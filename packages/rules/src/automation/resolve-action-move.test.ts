@@ -4,7 +4,7 @@ import { createSeededRandomSource } from '../dice/rng.js';
 import type { MoveAutomation } from '../schema/automation.js';
 import type { RandomSource } from '../schema/dice.js';
 import { resolveActionMove } from './resolve-action-move.js';
-import { faceDanger, gatherInformation } from './specs/index.js';
+import { endureHarm, faceDanger, gatherInformation, secureAnAdvantage } from './specs/index.js';
 
 /**
  * A RandomSource that returns a fixed queue of values, so a test can drive
@@ -92,6 +92,56 @@ describe('resolveActionMove', () => {
       const result = resolveActionMove(faceDanger, rng, [{ amount: 2, label: 'edge' }], 0, 0);
       seenTiers.add(result.roll.tier);
       expect(result.effects).toEqual(faceDanger.outcomes[result.roll.tier]?.effects);
+    }
+    expect(seenTiers).toEqual(new Set(['strong_hit', 'weak_hit', 'miss']));
+  });
+
+  it('carries marked impacts through to the burn offer’s impact-reduced reset value (D-74)', () => {
+    // actionDie 4, dice [6, 3] -> weak hit; momentum 7 would beat both.
+    const rng = fixedRandomSource([0.55, 0.55, 0.25]);
+    const result = resolveActionMove(gatherInformation, rng, [], 7, 2);
+    expect(result.roll.tier).toBe('weak_hit');
+    expect(result.roll.burnOffer).toEqual({ wouldBecome: 'strong_hit', momentum: 7, resetsTo: 0 });
+  });
+
+  it('surfaces a match through the full resolver, independent of tier (a miss can still match)', () => {
+    // actionDie 4, challenge dice 7 and 7 -> beats neither (miss), matched.
+    const rng = fixedRandomSource([0.55, 0.65, 0.65]);
+    const result = resolveActionMove(faceDanger, rng, [], 0, 0);
+    expect(result.roll.tier).toBe('miss');
+    expect(result.roll.challengeDice).toEqual([7, 7]);
+    expect(result.roll.isMatch).toBe(true);
+  });
+
+  it('resolves Secure an Advantage’s weak-hit choice across every seed that reaches it', () => {
+    let weakHitsSeen = 0;
+    for (let seed = 0; seed < 500; seed++) {
+      const rng = createSeededRandomSource(seed);
+      const result = resolveActionMove(
+        secureAnAdvantage,
+        rng,
+        [{ amount: 2, label: 'wits' }],
+        0,
+        0,
+      );
+      expect(result.effects).toEqual(secureAnAdvantage.outcomes[result.roll.tier]?.effects);
+      expect(result.choices).toEqual(secureAnAdvantage.outcomes[result.roll.tier]?.choices ?? []);
+      if (result.roll.tier === 'weak_hit') {
+        weakHitsSeen++;
+        expect(result.choices).toHaveLength(1);
+        expect(result.choices[0]?.options.map((o) => o.id)).toEqual(['momentum', 'bonus']);
+      }
+    }
+    expect(weakHitsSeen).toBeGreaterThan(0);
+  });
+
+  it('resolves Endure Harm’s choices across every tier it can reach, never throwing', () => {
+    const seenTiers = new Set<string>();
+    for (let seed = 0; seed < 500; seed++) {
+      const rng = createSeededRandomSource(seed);
+      const result = resolveActionMove(endureHarm, rng, [{ amount: 2, label: 'health' }], 0, 0);
+      seenTiers.add(result.roll.tier);
+      expect(result.choices).toEqual(endureHarm.outcomes[result.roll.tier]?.choices);
     }
     expect(seenTiers).toEqual(new Set(['strong_hit', 'weak_hit', 'miss']));
   });
