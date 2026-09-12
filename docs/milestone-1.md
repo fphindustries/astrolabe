@@ -51,7 +51,7 @@ Issue-sized. Each task should land in one sitting and leave the build working.
 
 ### 1. Rules package
 
-- [ ] 1.1 Monorepo scaffold: `rules`, `server`, `web`, `shared`; TypeScript, linting, test runner
+- [x] 1.1 Monorepo scaffold: `rules`, `server`, `web`, `shared`; TypeScript, linting, test runner
 - [ ] 1.2 Define the internal rules schema: moves, outcomes, stats, assets, oracle tables, stable IDs
 - [ ] 1.3 Datasworn adapter: import Starforged moves, assets, and oracles into the schema
 - [ ] 1.4 Dice: action roll, progress roll, oracle roll; seedable for tests
