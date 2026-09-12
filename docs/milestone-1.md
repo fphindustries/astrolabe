@@ -467,6 +467,11 @@ imports them — it discarded them until D-89. `assetCategories`, and assets'
 `categoryId` / `attachments` / `shared` / `requirement`, all arrived then.
 Changing the adapter means regenerating `starforged.json` (section 1's note).
 
+A module's attachment prerequisite needs **no creation check**: modules
+attach to the starship, the starship is always granted, so a module is
+always a legal pick. Don't go looking for validation code here — there
+isn't any, on purpose.
+
 ### What the picker UI will need from `rules`
 
 - `CHARACTER_CREATION.slots` — one picker per slot; each has a `label` and
@@ -479,6 +484,10 @@ Changing the adapter means regenerating `starforged.json` (section 1's note).
   outside the slot count.
 - `validateCharacterDraft` returns every problem with the `field` it belongs
   to, for inline display. **Don't recount slots in the UI** — call it.
+- `CreateCharacterRequest.grantCommandVehicle: false` declines the ship
+  grant. Ownership (sole/shared/another character's) is narrative and
+  unmodelled (D-89) — only wire a toggle for this if the concept-first flow
+  (3.3) actually wants to offer "no ship of your own."
 
 ### Conventions for groups 4 and 5
 
