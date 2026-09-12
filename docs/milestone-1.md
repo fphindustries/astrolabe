@@ -54,7 +54,7 @@ Issue-sized. Each task should land in one sitting and leave the build working.
 - [x] 1.1 Monorepo scaffold: `rules`, `server`, `web`, `shared`; TypeScript, linting, test runner
 - [x] 1.2 Define the internal rules schema: moves, outcomes, stats, assets, oracle tables, stable IDs
 - [x] 1.3 Datasworn adapter: import Starforged moves, assets, and oracles into the schema
-- [ ] 1.4 Dice: action roll, progress roll, oracle roll; seedable for tests
+- [x] 1.4 Dice: action roll, progress roll, oracle roll; seedable for tests
 - [ ] 1.5 Outcome resolution: strong hit, weak hit, miss, match detection
 - [ ] 1.6 Momentum: gain, loss, reset, burn, and when burning changes an outcome
 - [ ] 1.7 Move automation for the Automated-level moves listed under In scope (D-59): effects with no choice, inline choices, chained moves
