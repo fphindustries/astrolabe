@@ -49,6 +49,16 @@ Each maps to a beat of the golden session.
 
 Issue-sized. Each task should land in one sitting and leave the build working.
 
+**Order (D-88).** Task numbers are stable, so references to them keep
+resolving; the order they are *worked* in is:
+
+> 1 · 2 · **3.1, 3.5** · **5.1, 5.2** · 3.2, 3.4 · 4 · 5.3–5.7 · 6 · 7 · 3.3 · 8 · 9 · 10
+
+The play-screen shell comes before the creation and campaign-setup UI because
+those have no React app to live in — `web` is a bare Vite scaffold. The
+server-side halves of groups 3 and 4 stay ahead of it, since they need no UI
+at all. 3.3 waits on the AI provider in group 7.
+
 ### 1. Rules package
 
 - [x] 1.1 Monorepo scaffold: `rules`, `server`, `web`, `shared`; TypeScript, linting, test runner

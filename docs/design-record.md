@@ -84,7 +84,7 @@ The AI Guide has three jobs: **narrate** (give player decisions narrative depth)
 | D-54 | Narration starts streaming within 5 seconds. | 7 | Approved |
 | D-55 | Docker packaging for production on a Linux home server. Local development runs natively. | 7 | Approved |
 | D-56 | Milestone 1 is done when the golden session runs end to end with real rules data and real AI narration. Nothing beyond it ships. | 8 | Approved |
-| D-57 | Build order runs rules engine → event log → creation flows → play shell → move flow → AI → polish (see `milestone-1.md`). | 8 | Approved |
+| D-57 | Build order runs rules engine → event log → creation flows → play shell → move flow → AI → polish (see `milestone-1.md`). | 8 | Approved (groups 3–5 resequenced by D-88) |
 | D-58 | The build prompt targets Claude Code. Repository conventions live in `CLAUDE.md`. | 8 | Approved |
 | D-59 | Milestone 1 hand-writes move automation only for the moves the golden session exercises (about eleven, including Swear an Iron Vow for campaign setup and Reach a Milestone for Beat 10). The rest of the Session, Adventure, Quest, Fate and Suffer categories, and all three Threshold moves, stay at Reference. This narrows §5's assignment table for Milestone 1 only. | 9 | Approved |
 | D-60 | Milestone 1 ships the AI provider interface, the Claude implementation, and the stubbed provider the golden-session test needs. The OpenAI implementation moves to Milestone 2. D-50 is satisfied by the abstraction existing. | 9 | Approved |
@@ -115,6 +115,7 @@ The AI Guide has three jobs: **narrate** (give player decisions narrative depth)
 | D-85 | Token accounting is exempt from void: an AI call inside a voided cascade still counts toward the session token total (D-75), because the tokens were spent whatever the fiction now says. | 11 | Approved |
 | D-86 | Entity amendment and void-reinstatement are both deferred past Milestone 1. They are coupled: D-70's reinstating of a discarded oracle roll implies amending the entity built from the surviving result. A9 requires only that the discarded chip stay struck through, so Milestone 1 ships display-only rerolls. This leaves §3's "correcting or retconning any AI-established fact" undelivered in Milestone 1 — narration correction (A15) and manual mechanical override (A16) ship; entity retcon does not. | 11 | Approved |
 | D-87 | The starship is a display-only entity in Milestone 1. No golden-session beat mutates ship state — Beats 4 and 5 use the *Lantern Wake*'s sensors, which resolves as a character move. Whether a ship is an entity, an asset, or a character defers to Milestone 2. | 11 | Proposed |
+| D-88 | The play-screen shell (5.1, 5.2) moves ahead of the creation and campaign-setup UI (3.2, 3.4, 4.2–4.5), because those have no React app to live in. D-57's build order otherwise stands, and the server-side halves of groups 3 and 4 keep their place ahead of it. | 11 | Approved |
 
 ---
 
