@@ -94,7 +94,7 @@ narrative log is a second read model with its own paged query.
 - [x] 3.1 Character data model: stats, meters, momentum, impacts, assets, vows
 - [ ] 3.2 Manual creation UI with rule validation on every field — blocked on the React app shell (5.1)
 - [ ] 3.3 Concept-first flow: prompt, AI proposal, review, accept or edit per field — blocked on the AI provider (7.1, 7.2)
-- [ ] 3.4 Asset selection with rule constraints — blocked on the React app shell (5.1)
+- [ ] 3.4 Asset selection with rule constraints — the constraints are built and traced (D-89); the picker UI is blocked on the React app shell (5.1)
 - [x] 3.5 Creation writes character-created events
 
 ### 4. Campaign setup

@@ -1,4 +1,6 @@
-import type { Asset } from '../schema/assets.js';
+import type { Asset, AssetCategory } from '../schema/assets.js';
+
+import { CHARACTER_CREATION, type CharacterCreationRules } from './creation-rules.js';
 import type { GameRules } from '../schema/game-rules.js';
 import type { AssetId, MeterId, StatId } from '../schema/ids.js';
 
@@ -64,7 +66,11 @@ export type CharacterProblemCode =
   | 'callsign_required'
   | 'stat_array_mismatch'
   | 'unknown_asset'
-  | 'duplicate_asset';
+  | 'duplicate_asset'
+  | 'too_many_assets'
+  | 'too_few_paths'
+  | 'forbidden_category'
+  | 'category_not_allowed';
 
 export interface CharacterProblem {
   readonly code: CharacterProblemCode;
@@ -75,6 +81,7 @@ export interface CharacterProblem {
 
 export interface RulesetForCreation {
   readonly assets: readonly Asset[];
+  readonly assetCategories: readonly AssetCategory[];
   readonly gameRules: GameRules;
 }
 
@@ -88,6 +95,7 @@ export interface RulesetForCreation {
 export function validateCharacterDraft(
   draft: CharacterDraft,
   ruleset: RulesetForCreation,
+  rules: CharacterCreationRules = CHARACTER_CREATION,
 ): readonly CharacterProblem[] {
   const problems: CharacterProblem[] = [];
 
@@ -110,16 +118,38 @@ export function validateCharacterDraft(
     });
   }
 
-  const known = new Set(ruleset.assets.map((asset) => asset.id));
+  problems.push(...validateAssets(draft.assets, ruleset, rules));
+  return problems;
+}
+
+/**
+ * The asset slots (D-89).
+ *
+ * Checked as a multiset against the slot spec rather than positionally: a
+ * player fills the slots in whatever order they like, and the rule is about
+ * what they end up holding.
+ */
+function validateAssets(
+  chosen: readonly AssetId[],
+  ruleset: RulesetForCreation,
+  rules: CharacterCreationRules,
+): readonly CharacterProblem[] {
+  const problems: CharacterProblem[] = [];
+  const byId = new Map(ruleset.assets.map((asset) => [asset.id, asset]));
   const seen = new Set<AssetId>();
-  for (const assetId of draft.assets) {
-    if (!known.has(assetId)) {
+  const resolved: Asset[] = [];
+
+  for (const assetId of chosen) {
+    const asset = byId.get(assetId);
+    if (asset === undefined) {
       problems.push({
         code: 'unknown_asset',
         field: 'assets',
         message: `No asset "${assetId}" in the ruleset.`,
       });
-    } else if (seen.has(assetId)) {
+      continue;
+    }
+    if (seen.has(assetId)) {
       problems.push({
         code: 'duplicate_asset',
         field: 'assets',
@@ -127,6 +157,52 @@ export function validateCharacterDraft(
       });
     }
     seen.add(assetId);
+    resolved.push(asset);
+  }
+
+  const granted = new Set(rules.grants.map((grant) => grant.category));
+  const forbidden = new Map(rules.forbidden.map((entry) => [entry.category, entry]));
+  // A granted category occupies no slot, so it is filtered out before the
+  // slots are counted rather than rejected — a client may well send the
+  // starship back with the rest of the sheet.
+  const occupying = resolved.filter((asset) => !granted.has(asset.categoryId));
+
+  for (const asset of occupying) {
+    if (forbidden.has(asset.categoryId)) {
+      problems.push({
+        code: 'forbidden_category',
+        field: 'assets',
+        message: `${asset.name} is a ${asset.category} asset, which cannot be chosen at creation.`,
+      });
+    } else if (!rules.slots.some((slot) => slot.allows.includes(asset.categoryId))) {
+      problems.push({
+        code: 'category_not_allowed',
+        field: 'assets',
+        message: `${asset.name} is a ${asset.category} asset, which no creation slot accepts.`,
+      });
+    }
+  }
+
+  // Only a complete set is judged against the slot counts: a half-filled
+  // draft is in progress, not wrong.
+  if (occupying.length > rules.slots.length) {
+    problems.push({
+      code: 'too_many_assets',
+      field: 'assets',
+      message: `A character starts with ${rules.slots.length} assets; ${occupying.length} are selected.`,
+    });
+  } else if (occupying.length === rules.slots.length) {
+    const pathSlots = rules.slots.filter(
+      (slot) => slot.allows.length === 1 && slot.allows[0] === 'path',
+    ).length;
+    const paths = occupying.filter((asset) => asset.categoryId === 'path').length;
+    if (paths < pathSlots) {
+      problems.push({
+        code: 'too_few_paths',
+        field: 'assets',
+        message: `A character starts with ${pathSlots} paths; ${paths} are selected.`,
+      });
+    }
   }
 
   return problems;
@@ -144,6 +220,24 @@ export function matchesStatArray(stats: Readonly<Record<StatId, number>>): boole
 }
 
 /** Whether a draft is ready to be written as a character. */
-export function isValidCharacterDraft(draft: CharacterDraft, ruleset: RulesetForCreation): boolean {
-  return validateCharacterDraft(draft, ruleset).length === 0;
+export function isValidCharacterDraft(
+  draft: CharacterDraft,
+  ruleset: RulesetForCreation,
+  rules: CharacterCreationRules = CHARACTER_CREATION,
+): boolean {
+  return validateCharacterDraft(draft, ruleset, rules).length === 0;
+}
+
+/**
+ * The assets a character is given outright at creation, occupying no slot
+ * (D-89). Ownership of the starship — sole, shared, or another
+ * character's — is narrative and deliberately unmodelled: it has no effect
+ * on how the asset is used in play.
+ */
+export function grantedAssets(
+  ruleset: RulesetForCreation,
+  rules: CharacterCreationRules = CHARACTER_CREATION,
+): readonly AssetId[] {
+  const categories = new Set(rules.grants.map((grant) => grant.category));
+  return ruleset.assets.filter((asset) => categories.has(asset.categoryId)).map((a) => a.id);
 }

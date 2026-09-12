@@ -1,11 +1,11 @@
 import type { Datasworn } from '@datasworn/core';
 
-import type { Asset } from '../schema/assets.js';
+import type { Asset, AssetCategory } from '../schema/assets.js';
 import type { GameRules } from '../schema/game-rules.js';
 import type { Move } from '../schema/moves.js';
 import type { OracleTable } from '../schema/oracles.js';
 
-import { mapAssets } from './assets.js';
+import { mapAssetCategories, mapAssets } from './assets.js';
 import { mapGameRules } from './game-rules.js';
 import { mapMoveCategory } from './moves.js';
 import { mapOracles } from './oracles.js';
@@ -15,6 +15,8 @@ export interface AdaptedRuleset {
   readonly moves: readonly Move[];
   readonly oracles: readonly OracleTable[];
   readonly assets: readonly Asset[];
+  /** Imported as entities: their descriptions carry rules nothing else does (D-89). */
+  readonly assetCategories: readonly AssetCategory[];
 }
 
 /**
@@ -40,6 +42,7 @@ export function adaptStarforged(raw: Datasworn.Ruleset): AdaptedRuleset {
     moves,
     oracles: mapOracles(raw.oracles, version),
     assets: mapAssets(raw.assets, version, allMoveSourceIds),
+    assetCategories: mapAssetCategories(raw.assets, version),
   };
 }
 

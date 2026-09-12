@@ -30218,9 +30218,16 @@
   "assets": [
     {
       "id": "asset:command-vehicle/starship",
+      "categoryId": "command_vehicle",
       "category": "Command Vehicle",
       "name": "Starship",
       "countAsImpact": false,
+      "shared": true,
+      "attachments": {
+        "categories": [
+          "module"
+        ]
+      },
       "abilities": [
         {
           "id": "0",
@@ -30260,9 +30267,11 @@
     },
     {
       "id": "asset:companion/banshee",
+      "categoryId": "companion",
       "category": "Companion",
       "name": "Banshee",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -30308,9 +30317,11 @@
     },
     {
       "id": "asset:companion/combat-bot",
+      "categoryId": "companion",
       "category": "Companion",
       "name": "Combat Bot",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -30352,9 +30363,11 @@
     },
     {
       "id": "asset:companion/glowcat",
+      "categoryId": "companion",
       "category": "Companion",
       "name": "Glowcat",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -30395,9 +30408,11 @@
     },
     {
       "id": "asset:companion/protocol-bot",
+      "categoryId": "companion",
       "category": "Companion",
       "name": "Protocol Bot",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -30431,9 +30446,11 @@
     },
     {
       "id": "asset:companion/rockhorn",
+      "categoryId": "companion",
       "category": "Companion",
       "name": "Rockhorn",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -30472,9 +30489,11 @@
     },
     {
       "id": "asset:companion/sidekick",
+      "categoryId": "companion",
       "category": "Companion",
       "name": "Sidekick",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -30515,9 +30534,11 @@
     },
     {
       "id": "asset:companion/sprite",
+      "categoryId": "companion",
       "category": "Companion",
       "name": "Sprite",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -30555,9 +30576,11 @@
     },
     {
       "id": "asset:companion/survey-bot",
+      "categoryId": "companion",
       "category": "Companion",
       "name": "Survey Bot",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -30600,9 +30623,11 @@
     },
     {
       "id": "asset:companion/symbiote",
+      "categoryId": "companion",
       "category": "Companion",
       "name": "Symbiote",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -30636,9 +30661,11 @@
     },
     {
       "id": "asset:companion/utility-bot",
+      "categoryId": "companion",
       "category": "Companion",
       "name": "Utility Bot",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -30676,9 +30703,11 @@
     },
     {
       "id": "asset:companion/voidglider",
+      "categoryId": "companion",
       "category": "Companion",
       "name": "Voidglider",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -30714,9 +30743,12 @@
     },
     {
       "id": "asset:deed/bonded",
+      "categoryId": "deed",
       "category": "Deed",
       "name": "Bonded",
       "countAsImpact": false,
+      "requirement": "One time only, once you [Forge a Bond](id:move:connection/forge-a-bond) with a special individual...",
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -30757,9 +30789,12 @@
     },
     {
       "id": "asset:deed/homesteader",
+      "categoryId": "deed",
       "category": "Deed",
       "name": "Homesteader",
       "countAsImpact": false,
+      "requirement": "Once you fill 4 boxes on your bonds legacy track...",
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -30800,9 +30835,12 @@
     },
     {
       "id": "asset:deed/marked",
+      "categoryId": "deed",
       "category": "Deed",
       "name": "Marked",
       "countAsImpact": false,
+      "requirement": "Once you fill 5 boxes on your quests legacy track...",
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -30841,9 +30879,12 @@
     },
     {
       "id": "asset:deed/oathbreaker",
+      "categoryId": "deed",
       "category": "Deed",
       "name": "Oathbreaker",
       "countAsImpact": true,
+      "requirement": "Once you [Forsake Your Vow](id:move:quest/forsake-your-vow)...",
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -30886,9 +30927,12 @@
     },
     {
       "id": "asset:deed/revenant",
+      "categoryId": "deed",
       "category": "Deed",
       "name": "Revenant",
       "countAsImpact": false,
+      "requirement": "Once you [Face Death](id:move:threshold/face-death)...",
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -30929,9 +30973,12 @@
     },
     {
       "id": "asset:deed/survivor",
+      "categoryId": "deed",
       "category": "Deed",
       "name": "Survivor",
       "countAsImpact": false,
+      "requirement": "Once you mark traumatized or permanently harmed...",
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -30967,9 +31014,12 @@
     },
     {
       "id": "asset:deed/vanguard",
+      "categoryId": "deed",
       "category": "Deed",
       "name": "Vanguard",
       "countAsImpact": false,
+      "requirement": "Once you fill 6 boxes on your discoveries legacy track...",
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -31005,9 +31055,11 @@
     },
     {
       "id": "asset:module/engine-upgrade",
+      "categoryId": "module",
       "category": "Module",
       "name": "Engine Upgrade",
       "countAsImpact": false,
+      "shared": true,
       "abilities": [
         {
           "id": "0",
@@ -31045,9 +31097,11 @@
     },
     {
       "id": "asset:module/expanded-hold",
+      "categoryId": "module",
       "category": "Module",
       "name": "Expanded Hold",
       "countAsImpact": false,
+      "shared": true,
       "abilities": [
         {
           "id": "0",
@@ -31081,9 +31135,11 @@
     },
     {
       "id": "asset:module/grappler",
+      "categoryId": "module",
       "category": "Module",
       "name": "Grappler",
       "countAsImpact": false,
+      "shared": true,
       "abilities": [
         {
           "id": "0",
@@ -31119,9 +31175,11 @@
     },
     {
       "id": "asset:module/heavy-cannons",
+      "categoryId": "module",
       "category": "Module",
       "name": "Heavy Cannons",
       "countAsImpact": false,
+      "shared": true,
       "abilities": [
         {
           "id": "0",
@@ -31163,9 +31221,11 @@
     },
     {
       "id": "asset:module/internal-refit",
+      "categoryId": "module",
       "category": "Module",
       "name": "Internal Refit",
       "countAsImpact": false,
+      "shared": true,
       "abilities": [
         {
           "id": "0",
@@ -31203,9 +31263,11 @@
     },
     {
       "id": "asset:module/medbay",
+      "categoryId": "module",
       "category": "Module",
       "name": "Medbay",
       "countAsImpact": false,
+      "shared": true,
       "abilities": [
         {
           "id": "0",
@@ -31247,9 +31309,11 @@
     },
     {
       "id": "asset:module/missile-array",
+      "categoryId": "module",
       "category": "Module",
       "name": "Missile Array",
       "countAsImpact": false,
+      "shared": true,
       "abilities": [
         {
           "id": "0",
@@ -31291,9 +31355,11 @@
     },
     {
       "id": "asset:module/overseer",
+      "categoryId": "module",
       "category": "Module",
       "name": "Overseer",
       "countAsImpact": false,
+      "shared": true,
       "abilities": [
         {
           "id": "0",
@@ -31336,9 +31402,11 @@
     },
     {
       "id": "asset:module/reinforced-hull",
+      "categoryId": "module",
       "category": "Module",
       "name": "Reinforced Hull",
       "countAsImpact": false,
+      "shared": true,
       "abilities": [
         {
           "id": "0",
@@ -31378,9 +31446,11 @@
     },
     {
       "id": "asset:module/research-lab",
+      "categoryId": "module",
       "category": "Module",
       "name": "Research Lab",
       "countAsImpact": false,
+      "shared": true,
       "abilities": [
         {
           "id": "0",
@@ -31426,9 +31496,11 @@
     },
     {
       "id": "asset:module/sensor-array",
+      "categoryId": "module",
       "category": "Module",
       "name": "Sensor Array",
       "countAsImpact": false,
+      "shared": true,
       "abilities": [
         {
           "id": "0",
@@ -31472,9 +31544,11 @@
     },
     {
       "id": "asset:module/shields",
+      "categoryId": "module",
       "category": "Module",
       "name": "Shields",
       "countAsImpact": false,
+      "shared": true,
       "abilities": [
         {
           "id": "0",
@@ -31512,9 +31586,11 @@
     },
     {
       "id": "asset:module/stealth-tech",
+      "categoryId": "module",
       "category": "Module",
       "name": "Stealth Tech",
       "countAsImpact": false,
+      "shared": true,
       "abilities": [
         {
           "id": "0",
@@ -31554,9 +31630,11 @@
     },
     {
       "id": "asset:module/vehicle-bay",
+      "categoryId": "module",
       "category": "Module",
       "name": "Vehicle Bay",
       "countAsImpact": false,
+      "shared": true,
       "abilities": [
         {
           "id": "0",
@@ -31594,9 +31672,11 @@
     },
     {
       "id": "asset:module/workshop",
+      "categoryId": "module",
       "category": "Module",
       "name": "Workshop",
       "countAsImpact": false,
+      "shared": true,
       "abilities": [
         {
           "id": "0",
@@ -31637,9 +31717,11 @@
     },
     {
       "id": "asset:path/ace",
+      "categoryId": "path",
       "category": "Path",
       "name": "Ace",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -31681,9 +31763,12 @@
     },
     {
       "id": "asset:path/archer",
+      "categoryId": "path",
       "category": "Path",
       "name": "Archer",
       "countAsImpact": false,
+      "requirement": "If you wield a power bow...",
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -31719,9 +31804,12 @@
     },
     {
       "id": "asset:path/armored",
+      "categoryId": "path",
       "category": "Path",
       "name": "Armored",
       "countAsImpact": false,
+      "requirement": "If you wear your finely crafted set of personal armor...",
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -31762,9 +31850,11 @@
     },
     {
       "id": "asset:path/artist",
+      "categoryId": "path",
       "category": "Path",
       "name": "Artist",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -31802,9 +31892,11 @@
     },
     {
       "id": "asset:path/augmented",
+      "categoryId": "path",
       "category": "Path",
       "name": "Augmented",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -31841,9 +31933,11 @@
     },
     {
       "id": "asset:path/bannersworn",
+      "categoryId": "path",
       "category": "Path",
       "name": "Bannersworn",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -31882,9 +31976,12 @@
     },
     {
       "id": "asset:path/blademaster",
+      "categoryId": "path",
       "category": "Path",
       "name": "Blademaster",
       "countAsImpact": false,
+      "requirement": "If you wield a bladed weapon...",
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -31925,9 +32022,11 @@
     },
     {
       "id": "asset:path/bounty-hunter",
+      "categoryId": "path",
       "category": "Path",
       "name": "Bounty Hunter",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -31968,9 +32067,12 @@
     },
     {
       "id": "asset:path/brawler",
+      "categoryId": "path",
       "category": "Path",
       "name": "Brawler",
       "countAsImpact": false,
+      "requirement": "If you fight unarmed or with a close quarters weapon...",
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -32010,9 +32112,11 @@
     },
     {
       "id": "asset:path/courier",
+      "categoryId": "path",
       "category": "Path",
       "name": "Courier",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -32054,9 +32158,11 @@
     },
     {
       "id": "asset:path/demolitionist",
+      "categoryId": "path",
       "category": "Path",
       "name": "Demolitionist",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -32092,9 +32198,11 @@
     },
     {
       "id": "asset:path/devotant",
+      "categoryId": "path",
       "category": "Path",
       "name": "Devotant",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -32137,9 +32245,11 @@
     },
     {
       "id": "asset:path/diplomat",
+      "categoryId": "path",
       "category": "Path",
       "name": "Diplomat",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -32178,9 +32288,11 @@
     },
     {
       "id": "asset:path/empath",
+      "categoryId": "path",
       "category": "Path",
       "name": "Empath",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -32217,9 +32329,11 @@
     },
     {
       "id": "asset:path/explorer",
+      "categoryId": "path",
       "category": "Path",
       "name": "Explorer",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -32259,9 +32373,11 @@
     },
     {
       "id": "asset:path/fated",
+      "categoryId": "path",
       "category": "Path",
       "name": "Fated",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -32300,9 +32416,11 @@
     },
     {
       "id": "asset:path/firebrand",
+      "categoryId": "path",
       "category": "Path",
       "name": "Firebrand",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -32341,9 +32459,11 @@
     },
     {
       "id": "asset:path/fugitive",
+      "categoryId": "path",
       "category": "Path",
       "name": "Fugitive",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -32377,9 +32497,11 @@
     },
     {
       "id": "asset:path/gearhead",
+      "categoryId": "path",
       "category": "Path",
       "name": "Gearhead",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -32418,9 +32540,12 @@
     },
     {
       "id": "asset:path/gunner",
+      "categoryId": "path",
       "category": "Path",
       "name": "Gunner",
       "countAsImpact": false,
+      "requirement": "If you wield a heavy ranged personal weapon...",
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -32462,9 +32587,12 @@
     },
     {
       "id": "asset:path/gunslinger",
+      "categoryId": "path",
       "category": "Path",
       "name": "Gunslinger",
       "countAsImpact": false,
+      "requirement": "If you wield a pistol...",
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -32506,9 +32634,11 @@
     },
     {
       "id": "asset:path/haunted",
+      "categoryId": "path",
       "category": "Path",
       "name": "Haunted",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -32544,9 +32674,11 @@
     },
     {
       "id": "asset:path/healer",
+      "categoryId": "path",
       "category": "Path",
       "name": "Healer",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -32584,9 +32716,11 @@
     },
     {
       "id": "asset:path/infiltrator",
+      "categoryId": "path",
       "category": "Path",
       "name": "Infiltrator",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -32627,9 +32761,11 @@
     },
     {
       "id": "asset:path/kinetic",
+      "categoryId": "path",
       "category": "Path",
       "name": "Kinetic",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -32663,9 +32799,11 @@
     },
     {
       "id": "asset:path/leader",
+      "categoryId": "path",
       "category": "Path",
       "name": "Leader",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -32703,9 +32841,11 @@
     },
     {
       "id": "asset:path/looper",
+      "categoryId": "path",
       "category": "Path",
       "name": "Looper",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -32743,9 +32883,11 @@
     },
     {
       "id": "asset:path/lore-hunter",
+      "categoryId": "path",
       "category": "Path",
       "name": "Lore Hunter",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -32787,9 +32929,11 @@
     },
     {
       "id": "asset:path/loyalist",
+      "categoryId": "path",
       "category": "Path",
       "name": "Loyalist",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -32825,9 +32969,11 @@
     },
     {
       "id": "asset:path/mercenary",
+      "categoryId": "path",
       "category": "Path",
       "name": "Mercenary",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -32869,9 +33015,11 @@
     },
     {
       "id": "asset:path/naturalist",
+      "categoryId": "path",
       "category": "Path",
       "name": "Naturalist",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -32913,9 +33061,11 @@
     },
     {
       "id": "asset:path/navigator",
+      "categoryId": "path",
       "category": "Path",
       "name": "Navigator",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -32959,9 +33109,11 @@
     },
     {
       "id": "asset:path/outcast",
+      "categoryId": "path",
       "category": "Path",
       "name": "Outcast",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -32999,9 +33151,11 @@
     },
     {
       "id": "asset:path/scavenger",
+      "categoryId": "path",
       "category": "Path",
       "name": "Scavenger",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -33042,9 +33196,11 @@
     },
     {
       "id": "asset:path/scoundrel",
+      "categoryId": "path",
       "category": "Path",
       "name": "Scoundrel",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -33080,9 +33236,11 @@
     },
     {
       "id": "asset:path/seer",
+      "categoryId": "path",
       "category": "Path",
       "name": "Seer",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -33121,9 +33279,11 @@
     },
     {
       "id": "asset:path/shade",
+      "categoryId": "path",
       "category": "Path",
       "name": "Shade",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -33157,9 +33317,11 @@
     },
     {
       "id": "asset:path/slayer",
+      "categoryId": "path",
       "category": "Path",
       "name": "Slayer",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -33198,9 +33360,11 @@
     },
     {
       "id": "asset:path/sleuth",
+      "categoryId": "path",
       "category": "Path",
       "name": "Sleuth",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -33238,9 +33402,12 @@
     },
     {
       "id": "asset:path/sniper",
+      "categoryId": "path",
       "category": "Path",
       "name": "Sniper",
       "countAsImpact": false,
+      "requirement": "If you wield a rifle...",
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -33279,9 +33446,11 @@
     },
     {
       "id": "asset:path/tech",
+      "categoryId": "path",
       "category": "Path",
       "name": "Tech",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -33322,9 +33491,11 @@
     },
     {
       "id": "asset:path/trader",
+      "categoryId": "path",
       "category": "Path",
       "name": "Trader",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -33364,9 +33535,11 @@
     },
     {
       "id": "asset:path/vestige",
+      "categoryId": "path",
       "category": "Path",
       "name": "Vestige",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -33407,9 +33580,11 @@
     },
     {
       "id": "asset:path/veteran",
+      "categoryId": "path",
       "category": "Path",
       "name": "Veteran",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -33449,9 +33624,11 @@
     },
     {
       "id": "asset:path/voidborn",
+      "categoryId": "path",
       "category": "Path",
       "name": "Voidborn",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -33489,9 +33666,11 @@
     },
     {
       "id": "asset:path/weapon-master",
+      "categoryId": "path",
       "category": "Path",
       "name": "Weapon Master",
       "countAsImpact": false,
+      "shared": false,
       "abilities": [
         {
           "id": "0",
@@ -33533,9 +33712,11 @@
     },
     {
       "id": "asset:support-vehicle/exosuit",
+      "categoryId": "support_vehicle",
       "category": "Support Vehicle",
       "name": "Exosuit",
       "countAsImpact": false,
+      "shared": true,
       "abilities": [
         {
           "id": "0",
@@ -33571,9 +33752,11 @@
     },
     {
       "id": "asset:support-vehicle/hoverbike",
+      "categoryId": "support_vehicle",
       "category": "Support Vehicle",
       "name": "Hoverbike",
       "countAsImpact": false,
+      "shared": true,
       "abilities": [
         {
           "id": "0",
@@ -33609,9 +33792,11 @@
     },
     {
       "id": "asset:support-vehicle/rover",
+      "categoryId": "support_vehicle",
       "category": "Support Vehicle",
       "name": "Rover",
       "countAsImpact": false,
+      "shared": true,
       "abilities": [
         {
           "id": "0",
@@ -33653,9 +33838,11 @@
     },
     {
       "id": "asset:support-vehicle/service-pod",
+      "categoryId": "support_vehicle",
       "category": "Support Vehicle",
       "name": "Service Pod",
       "countAsImpact": false,
+      "shared": true,
       "abilities": [
         {
           "id": "0",
@@ -33694,9 +33881,11 @@
     },
     {
       "id": "asset:support-vehicle/shuttle",
+      "categoryId": "support_vehicle",
       "category": "Support Vehicle",
       "name": "Shuttle",
       "countAsImpact": false,
+      "shared": true,
       "abilities": [
         {
           "id": "0",
@@ -33736,9 +33925,11 @@
     },
     {
       "id": "asset:support-vehicle/skiff",
+      "categoryId": "support_vehicle",
       "category": "Support Vehicle",
       "name": "Skiff",
       "countAsImpact": false,
+      "shared": true,
       "abilities": [
         {
           "id": "0",
@@ -33780,9 +33971,11 @@
     },
     {
       "id": "asset:support-vehicle/snub-fighter",
+      "categoryId": "support_vehicle",
       "category": "Support Vehicle",
       "name": "Snub Fighter",
       "countAsImpact": false,
+      "shared": true,
       "abilities": [
         {
           "id": "0",
@@ -33812,6 +34005,104 @@
         "sourceId": "starforged/assets/support_vehicle/snub_fighter",
         "sourceVersion": "0.0.10",
         "book": "Ironsworn: Starforged Assets",
+        "authors": [
+          "Shawn Tomkin"
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0",
+        "url": "https://ironswornrpg.com"
+      }
+    }
+  ],
+  "assetCategories": [
+    {
+      "id": "command_vehicle",
+      "name": "Command Vehicle Assets",
+      "description": "The __command vehicle__ is your interstellar STARSHIP. It is a default asset for your character, taken when you begin your campaign. If you are playing with others, this is a shared asset; each of you may use the STARSHIP's abilities while aboard the craft.\n\nThe command vehicle has an integrity meter and starts at 5 integrity. When your STARSHIP takes a hit, make the [Withstand Damage](id:move:suffer/withstand-damage) move to see what happens.",
+      "source": {
+        "sourceId": "starforged/collections/assets/command_vehicle",
+        "sourceVersion": "0.0.10",
+        "book": "Ironsworn: Starforged Rulebook",
+        "page": 55,
+        "authors": [
+          "Shawn Tomkin"
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0",
+        "url": "https://ironswornrpg.com"
+      }
+    },
+    {
+      "id": "companion",
+      "name": "Companion Assets",
+      "description": "__Companions__ are NPC helpers. When you gain a companion, give them a name and envision their look and personality.\n\nCompanions utilize a health meter that can be reduced if an outcome puts them in harm's way. When your companion faces harm, make the [Companion Takes a Hit](id:move:suffer/companion-takes-a-hit) move. When their health is at 0, they are in danger of being killed or destroyed.",
+      "source": {
+        "sourceId": "starforged/collections/assets/companion",
+        "sourceVersion": "0.0.10",
+        "book": "Ironsworn: Starforged Rulebook",
+        "page": 57,
+        "authors": [
+          "Shawn Tomkin"
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0",
+        "url": "https://ironswornrpg.com"
+      }
+    },
+    {
+      "id": "deed",
+      "name": "Deed Assets",
+      "description": "__Deeds__ represent the notable achievement and situations of your story, and how those events change your character.\n\nDeeds have a requirement listed at the top of the card, phrased as “Once you \\[blank\\].” You may not spend experience to acquire a deed until you fulfill the requirement, and you cannot choose a deed when creating your character.",
+      "source": {
+        "sourceId": "starforged/collections/assets/deed",
+        "sourceVersion": "0.0.10",
+        "book": "Ironsworn: Starforged Rulebook",
+        "page": 57,
+        "authors": [
+          "Shawn Tomkin"
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0",
+        "url": "https://ironswornrpg.com"
+      }
+    },
+    {
+      "id": "module",
+      "name": "Module Assets",
+      "description": "__Modules__ are linked to your STARSHIP and offer additional options and advantages when aboard that vehicle.\n\nThese assets are earned and managed by a single character. They can be shared with allies, but only if it's practical for them to make use of it (not everyone may know how to use a RESEARCH LAB).\n\nWhen you [Withstand Damage](id:move:suffer/withstand-damage) and score a miss, you can mark a module as broken to offset further danger for your STARSHIP. Flip the card over to indicate its broken state. A broken module cannot be used until you successfully [Repair](id:move:recover/repair) it.",
+      "source": {
+        "sourceId": "starforged/collections/assets/module",
+        "sourceVersion": "0.0.10",
+        "book": "Ironsworn: Starforged Rulebook",
+        "page": 55,
+        "authors": [
+          "Shawn Tomkin"
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0",
+        "url": "https://ironswornrpg.com"
+      }
+    },
+    {
+      "id": "path",
+      "name": "Path Assets",
+      "description": "__Paths__ are your background, interests, training, skills, powers, and key equipment. They provide mechanical and narrative advantages, but also reflect who you are and how you interact with the world. When you create your character in the next chapter, you'll select at least two paths to get started.\n\nSome paths represent your skill with a signature weapon style or piece of equipment. If you see a requirement at the top of the asset card, such as “If you wield a bladed weapon…,” the asset is only usable when taking action using that item.",
+      "source": {
+        "sourceId": "starforged/collections/assets/path",
+        "sourceVersion": "0.0.10",
+        "book": "Ironsworn: Starforged Rulebook",
+        "page": 56,
+        "authors": [
+          "Shawn Tomkin"
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0",
+        "url": "https://ironswornrpg.com"
+      }
+    },
+    {
+      "id": "support_vehicle",
+      "name": "Support Vehicle Assets",
+      "description": "__Support vehicles__ complement your command vehicle for planetside or short-range operations. If you are playing with others, one of you might serve as the pilot or owner of a support vehicle, but anyone on board can use its abilities as appropriate to the situation.\n\nAs with the command vehicle, your support vehicles have integrity meters. The maximum integrity varies based on the type of vehicle. When a support vehicle faces a damaging situation or environment, you must [Withstand Damage](id:move:suffer/withstand-damage) to see how it fares.",
+      "source": {
+        "sourceId": "starforged/collections/assets/support_vehicle",
+        "sourceVersion": "0.0.10",
+        "book": "Ironsworn: Starforged Rulebook",
+        "page": 56,
         "authors": [
           "Shawn Tomkin"
         ],

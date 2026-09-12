@@ -12,7 +12,15 @@ import { uuidv7 } from './uuid.js';
 
 const PLAYER: Actor = { kind: 'player', playerId: LOCAL_PLAYER_ID };
 const newId = <T>(): T => uuidv7() as T;
-const REAL_ASSETS = STARFORGED.assets.slice(0, 2).map((a) => a.id);
+const byCategory = (category: string, n: number) =>
+  STARFORGED.assets
+    .filter((a) => a.categoryId === category)
+    .slice(0, n)
+    .map((a) => a.id);
+
+/** A legal set under D-89: two paths plus a companion in the final slot. */
+const REAL_ASSETS = [...byCategory('path', 2), ...byCategory('companion', 1)];
+const STARSHIP = byCategory('command_vehicle', 1)[0] as AssetId;
 
 function draft(overrides: Partial<CharacterDraft> = {}): CharacterDraft {
   return {
@@ -72,7 +80,8 @@ describe.skipIf(!hasTestDatabase)('creating a character (task 3.5)', () => {
     expect(character?.momentum.max).toBe(10);
     expect(character?.meters.health).toMatchObject({ value: 5, min: 0, max: 5 });
     expect(character?.markedImpacts).toBe(0);
-    expect(character?.assets).toEqual(REAL_ASSETS);
+    // The three chosen slots, plus the granted starship (D-89).
+    expect(character?.assets).toEqual([...REAL_ASSETS, STARSHIP]);
   });
 
   it('trims the name and callsign it stores', async () => {
@@ -205,5 +214,62 @@ describe.skipIf(!hasTestDatabase)('creating a character (task 3.5)', () => {
 
     const characters = Object.values(project(await readEvents(db.sql, campaignId)).characters);
     expect(characters.map((c) => c.callsign).sort()).toEqual(['Juno', 'Rook', 'Vesna']);
+  });
+
+  describe('the starship grant (D-89)', () => {
+    it('grants the command vehicle without it occupying a slot', async () => {
+      const campaignId = await newCampaign();
+      const { characterId } = await createCharacter(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        draft: draft(),
+      });
+
+      const assets = project(await readEvents(db.sql, campaignId)).characters[characterId]?.assets;
+      expect(assets).toContain(STARSHIP);
+      // The three chosen, plus the granted starship.
+      expect(assets).toHaveLength(4);
+    });
+
+    it('does not duplicate a starship the client sent back with the sheet', async () => {
+      const campaignId = await newCampaign();
+      const { characterId } = await createCharacter(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        draft: draft({ assets: [...REAL_ASSETS, STARSHIP] }),
+      });
+
+      const assets = project(await readEvents(db.sql, campaignId)).characters[characterId]?.assets;
+      expect(assets?.filter((a) => a === STARSHIP)).toHaveLength(1);
+    });
+
+    it('can be declined, since ownership is narrative', async () => {
+      const campaignId = await newCampaign();
+      const { characterId } = await createCharacter(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        draft: draft(),
+        grantCommandVehicle: false,
+      });
+
+      const assets = project(await readEvents(db.sql, campaignId)).characters[characterId]?.assets;
+      expect(assets).not.toContain(STARSHIP);
+      expect(assets).toHaveLength(3);
+    });
+
+    it('rejects a deed in a slot (D-89)', async () => {
+      const campaignId = await newCampaign();
+      await expect(
+        createCharacter(db.sql, {
+          campaignId,
+          commandId: newId<CommandId>(),
+          actor: PLAYER,
+          draft: draft({ assets: [...byCategory('path', 2), ...byCategory('deed', 1)] }),
+        }),
+      ).rejects.toThrow(/cannot be chosen at creation/);
+    });
   });
 });

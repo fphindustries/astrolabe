@@ -14,8 +14,14 @@ import {
   type CharacterDraft,
 } from './creation.js';
 
-/** The first three assets the real ruleset ships, so the tests use real ids. */
-const REAL_ASSETS = STARFORGED.assets.slice(0, 3).map((asset) => asset.id);
+const byCategory = (category: string, n: number) =>
+  STARFORGED.assets
+    .filter((a) => a.categoryId === category)
+    .slice(0, n)
+    .map((a) => a.id);
+
+/** A legal set under D-89: two paths and one companion. */
+const REAL_ASSETS = [...byCategory('path', 2), ...byCategory('companion', 1)];
 
 function draft(overrides: Partial<CharacterDraft> = {}): CharacterDraft {
   return {
@@ -110,7 +116,7 @@ describe('validateCharacterDraft', () => {
   it('rejects the same asset chosen twice', () => {
     const first = REAL_ASSETS[0] as AssetId;
     const problems = validateCharacterDraft(draft({ assets: [first, first] }), STARFORGED);
-    expect(problems.map((p) => p.code)).toEqual(['duplicate_asset']);
+    expect(problems.map((p) => p.code)).toContain('duplicate_asset');
   });
 
   it('accepts a draft with no assets yet', () => {
@@ -141,5 +147,65 @@ describe('validateCharacterDraft', () => {
   it('names the field each problem belongs to', () => {
     const problems = validateCharacterDraft(draft({ name: '' }), STARFORGED);
     expect(problems[0]?.field).toBe('name');
+  });
+});
+
+describe('the asset slots (D-89)', () => {
+  const paths = byCategory('path', 4);
+  const companion = byCategory('companion', 1);
+  const module_ = byCategory('module', 1);
+  const deed = byCategory('deed', 1);
+  const starship = byCategory('command_vehicle', 1);
+
+  it('accepts two paths and a companion', () => {
+    expect(
+      validateCharacterDraft(draft({ assets: [...paths.slice(0, 2), ...companion] }), STARFORGED),
+    ).toEqual([]);
+  });
+
+  it('accepts two paths and a module', () => {
+    expect(
+      validateCharacterDraft(draft({ assets: [...paths.slice(0, 2), ...module_] }), STARFORGED),
+    ).toEqual([]);
+  });
+
+  it('accepts three paths: the final slot may be another path', () => {
+    expect(validateCharacterDraft(draft({ assets: paths.slice(0, 3) }), STARFORGED)).toEqual([]);
+  });
+
+  it('rejects a fourth asset', () => {
+    const problems = validateCharacterDraft(draft({ assets: paths.slice(0, 4) }), STARFORGED);
+    expect(problems.map((p) => p.code)).toContain('too_many_assets');
+  });
+
+  it('rejects a complete set with only one path', () => {
+    const problems = validateCharacterDraft(
+      draft({ assets: [...paths.slice(0, 1), ...companion, ...module_] }),
+      STARFORGED,
+    );
+    expect(problems.map((p) => p.code)).toContain('too_few_paths');
+  });
+
+  it('rejects a deed outright', () => {
+    const problems = validateCharacterDraft(
+      draft({ assets: [...paths.slice(0, 2), ...deed] }),
+      STARFORGED,
+    );
+    expect(problems.map((p) => p.code)).toContain('forbidden_category');
+  });
+
+  it('does not count the granted starship against the slots', () => {
+    // Ownership is narrative; the asset occupies no slot either way.
+    expect(
+      validateCharacterDraft(
+        draft({ assets: [...paths.slice(0, 2), ...companion, ...starship] }),
+        STARFORGED,
+      ),
+    ).toEqual([]);
+  });
+
+  it('leaves a half-filled draft alone', () => {
+    // In progress, not wrong: the slot counts only judge a complete set.
+    expect(validateCharacterDraft(draft({ assets: paths.slice(0, 1) }), STARFORGED)).toEqual([]);
   });
 });

@@ -66,6 +66,7 @@ describe('collectAttributionEntries, against the real Starforged data', () => {
       ],
       oracles: [],
       assets: [],
+      assetCategories: [],
       gameRules: { conditionMeters: [], impacts: [], specialTracks: [] },
     };
     const result = collectAttributionEntries(fixture);

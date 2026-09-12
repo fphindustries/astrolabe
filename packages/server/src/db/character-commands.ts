@@ -1,6 +1,7 @@
 import {
   STARFORGED,
   STARTING_MOMENTUM,
+  grantedAssets,
   startingMeters,
   validateCharacterDraft,
   type CharacterDraft,
@@ -44,6 +45,13 @@ export interface CreateCharacterRequest {
    * vow in play.
    */
   readonly backgroundVow?: { readonly title: string; readonly rank: string };
+  /**
+   * D-89: the starship is a default asset and occupies no slot. Set false
+   * for a character the fiction says has no ship of their own — ownership
+   * is narrative and changes nothing mechanically, so this only affects
+   * whether the asset appears on their sheet.
+   */
+  readonly grantCommandVehicle?: boolean;
 }
 
 export interface CreatedCharacter {
@@ -68,6 +76,8 @@ export async function createCharacter(
     throw new CharacterRejectedError(problems);
   }
 
+  const granted = request.grantCommandVehicle === false ? [] : grantedAssets(STARFORGED);
+
   const state = project(await readEvents(sql, request.campaignId));
   const sessionId: SessionId | null = state.session?.id ?? null;
   const characterId = uuidv7() as CharacterId;
@@ -85,7 +95,10 @@ export async function createCharacter(
         // read rules content.
         meters: startingMeters(STARFORGED.gameRules),
         momentum: STARTING_MOMENTUM,
-        assets: request.draft.assets,
+        // The chosen slots plus anything granted outright (D-89). Granted
+        // assets are deduplicated against the draft, so a client that sends
+        // the starship back with the rest of the sheet is not penalised.
+        assets: [...new Set([...request.draft.assets, ...granted])],
       },
       sessionId,
       subjectCharacterId: characterId,

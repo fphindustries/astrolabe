@@ -1,6 +1,12 @@
 import type { Datasworn } from '@datasworn/core';
 
-import type { Asset, AssetAbility } from '../schema/assets.js';
+import type {
+  Asset,
+  AssetAbility,
+  AssetAttachments,
+  AssetCategory,
+  AssetCategoryId,
+} from '../schema/assets.js';
 import type { MoveId } from '../schema/ids.js';
 
 import { assetIdFromSource, moveIdFromSource } from './id-mapping.js';
@@ -25,17 +31,73 @@ interface RawAssetAbility {
   readonly enhance_moves?: readonly RawEnhanceMoves[];
 }
 
+interface RawAssetAttachments {
+  readonly max?: number | null;
+  readonly assets?: readonly string[];
+}
+
 interface RawAsset {
   readonly _id: string;
   readonly name: string;
   readonly category: string;
   readonly count_as_impact: boolean;
+  readonly shared?: boolean;
+  readonly requirement?: string;
+  readonly attachments?: RawAssetAttachments;
   readonly abilities: readonly RawAssetAbility[];
   readonly _source: Datasworn.SourceInfo;
 }
 
 interface RawAssetCollection {
+  readonly _id: string;
+  readonly name: string;
+  readonly description?: string;
   readonly contents?: Record<string, RawAsset>;
+  readonly _source: Datasworn.SourceInfo;
+}
+
+/**
+ * The six categories the Starforged data actually ships. Checked rather
+ * than cast: a new collection in a future Datasworn version should fail the
+ * import loudly, because D-89's creation rules are keyed to these.
+ */
+const ASSET_CATEGORY_IDS = new Set<string>([
+  'path',
+  'companion',
+  'deed',
+  'module',
+  'support_vehicle',
+  'command_vehicle',
+]);
+
+function requireCategoryId(key: string): AssetCategoryId {
+  if (!ASSET_CATEGORY_IDS.has(key)) {
+    throw new Error(`Unknown asset category "${key}"`);
+  }
+  return key as AssetCategoryId;
+}
+
+/**
+ * Attachment patterns name a collection by wildcard path — the Starship's
+ * selects every asset under `assets/module`. Only the category matters to
+ * us, so the pattern is reduced to the category ids it selects.
+ */
+function mapAttachments(raw: RawAssetAttachments | undefined): AssetAttachments | undefined {
+  if (raw === undefined) {
+    return undefined;
+  }
+  const categories: AssetCategoryId[] = [];
+  for (const pattern of raw.assets ?? []) {
+    for (const key of ASSET_CATEGORY_IDS) {
+      if (pattern.includes(`/assets/${key}/`)) {
+        categories.push(key as AssetCategoryId);
+      }
+    }
+  }
+  return {
+    ...(raw.max !== null && raw.max !== undefined ? { max: raw.max } : {}),
+    categories: [...new Set(categories)],
+  };
 }
 
 function requireAssetId(sourceId: string) {
@@ -93,24 +155,53 @@ function mapAssetAbility(raw: RawAssetAbility, allMoveSourceIds: readonly string
   };
 }
 
-function mapAsset(raw: RawAsset, version: string, allMoveSourceIds: readonly string[]): Asset {
+function mapAsset(
+  raw: RawAsset,
+  categoryId: AssetCategoryId,
+  version: string,
+  allMoveSourceIds: readonly string[],
+): Asset {
+  const attachments = mapAttachments(raw.attachments);
   return {
     id: requireAssetId(raw._id),
+    categoryId,
     category: raw.category,
     name: raw.name,
     countAsImpact: raw.count_as_impact,
+    ...(raw.requirement !== undefined ? { requirement: rewriteLinks(raw.requirement) } : {}),
+    shared: raw.shared ?? false,
+    ...(attachments !== undefined ? { attachments } : {}),
     abilities: raw.abilities.map((ability) => mapAssetAbility(ability, allMoveSourceIds)),
     source: mapProvenance(raw._id, version, raw._source),
   };
 }
 
+/**
+ * The collection itself, imported as an entity. Its description carries
+ * rules that exist nowhere else in the data — see AssetCategory.
+ */
+export function mapAssetCategory(
+  key: string,
+  raw: RawAssetCollection,
+  version: string,
+): AssetCategory {
+  return {
+    id: requireCategoryId(key),
+    name: raw.name,
+    description: rewriteLinks(raw.description ?? ''),
+    source: mapProvenance(raw._id, version, raw._source),
+  };
+}
+
 export function mapAssetCollection(
+  key: string,
   raw: RawAssetCollection,
   version: string,
   allMoveSourceIds: readonly string[],
 ): readonly Asset[] {
+  const categoryId = requireCategoryId(key);
   return Object.values(raw.contents ?? {}).map((asset) =>
-    mapAsset(asset, version, allMoveSourceIds),
+    mapAsset(asset, categoryId, version, allMoveSourceIds),
   );
 }
 
@@ -124,7 +215,14 @@ export function mapAssets(
   version: string,
   allMoveSourceIds: readonly string[],
 ): readonly Asset[] {
-  return Object.values(raw).flatMap((collection) =>
-    mapAssetCollection(collection, version, allMoveSourceIds),
+  return Object.entries(raw).flatMap(([key, collection]) =>
+    mapAssetCollection(key, collection, version, allMoveSourceIds),
   );
+}
+
+export function mapAssetCategories(
+  raw: Record<string, RawAssetCollection>,
+  version: string,
+): readonly AssetCategory[] {
+  return Object.entries(raw).map(([key, collection]) => mapAssetCategory(key, collection, version));
 }
