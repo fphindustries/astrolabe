@@ -76,7 +76,7 @@ narrative log is a second read model with its own paged query.
 - [x] 2.3 Append-only event writer with actor and timestamp: per-campaign sequence, idempotent commands, server-assigned causality
 - [x] 2.4b Narrative log read model and its paged query
 - [x] 2.5 Void-and-redo: cascade over causation, referential containment, reproject, keep it visible (D-83, D-84)
-- [ ] 2.6 Manual override and narration-correction events, distinguishable from automated changes
+- [x] 2.6 Manual override and narration-correction events, distinguishable from automated changes
 - [ ] 2.7 CLI harness that plays a scripted sequence and prints projected state
 
 ### 3. Character creation

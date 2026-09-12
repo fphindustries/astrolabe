@@ -19,3 +19,14 @@ export {
 export { uuidv7 } from './uuid.js';
 export { readNarrativeEvents } from './event-store.js';
 export { previewVoid, voidEvent, VoidRefusedError, type VoidRequest } from './void-command.js';
+export {
+  overrideState,
+  requestNarrationCorrection,
+  reviseNarration,
+  AmendRefusedError,
+  type AmendRefusalReason,
+  type CorrectionRequest,
+  type OverrideRequest,
+  type OverrideTarget,
+  type RevisionRequest,
+} from './amend-commands.js';
