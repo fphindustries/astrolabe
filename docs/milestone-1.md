@@ -150,3 +150,181 @@ Issue-sized. Each task should land in one sitting and leave the build working.
 - [ ] 10.3 Keyboard navigation and focus states
 - [ ] 10.4 Golden session as an automated end-to-end test with a stubbed AI provider, a seeded RNG, and the session-1 fixture event log (D-72)
 - [ ] 10.5 Docker Compose packaging for the Linux home server
+
+---
+
+## Implementation notes (section 1, `rules` package)
+
+Section 1 (tasks 1.1–1.10) is done: 199 tests, all passing, across the schema,
+the Datasworn adapter, dice, outcome resolution, momentum, move automation,
+relevance, and attribution. This section records what the rest of the
+milestone needs to know about how it's built — not a restatement of the code,
+which speaks for itself, but the decisions and conventions that weren't
+visible from the task list alone.
+
+### Deviations from the task list
+
+No task was skipped, reordered, or expanded beyond its own line. Three things
+grew the schema past what task 1.2 originally anticipated, each forced by
+something task 1.3 or later found in the real data rather than chosen upfront:
+
+- **`RollOption` gained three variants** (`asset_control`, `custom`,
+  `legacy_track`) after enumerating every `using` value Datasworn's move
+  triggers actually use — task 1.2's original union only covered `stat`,
+  `condition_meter`, and `progress_track`. Without the extra variants the
+  adapter would have had to drop trigger data for 20+ moves outside the
+  golden session's set.
+- **`Provenance` gained a `url` field** during task 1.10 — the adapter was
+  discarding Datasworn's source URL, and a real attribution needs to link to
+  the source, not just name it.
+- **`RawActionRoll`/`RawProgressRoll` were split out of `ActionRollResult`/
+  `ProgressRollResult`** during task 1.4. Task 1.2's original types bundled
+  `tier`/`isMatch` in as required fields, which doesn't work once dice (1.4)
+  and outcome resolution (1.5) are separate steps that don't share a
+  constructor — 1.4 now produces the Raw* types, and 1.5's `resolveActionRoll`
+  /`resolveProgressRoll` complete them.
+
+Within task 1.7's already-narrowed move set (D-59), three further
+simplifications surfaced while writing the specs against the real move text.
+Each is now D-80–D-82 in the design record: Face Danger's weak-hit suffer
+move is left for the player to pick rather than auto-chained (the text
+doesn't say which suffer move applies); Endure Harm's miss-branch
+health-already-zero compounding requirement is deferred; and Ask the
+Oracle's "pick two" is folded into its five odds-tier options rather than
+modelled as its own flow. D-78 and D-79 record two gaps D-74's momentum
+formula left open (the fixed −6 floor, and flooring the impact-reduced
+maximum/reset at 0) that the code needed an answer to before it could be
+written.
+
+### Schema shape (`packages/rules/src/schema/`)
+
+The schema is two layers, and the split is load-bearing, not stylistic:
+Datasworn ships move and oracle **text**, never structured effects — there is
+no `{ momentum: +1 }` anywhere in the data, and a chain like Pay the Price's
+"You are harmed" leading to Endure Harm exists only in prose. So:
+
+- **The imported layer** (`moves.ts`, `oracles.ts`, `assets.ts`,
+  `game-rules.ts`) is a faithful, verbatim projection of Datasworn. Outcome
+  text is typed but never parsed for meaning.
+- **The automation layer** (`automation.ts`) is hand-authored, keyed to
+  Astrolabe's own IDs, entirely separate from the imported layer. Every
+  effect it declares carries the exact clause of imported text it implements
+  (`TracedEffect.clause`), checked against the real text by
+  `isVerbatimClause` (`traceability.ts`) — this is what makes "every
+  automated rule behaviour is traceable" a build check instead of a
+  convention nobody enforces.
+
+IDs are Astrolabe's own (`move:`, `oracle:`, `asset:`, `impact:` prefixes),
+minted by the adapter rather than borrowed from Datasworn, so a Datasworn
+version bump only touches the adapter's mapping (D-21, D-63). Two things
+verified before choosing the ID shape: move slugs collide across categories
+(`face_danger` exists under both `adventure` and `scene_challenge`, so the
+category segment stays in the ID), and oracle leaf names collide far more
+(`feature` alone appears 29 times, so the full collection path stays).
+
+Campaign-scoped instances — a character, a track — are **not** rule content
+and get opaque branded IDs (`CharacterId`, `TrackId`) instead of the `move:`/
+`oracle:` scheme; the event log (section 2) is what actually issues them.
+
+Dice, outcomes, and momentum are three separate modules on purpose:
+`dice/` only ever returns a `RawActionRoll`/`RawProgressRoll` (the numbers,
+nothing about what they mean); `outcomes/resolveTier` turns a score and two
+challenge dice into a tier, shared by both roll types; `momentum/` reuses
+`resolveTier` a second time, speculatively, to compute whether burning would
+help. `automation/resolveActionMove` is the one place that composes all
+three plus a `MoveAutomation` spec into a single result.
+
+### Datasworn adapter (`packages/rules/src/adapter/`, `scripts/generate-datasworn.ts`)
+
+The adapter runs as a **build step**, not at runtime. `scripts/
+generate-datasworn.ts` is the only file in the `rules` package allowed to
+touch the filesystem — it reads the real `@datasworn/starforged` package,
+runs it through the pure `adaptStarforged` function, and writes the result to
+`src/generated/starforged.json`, which is **committed to git** and loaded by
+`src/generated/index.ts` via a plain JSON import
+(`import data from './starforged.json' with { type: 'json' }`). That import
+form was verified to work identically under `tsc`/`tsx` (Node) and under
+Vite (the `web` package's bundler) before it was chosen over a hand-written
+`fs` reader — the reader would have broken the moment `web` tried to import
+`@astrolabe/rules` into a browser bundle.
+
+**Regenerating**: `npm run generate --workspace @astrolabe/rules`, then
+review the JSON diff like any other generated-but-committed artifact (a
+migration, a lockfile). Regenerate deliberately — on a Datasworn version
+bump, or an adapter change — never as part of the normal build.
+
+Three things the real 0.0.10 data didn't behave the way the schema initially
+assumed, worth knowing before anyone touches the adapter again:
+
+- **`@datasworn/core`'s own type for oracle leaves omits `column_text`**,
+  even though 66 real tables use it. The adapter declares its own minimal
+  raw shape for oracle leaves rather than fighting the upstream gap.
+- **A markdown link can target a whole oracle collection**, not just a leaf
+  table (about a fifth of the links in the data), spelled two ways
+  (`starforged/collections/oracles/...` or with "collections" dropped).
+  Astrolabe doesn't model collections as addressable entities yet, so these
+  resolve to an ID nothing in the imported set answers to — a known,
+  tested gap (`index.test.ts`), not a bug.
+- **Three links in the Faction Name template point at oracle tables that
+  don't exist under any spelling** — a genuine upstream Datasworn defect,
+  not an adapter bug. `index.test.ts` asserts this exact, named set, so a
+  future Datasworn version either fixing it or adding a new broken link
+  shows up as a test change.
+
+### Library and tooling choices
+
+- **Zero runtime dependencies in `rules`**, as planned. `@datasworn/core` and
+  `@datasworn/starforged` are devDependencies only — consumed by the
+  build-time adapter, never imported by anything that ships.
+- **Seeded dice use mulberry32** (`dice/rng.ts`), a ~10-line PRNG written
+  in-repo rather than a dependency — `crypto` isn't seedable, and this is
+  game dice, not security. `eslint.config.js` still bans `Math.random` and
+  node built-ins inside `packages/rules/src/**`, so nothing can quietly
+  reintroduce non-seedable entropy.
+- **ESM throughout, with `.js` extensions on relative imports** (required by
+  `NodeNext` module resolution) even though the source files are `.ts`.
+  `verbatimModuleSyntax` is on, so a type-only import must say
+  `import type { … }` — mixing a type and a value from the same module needs
+  two import statements or an inline `type` modifier.
+- **`resolveJsonModule` plus import attributes** (`with { type: 'json' }`)
+  is how the frozen Datasworn artifact loads — see the adapter section
+  above. Any future package that needs to import a static JSON asset can
+  use the same pattern.
+
+### Conventions the rest of the milestone should follow
+
+- **Import `@astrolabe/rules`'s public surface, not its internal modules.**
+  `STARFORGED` (the whole adapted ruleset), `ATTRIBUTION` (precomputed
+  attribution content), and every schema type and resolver function are
+  exported from the package root. Tests reach into `adapter/`, `dice/`, etc.
+  directly by relative path; application code (`server`, `web`) shouldn't
+  need to.
+- **`RandomSource` is the only source of entropy dice will accept.** The
+  golden-session test and all of section 1's own tests use
+  `createSeededRandomSource`; the server (task 7.x onward) needs its own
+  non-seeded implementation of the same one-method interface for real play.
+- **`EffectTarget` ('actor' | 'aided_ally') is resolved by
+  `resolveEffectTarget`, not by the caller inspecting `MoveInvocation`
+  directly.** Aid Your Ally is a flag (`aidingAllyId`) on the invocation, not
+  its own move (D-62) — `resolveEffectTarget` is what turns "this effect
+  targets 'actor'" plus "the actor is aiding someone" plus "this was a hit"
+  into a concrete `CharacterId`. Whoever builds the move-resolution endpoint
+  (task 6.x) should call it rather than re-deriving the redirect rule.
+- **A move's `preRoll` is read directly off its `MoveAutomation`, not
+  returned by `resolveActionMove`.** Endure Harm's harm-intake step precedes
+  and is independent of whether a roll even happens, so it isn't
+  round-tripped through the roll resolver's return value.
+- **Any new `MoveAutomation` spec (Milestone 2's combat, or extending
+  Milestone 1's Reference-level moves later) must give every effect a
+  `clause` that is a verbatim substring of the move text it implements.**
+  `traceability.test.ts` checks this for every spec in
+  `MOVE_AUTOMATION_SPECS`; a new spec file needs to be added to that map to
+  be covered, and the test will fail loudly if a clause doesn't match —
+  that's the mechanism working as intended, not a bug to work around.
+- **Tests in `rules` run against the real `@datasworn/starforged` package
+  and the real generated `STARFORGED` artifact wherever feasible, not
+  hand-rolled fixtures.** This caught real issues during section 1 (the
+  `column_text` type gap, the three broken Faction Name links, oracle rows
+  with no rollable range) that a fixture would have hidden. Later packages'
+  tests should default to the same habit where a real dependency is
+  available rather than reaching for a mock first.

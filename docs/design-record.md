@@ -105,6 +105,11 @@ The AI Guide has three jobs: **narrate** (give player decisions narrative depth)
 | D-75 | Each AI call appends an event carrying its input and output token counts. The session token counter is a projection over those events, so it survives reload and resumption. | 9 | Approved |
 | D-76 | D-23 confirmed: combat moves are Guided and ship in Milestone 2; Reference in Milestone 1. | 9 | Approved |
 | D-77 | D-30 confirmed: characters are created before the session, on each player's own time. | 9 | Approved |
+| D-78 | Momentum's fixed floor is −6, unaffected by marked impacts. Only the maximum (10 minus impacts) and the burn-reset value (2 minus impacts) are impact-reduced, per D-74. | 10 | Approved |
+| D-79 | Momentum's impact-reduced maximum and reset value are floored at 0 rather than going negative, completing D-74's formula for the case D-74 didn't specify. | 10 | Approved |
+| D-80 | Face Danger's weak-hit "make a suffer move (-1)" is not auto-chained to a specific suffer move — the text doesn't say which, and choosing between Endure Harm and Endure Stress is a fictional judgment the authority model already gives the player. | 10 | Approved |
+| D-81 | Endure Harm's miss-branch compounding requirement (if health is already 0, also mark wounded or permanently harmed, or roll the oracle) is deferred past Milestone 1. Endure Harm's automation covers the common case; this rare compounding state waits for impact-marking to exist. | 10 | Approved |
+| D-82 | Ask the Oracle's "pick two" is folded into the same five odds-tier options as "ask a yes/no question," rather than modelled as its own two-envisioned-options flow — mechanically it is the same "rate one likely and roll" action once the two options are stated. | 10 | Approved |
 
 ---
 
