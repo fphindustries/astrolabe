@@ -17,7 +17,11 @@ export interface DbOptions {
 export function createDb(url: string, options: DbOptions = {}): Sql {
   return postgres(url, {
     max: options.max ?? 5,
-    ...(options.debug === true ? { debug: console.log } : {}),
+    // Postgres emits a NOTICE for every `if not exists` that finds the
+    // object already there, which means one on every migration run. None of
+    // them are actionable, and printing them trains people to ignore the
+    // output. `debug` puts them back.
+    ...(options.debug === true ? { debug: console.log } : { onnotice: () => {} }),
   });
 }
 

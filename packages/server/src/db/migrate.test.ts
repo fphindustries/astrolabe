@@ -39,6 +39,8 @@ describe('migration list', () => {
   });
 });
 
+const OTHER_CAMPAIGN = '12121212-1212-4121-8121-121212121212';
+
 describe.skipIf(!hasTestDatabase)('the event log schema', () => {
   let db: TestDatabase;
 
@@ -62,14 +64,21 @@ describe.skipIf(!hasTestDatabase)('the event log schema', () => {
     `;
   }
 
-  async function insertEvent(seq: number) {
-    await insertCommand(seq);
+  /**
+   * `unique` names the command and event ids independently of `seq`, so a
+   * test can collide on exactly one constraint at a time. Without it, a
+   * second insert at the same seq would fail on the *commands* primary key
+   * before ever reaching the events table — passing, but for the wrong
+   * reason.
+   */
+  async function insertEvent(seq: number, unique: number = seq) {
+    await insertCommand(unique);
     await db.sql`
       insert into events (
         campaign_id, seq, id, command_id, caused_by, session_id, scene_id,
         actor, subject_character_id, type, version, visibility, payload, occurred_at
       ) values (
-        ${CAMPAIGN_ID}, ${seq}, ${testEventId(seq)}, ${testCommandId(seq)}, null,
+        ${CAMPAIGN_ID}, ${seq}, ${testEventId(unique)}, ${testCommandId(unique)}, null,
         ${SESSION_ID}, null, ${db.sql.json({ kind: 'system' })}, null,
         'session.began', 1, 'table',
         ${db.sql.json({ sessionId: SESSION_ID, number: 2 })},
@@ -158,11 +167,52 @@ describe.skipIf(!hasTestDatabase)('the event log schema', () => {
 
   describe('constraints', () => {
     it('rejects a second event at the same campaign and seq', async () => {
-      await expect(insertEvent(1)).rejects.toThrow();
+      // A distinct command and event id, so the only thing colliding is the
+      // (campaign_id, seq) primary key the sequence depends on.
+      await expect(insertEvent(1, 201)).rejects.toThrow(/events_pkey/);
+    });
+
+    it('rejects two events sharing an id across campaigns', async () => {
+      await db.sql`insert into campaigns (id, name) values (${OTHER_CAMPAIGN}, 'Other')`;
+      await db.sql`
+        insert into commands (campaign_id, id, kind, actor, first_seq, last_seq, response)
+        values (${OTHER_CAMPAIGN}, ${testCommandId(202)}, 'x',
+                ${db.sql.json({ kind: 'system' })}, 1, 1, ${db.sql.json({})})
+      `;
+      // events.id is globally unique, not per-campaign: an event id is a
+      // uuid v7 and identifies one event anywhere.
+      await expect(
+        db.sql`
+          insert into events (
+            campaign_id, seq, id, command_id, caused_by, session_id, scene_id,
+            actor, subject_character_id, type, version, visibility, payload, occurred_at
+          ) values (
+            ${OTHER_CAMPAIGN}, 1, ${testEventId(1)}, ${testCommandId(202)}, null,
+            null, null, ${db.sql.json({ kind: 'system' })}, null,
+            'session.began', 1, 'table', ${db.sql.json({})}, now()
+          )
+        `,
+      ).rejects.toThrow(/events_id_key/);
     });
 
     it('rejects a seq below 1', async () => {
-      await expect(insertEvent(0)).rejects.toThrow();
+      await expect(insertEvent(0, 203)).rejects.toThrow(/events_seq_positive/);
+    });
+
+    it('rejects a version below 1', async () => {
+      await insertCommand(204);
+      await expect(
+        db.sql`
+          insert into events (
+            campaign_id, seq, id, command_id, caused_by, session_id, scene_id,
+            actor, subject_character_id, type, version, visibility, payload, occurred_at
+          ) values (
+            ${CAMPAIGN_ID}, 204, ${testEventId(204)}, ${testCommandId(204)}, null,
+            null, null, ${db.sql.json({ kind: 'system' })}, null,
+            'session.began', 0, 'table', ${db.sql.json({})}, now()
+          )
+        `,
+      ).rejects.toThrow(/events_version_positive/);
     });
 
     it('rejects an event whose campaign does not exist', async () => {

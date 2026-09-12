@@ -45,7 +45,7 @@ export async function createTestDatabase(label: string): Promise<TestDatabase> {
   const schema = `test_${sanitise(label)}_${process.pid}_${schemaCounter}`;
 
   // A first connection with no search_path, only to create the schema.
-  const admin = postgres(TEST_DATABASE_URL as string, { max: 1 });
+  const admin = postgres(TEST_DATABASE_URL as string, { max: 1, onnotice: () => {} });
   try {
     await admin.unsafe(`create schema "${schema}"`);
   } finally {
@@ -55,6 +55,7 @@ export async function createTestDatabase(label: string): Promise<TestDatabase> {
   const sql = postgres(TEST_DATABASE_URL as string, {
     max: 2,
     connection: { search_path: schema },
+    onnotice: () => {},
   });
   await migrate(sql);
 
@@ -63,7 +64,7 @@ export async function createTestDatabase(label: string): Promise<TestDatabase> {
     schema,
     async close() {
       await sql.end();
-      const cleanup = postgres(TEST_DATABASE_URL as string, { max: 1 });
+      const cleanup = postgres(TEST_DATABASE_URL as string, { max: 1, onnotice: () => {} });
       try {
         // DROP does not fire the row-level or truncate guards on `events`;
         // those reject mutation of the data, not removal of the table.
