@@ -18,3 +18,4 @@ export {
 } from './event-store.js';
 export { uuidv7 } from './uuid.js';
 export { readNarrativeEvents } from './event-store.js';
+export { previewVoid, voidEvent, VoidRefusedError, type VoidRequest } from './void-command.js';

@@ -93,15 +93,22 @@ export function character(id: CharacterId, name: string, momentum: number) {
  * survivor NPC Beat 6 establishes.
  */
 export function goldenSessionPrelude(): LogBuilder {
+  // Campaign setup happens before session 1, so those events carry no
+  // session id — which is also what makes them unreachable by a void (D-84).
+  const setup = { sessionId: null, sceneId: null } as const;
   return log()
-    .add('campaign.created', {
-      name: 'Lantern Wake',
-      settings: { narrationLatitude: 'color', narrationLength: 'standard', rerollCap: 2 },
-    })
-    .add('character.created', character(VESNA, 'Vesna Kade', 7))
-    .add('character.created', character(ROOK, 'Rook Ilari', 2))
-    .add('character.created', character(JUNO, 'Juno Marr', 3))
-    .add('session.began', { sessionId: SESSION_ID, number: 2 })
+    .add(
+      'campaign.created',
+      {
+        name: 'Lantern Wake',
+        settings: { narrationLatitude: 'color', narrationLength: 'standard', rerollCap: 2 },
+      },
+      setup,
+    )
+    .add('character.created', character(VESNA, 'Vesna Kade', 7), setup)
+    .add('character.created', character(ROOK, 'Rook Ilari', 2), setup)
+    .add('character.created', character(JUNO, 'Juno Marr', 3), setup)
+    .add('session.began', { sessionId: SESSION_ID, number: 2 }, { sceneId: null })
     .add('scene.started', { sceneId: SCENE_ID, title: 'The relay station', locationId: STATION })
     .add('track.created', {
       kind: 'vow',

@@ -12,3 +12,4 @@ export * from './state.js';
 export * from './void-state.js';
 export { project, applyEvent, canApplyIncrementally } from './project.js';
 export * from './narrative-log.js';
+export * from './cascade.js';
