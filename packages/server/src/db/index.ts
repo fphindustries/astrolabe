@@ -17,3 +17,4 @@ export {
   type NewEvent,
 } from './event-store.js';
 export { uuidv7 } from './uuid.js';
+export { readNarrativeEvents } from './event-store.js';

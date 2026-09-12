@@ -3,9 +3,16 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CAMPAIGN_ID, JUNO, SESSION_ID, VESNA } from '@astrolabe/shared/test-fixtures';
 import { LOCAL_PLAYER_ID, type Actor, type CampaignId, type CommandId } from '@astrolabe/shared';
 
+import { buildNarrativeLog } from '../projection/narrative-log.js';
 import { project } from '../projection/project.js';
 
-import { appendCommand, readEvents, readEventsByCommand, type NewEvent } from './event-store.js';
+import {
+  appendCommand,
+  readEvents,
+  readEventsByCommand,
+  readNarrativeEvents,
+  type NewEvent,
+} from './event-store.js';
 import { createTestDatabase, hasTestDatabase, type TestDatabase } from './testing.js';
 import { uuidv7 } from './uuid.js';
 
@@ -433,6 +440,173 @@ describe.skipIf(!hasTestDatabase)('the event writer', () => {
       });
       expect(await readEvents(db.sql, a)).toHaveLength(1);
       expect(await readEvents(db.sql, b)).toHaveLength(2);
+    });
+  });
+
+  describe('the narrative log query', () => {
+    /** A session with three beats, the middle one voided. */
+    async function narratedCampaign() {
+      const id = await newCampaign();
+      await appendCommand(db.sql, {
+        campaignId: id,
+        commandId: commandId(),
+        kind: 'session.begin',
+        actor: PLAYER,
+        events: [beginSession],
+      });
+
+      const rolled = await appendCommand(db.sql, {
+        campaignId: id,
+        commandId: commandId(),
+        kind: 'move',
+        actor: PLAYER,
+        events: [
+          {
+            type: 'move.invoked',
+            payload: {
+              moveId: 'move:adventure/face_danger',
+              actorCharacterId: VESNA,
+              using: { using: 'stat', stat: 'edge' },
+              adds: [],
+            },
+            sessionId: SESSION_ID,
+          },
+          {
+            type: 'dice.rolled',
+            payload: {
+              kind: 'action',
+              actionDie: 6,
+              adds: [],
+              actionScore: 6,
+              challengeDice: [3, 4],
+              tier: 'strong_hit',
+              isMatch: false,
+              rng: { source: 'crypto' },
+            },
+            sessionId: SESSION_ID,
+            actor: { kind: 'system' },
+          },
+        ],
+      });
+
+      const narrated = await appendCommand(db.sql, {
+        campaignId: id,
+        commandId: commandId(),
+        kind: 'narrate',
+        actor: AI,
+        events: [
+          {
+            type: 'narration.written',
+            payload: { role: 'beat', text: 'Rook looks shaken.', groundedIn: [] },
+            sessionId: SESSION_ID,
+          },
+        ],
+      });
+
+      return { id, rolled, narrated };
+    }
+
+    it('returns only narrative types, in sequence order', async () => {
+      const { id } = await narratedCampaign();
+      const events = await readNarrativeEvents(db.sql, id, { sessionId: SESSION_ID });
+
+      expect(events.map((e) => e.seq)).toEqual([...events.map((e) => e.seq)].sort((a, b) => a - b));
+      expect(events.some((e) => e.type === 'ai.completed')).toBe(false);
+      expect(events.some((e) => e.type === 'dice.rolled')).toBe(true);
+    });
+
+    it('bounds by session', async () => {
+      const { id } = await narratedCampaign();
+      const other = '4c4c4c4c-4c4c-4c4c-8c4c-4c4c4c4c4c4c' as typeof SESSION_ID;
+      expect(await readNarrativeEvents(db.sql, id, { sessionId: other })).toHaveLength(0);
+    });
+
+    it('fetches amendments regardless of the page, so a strike-through is never lost', async () => {
+      // The void can sit far past the event it suppresses; bounding
+      // amendments to the page would silently drop the marking.
+      const { id, rolled } = await narratedCampaign();
+      const roll = rolled.events[1];
+      await appendCommand(db.sql, {
+        campaignId: id,
+        commandId: commandId(),
+        kind: 'void',
+        actor: PLAYER,
+        events: [
+          {
+            type: 'event.voided',
+            payload: {
+              targetEventId: roll?.id as never,
+              kind: 'player_void',
+              reason: 'wrong stat',
+              cascaded: [roll?.id as never],
+            },
+            sessionId: SESSION_ID,
+          },
+        ],
+      });
+
+      const events = await readNarrativeEvents(db.sql, id, { sessionId: SESSION_ID, limit: 1 });
+      expect(events.some((e) => e.type === 'event.voided')).toBe(true);
+    });
+
+    it('feeds the log builder end to end', async () => {
+      const { id, rolled, narrated } = await narratedCampaign();
+      const roll = rolled.events[1];
+      const passage = narrated.events[0];
+
+      await appendCommand(db.sql, {
+        campaignId: id,
+        commandId: commandId(),
+        kind: 'void',
+        actor: PLAYER,
+        events: [
+          {
+            type: 'event.voided',
+            payload: {
+              targetEventId: roll?.id as never,
+              kind: 'player_void',
+              reason: 'Rook is forcing the bulkhead, not slipping past it',
+              cascaded: [roll?.id as never],
+            },
+            sessionId: SESSION_ID,
+          },
+        ],
+      });
+      await appendCommand(db.sql, {
+        campaignId: id,
+        commandId: commandId(),
+        kind: 'correct',
+        actor: PLAYER,
+        events: [
+          {
+            type: 'narration.correction_requested',
+            payload: { targetEventId: passage?.id as never, note: 'A veteran, not rattled.' },
+            sessionId: SESSION_ID,
+          },
+          {
+            type: 'narration.revised',
+            payload: { targetEventId: passage?.id as never, text: 'Rook shrugs it off, annoyed.' },
+            sessionId: SESSION_ID,
+            actor: AI,
+          },
+        ],
+      });
+
+      const page = buildNarrativeLog(
+        await readNarrativeEvents(db.sql, id, { sessionId: SESSION_ID }),
+      );
+      const entries = page.beats.flatMap((b) => b.entries);
+
+      // The voided roll is still there, struck through with its reason.
+      const rollEntry = entries.find((e) => e.event.id === roll?.id);
+      expect(rollEntry?.voided).toBe(true);
+      expect(rollEntry?.voidedBy[0]?.reason).toMatch(/forcing the bulkhead/);
+
+      // The corrected passage reads as its revision, with both retained.
+      const passageEntry = entries.find((e) => e.event.id === passage?.id);
+      expect(passageEntry?.narration?.text).toBe('Rook shrugs it off, annoyed.');
+      expect(passageEntry?.narration?.original).toBe('Rook looks shaken.');
+      expect(passageEntry?.narration?.note).toMatch(/veteran/);
     });
   });
 

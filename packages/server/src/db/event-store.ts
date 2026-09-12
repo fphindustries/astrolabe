@@ -1,5 +1,6 @@
 import type { CharacterId } from '@astrolabe/rules';
 import {
+  NARRATIVE_EVENT_TYPES,
   currentVersion,
   decodeStoredEvent,
   parseEvent,
@@ -293,3 +294,66 @@ export async function readEventsByCommand(
   `;
   return rows.map(toEvent);
 }
+
+/**
+ * The events the narrative log needs for one session's page.
+ *
+ * Two queries rather than one, and the split is the design's:
+ *
+ * - The renderable events, bounded by session and by the cursor, newest
+ *   first so the limit takes the *most recent* page, then reversed into
+ *   reading order.
+ * - Every amendment in the campaign — voids, correction requests and
+ *   revisions. These are few, and a voided or corrected event can be paged
+ *   far away from the amendment that changed it, so bounding them to the
+ *   page would silently drop strike-throughs and corrections.
+ *
+ * The over-fetch is deliberate: `limit` counts events here, but the log
+ * pages by *beat*, and a beat can hold several events. Asking for more than
+ * the caller wants means the builder can drop a partial oldest beat rather
+ * than showing a roll with no invocation above it.
+ */
+export async function readNarrativeEvents(
+  sql: Sql,
+  campaignId: CampaignId,
+  options: { sessionId?: SessionId; before?: number; limit?: number } = {},
+): Promise<AstrolabeEvent[]> {
+  const limit = options.limit ?? 50;
+  const rows = await sql<EventRow[]>`
+    select ${sql.unsafe(EVENT_COLUMNS)} from events
+     where campaign_id = ${campaignId}
+       and type = any(${[...NARRATIVE_EVENT_TYPES]})
+       ${options.sessionId === undefined ? sql`` : sql`and session_id = ${options.sessionId}`}
+       ${options.before === undefined ? sql`` : sql`and seq < ${options.before}`}
+     order by seq desc
+     limit ${limit * EVENTS_PER_BEAT_ALLOWANCE}
+  `;
+
+  const amendments = await sql<EventRow[]>`
+    select ${sql.unsafe(EVENT_COLUMNS)} from events
+     where campaign_id = ${campaignId}
+       and type = any(${[...AMENDMENT_TYPES]})
+     order by seq
+  `;
+
+  const bySeq = new Map<number, AstrolabeEvent>();
+  for (const row of [...rows, ...amendments]) {
+    const event = toEvent(row);
+    bySeq.set(event.seq, event);
+  }
+  return [...bySeq.values()].sort((a, b) => a.seq - b.seq);
+}
+
+/**
+ * How many events a beat might hold. A move resolution writes an invocation,
+ * a roll and its effects; nothing in Milestone 1 writes more than a handful.
+ * Over-fetching by this factor keeps the paged builder from trimming a page
+ * down to nothing.
+ */
+const EVENTS_PER_BEAT_ALLOWANCE = 4;
+
+const AMENDMENT_TYPES = [
+  'event.voided',
+  'narration.revised',
+  'narration.correction_requested',
+] as const;

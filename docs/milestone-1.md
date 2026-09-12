@@ -74,7 +74,7 @@ narrative log is a second read model with its own paged query.
 - [x] 2.1 Postgres schema: campaigns, commands, events; migration runner; the INSERT-only trigger
 - [x] 2.4a State projection, pure: characters, scene, trackers, entities, canon — no I/O, plus the lint rule that keeps it that way
 - [x] 2.3 Append-only event writer with actor and timestamp: per-campaign sequence, idempotent commands, server-assigned causality
-- [ ] 2.4b Narrative log read model and its paged query
+- [x] 2.4b Narrative log read model and its paged query
 - [ ] 2.5 Void-and-redo: cascade over causation, referential containment, reproject, keep it visible (D-83, D-84)
 - [ ] 2.6 Manual override and narration-correction events, distinguishable from automated changes
 - [ ] 2.7 CLI harness that plays a scripted sequence and prints projected state
