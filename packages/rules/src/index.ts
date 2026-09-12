@@ -16,8 +16,13 @@
  * (src/generated/), exported below as STARFORGED: the whole Starforged
  * moves/oracles/assets/game-rules set, already mapped into the schema.
  *
+ * Task 1.4 is dice (src/dice/): a seedable RandomSource, the action,
+ * progress and oracle rolls built on it, and nothing about outcomes —
+ * dice produce a RawActionRoll/RawProgressRoll, not a tier. That's task
+ * 1.5, which turns a raw roll into the full ActionRollResult/
+ * ProgressRollResult by comparing the score against the challenge dice.
+ *
  * Still to come:
- *   1.4  dice, against an injected RandomSource
  *   1.5  outcome resolution
  *   1.6  momentum
  *   1.7  move automation for the moves the golden session exercises (D-59)
@@ -32,6 +37,8 @@ export * from './schema/game-rules.js';
 export * from './schema/automation.js';
 export * from './schema/dice.js';
 export * from './schema/traceability.js';
+
+export * from './dice/index.js';
 
 export type { AdaptedRuleset } from './adapter/index.js';
 export { STARFORGED } from './generated/index.js';

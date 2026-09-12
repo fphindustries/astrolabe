@@ -19,18 +19,33 @@ export interface RollAdjustment {
 }
 
 /**
- * The result of an action roll. Momentum burn (task 1.6, A8, Beat 5) is
- * deliberately absent from MoveAutomation: it is not an outcome effect, it
- * is a roll-time substitution evaluated before the tier is known — replace
- * the action score with current momentum, recompute the tier, then reset
- * momentum. So it lives on the roll result instead.
+ * What rolling the dice produces, before anyone has interpreted them.
+ * Task 1.4 stops here: dice know nothing about strong hit / weak hit /
+ * miss, and nothing about matches. That's task 1.5 (outcome resolution),
+ * which turns a RawActionRoll into the full ActionRollResult below by
+ * comparing actionScore against challengeDice.
  */
-export interface ActionRollResult {
+export interface RawActionRoll {
   readonly actionDie: number;
   readonly adds: readonly RollAdjustment[];
   /** Capped at 10. */
   readonly actionScore: number;
   readonly challengeDice: readonly [number, number];
+}
+
+export interface RawProgressRoll {
+  readonly progressScore: number;
+  readonly challengeDice: readonly [number, number];
+}
+
+/**
+ * The fully resolved result of an action roll. Momentum burn (task 1.6,
+ * A8, Beat 5) is deliberately absent from MoveAutomation: it is not an
+ * outcome effect, it is a roll-time substitution evaluated before the tier
+ * is known — replace the action score with current momentum, recompute the
+ * tier, then reset momentum. So it lives on the roll result instead.
+ */
+export interface ActionRollResult extends RawActionRoll {
   readonly tier: OutcomeTier;
   readonly isMatch: boolean;
   readonly burnOffer?: BurnOffer;
@@ -48,9 +63,7 @@ export interface BurnOffer {
   readonly resetsTo: number;
 }
 
-export interface ProgressRollResult {
-  readonly progressScore: number;
-  readonly challengeDice: readonly [number, number];
+export interface ProgressRollResult extends RawProgressRoll {
   readonly tier: OutcomeTier;
   readonly isMatch: boolean;
 }
