@@ -1,7 +1,7 @@
 import * as z from 'zod';
 
 import { EnvelopeFieldsSchema, type EnvelopeFields } from '../envelope.js';
-import type { DeepReadonly } from '../readonly.js';
+import type { DeepMutable, DeepReadonly } from '../readonly.js';
 
 import { AiCompletedSchema } from './ai.js';
 import { CampaignCreatedSchema } from './campaign.js';
@@ -115,6 +115,30 @@ type CatalogueIsComplete =
   Exclude<EventType, z.infer<typeof EventSchema>['type']> extends never ? true : false;
 const _CATALOGUE_IS_COMPLETE: CatalogueIsComplete = true;
 void _CATALOGUE_IS_COMPLETE;
+
+/**
+ * Compile-time proof that what `EventSchema` actually parses to is what
+ * `AstrolabeEvent` claims — in **both** directions, so neither a field the
+ * schema produces and the type omits, nor the reverse, can slip through.
+ *
+ * This is what makes the `as AstrolabeEvent` in `parseEvent` a statement of
+ * fact rather than an assumption. `EnvelopeFields` is hand-written while
+ * payloads are inferred, so the two halves could drift; and a schema that
+ * gained a `.transform()` or a `.default()` would change its output type
+ * without changing its input type, which is exactly the kind of change a
+ * cast would otherwise swallow.
+ *
+ * `DeepMutable` strips the `readonly` that `AstrolabeEvent` adds and
+ * `z.infer` does not. Mutability is the only difference the two are allowed
+ * to have.
+ */
+type SchemaOutput = z.infer<typeof EventSchema>;
+type DeclaredShape = DeepMutable<AstrolabeEvent>;
+const _SCHEMA_MATCHES_TYPE: [SchemaOutput, DeclaredShape] = [
+  null as unknown as DeclaredShape,
+  null as unknown as SchemaOutput,
+];
+void _SCHEMA_MATCHES_TYPE;
 
 /**
  * Validate an event. Used on write, always — a payload that does not

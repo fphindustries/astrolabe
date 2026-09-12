@@ -25,7 +25,22 @@ export interface EventTypeMeta<T extends EventType> {
   readonly narrative: boolean;
   /** Worth carrying into a recap of a past session (A1, D-72). */
   readonly significant: boolean;
-  /** Changes projected state, so voiding it changes numbers. */
+  /**
+   * Changes projected state, so voiding it changes numbers.
+   *
+   * **Unverified until the projector exists.** The projector is what
+   * defines the answer, so task 2.4a owes this flag a test: for every type,
+   * `mutatesState` should be true exactly when projecting a log with that
+   * event appended differs from projecting without it. Until then this is a
+   * claim, not a checked fact.
+   *
+   * One case to settle there rather than guess at now: `dice.rolled` is
+   * marked false, but a roll's `burnOffer` is what A8's momentum-burn offer
+   * reads, and `momentum.burned` points back at the roll. If `CampaignState`
+   * ends up carrying "the pending roll and its offer", a roll does mutate
+   * state and the flag is wrong — or that view belongs to the narrative log
+   * read model instead, and the flag stands.
+   */
   readonly mutatesState: boolean;
   /**
    * Exempt from void (D-85). Only token accounting is: the tokens were

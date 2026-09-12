@@ -1,7 +1,12 @@
 import type { CharacterId, TrackId } from '@astrolabe/rules';
 
 import type { EnvelopeFields } from './envelope.js';
-import type { AstrolabeEvent, EventType, PayloadFor } from './events/index.js';
+import {
+  EVENT_TYPES,
+  type AstrolabeEvent,
+  type EventType,
+  type PayloadFor,
+} from './events/index.js';
 import {
   LOCAL_PLAYER_ID,
   type CampaignId,
@@ -31,6 +36,7 @@ export const JUNO = '66666666-6666-4666-8666-666666666666' as CharacterId;
 export const VOW_TRACK = '77777777-7777-4777-8777-777777777777' as TrackId;
 export const CLOCK_TRACK = '88888888-8888-4888-8888-888888888888' as TrackId;
 export const SURVIVOR = '99999999-9999-4999-8999-999999999999' as EntityId;
+export const STATION = 'aaaa0000-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as EntityId;
 
 /** Deterministic ids, so a fixture log reads the same on every run. */
 export function testEventId(n: number): EventId {
@@ -104,3 +110,140 @@ export function rawEvent(type: string, payload: unknown, overrides: EventOverrid
 export const PLAYER_ACTOR = { kind: 'player', playerId: LOCAL_PLAYER_ID } as const;
 export const AI_ACTOR = { kind: 'ai' } as const;
 export const SYSTEM_ACTOR = { kind: 'system' } as const;
+
+/**
+ * One valid payload for every event type in the catalogue, drawn from the
+ * golden session wherever a beat supplies one.
+ *
+ * Typed as `{ [T in EventType]: PayloadFor<T> }` rather than loosely, so
+ * adding an event type fails the compile here until it has a sample — which
+ * is what lets tests assert properties across the *whole* catalogue instead
+ * of across whichever types someone remembered.
+ */
+export const SAMPLE_PAYLOADS: { [T in EventType]: PayloadFor<T> } = {
+  'campaign.created': {
+    name: 'The Lantern Wake',
+    settings: { narrationLatitude: 'color', narrationLength: 'standard', rerollCap: 2 },
+  },
+  'character.created': {
+    characterId: VESNA,
+    name: 'Vesna Kade',
+    callsign: 'Vesna',
+    stats: { edge: 3, heart: 2, iron: 1, shadow: 2, wits: 1 },
+    meters: {
+      health: { value: 5, min: 0, max: 5 },
+      spirit: { value: 5, min: 0, max: 5 },
+      supply: { value: 5, min: 0, max: 5 },
+    },
+    momentum: 7,
+    assets: ['asset:path/pilot'],
+  },
+  'session.began': { sessionId: SESSION_ID, number: 2 },
+  'session.ended': {
+    summary: 'The crew boarded the relay station and found it was not empty.',
+    openThreads: ["the survivor's intent", 'the failing power', 'where the recorder is'],
+  },
+  'scene.started': { sceneId: SCENE_ID, title: 'The relay station', locationId: STATION },
+  'move.invoked': {
+    moveId: 'move:adventure/face_danger',
+    actorCharacterId: ROOK,
+    using: { using: 'stat', stat: 'iron' },
+    adds: [{ amount: 2, label: 'iron' }],
+    actionText: 'Rook forces the sealed bulkhead.',
+  },
+  'dice.rolled': {
+    kind: 'action',
+    actionDie: 3,
+    adds: [{ amount: 2, label: 'iron' }],
+    actionScore: 5,
+    challengeDice: [8, 4],
+    tier: 'miss',
+    isMatch: false,
+    rng: { source: 'seeded', seed: 7 },
+  },
+  'momentum.burned': {
+    characterId: VESNA,
+    rollEventId: testEventId(5),
+    tierBefore: 'weak_hit',
+    tierAfter: 'strong_hit',
+  },
+  'state.changed': {
+    cause: {
+      kind: 'move_outcome',
+      moveId: 'move:adventure/gather_information',
+      tier: 'weak_hit',
+    },
+    changes: [
+      { delta: { kind: 'momentum', characterId: JUNO, delta: 1 }, clause: 'take +1 momentum' },
+    ],
+  },
+  'state.overridden': {
+    target: { kind: 'momentum', characterId: JUNO },
+    from: 3,
+    to: 4,
+    reason: 'a ruling from last session left this one too low',
+  },
+  'track.created': {
+    kind: 'clock',
+    trackId: CLOCK_TRACK,
+    title: 'Station power failing',
+    segments: 4,
+    cause: {
+      kind: 'ai_judgement',
+      reason: 'forcing the bulkhead tripped emergency load-shedding',
+    },
+  },
+  'track.advanced': {
+    trackId: CLOCK_TRACK,
+    ticks: 1,
+    cause: {
+      kind: 'ai_judgement',
+      reason: 'forcing the bulkhead tripped emergency load-shedding',
+    },
+  },
+  'entity.established': {
+    entityId: SURVIVOR,
+    kind: 'npc',
+    name: 'Sura Vance',
+    fields: { role: 'technician', disposition: 'wary' },
+    provenance: {
+      establishedBy: 'ai',
+      recipeId: 'recipe:npc',
+      groundedIn: [testEventId(11), testEventId(12)],
+    },
+  },
+  'narration.written': {
+    role: 'beat',
+    text: 'The bulkhead gives with a shriek of tortured metal.',
+    groundedIn: [],
+  },
+  'narration.correction_requested': {
+    targetEventId: testEventId(20),
+    note: 'Rook is a veteran — annoyed rather than rattled.',
+  },
+  'narration.revised': {
+    targetEventId: testEventId(20),
+    text: 'The bulkhead gives, and Rook shakes the sparks off his sleeve, annoyed.',
+  },
+  'event.voided': {
+    targetEventId: testEventId(4),
+    kind: 'player_void',
+    reason: 'Rook is forcing the bulkhead, not slipping past it',
+    cascaded: [testEventId(3), testEventId(4)],
+  },
+  'ai.completed': {
+    provider: 'anthropic',
+    model: 'claude-opus-5',
+    purpose: 'beat',
+    inputTokens: 1200,
+    outputTokens: 180,
+    latencyMs: 900,
+  },
+};
+
+/** Every sample as a complete, valid event, in catalogue order. */
+export function sampleEvents(): readonly AstrolabeEvent[] {
+  return EVENT_TYPES.map((type, index) =>
+    testEvent(type, SAMPLE_PAYLOADS[type], { seq: index + 1 }),
+  );
+}
