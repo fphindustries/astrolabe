@@ -1,0 +1,71 @@
+/**
+ * Design tokens (task 5.1, D-46, D-97).
+ *
+ * These are *structural* for now: names and plausible values, so the shell
+ * has something consistent to build against. The visual design pass
+ * (task 10.1) picks final values and the display typeface; the purpose-built
+ * meter/clock/track treatments are task 10.2. Nothing here is meant to look
+ * finished yet.
+ *
+ * Meaning is never carried by color alone (§10 NFRs). Every tone below is
+ * paired with a text label or a shape/glyph wherever it's used — an outcome
+ * is a word ("Weak hit"), AI provenance is a labelled badge, a manual
+ * override gets its own glyph — never a color swatch standing alone.
+ */
+:root {
+  color-scheme: dark;
+
+  /* Surfaces: dark, layered (D-46). */
+  --surface-0: #14120f;
+  --surface-1: #1c1a16;
+  --surface-2: #262319;
+  --surface-border: #3a352a;
+
+  /* Text. */
+  --text-primary: #ede7da;
+  --text-secondary: #b7ae9c;
+  --text-muted: #837a68;
+
+  /* One amber accent (D-46). */
+  --accent: #d68a2c;
+  --accent-strong: #f0a83f;
+  --accent-text: #1c1305;
+
+  /* Outcome tones — always paired with the outcome's name as text. */
+  --outcome-strong-hit: #4caf6d;
+  --outcome-weak-hit: #d68a2c;
+  --outcome-miss: #c1483f;
+
+  /* Provenance tones — always paired with a badge label (A10, A16). */
+  --provenance-ai: #6a8fd6;
+  --provenance-player: #b7ae9c;
+  --provenance-system: #837a68;
+  --provenance-override: #d6c02c;
+
+  /* Spacing scale. */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+
+  /* Type. System stacks until 10.1 picks a display face. */
+  --font-display: Georgia, 'Times New Roman', serif;
+  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', Consolas, monospace;
+
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+
+  /* Layout sizes (D-97: 1280×720 minimum). */
+  --topbar-h: 3rem;
+  --rail-left: 15rem;
+  --rail-right: 18rem;
+  --composer-max: 12rem;
+}

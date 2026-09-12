@@ -1,0 +1,9 @@
+.meter {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25em;
+}
+
+.label {
+  color: var(--text-muted);
+}

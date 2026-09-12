@@ -1,4 +1,5 @@
 import js from '@eslint/js';
+import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
@@ -125,5 +126,12 @@ export default tseslint.config(
         },
       ],
     },
+  },
+  {
+    // Catches rules-of-hooks and stale-dependency bugs statically (D-96).
+    files: ['packages/web/**/*.{ts,tsx}'],
+    ignores: ['packages/web/**/*.test.{ts,tsx}'],
+    plugins: { 'react-hooks': reactHooks },
+    rules: reactHooks.configs['recommended-latest'].rules,
   },
 );

@@ -1,0 +1,43 @@
+@import './tokens.css';
+
+/**
+ * Reset and page-level rules. `html`/`body`/`#root` are pinned to the
+ * viewport with no overflow, because the play screen owns the only
+ * scrolling region (the narrative log) — see PlayLayout.module.css (D-40).
+ */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  background: var(--surface-0);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--accent-strong);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}

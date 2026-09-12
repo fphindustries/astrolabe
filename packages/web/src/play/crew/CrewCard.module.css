@@ -1,0 +1,56 @@
+/**
+ * D-97: at 1280×720 the left rail budget puts a card at ≤ 56px tall, so
+ * six of them fit without the rail scrolling.
+ */
+.card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  color: inherit;
+  cursor: pointer;
+  max-height: 3.5rem;
+}
+
+.card:hover {
+  border-color: var(--accent);
+}
+
+.card[data-acting='true'] {
+  border-color: var(--accent-strong);
+}
+
+.top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.callsign {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actingBadge {
+  font-size: var(--text-sm);
+  color: var(--accent-strong);
+}
+
+.meters {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.meterLabel {
+  color: var(--text-muted);
+  margin-right: 0.25em;
+}
