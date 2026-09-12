@@ -49,10 +49,10 @@ Each maps to a beat of the golden session.
 
 Issue-sized. Each task should land in one sitting and leave the build working.
 
-**Order (D-88).** Task numbers are stable, so references to them keep
+**Order (D-88, D-94).** Task numbers are stable, so references to them keep
 resolving; the order they are *worked* in is:
 
-> 1 · 2 · **3.1, 3.5** · **5.1, 5.2** · 3.2, 3.4 · 4 · 5.3–5.7 · 6 · 7 · 3.3 · 8 · 9 · 10
+> 1 · 2 · **3.1, 3.5** · **5.0, 5.1, 5.2** · 3.2, 3.4 · 4 · 5.3–5.7 · 6 · 7 · 3.3 · 8 · 9 · 10
 
 The play-screen shell comes before the creation and campaign-setup UI because
 those have no React app to live in — `web` is a bare Vite scaffold. The
@@ -107,8 +107,9 @@ narrative log is a second read model with its own paged query.
 
 ### 5. Play screen shell
 
-- [ ] 5.1 Layout: top bar, left rail, centre, right rail, composer
-- [ ] 5.2 Crew mini-cards (callsign, health, momentum) and the character drawer
+- [x] 5.0 HTTP read API: list campaigns, campaign state, narrative log page (D-94)
+- [x] 5.1 Layout: top bar, left rail, centre, right rail, composer
+- [x] 5.2 Crew mini-cards (callsign, health, momentum) and the character drawer
 - [ ] 5.3 Scene header bound to scene state
 - [ ] 5.4 Narrative log rendering events in order
 - [ ] 5.5 Pressure rail: clocks, vows, progress tracks, with detail popovers
@@ -489,12 +490,100 @@ Changing the adapter means regenerating `starforged.json` (section 1's note).
   once", "this vow is already sworn" — belongs in the command, not in
   `rules`. `rules` sees no campaign state and must stay that way.
 
-### Gap the next session hits first
+### Gap the next session hits first — resolved by D-94
 
-**There is no HTTP API task in this list.** Fastify is a dependency but is
-imported nowhere; `web` has no client. The commands in
-`server/src/db/*-commands.ts` and the two read models are all callable
-in-process only. Group 5 needs a route layer before the shell can render
-anything real — decide whether that is a new task or part of 5.1, and record
-it. (The only "API" entries here are 8.1's oracle interface for the AI and
-4.3's sector routes; neither is HTTP.)
+There was no HTTP API task in this list: Fastify was a dependency imported
+nowhere, and the commands in `server/src/db/*-commands.ts` plus the two read
+models were callable in-process only. Task **5.0** closes this with
+read-only endpoints (list campaigns, campaign state, narrative log page);
+D-95 moves the read-model interfaces into `shared` so `web` can import them.
+Command endpoints are not part of 5.0 — each lands with the first task that
+writes through it (3.2, then 6.x). (8.1's oracle interface for the AI and
+4.3's sector routes remain non-HTTP, in-process interfaces.)
+
+---
+
+## Implementation notes (section 5, play screen shell — partial)
+
+Tasks 5.0–5.2 are done: the HTTP read API, the four-zone layout, and the
+crew mini-cards with the character drawer. 5.3–5.7 come later, once 3.2, 3.4
+and group 4 have used the app shell (D-88). Decisions: D-94–D-100. This
+session set the frontend conventions the rest of the milestone follows —
+recorded here rather than in the design record, since these are build
+conventions, not product decisions.
+
+### App structure
+
+`packages/web/src/` is organised by feature (`play/`, `campaigns/`), with
+`app/` for routing and providers, `api/` for the HTTP layer, and `ui/` for
+primitives used by more than one feature (`Drawer`, `Meter`, `Signed`,
+`ErrorBoundary`). One component per file, styles in a sibling
+`.module.css`, display logic kept out of JSX in a plain `.ts` file next to
+its component (`play/crew/crew.ts`'s `toCrewCard`/`toCharacterSheet`, unit
+tested with no DOM).
+
+### Routing
+
+`app/router.ts` is a pure `matchRoute(pathname) → Route`, unit tested;
+`app/location.ts` holds the History API glue (`navigate`, `subscribeToLocation`)
+that touches `location`/`history`/`addEventListener` — split out so
+`router.ts` stays free of DOM globals, which matters because
+`tsconfig.test.json` carries no `dom` lib. `app/routes.tsx` adds the
+React-facing `useRoute` hook and `<Link>`. No router dependency (D-96):
+five routes, one param shape.
+
+### Server state → UI
+
+Two query families mirror the two read models rather than merging them
+(`api/campaigns.ts`): `useCampaignState` (bounded, `staleTime: Infinity`,
+invalidated explicitly after a command — none exist yet) and
+`useCampaignLog` (`useInfiniteQuery` keyed to `NarrativeLog.nextCursor`,
+the same cursor `buildNarrativeLog` already hands back). `useCampaignState`
+takes a `select` so a component subscribes to a slice — `CrewRail` doesn't
+re-render when a clock ticks. `api/http.ts` is a ~30-line fetch wrapper;
+response types are `shared`'s read-model and `api.ts` envelope types,
+unparsed on the client since the server is the trusted producer.
+
+### Styling
+
+CSS Modules plus custom-property tokens (`styles/tokens.css`), no CSS
+library (D-96). Values are structural placeholders; 10.1/10.2 pick the
+final visual design and purpose-built meter/clock treatments — nothing in
+5.1/5.2 should be mistaken for the finished look. Every tone token is
+written to pair with a text label, never to carry meaning alone (§10).
+
+### The four zones
+
+`play/PlayLayout.tsx` is pure layout (props in, no data access), a CSS
+grid with `minmax(0, 1fr)` and `min-height: 0` on every region — without
+both, a grid child grows to its content and the whole page scrolls, which
+is what D-40 rules out. `.log` is the shell's one `overflow-y: auto`,
+verified by injecting long content and checking `document.documentElement`
+never grows. D-97 sets the minimum viewport (1280×720) and the left rail's
+per-card height budget for six crew.
+
+### Drawers
+
+`ui/Drawer.tsx` wraps native `<dialog>` (`showModal()`) rather than a
+component library dependency: focus trap, Esc, backdrop click, and
+top-layer stacking all come from the platform. `play/play-ui.tsx` holds
+which drawer is open in a `useReducer` + context pair — the only client
+state `zustand` would have held, which is why D-96 drops it.
+
+### What the next session needs to know
+
+- **`CharacterId`, `CampaignId`, etc. stay branded through the client**
+  where they index projected state (`Record<CharacterId, CharacterState>`);
+  a route param is plain `string` until it's used to index something, since
+  branding a URL segment buys nothing.
+- **No component test tooling yet.** Logic worth testing is kept in plain
+  `.ts` functions (`crew.ts`) covered by the existing vitest glob; jsdom and
+  testing-library are a task 10.4 decision, not assumed here.
+- **The bundle ships the whole `STARFORGED` JSON** (character drawer needs
+  asset/impact names). ~840 KB / 178 KB gzip today. Accepted for a desktop
+  home-server app; revisit only if load time shows it.
+- **Verification gap:** this session's sandbox had no Docker/Postgres, so
+  `http/app.test.ts`'s database-backed tests and the harness-seeded
+  golden-campaign walkthrough are written and typecheck but were not run
+  against a real database. Run `npm run db:up && npm run migrate && npm test`
+  before trusting 5.0 fully.
