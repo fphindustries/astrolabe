@@ -18,17 +18,20 @@ export const MeterSnapshotSchema = z.object({
   max: z.int(),
 });
 
+/** The five stats a character sheet carries. Reused by the creation-request schema (task 3.2) so the wire shape and the event payload cannot drift apart. */
+export const CharacterStatsSchema = z.object({
+  edge: z.int(),
+  heart: z.int(),
+  iron: z.int(),
+  shadow: z.int(),
+  wits: z.int(),
+});
+
 export const CharacterCreatedSchema = z.object({
   characterId: CharacterIdSchema,
   name: z.string().min(1),
   callsign: z.string().min(1),
-  stats: z.object({
-    edge: z.int(),
-    heart: z.int(),
-    iron: z.int(),
-    shadow: z.int(),
-    wits: z.int(),
-  }),
+  stats: CharacterStatsSchema,
   meters: z.object({
     health: MeterSnapshotSchema,
     spirit: MeterSnapshotSchema,

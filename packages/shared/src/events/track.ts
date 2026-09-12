@@ -22,6 +22,8 @@ export const ChallengeRankSchema = z.enum([
   'epic',
 ]);
 
+export type ChallengeRank = z.infer<typeof ChallengeRankSchema>;
+
 /**
  * Vows, clocks and expeditions are all tracks, which is why they share one
  * pair of event types. They differ in how they are sized: a vow by its

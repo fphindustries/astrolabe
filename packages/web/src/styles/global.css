@@ -1,20 +1,27 @@
 @import './tokens.css';
 
 /**
- * Reset and page-level rules. `html`/`body`/`#root` are pinned to the
- * viewport with no overflow, because the play screen owns the only
- * scrolling region (the narrative log) — see PlayLayout.module.css (D-40).
+ * Reset and page-level rules. `html`/`body` are pinned to the viewport with
+ * no overflow. `#root` scrolls instead of them: the play screen's own
+ * layout fills it exactly (D-40 — `.log` is that screen's only internal
+ * scrolling region, so `#root` never actually overflows there), while an
+ * ordinary full page route (campaign list, character creation, D-100)
+ * relies on `#root` to scroll when its content is taller than the viewport.
  */
 * {
   box-sizing: border-box;
 }
 
 html,
-body,
-#root {
+body {
   height: 100%;
   margin: 0;
   overflow: hidden;
+}
+
+#root {
+  height: 100%;
+  overflow: auto;
 }
 
 body {

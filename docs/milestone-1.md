@@ -92,9 +92,9 @@ narrative log is a second read model with its own paged query.
 ### 3. Character creation
 
 - [x] 3.1 Character data model: stats, meters, momentum, impacts, assets, vows
-- [ ] 3.2 Manual creation UI with rule validation on every field — blocked on the React app shell (5.1)
+- [x] 3.2 Manual creation UI with rule validation on every field
 - [ ] 3.3 Concept-first flow: prompt, AI proposal, review, accept or edit per field — blocked on the AI provider (7.1, 7.2)
-- [ ] 3.4 Asset selection with rule constraints — the constraints are built and traced (D-89); the picker UI is blocked on the React app shell (5.1)
+- [x] 3.4 Asset selection with rule constraints
 - [x] 3.5 Creation writes character-created events
 
 ### 4. Campaign setup
@@ -439,8 +439,9 @@ the seed of D-72's committed session fixture.
 
 ## Implementation notes (section 3, character creation)
 
-Half done: 3.1 and 3.5 (server-side) are complete; 3.2 and 3.4 wait on the
-React shell, 3.3 on the AI provider. Decisions: D-89 to D-93.
+3.1, 3.2, 3.4 and 3.5 are done. 3.3 (concept-first) still waits on the AI
+provider (group 7) — it reuses this session's form rather than replacing it.
+Decisions: D-89 to D-93.
 
 ### Where the creation rules live
 
@@ -472,22 +473,81 @@ attach to the starship, the starship is always granted, so a module is
 always a legal pick. Don't go looking for validation code here — there
 isn't any, on purpose.
 
-### What the picker UI will need from `rules`
+### The manual creation UI and picker (3.2, 3.4)
 
-- `CHARACTER_CREATION.slots` — one picker per slot; each has a `label` and
-  the `allows` categories it accepts.
-- `STARFORGED.assetCategories` — names and descriptions, for grouping and
-  help text.
-- `asset.categoryId` to filter. `asset.requirement` is prose to **display**;
-  on a path it never disables the choice (D-91).
-- `grantedAssets(STARFORGED)` — show the starship as granted, not chosen, and
-  outside the slot count.
-- `validateCharacterDraft` returns every problem with the `field` it belongs
-  to, for inline display. **Don't recount slots in the UI** — call it.
-- `CreateCharacterRequest.grantCommandVehicle: false` declines the ship
-  grant. Ownership (sole/shared/another character's) is narrative and
-  unmodelled (D-89) — only wire a toggle for this if the concept-first flow
-  (3.3) actually wants to offer "no ship of your own."
+`web/src/characters/`: `CharacterCreationScreen.tsx` (the route,
+`/campaigns/:id/characters/new`, D-100) and `AssetPicker.tsx` (one picker per
+`CHARACTER_CREATION` slot, grouped by `STARFORGED.assetCategories`).
+`creation-form.ts` holds the pure view-model helpers, kept out of JSX and
+unit tested with no DOM — same split as `play/crew/crew.ts`:
+
+- `emptyDraft()`/`assignStat()` keep the five stats a valid permutation of
+  the starting array at every step, by **swapping** two stats' values
+  rather than overwriting one. This makes `stat_array_mismatch` unreachable
+  through the UI rather than a message the player has to clear.
+- `slotOptionGroups()` is the one place that reads `asset.categoryId` and
+  `CreationSlot.allows` to build a slot's grouped options; `asset.requirement`
+  is rendered under the select as text and never disables an option (D-91).
+- `grantedAssetViews(STARFORGED, grantedAssets(STARFORGED))` shows the
+  starship as granted, not chosen, outside the slot count.
+- The screen calls `validateCharacterDraft` on every change and groups
+  problems by `field` (`problemsByField`) for inline display — it never
+  recounts slots itself.
+- No `grantCommandVehicle` toggle: manual creation always grants the
+  starship. Only wire one if concept-first (3.3) wants to offer "no ship of
+  your own" — ownership is narrative and unmodelled (D-89).
+
+### The character-creation command endpoint
+
+`POST /api/campaigns/:id/characters` (`server/src/http/app.ts`) is the first
+command endpoint task 5.0 left for later. It parses the body against
+`CreateCharacterRequestBodySchema` (`shared/src/api.ts`), then calls
+`createCharacter` unchanged. Two things worth knowing:
+
+- **The actor is never taken from the request.** The route always builds
+  `{ kind: 'player', playerId: LOCAL_PLAYER_ID }` itself — Milestone 1 has no
+  auth (D-52), and a client-supplied actor would be exactly the kind of
+  thing section 2 already refuses for `causedBy`.
+- **`CharacterRejectedError` becomes a 422 carrying `problems`**, the same
+  `CharacterProblem[]` shape the client already renders inline. This is the
+  belt-and-suspenders path: the client blocks submission on the identical
+  `validateCharacterDraft` call first, so a 422 means the two sides
+  disagreed, not the expected case.
+
+`commandId` is minted client-side (`crypto.randomUUID()` in
+`api/characters.ts`'s `useCreateCharacter`) — it's the idempotency key
+section 2's store already expects, not something a server route invents.
+
+**Verification gap, narrower this time:** this session's sandbox had no
+Docker/Postgres either, same as section 5's. The new route's tests in
+`http/app.test.ts` typecheck and collect but were not run against a real
+database. Run `npm run db:up && npm run migrate && npm test` before trusting
+3.2's server half fully. The screen itself **was** exercised in a live
+`npm run dev` + browser pass, unlike 5.1/5.2 — worth knowing what that
+caught:
+
+- **A stale Vite dependency-optimizer cache blanked the whole app**,
+  every route, with no console error at all. `web` had never had a
+  browser-side (non-type) import of `@astrolabe/shared`'s runtime code
+  before this task's `ChallengeRankSchema` import — every prior import was
+  `type`-only and erased at compile time. That first real import made Vite
+  discover `zod` as a new browser dependency mid-session and re-optimize,
+  and the already-loaded page kept referencing the stale pre-bundle,
+  silently. A dev-server restart (or just not having one already running
+  from a previous session) resolves it; nothing to fix in the app itself,
+  but worth knowing this class of "blank page, zero errors" isn't
+  necessarily a code bug.
+- **`global.css`'s `html, body, #root { overflow: hidden }` (task 5.1)
+  blanked out scrolling on every screen, not just the play screen it was
+  written for.** This form is taller than 720px, so its background-vow
+  section and submit button were unreachable — a real bug, now fixed by
+  moving the `overflow: hidden` off `#root` and giving `#root` its own
+  `overflow: auto` instead. The play screen still gets its single internal
+  scroll region (`.log`, D-40): `PlayLayout` fills `#root` exactly, so
+  `#root` never actually overflows there. An ordinary full page (campaign
+  list, character creation, D-100) now scrolls like a normal page when its
+  content runs long. Worth re-checking if 5.3–5.7 assumed the old
+  no-scroll-anywhere behavior.
 
 ### Conventions for groups 4 and 5
 
