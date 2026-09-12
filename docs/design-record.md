@@ -110,6 +110,11 @@ The AI Guide has three jobs: **narrate** (give player decisions narrative depth)
 | D-80 | Face Danger's weak-hit "make a suffer move (-1)" is not auto-chained to a specific suffer move — the text doesn't say which, and choosing between Endure Harm and Endure Stress is a fictional judgment the authority model already gives the player. | 10 | Approved |
 | D-81 | Endure Harm's miss-branch compounding requirement (if health is already 0, also mark wounded or permanently harmed, or roll the oracle) is deferred past Milestone 1. Endure Harm's automation covers the common case; this rare compounding state waits for impact-marking to exist. | 10 | Approved |
 | D-82 | Ask the Oracle's "pick two" is folded into the same five odds-tier options as "ask a yes/no question," rather than modelled as its own two-envisioned-options flow — mechanically it is the same "rate one likely and roll" action once the two options are stated. | 10 | Approved |
+| D-83 | Voiding an event cascades over recorded causation: the causal subtree is computed and stored on the void event at write time, previewed before the player confirms, and the void is refused when a non-voided event outside the subtree references an entity or track introduced inside it. Void means "this shouldn't have happened"; amendment (A15, A16) means "this happened and was wrong." | 11 | Approved |
+| D-84 | Void is limited to events in the current session. | 11 | Approved |
+| D-85 | Token accounting is exempt from void: an AI call inside a voided cascade still counts toward the session token total (D-75), because the tokens were spent whatever the fiction now says. | 11 | Approved |
+| D-86 | Entity amendment and void-reinstatement are both deferred past Milestone 1. They are coupled: D-70's reinstating of a discarded oracle roll implies amending the entity built from the surviving result. A9 requires only that the discarded chip stay struck through, so Milestone 1 ships display-only rerolls. This leaves §3's "correcting or retconning any AI-established fact" undelivered in Milestone 1 — narration correction (A15) and manual mechanical override (A16) ship; entity retcon does not. | 11 | Approved |
+| D-87 | The starship is a display-only entity in Milestone 1. No golden-session beat mutates ship state — Beats 4 and 5 use the *Lantern Wake*'s sensors, which resolves as a character move. Whether a ship is an entity, an asset, or a character defers to Milestone 2. | 11 | Proposed |
 
 ---
 
@@ -146,7 +151,7 @@ The AI sets the odds on its own yes/no questions about the world. Rerolls are ca
 
 ---
 
-## 5. Rules Scope — v1.0 (Approved)
+## 5. Rules Scope — v1.1 (Approved)
 
 **Rules source.** Astrolabe owns its internal rules schema. Datasworn's Starforged data (moves, assets, oracle tables) is imported into that schema through an adapter. Automation logic (effects, choices, chained moves) lives in Astrolabe's own layer, keyed to stable rule IDs. If Datasworn ever constrains the application, only the adapter changes, not the rules engine. Datasworn content is CC BY licensed, so the app includes an attribution screen.
 
@@ -175,6 +180,10 @@ The Milestone 1 column is the *eventual* assignment for those categories. D-59 n
 **Relevant-moves panel.** Relevance is rules-based. It comes from explicit situation state that moves set and clear (for example, Enter the Fray puts the characters in a fight), plus categories that are always relevant. Relevance rules live in the rules data: each move declares the situation flags it requires, sets and clears. The full move list is always one click away. Milestone 1 needs none of that machinery exercised: every move in the Session, Adventure, Quest, Fate, Suffer, and Threshold categories has a broadly applicable trigger with no fictional-positioning requirement, so those six categories are always relevant and no situation flag is required until Milestone 2's Enter the Fray (D-66).
 
 **Overrides and corrections.** Players can directly edit any meter, track, or clock. Every edit is logged with who made it, and it's shown differently from automated changes. Players can also void a roll and redo it. The voided roll stays in the log, visible and struck through *(display is Draft)*.
+
+Voiding cascades over what the voided event caused — its effects, any clock it ticked, the narration it produced — and the player sees that set before confirming. It is refused when something outside that set has already been built on it, and it reaches back no further than the current session (D-83, D-84). The rule of thumb: **void is for "this shouldn't have happened," amendment for "this happened and was wrong."** Once the world has moved on, the correction path is a narration correction or a manual override, neither of which removes anything.
+
+Milestone 1 delivers two of §3's three correction paths: narration correction (A15) and manual mechanical override (A16). Retconning an AI-established fact — amending an NPC's disposition, reinstating a discarded oracle result — is deferred (D-86). The authority in §3 is unchanged; only its delivery waits.
 
 ---
 
@@ -299,7 +308,7 @@ Only the narrative log scrolls. Everything else holds still.
 
 ---
 
-## 9. Architecture — v1.0 (Approved)
+## 9. Architecture — v1.1 (Approved)
 
 **Stack**
 
@@ -324,6 +333,14 @@ Only the narrative log scrolls. Everything else holds still.
 **Server-authoritative state.** All dice and all state changes go through the server. The client renders state and sends intent. This is unnecessary for solo play and essential for multiplayer, and retrofitting it later would mean rewriting every interaction. It costs little now.
 
 **Event log.** Every state change is an appended event: rolls, move resolutions, oracle rolls, clock ticks, canon entries, narration, corrections, and manual overrides. Current state is a projection over the log. The log gives recaps, AI grounding, void-and-redo, correction history, and later multiplayer sync, all from one mechanism.
+
+Three properties make that work, and each constrains what may go in an event:
+
+- **Projection is a pure fold.** No dice, no clock, no I/O, and no reads of the rules data. Anything non-deterministic — a die, an oracle row, an AI passage, a generated ID, a timestamp — is resolved once at write time and stored.
+- **Events store resolved effects, not instructions to recompute them.** Which effects a weak hit produces comes from the automation layer, which changes when Datasworn is regenerated or a spec is edited. Replaying an old campaign must not produce different numbers, so the resolved deltas are recorded. Bounds that should track the current rules — momentum's maximum, for instance — stay derived. *Store facts, derive bounds.*
+- **Events record causality.** Each carries the command that wrote it and, where one exists, the event that caused it. That is what makes cascading void computable and what groups a narrative log into beats rather than rows.
+
+Detailed design: [`design-event-log.md`](design-event-log.md).
 
 **Real-time.** Deferred with multiplayer, but the design assumes it: events already carry an actor, and the client already applies server-authored events. Adding a WebSocket later means broadcasting the events that are already being written, not restructuring state.
 

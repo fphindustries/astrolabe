@@ -14,7 +14,7 @@ Campaign setup (truths, sector as a location list, inciting incident) · concept
 
 ## Out of scope
 
-Multiplayer and real-time sync · authentication · the OpenAI provider implementation (D-60) · AI-proposed scene transitions (D-71) · automation for any move the golden session does not exercise, including the Threshold moves (D-59) · combat, exploration, recovery, connection, legacy, and scene-challenge automation · the visual starmap · portraits · lines and veils · mobile and tablet layouts · asset automation beyond the Guided level.
+Multiplayer and real-time sync · authentication · the OpenAI provider implementation (D-60) · AI-proposed scene transitions (D-71) · automation for any move the golden session does not exercise, including the Threshold moves (D-59) · combat, exploration, recovery, connection, legacy, and scene-challenge automation · the visual starmap · portraits · lines and veils · mobile and tablet layouts · asset automation beyond the Guided level · entity amendment and void-reinstatement (D-86) · mutable ship state (D-87).
 
 ---
 
@@ -64,12 +64,19 @@ Issue-sized. Each task should land in one sitting and leave the build working.
 
 ### 2. Event log and state
 
-- [ ] 2.1 Postgres schema: campaigns, events, and projections
-- [ ] 2.2 Event types and payload schemas in `shared`
-- [ ] 2.3 Append-only event writer with actor and timestamp
-- [ ] 2.4 State projection: characters, scene, trackers, entities, canon
-- [ ] 2.5 Void-and-redo: mark an event void, reproject, keep it visible
-- [ ] 2.6 Manual override events, distinguishable from automated changes
+Design: [`design-event-log.md`](design-event-log.md). Two changes to the order below,
+made deliberately rather than silently. **2.2 now precedes 2.1**: the events table is
+`jsonb`, so the payload types drive the DDL, the validation and the projector. **2.4 is
+split**, because the projector is pure and testable without a database while the
+narrative log is a second read model with its own paged query.
+
+- [x] 2.2 Event envelope and payload schemas in `shared`: the 18 spine event types, the zod union, `EVENT_TYPE_META`, and the payload-version upcaster scaffolding
+- [ ] 2.1 Postgres schema: campaigns, commands, events; migration runner; the INSERT-only trigger
+- [ ] 2.4a State projection, pure: characters, scene, trackers, entities, canon — no I/O, plus the lint rule that keeps it that way
+- [ ] 2.3 Append-only event writer with actor and timestamp: per-campaign sequence, idempotent commands, server-assigned causality
+- [ ] 2.4b Narrative log read model and its paged query
+- [ ] 2.5 Void-and-redo: cascade over causation, referential containment, reproject, keep it visible (D-83, D-84)
+- [ ] 2.6 Manual override and narration-correction events, distinguishable from automated changes
 - [ ] 2.7 CLI harness that plays a scripted sequence and prints projected state
 
 ### 3. Character creation

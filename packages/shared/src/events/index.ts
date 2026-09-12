@@ -1,0 +1,151 @@
+import * as z from 'zod';
+
+import { EnvelopeFieldsSchema, type EnvelopeFields } from '../envelope.js';
+import type { DeepReadonly } from '../readonly.js';
+
+import { AiCompletedSchema } from './ai.js';
+import { CampaignCreatedSchema } from './campaign.js';
+import { CharacterCreatedSchema } from './character.js';
+import { EntityEstablishedSchema } from './entity.js';
+import { DiceRolledSchema, MomentumBurnedSchema, MoveInvokedSchema } from './move.js';
+import {
+  NarrationCorrectionRequestedSchema,
+  NarrationRevisedSchema,
+  NarrationWrittenSchema,
+} from './narration.js';
+import { SceneStartedSchema } from './scene.js';
+import { SessionBeganSchema, SessionEndedSchema } from './session.js';
+import { StateChangedSchema, StateOverriddenSchema } from './state.js';
+import { TrackAdvancedSchema, TrackCreatedSchema } from './track.js';
+import { EventVoidedSchema } from './void.js';
+
+/**
+ * The event catalogue: every type Milestone 1's event log can hold, mapped
+ * to the schema that validates its payload.
+ *
+ * These eighteen are the spine — what the projector and the section 2
+ * harness need. The rest of Milestone 1's types (oracle rolls, truths,
+ * inline choices, proposed amounts, complications, the scene header,
+ * provider failures) are designed in `docs/design-event-log.md` and land
+ * with the features that write them, so their payloads are shaped by a real
+ * caller rather than guessed at a month early.
+ *
+ * That is safe because this map is the single definition: adding a type
+ * here fails the compile at every exhaustive switch over `EventType`, which
+ * is the behaviour we want from a projector.
+ */
+export const PAYLOAD_SCHEMAS = {
+  'campaign.created': CampaignCreatedSchema,
+  'character.created': CharacterCreatedSchema,
+  'session.began': SessionBeganSchema,
+  'session.ended': SessionEndedSchema,
+  'scene.started': SceneStartedSchema,
+  'move.invoked': MoveInvokedSchema,
+  'dice.rolled': DiceRolledSchema,
+  'momentum.burned': MomentumBurnedSchema,
+  'state.changed': StateChangedSchema,
+  'state.overridden': StateOverriddenSchema,
+  'track.created': TrackCreatedSchema,
+  'track.advanced': TrackAdvancedSchema,
+  'entity.established': EntityEstablishedSchema,
+  'narration.written': NarrationWrittenSchema,
+  'narration.correction_requested': NarrationCorrectionRequestedSchema,
+  'narration.revised': NarrationRevisedSchema,
+  'event.voided': EventVoidedSchema,
+  'ai.completed': AiCompletedSchema,
+} as const;
+
+export type EventType = keyof typeof PAYLOAD_SCHEMAS;
+
+export const EVENT_TYPES = Object.keys(PAYLOAD_SCHEMAS) as readonly EventType[];
+
+/** The payload type for one event type, readonly all the way down. */
+export type PayloadFor<T extends EventType> = DeepReadonly<z.infer<(typeof PAYLOAD_SCHEMAS)[T]>>;
+
+/**
+ * A complete event: the common envelope, its type, and the payload that
+ * type implies. Narrowing on `type` narrows `payload` with it.
+ */
+export type AstrolabeEvent = {
+  [T in EventType]: EnvelopeFields & { readonly type: T; readonly payload: PayloadFor<T> };
+}[EventType];
+
+/** One event type as a zod object: the envelope extended with its own type and payload. */
+function eventMember<T extends EventType>(type: T) {
+  return EnvelopeFieldsSchema.extend({
+    type: z.literal(type),
+    payload: PAYLOAD_SCHEMAS[type],
+  });
+}
+
+/**
+ * The runtime schema. Written out member by member rather than derived from
+ * the map, because a tuple literal is what gives `z.discriminatedUnion` its
+ * inference — and because one readable manifest of the catalogue is worth
+ * the repetition. `_CATALOGUE_IS_COMPLETE` below makes the repetition safe:
+ * a type present in the map but missing here fails to compile.
+ */
+export const EventSchema = z.discriminatedUnion('type', [
+  eventMember('campaign.created'),
+  eventMember('character.created'),
+  eventMember('session.began'),
+  eventMember('session.ended'),
+  eventMember('scene.started'),
+  eventMember('move.invoked'),
+  eventMember('dice.rolled'),
+  eventMember('momentum.burned'),
+  eventMember('state.changed'),
+  eventMember('state.overridden'),
+  eventMember('track.created'),
+  eventMember('track.advanced'),
+  eventMember('entity.established'),
+  eventMember('narration.written'),
+  eventMember('narration.correction_requested'),
+  eventMember('narration.revised'),
+  eventMember('event.voided'),
+  eventMember('ai.completed'),
+]);
+
+/**
+ * Compile-time proof that `EventSchema` covers every type in
+ * `PAYLOAD_SCHEMAS`. If the two ever drift, `Exclude<...>` stops being
+ * `never` and this assignment fails.
+ */
+type CatalogueIsComplete =
+  Exclude<EventType, z.infer<typeof EventSchema>['type']> extends never ? true : false;
+const _CATALOGUE_IS_COMPLETE: CatalogueIsComplete = true;
+void _CATALOGUE_IS_COMPLETE;
+
+/**
+ * Validate an event. Used on write, always — a payload that does not
+ * validate is a bug that must not reach storage — and on read, where at a
+ * few thousand events per campaign it costs single-digit milliseconds and
+ * catches upcaster mistakes while they are still cheap.
+ *
+ * Throws rather than returning a partial result. Failing closed matters
+ * here: silently skipping an event silently produces wrong state.
+ */
+export function parseEvent(input: unknown): AstrolabeEvent {
+  return EventSchema.parse(input) as AstrolabeEvent;
+}
+
+export function safeParseEvent(input: unknown): z.ZodSafeParseResult<AstrolabeEvent> {
+  return EventSchema.safeParse(input) as z.ZodSafeParseResult<AstrolabeEvent>;
+}
+
+/** Whether a string names an event type this build knows about. */
+export function isEventType(value: string): value is EventType {
+  return Object.hasOwn(PAYLOAD_SCHEMAS, value);
+}
+
+export * from './ai.js';
+export * from './campaign.js';
+export * from './character.js';
+export * from './entity.js';
+export * from './move.js';
+export * from './narration.js';
+export * from './scene.js';
+export * from './session.js';
+export * from './state.js';
+export * from './track.js';
+export * from './void.js';
