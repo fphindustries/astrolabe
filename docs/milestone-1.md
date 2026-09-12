@@ -77,7 +77,7 @@ narrative log is a second read model with its own paged query.
 - [x] 2.4b Narrative log read model and its paged query
 - [x] 2.5 Void-and-redo: cascade over causation, referential containment, reproject, keep it visible (D-83, D-84)
 - [x] 2.6 Manual override and narration-correction events, distinguishable from automated changes
-- [ ] 2.7 CLI harness that plays a scripted sequence and prints projected state
+- [x] 2.7 CLI harness that plays a scripted sequence and prints projected state
 
 ### 3. Character creation
 
@@ -335,3 +335,91 @@ assumed, worth knowing before anyone touches the adapter again:
   with no rollable range) that a fixture would have hidden. Later packages'
   tests should default to the same habit where a real dependency is
   available rather than reaching for a mock first.
+
+---
+
+## Implementation notes (section 2, the event log)
+
+Section 2 (tasks 2.1–2.7) is done: 458 tests with a database, 381 without.
+Design: [`design-event-log.md`](design-event-log.md), decisions D-83…D-87.
+This records what the rest of the milestone needs to know — the things that
+were not visible from the task list or the design document alone.
+
+### Deviations from the design
+
+Three, each forced by building the thing rather than chosen up front:
+
+- **`Delta` has no `progress` kind.** The design called it "a resolved
+  `Effect`", but that gave two paths to the same state: a progress delta
+  inside `state.changed`, and `track.advanced`. Track movement now goes
+  through `track.advanced` only, so every tick on a vow or clock is one
+  event type however it was caused, and Beat 8's "who ticked it and why" has
+  one place to look. `Delta` is therefore "a change to one character's
+  sheet", which is tighter than the design's phrasing. An outcome that moves
+  a meter *and* marks progress writes two events in its command.
+- **`causedBy` is per-command, not per-event.** Events inside a command
+  already share a `commandId`, which is the minimum unit a void operates on,
+  so causality only needs recording when it crosses commands.
+- **Appending a void has no incremental projection step.** A void suppresses
+  events already folded in, so `canApplyIncrementally` returns false for it
+  and the caller rebuilds. The design assumed incremental application worked
+  for everything.
+
+### Shape
+
+`projection/` is pure and tested with no database at all; `db/` is the only
+module that does I/O. The split is enforced by seven lint rules over
+`projection/**` — no `STARFORGED`, `Date`, `crypto`, `Math.random`,
+`process`, `postgres` or provider SDK — each verified to reject a violation
+before being trusted.
+
+Two read models over one log, and they are deliberately different shapes:
+`CampaignState` is bounded and rebuilt whole; `NarrativeLog` is unbounded and
+paged. Where the projector *skips* a voided event, the log *keeps* it, struck
+through. Both ask `EVENT_TYPE_META.voidable` the same question, so they
+cannot disagree about what a cascade suppressed.
+
+### Conventions the rest of the milestone should follow
+
+- **Write through a command, not through `appendCommand` directly.** The
+  store writes whatever validates against a schema; whether a character
+  exists, whether a value is in range, and whether a target is the right kind
+  of event are questions about *state*, asked against a projection in
+  `db/amend-commands.ts` and `db/void-command.ts`. New writes belong in that
+  layer, not in a route handler.
+- **Never accept `causedBy` from a client.** A client able to supply it could
+  forge causality and steer what a void cascades over.
+- **Refusals are returned, not thrown, when the player is choosing.**
+  `planVoid` returns a refusal because the player is shown what a void would
+  remove before confirming; `voidEvent` throws once they have.
+- **`EVENT_TYPE_META` is the place to declare what an event type means.** Its
+  `introduces`/`references` hooks are what make D-83's containment check
+  possible, `voidable` is what makes D-85's exemption work in both read
+  models, and `mutatesState` is checked against the projector per type. A new
+  event type that gets these wrong fails a test, not a review.
+- **The store returns `occurredAt` as an ISO string.** `toTimestamp` does
+  that at the row-mapping boundary, because the projector is banned from
+  touching `Date`.
+
+### Things the database corrected
+
+Worth knowing before writing more SQL:
+
+- `sql.json(null)` writes an SQL NULL, not the JSON document `null`.
+  Pre-stringifying is not the fix either — the driver JSON-encodes for a
+  `jsonb` target, so a stringified value arrives double-encoded. The working
+  form is `coalesce(sql.json(v), 'null'::jsonb)`.
+- Columns are mapped by hand rather than with the driver's camel-case
+  transform, which would rewrite keys inside `payload` too.
+- `pg_advisory_lock` is session-scoped and the connection is pooled, so a
+  lock taken on one connection can be released on another. Migrations use
+  `pg_advisory_xact_lock` inside the transaction instead.
+- `TRUNCATE` bypasses row-level triggers, so the append-only guarantee needs
+  a second, statement-level trigger.
+
+### Running it
+
+`npm run harness` plays the golden session's mechanical beats through the
+real store and prints the projected state and the narrative log. That is the
+end-to-end check section 2 has no UI for, and `harness/golden-beats.ts` is
+the seed of D-72's committed session fixture.
