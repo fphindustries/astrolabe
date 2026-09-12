@@ -8,3 +8,12 @@
 
 export { createDb, databaseUrlFromEnv, toTimestamp, type DbOptions } from './client.js';
 export { MIGRATIONS, migrate, type Migration, type MigrationOutcome } from './migrate.js';
+export {
+  appendCommand,
+  readEvents,
+  readEventsByCommand,
+  type AppendRequest,
+  type AppendResult,
+  type NewEvent,
+} from './event-store.js';
+export { uuidv7 } from './uuid.js';
