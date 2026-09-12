@@ -23,5 +23,6 @@ export function mapProvenance(
     ...(source.page !== undefined && { page: source.page }),
     authors: source.authors.map((author: Datasworn.AuthorInfo) => author.name),
     license: source.license ?? STARFORGED_LICENSE_FALLBACK,
+    url: source.url,
   };
 }

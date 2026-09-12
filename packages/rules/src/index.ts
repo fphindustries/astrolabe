@@ -48,6 +48,12 @@
  * to a category check for now. The RelevanceRule mechanism (requires/sets/
  * clears) is real and tested, just with an empty rule table until
  * Milestone 2's Enter the Fray needs its first entry.
+ *
+ * Task 1.10 is attribution (src/attribution/): CLAUDE.md requires an
+ * attribution screen for Datasworn's CC BY 4.0 content. buildAttributionScreen
+ * derives its entries from STARFORGED's own Provenance records rather than
+ * hard-coded prose, so a future Datasworn expansion appears automatically.
+ * ATTRIBUTION below is that content, precomputed for STARFORGED.
  */
 
 export * from './schema/ids.js';
@@ -60,14 +66,21 @@ export * from './schema/dice.js';
 export * from './schema/relevance.js';
 export * from './schema/traceability.js';
 
+import { buildAttributionScreen } from './attribution/index.js';
+import { STARFORGED } from './generated/index.js';
+
 export * from './dice/index.js';
 export * from './outcomes/index.js';
 export * from './momentum/index.js';
 export * from './automation/index.js';
 export * from './relevance/index.js';
+export * from './attribution/index.js';
 
 export type { AdaptedRuleset } from './adapter/index.js';
-export { STARFORGED } from './generated/index.js';
+export { STARFORGED };
+
+/** The attribution screen's content (task 1.10), precomputed for STARFORGED. */
+export const ATTRIBUTION = buildAttributionScreen(STARFORGED);
 
 /** Kept for the workspace smoke test (task 1.1); harmless now that real exports exist. */
 export const RULES_PACKAGE = '@astrolabe/rules' as const;

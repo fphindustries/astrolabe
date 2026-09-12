@@ -56,6 +56,8 @@ export interface Provenance {
   readonly book: string;
   readonly page?: number;
   readonly authors: readonly string[];
-  /** e.g. "CC BY 4.0" */
+  /** e.g. "https://creativecommons.org/licenses/by/4.0" */
   readonly license: string;
+  /** Where to find the source document — the attribution screen links here. */
+  readonly url: string;
 }
