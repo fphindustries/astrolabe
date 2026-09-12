@@ -42,8 +42,12 @@
  * resolvePayThePriceChain, resolveEffectTarget for D-62's Aid Your Ally
  * redirect).
  *
- * Still to come:
- *   1.8  move relevance (D-66)
+ * Task 1.8 is move relevance (src/relevance/): D-66 found that Milestone 1
+ * needs no situation flags at all — every move in six categories has a
+ * broadly applicable trigger, verified directly — so relevantMoves reduces
+ * to a category check for now. The RelevanceRule mechanism (requires/sets/
+ * clears) is real and tested, just with an empty rule table until
+ * Milestone 2's Enter the Fray needs its first entry.
  */
 
 export * from './schema/ids.js';
@@ -53,12 +57,14 @@ export * from './schema/assets.js';
 export * from './schema/game-rules.js';
 export * from './schema/automation.js';
 export * from './schema/dice.js';
+export * from './schema/relevance.js';
 export * from './schema/traceability.js';
 
 export * from './dice/index.js';
 export * from './outcomes/index.js';
 export * from './momentum/index.js';
 export * from './automation/index.js';
+export * from './relevance/index.js';
 
 export type { AdaptedRuleset } from './adapter/index.js';
 export { STARFORGED } from './generated/index.js';
