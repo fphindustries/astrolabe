@@ -35,8 +35,14 @@
  * task 1.5 left unset, by running resolveTier a second time against
  * momentum standing in for the action score.
  *
+ * Task 1.7 is move automation (src/automation/): the hand-authored
+ * MoveAutomation specs for exactly the moves D-59 scopes Milestone 1 to
+ * (specs/), and the resolvers that apply one to a rolled or chosen
+ * outcome (resolveActionMove, resolveMethodOption,
+ * resolvePayThePriceChain, resolveEffectTarget for D-62's Aid Your Ally
+ * redirect).
+ *
  * Still to come:
- *   1.7  move automation for the moves the golden session exercises (D-59)
  *   1.8  move relevance (D-66)
  */
 
@@ -52,6 +58,7 @@ export * from './schema/traceability.js';
 export * from './dice/index.js';
 export * from './outcomes/index.js';
 export * from './momentum/index.js';
+export * from './automation/index.js';
 
 export type { AdaptedRuleset } from './adapter/index.js';
 export { STARFORGED } from './generated/index.js';
