@@ -433,3 +433,58 @@ Worth knowing before writing more SQL:
 real store and prints the projected state and the narrative log. That is the
 end-to-end check section 2 has no UI for, and `harness/golden-beats.ts` is
 the seed of D-72's committed session fixture.
+
+---
+
+## Implementation notes (section 3, character creation)
+
+Half done: 3.1 and 3.5 (server-side) are complete; 3.2 and 3.4 wait on the
+React shell, 3.3 on the AI provider. Decisions: D-89 to D-93.
+
+### Where the creation rules live
+
+- `rules/characters/creation-rules.ts` — `CHARACTER_CREATION`, the slot spec.
+  Data keyed to asset category ids, not a check in a form.
+- `rules/characters/creation.ts` — `validateCharacterDraft`, `startingMeters`,
+  `grantedAssets`, and the hand-authored constants (D-92).
+- Both pure. The client validates as fields are edited; `createCharacter`
+  revalidates on write (D-90).
+
+### How a constraint is traced
+
+Each rule carries a verbatim `clause` from the imported asset-collection
+description, and `assetCreationTraceProblems` checks it against the real
+text — the same guarantee `isVerbatimClause` gives move automation. The slot
+count carries a `citation` instead, because Rulebook pp. 104–110 are outside
+the CC-BY subset: **cite, never quote.** A slot with neither fails the check.
+
+Adding a constraint: write the clause, run the test. If no imported text
+states the rule, use a citation and say where it came from.
+
+The rules the collection descriptions carry are invisible unless the adapter
+imports them — it discarded them until D-89. `assetCategories`, and assets'
+`categoryId` / `attachments` / `shared` / `requirement`, all arrived then.
+Changing the adapter means regenerating `starforged.json` (section 1's note).
+
+### What the picker UI will need from `rules`
+
+- `CHARACTER_CREATION.slots` — one picker per slot; each has a `label` and
+  the `allows` categories it accepts.
+- `STARFORGED.assetCategories` — names and descriptions, for grouping and
+  help text.
+- `asset.categoryId` to filter. `asset.requirement` is prose to **display**;
+  on a path it never disables the choice (D-91).
+- `grantedAssets(STARFORGED)` — show the starship as granted, not chosen, and
+  outside the slot count.
+- `validateCharacterDraft` returns every problem with the `field` it belongs
+  to, for inline display. **Don't recount slots in the UI** — call it.
+
+### Conventions for groups 4 and 5
+
+- A new rules-derived constraint follows D-89's shape: data in `rules`, a
+  clause where imported text states it, a citation where only the book does.
+- Write through a command in `server/src/db/*-commands.ts`, never
+  `appendCommand` directly (section 2's note).
+- A constraint that depends on **campaign state** — "a truth can only be set
+  once", "this vow is already sworn" — belongs in the command, not in
+  `rules`. `rules` sees no campaign state and must stay that way.
