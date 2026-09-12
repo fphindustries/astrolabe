@@ -58,7 +58,7 @@ Issue-sized. Each task should land in one sitting and leave the build working.
 - [x] 1.5 Outcome resolution: strong hit, weak hit, miss, match detection
 - [x] 1.6 Momentum: gain, loss, reset, burn, and when burning changes an outcome
 - [x] 1.7 Move automation for the Automated-level moves listed under In scope (D-59): effects with no choice, inline choices, chained moves
-- [ ] 1.8 Move relevance rules driven by situation state; Milestone 1 uses category-only relevance with zero flags (D-66)
+- [x] 1.8 Move relevance rules driven by situation state; Milestone 1 uses category-only relevance with zero flags (D-66)
 - [ ] 1.9 Unit tests across 1.4–1.8, including matches and chained Pay the Price → suffer moves
 - [ ] 1.10 Attribution screen content for Datasworn's CC BY licence
 
