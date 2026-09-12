@@ -76,6 +76,8 @@ export interface CharacterState {
   readonly markedImpacts: number;
   readonly assets: readonly AssetId[];
   readonly bonusNextMove?: BonusNextMove;
+  /** The vows this character swore, in the order they were sworn. */
+  readonly vowTrackIds: readonly TrackId[];
 }
 
 export type TrackKind = 'vow' | 'expedition' | 'clock';

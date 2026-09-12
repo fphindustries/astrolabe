@@ -161,7 +161,8 @@ export const EVENT_TYPE_META: MetaTable = {
     mutatesState: true,
     voidable: true,
     introduces: (p) => [track(p.trackId)],
-    references: none,
+    references: (p) =>
+      p.kind === 'vow' && p.characterId !== undefined ? [character(p.characterId)] : [],
   },
   'track.advanced': {
     narrative: true,

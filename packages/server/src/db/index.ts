@@ -30,3 +30,9 @@ export {
   type OverrideTarget,
   type RevisionRequest,
 } from './amend-commands.js';
+export {
+  createCharacter,
+  CharacterRejectedError,
+  type CreateCharacterRequest,
+  type CreatedCharacter,
+} from './character-commands.js';

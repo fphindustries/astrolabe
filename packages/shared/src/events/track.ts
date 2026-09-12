@@ -1,7 +1,7 @@
 import * as z from 'zod';
 
 import { ChangeCauseSchema } from '../cause.js';
-import { TrackIdSchema } from '../ids.js';
+import { CharacterIdSchema, TrackIdSchema } from '../ids.js';
 
 /**
  * Starforged's five challenge ranks. A game constant rather than imported
@@ -33,6 +33,15 @@ export const TrackCreatedSchema = z.discriminatedUnion('kind', [
     trackId: TrackIdSchema,
     title: z.string().min(1),
     rank: ChallengeRankSchema,
+    /**
+     * The character who swore it. Vows are per-character in Starforged, and
+     * the pressure rail groups them that way.
+     *
+     * Optional rather than required, which is what keeps this a
+     * non-breaking payload change: a campaign written before the field
+     * existed still projects, with its vows unattributed.
+     */
+    characterId: CharacterIdSchema.optional(),
   }),
   z.object({
     kind: z.literal('expedition'),

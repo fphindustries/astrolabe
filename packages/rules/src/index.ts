@@ -74,6 +74,7 @@ export * from './outcomes/index.js';
 export * from './momentum/index.js';
 export * from './automation/index.js';
 export * from './relevance/index.js';
+export * from './characters/index.js';
 export * from './attribution/index.js';
 
 export type { AdaptedRuleset } from './adapter/index.js';

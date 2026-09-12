@@ -106,6 +106,7 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
         impacts: {},
         markedImpacts: 0,
         assets: payload.assets,
+        vowTrackIds: [],
       });
       return withCharacter(state, character);
     }
@@ -197,7 +198,16 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
           ...(reason?.kind === 'ai_judgement' ? { reason: reason.reason } : {}),
         },
       };
-      return { ...state, tracks: { ...state.tracks, [track.id]: track } };
+      const withTrack = { ...state, tracks: { ...state.tracks, [track.id]: track } };
+      // A vow belongs to the character who swore it, so the sheet can list
+      // it without scanning every track in the campaign.
+      if (payload.kind !== 'vow' || payload.characterId === undefined) {
+        return withTrack;
+      }
+      return updateCharacter(withTrack, payload.characterId, (c) => ({
+        ...c,
+        vowTrackIds: [...c.vowTrackIds, payload.trackId],
+      }));
     }
 
     case 'track.advanced': {
