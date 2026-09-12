@@ -71,7 +71,7 @@ split**, because the projector is pure and testable without a database while the
 narrative log is a second read model with its own paged query.
 
 - [x] 2.2 Event envelope and payload schemas in `shared`: the 18 spine event types, the zod union, `EVENT_TYPE_META`, and the payload-version upcaster scaffolding
-- [ ] 2.1 Postgres schema: campaigns, commands, events; migration runner; the INSERT-only trigger
+- [x] 2.1 Postgres schema: campaigns, commands, events; migration runner; the INSERT-only trigger
 - [ ] 2.4a State projection, pure: characters, scene, trackers, entities, canon — no I/O, plus the lint rule that keeps it that way
 - [ ] 2.3 Append-only event writer with actor and timestamp: per-campaign sequence, idempotent commands, server-assigned causality
 - [ ] 2.4b Narrative log read model and its paged query

@@ -1,0 +1,33 @@
+# Local development and test database.
+#
+# Task 10.5 adds the application services for the Linux home server; this
+# file is deliberately just Postgres, because that is all the event log's
+# integration tests need and all local development needs (D-55: production
+# runs in Docker, development runs natively).
+#
+#   docker compose up -d db
+#   export DATABASE_URL=postgres://astrolabe:astrolabe@localhost:5433/astrolabe
+#   npm test
+#
+# Port 5433 on the host, not 5432, so this never collides with a Postgres
+# someone already runs locally.
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: astrolabe
+      POSTGRES_PASSWORD: astrolabe
+      POSTGRES_DB: astrolabe
+    ports:
+      - '5433:5432'
+    volumes:
+      - astrolabe-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U astrolabe -d astrolabe']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  astrolabe-pgdata:

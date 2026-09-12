@@ -10,7 +10,29 @@ Built first for solo play, then for a private table of up to six players in a sh
 
 ## Status
 
-**Design phase.** No code yet. Requirements are being worked out round by round before development starts.
+**Milestone 1, in build.** The rules package is complete; the event log and state projection are under way. Scope and progress: [docs/milestone-1.md](docs/milestone-1.md).
+
+## Development
+
+Requires Node 22+. Docker is needed only for the database.
+
+```bash
+npm install
+npm test          # unit tests; database tests skip without a DATABASE_URL
+npm run typecheck # sources and tests
+npm run lint
+```
+
+To run the database-backed tests:
+
+```bash
+npm run db:up
+export DATABASE_URL=postgres://astrolabe:astrolabe@localhost:5433/astrolabe
+npm run migrate   # optional; the tests migrate their own schema
+npm test
+```
+
+The `rules` package and the state projection are pure and need no database. Only the store does.
 
 ## Documentation
 
