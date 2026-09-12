@@ -28,8 +28,14 @@
  * runs the same comparison speculatively against momentum instead of the
  * rolled score.
  *
+ * Task 1.6 is momentum (src/momentum/): gain and loss are one signed-delta
+ * function, not two, since the automation layer's momentum effect already
+ * carries the sign; reset and max both come from D-74's formula (10/2
+ * minus marked impacts); and computeBurnOffer/withBurnOffer complete what
+ * task 1.5 left unset, by running resolveTier a second time against
+ * momentum standing in for the action score.
+ *
  * Still to come:
- *   1.6  momentum
  *   1.7  move automation for the moves the golden session exercises (D-59)
  *   1.8  move relevance (D-66)
  */
@@ -45,6 +51,7 @@ export * from './schema/traceability.js';
 
 export * from './dice/index.js';
 export * from './outcomes/index.js';
+export * from './momentum/index.js';
 
 export type { AdaptedRuleset } from './adapter/index.js';
 export { STARFORGED } from './generated/index.js';
