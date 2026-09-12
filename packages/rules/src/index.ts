@@ -18,12 +18,17 @@
  *
  * Task 1.4 is dice (src/dice/): a seedable RandomSource, the action,
  * progress and oracle rolls built on it, and nothing about outcomes —
- * dice produce a RawActionRoll/RawProgressRoll, not a tier. That's task
- * 1.5, which turns a raw roll into the full ActionRollResult/
- * ProgressRollResult by comparing the score against the challenge dice.
+ * dice produce a RawActionRoll/RawProgressRoll, not a tier.
+ *
+ * Task 1.5 is outcome resolution (src/outcomes/): resolveTier compares a
+ * score against the challenge dice — strictly greater, a tie doesn't
+ * count as beating a die — and isMatch flags the two challenge dice
+ * showing the same value. Both are shared between action and progress
+ * rolls, and both are reused as-is by task 1.6's momentum burn, which
+ * runs the same comparison speculatively against momentum instead of the
+ * rolled score.
  *
  * Still to come:
- *   1.5  outcome resolution
  *   1.6  momentum
  *   1.7  move automation for the moves the golden session exercises (D-59)
  *   1.8  move relevance (D-66)
@@ -39,6 +44,7 @@ export * from './schema/dice.js';
 export * from './schema/traceability.js';
 
 export * from './dice/index.js';
+export * from './outcomes/index.js';
 
 export type { AdaptedRuleset } from './adapter/index.js';
 export { STARFORGED } from './generated/index.js';
