@@ -488,3 +488,13 @@ Changing the adapter means regenerating `starforged.json` (section 1's note).
 - A constraint that depends on **campaign state** — "a truth can only be set
   once", "this vow is already sworn" — belongs in the command, not in
   `rules`. `rules` sees no campaign state and must stay that way.
+
+### Gap the next session hits first
+
+**There is no HTTP API task in this list.** Fastify is a dependency but is
+imported nowhere; `web` has no client. The commands in
+`server/src/db/*-commands.ts` and the two read models are all callable
+in-process only. Group 5 needs a route layer before the shell can render
+anything real — decide whether that is a new task or part of 5.1, and record
+it. (The only "API" entries here are 8.1's oracle interface for the AI and
+4.3's sector routes; neither is HTTP.)
