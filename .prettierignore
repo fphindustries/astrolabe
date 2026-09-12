@@ -1,0 +1,8 @@
+dist
+node_modules
+*.tsbuildinfo
+packages/rules/src/generated
+
+# The design documents are hand-authored prose and are the source of truth.
+# Reflowing them would bury real decision changes in formatting noise.
+*.md
