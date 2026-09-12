@@ -12,8 +12,11 @@
  * shapes and the one pure helper — isVerbatimClause — that task 1.9's
  * traceability test is built on.
  *
+ * Task 1.3 is the adapter (src/adapter/) and its frozen output
+ * (src/generated/), exported below as STARFORGED: the whole Starforged
+ * moves/oracles/assets/game-rules set, already mapped into the schema.
+ *
  * Still to come:
- *   1.3  the Datasworn adapter, populating Move / OracleTable / Asset / GameRules
  *   1.4  dice, against an injected RandomSource
  *   1.5  outcome resolution
  *   1.6  momentum
@@ -29,6 +32,9 @@ export * from './schema/game-rules.js';
 export * from './schema/automation.js';
 export * from './schema/dice.js';
 export * from './schema/traceability.js';
+
+export type { AdaptedRuleset } from './adapter/index.js';
+export { STARFORGED } from './generated/index.js';
 
 /** Kept for the workspace smoke test (task 1.1); harmless now that real exports exist. */
 export const RULES_PACKAGE = '@astrolabe/rules' as const;

@@ -58,8 +58,22 @@ export interface TriggerCondition {
   readonly rollOptions: readonly RollOption[];
 }
 
+/**
+ * All 8 `using` values actually present across the Starforged move data
+ * (verified directly, not assumed): `stat`, `condition_meter` and
+ * `progress_track` cover the moves Milestone 1 automates; `asset_control`,
+ * `custom` and the three `*_legacy` values only appear on moves that stay
+ * at Reference in Milestone 1 (D-59), but are modelled here anyway so the
+ * adapter never has to drop a trigger condition to make it fit.
+ */
 export type RollOption =
   | { readonly using: 'stat'; readonly stat: StatId }
   | { readonly using: 'condition_meter'; readonly meter: MeterId }
   | { readonly using: 'progress_track' }
-  | { readonly using: 'asset_control'; readonly assetId: AssetId; readonly control: string };
+  | {
+      readonly using: 'asset_control';
+      readonly assets: readonly AssetId[] | null;
+      readonly control: string;
+    }
+  | { readonly using: 'custom'; readonly label: string; readonly value: number }
+  | { readonly using: 'legacy_track'; readonly track: 'quests' | 'bonds' | 'discoveries' };

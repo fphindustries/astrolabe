@@ -14,7 +14,8 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc --build",
-    "clean": "tsc --build --clean"
+    "clean": "tsc --build --clean",
+    "generate": "tsx scripts/generate-datasworn.ts"
   },
   "comment": "No runtime dependencies by design (design record section 9). Datasworn is consumed at build time by the adapter (D-63).",
   "devDependencies": {
