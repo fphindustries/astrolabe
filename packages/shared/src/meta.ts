@@ -28,18 +28,14 @@ export interface EventTypeMeta<T extends EventType> {
   /**
    * Changes projected state, so voiding it changes numbers.
    *
-   * **Unverified until the projector exists.** The projector is what
-   * defines the answer, so task 2.4a owes this flag a test: for every type,
-   * `mutatesState` should be true exactly when projecting a log with that
-   * event appended differs from projecting without it. Until then this is a
-   * claim, not a checked fact.
+   * Checked, not claimed: `projection/mutates-state.test.ts` asserts for
+   * every type that this is true exactly when appending such an event
+   * changes the projection. That test is what caught `move.invoked`, which
+   * looks inert but spends the aided character's `bonusNextMove` (Beat 5).
    *
-   * One case to settle there rather than guess at now: `dice.rolled` is
-   * marked false, but a roll's `burnOffer` is what A8's momentum-burn offer
-   * reads, and `momentum.burned` points back at the roll. If `CampaignState`
-   * ends up carrying "the pending roll and its offer", a roll does mutate
-   * state and the flag is wrong — or that view belongs to the narrative log
-   * read model instead, and the flag stands.
+   * `dice.rolled` is genuinely false. A roll's numbers and its A8 burn offer
+   * belong to the beat the player is reading, which is the narrative log
+   * read model — not this bounded, whole-campaign one.
    */
   readonly mutatesState: boolean;
   /**
@@ -115,7 +111,9 @@ export const EVENT_TYPE_META: MetaTable = {
   'move.invoked': {
     narrative: true,
     significant: true,
-    mutatesState: false,
+    // Spends the aided character's bonusNextMove (Beat 5) — inert-looking
+    // but not inert. Caught by projection/mutates-state.test.ts.
+    mutatesState: true,
     voidable: true,
     introduces: none,
     references: (p) => [

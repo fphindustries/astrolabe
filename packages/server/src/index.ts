@@ -10,6 +10,7 @@
  */
 
 export * from './db/index.js';
+export * from './projection/index.js';
 
 export { RULES_PACKAGE } from '@astrolabe/rules';
 export { SHARED_PACKAGE } from '@astrolabe/shared';

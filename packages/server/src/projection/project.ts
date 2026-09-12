@@ -1,0 +1,452 @@
+import { applyMomentumDelta, momentumMax, momentumResetValue } from '@astrolabe/rules';
+import type { CharacterId, ImpactId, MeterId, TrackId } from '@astrolabe/rules';
+import type { AstrolabeEvent, Delta, EntityId } from '@astrolabe/shared';
+
+import {
+  PROGRESS_TRACK_MAX_TICKS,
+  emptyState,
+  type CampaignState,
+  type CharacterState,
+  type FieldProvenance,
+  type MeterState,
+  type TrackState,
+} from './state.js';
+import { computeVoidState, isSuppressed, type VoidState } from './void-state.js';
+
+/**
+ * The projector: `fold(events) → CampaignState`, and nothing else.
+ *
+ * It is pure by construction and by lint. No RNG, no clock, no I/O, and no
+ * reads of versioned rules content — `eslint.config.js` enforces all four
+ * for this directory. Pure *functions* from `rules` are fine and used here
+ * (`applyMomentumDelta`, `momentumMax`, `momentumResetValue`); the
+ * `STARFORGED` dataset is not, because a Datasworn regeneration must never
+ * change what an old campaign's numbers were.
+ *
+ * That is why events carry resolved deltas rather than instructions to
+ * recompute them: which effects a weak hit produces is versioned content,
+ * decided once at write time.
+ */
+
+/**
+ * Project a whole log. Two passes, and the order matters: a void appears
+ * *after* the events it suppresses, so the void set has to be known before
+ * the fold begins.
+ */
+export function project(events: readonly AstrolabeEvent[]): CampaignState {
+  const voids = computeVoidState(events);
+  return projectWithVoids(events, voids);
+}
+
+function projectWithVoids(events: readonly AstrolabeEvent[], voids: VoidState): CampaignState {
+  let state = emptyState();
+  for (const event of events) {
+    if (isSuppressed(event, voids)) {
+      continue;
+    }
+    state = applyEvent(state, event);
+  }
+  return state;
+}
+
+/**
+ * Apply one event to a projected state.
+ *
+ * This is the incremental path, and it is an optimisation rather than a
+ * second source of truth: `project` is the definition, and the memoized
+ * state a caller keeps can be dropped at any moment with no consequence
+ * beyond a rebuild.
+ *
+ * **It is only valid for events that suppress nothing.** An `event.voided`
+ * retroactively removes the effect of events already folded in, so there is
+ * no incremental step for it — `canApplyIncrementally` says so, and a
+ * caller that sees `false` must re-run `project`.
+ */
+export function canApplyIncrementally(event: AstrolabeEvent): boolean {
+  return event.type !== 'event.voided';
+}
+
+export function applyEvent(state: CampaignState, event: AstrolabeEvent): CampaignState {
+  const by = provenanceOf(event);
+
+  switch (event.type) {
+    case 'campaign.created':
+      return {
+        ...state,
+        campaign: {
+          id: event.campaignId,
+          name: event.payload.name,
+          settings: event.payload.settings,
+        },
+      };
+
+    case 'character.created': {
+      const { payload } = event;
+      const meters = {} as Record<MeterId, MeterState>;
+      for (const meter of ['health', 'spirit', 'supply'] as const) {
+        const snapshot = payload.meters[meter];
+        meters[meter] = {
+          value: snapshot.value,
+          // Bounds are snapshotted onto the character at creation because
+          // ConditionMeterDef lives in STARFORGED, which the projector may
+          // not read. This is also the shape a later asset needs when it
+          // raises a character's maximum supply above the rulebook default.
+          min: snapshot.min,
+          max: snapshot.max,
+          lastChangedBy: by,
+        };
+      }
+      const character = normaliseCharacter({
+        id: payload.characterId,
+        name: payload.name,
+        callsign: payload.callsign,
+        stats: payload.stats,
+        meters,
+        momentum: { value: payload.momentum, max: 0, resetValue: 0, lastChangedBy: by },
+        impacts: {},
+        markedImpacts: 0,
+        assets: payload.assets,
+      });
+      return withCharacter(state, character);
+    }
+
+    case 'session.began':
+      return {
+        ...state,
+        session: {
+          id: event.payload.sessionId,
+          number: event.payload.number,
+          startedAt: event.occurredAt,
+          tokenUsage: { input: 0, output: 0 },
+        },
+      };
+
+    case 'session.ended': {
+      if (state.session === null) {
+        return state;
+      }
+      return {
+        ...state,
+        session: { ...state.session, endedAt: event.occurredAt },
+        canon: {
+          ...state.canon,
+          sessionSummaries: [
+            ...state.canon.sessionSummaries,
+            {
+              number: state.session.number,
+              summary: event.payload.summary,
+              openThreads: event.payload.openThreads,
+            },
+          ],
+        },
+      };
+    }
+
+    case 'scene.started':
+      return {
+        ...state,
+        scene: {
+          id: event.payload.sceneId,
+          title: event.payload.title,
+          ...(event.payload.locationId !== undefined
+            ? { locationId: event.payload.locationId }
+            : {}),
+        },
+      };
+
+    case 'move.invoked':
+      return consumeBonus(state, event);
+
+    case 'dice.rolled':
+    case 'momentum.burned':
+      // Neither changes projected state. The roll's numbers and its burn
+      // offer belong to the beat the player is reading, so they are part of
+      // the narrative log read model (task 2.4b), not this bounded one. The
+      // momentum reset a burn causes rides in the accompanying
+      // `state.changed` as a `momentum_reset` delta.
+      return state;
+
+    case 'state.changed': {
+      const reason =
+        event.payload.cause.kind === 'ai_judgement' ? event.payload.cause.reason : undefined;
+      let next = state;
+      for (const change of event.payload.changes) {
+        next = applyDelta(next, change.delta, {
+          ...by,
+          ...(reason !== undefined ? { reason } : {}),
+        });
+      }
+      return next;
+    }
+
+    case 'state.overridden':
+      return applyOverride(state, event, by);
+
+    case 'track.created': {
+      const { payload } = event;
+      const reason = payload.kind === 'clock' ? payload.cause : undefined;
+      const track: TrackState = {
+        id: payload.trackId,
+        kind: payload.kind,
+        title: payload.title,
+        ...(payload.kind === 'clock'
+          ? { ticks: 0, maxTicks: payload.segments }
+          : { rank: payload.rank, ticks: 0, maxTicks: PROGRESS_TRACK_MAX_TICKS }),
+        lastChangedBy: {
+          ...by,
+          ...(reason?.kind === 'ai_judgement' ? { reason: reason.reason } : {}),
+        },
+      };
+      return { ...state, tracks: { ...state.tracks, [track.id]: track } };
+    }
+
+    case 'track.advanced': {
+      const existing = state.tracks[event.payload.trackId];
+      if (existing === undefined) {
+        return state;
+      }
+      const reason =
+        event.payload.cause.kind === 'ai_judgement' ? event.payload.cause.reason : undefined;
+      const advanced: TrackState = {
+        ...existing,
+        ticks: clamp(existing.ticks + event.payload.ticks, 0, existing.maxTicks),
+        lastChangedBy: { ...by, ...(reason !== undefined ? { reason } : {}) },
+      };
+      return { ...state, tracks: { ...state.tracks, [advanced.id]: advanced } };
+    }
+
+    case 'entity.established': {
+      const { payload } = event;
+      return {
+        ...state,
+        entities: {
+          ...state.entities,
+          [payload.entityId]: {
+            id: payload.entityId,
+            kind: payload.kind,
+            name: payload.name,
+            fields: payload.fields,
+            provenance: {
+              establishedBy: payload.provenance.establishedBy,
+              ...(payload.provenance.recipeId !== undefined
+                ? { recipeId: payload.provenance.recipeId }
+                : {}),
+              groundedIn: payload.provenance.groundedIn,
+              eventId: event.id,
+            },
+          },
+        },
+      };
+    }
+
+    case 'narration.written':
+    case 'narration.correction_requested':
+    case 'narration.revised':
+      // Narration and its corrections are the narrative log's business.
+      // A15's requirement that a correction change nothing mechanical is
+      // this line.
+      return state;
+
+    case 'event.voided':
+      // Handled in the pass before the fold: a void suppresses events that
+      // appear earlier in the log, which a forward pass cannot do.
+      return state;
+
+    case 'ai.completed': {
+      if (state.session === null) {
+        return state;
+      }
+      // D-85: counted even inside a voided cascade. `isSuppressed` never
+      // skips this type, because the tokens were spent whatever the fiction
+      // now says.
+      return {
+        ...state,
+        session: {
+          ...state.session,
+          tokenUsage: {
+            input: state.session.tokenUsage.input + event.payload.inputTokens,
+            output: state.session.tokenUsage.output + event.payload.outputTokens,
+          },
+        },
+      };
+    }
+  }
+}
+
+function provenanceOf(event: AstrolabeEvent): FieldProvenance {
+  return { eventId: event.id, actorKind: event.actor.kind, at: event.occurredAt };
+}
+
+/**
+ * Recompute everything derived from a character's impacts.
+ *
+ * Every mutation path ends here, so the derivation cannot be forgotten:
+ * momentum's maximum and reset value are bounds that track the current
+ * rules, not facts that were recorded.
+ */
+function normaliseCharacter(character: CharacterState): CharacterState {
+  const markedImpacts = Object.keys(character.impacts).length;
+  return {
+    ...character,
+    markedImpacts,
+    momentum: {
+      ...character.momentum,
+      max: momentumMax(markedImpacts),
+      resetValue: momentumResetValue(markedImpacts),
+    },
+  };
+}
+
+function withCharacter(state: CampaignState, character: CharacterState): CampaignState {
+  return {
+    ...state,
+    characters: { ...state.characters, [character.id]: normaliseCharacter(character) },
+  };
+}
+
+function updateCharacter(
+  state: CampaignState,
+  id: CharacterId,
+  update: (character: CharacterState) => CharacterState,
+): CampaignState {
+  const existing = state.characters[id];
+  if (existing === undefined) {
+    return state;
+  }
+  return withCharacter(state, update(existing));
+}
+
+function applyDelta(state: CampaignState, delta: Delta, by: FieldProvenance): CampaignState {
+  switch (delta.kind) {
+    case 'momentum':
+      return updateCharacter(state, delta.characterId, (c) => ({
+        ...c,
+        momentum: {
+          ...c.momentum,
+          value: applyMomentumDelta(c.momentum.value, delta.delta, c.markedImpacts),
+          lastChangedBy: by,
+        },
+      }));
+
+    case 'momentum_reset':
+      return updateCharacter(state, delta.characterId, (c) => ({
+        ...c,
+        momentum: {
+          ...c.momentum,
+          // Derived, not stored on the event: a stored reset would go stale
+          // the moment an upstream impact event was voided.
+          value: momentumResetValue(c.markedImpacts),
+          lastChangedBy: by,
+        },
+      }));
+
+    case 'meter':
+      return updateCharacter(state, delta.characterId, (c) => {
+        const meter = c.meters[delta.meter];
+        return {
+          ...c,
+          meters: {
+            ...c.meters,
+            [delta.meter]: {
+              ...meter,
+              value: clamp(meter.value + delta.delta, meter.min, meter.max),
+              lastChangedBy: by,
+            },
+          },
+        };
+      });
+
+    case 'bonus_next_move':
+      return updateCharacter(state, delta.characterId, (c) => ({
+        ...c,
+        bonusNextMove: {
+          amount: delta.amount,
+          ...(delta.excludes !== undefined ? { excludes: delta.excludes } : {}),
+          sourceEventId: by.eventId,
+        },
+      }));
+
+    case 'impact':
+      return updateCharacter(state, delta.characterId, (c) => {
+        const impacts = { ...c.impacts } as Record<ImpactId, true>;
+        if (delta.set) {
+          impacts[delta.impact] = true;
+        } else {
+          delete impacts[delta.impact];
+        }
+        // A stored momentum value that now exceeds a lowered maximum stays
+        // as it is; the next delta clamps it. Bounds move, facts do not.
+        return { ...c, impacts };
+      });
+  }
+}
+
+function applyOverride(
+  state: CampaignState,
+  event: Extract<AstrolabeEvent, { type: 'state.overridden' }>,
+  by: FieldProvenance,
+): CampaignState {
+  const { target, to, reason } = event.payload;
+  // `from` is a write-time display value ("+3 → +4"), never an assertion:
+  // after a void reprojects the log it is legitimately stale, so nothing
+  // here gates on it.
+  const provenance: FieldProvenance = { ...by, ...(reason !== undefined ? { reason } : {}) };
+
+  switch (target.kind) {
+    case 'momentum':
+      return updateCharacter(state, target.characterId, (c) => ({
+        ...c,
+        momentum: { ...c.momentum, value: to, lastChangedBy: provenance },
+      }));
+
+    case 'meter':
+      return updateCharacter(state, target.characterId, (c) => ({
+        ...c,
+        meters: {
+          ...c.meters,
+          [target.meter]: { ...c.meters[target.meter], value: to, lastChangedBy: provenance },
+        },
+      }));
+
+    case 'track': {
+      const existing = state.tracks[target.trackId];
+      if (existing === undefined) {
+        return state;
+      }
+      return {
+        ...state,
+        tracks: {
+          ...state.tracks,
+          [target.trackId]: { ...existing, ticks: to, lastChangedBy: provenance },
+        },
+      };
+    }
+  }
+}
+
+/**
+ * Beat 5's +1 is spent by the aided character's next move — unless the
+ * bonus excludes progress moves and this is one, in which case it waits.
+ */
+function consumeBonus(
+  state: CampaignState,
+  event: Extract<AstrolabeEvent, { type: 'move.invoked' }>,
+): CampaignState {
+  return updateCharacter(state, event.payload.actorCharacterId, (c) => {
+    if (c.bonusNextMove === undefined) {
+      return c;
+    }
+    const isProgressMove = event.payload.using?.using === 'progress_track';
+    if (c.bonusNextMove.excludes === 'progress_moves' && isProgressMove) {
+      return c;
+    }
+    const { bonusNextMove: _spent, ...rest } = c;
+    return rest;
+  });
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+export type { CharacterId, EntityId, TrackId };
