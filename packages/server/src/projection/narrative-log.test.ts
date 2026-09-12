@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import type { AstrolabeEvent, CommandId, EventId } from '@astrolabe/shared';
+import type {
+  AstrolabeEvent,
+  CommandId,
+  EventId,
+  NarrativeBeat,
+  NarrativeLog,
+} from '@astrolabe/shared';
 
-import { buildNarrativeLog, type NarrativeBeat, type NarrativeLog } from './narrative-log.js';
+import { buildNarrativeLog } from './narrative-log.js';
 import {
   AI_ACTOR,
   JUNO,

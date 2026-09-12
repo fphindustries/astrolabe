@@ -1,16 +1,17 @@
 import { applyMomentumDelta, momentumMax, momentumResetValue } from '@astrolabe/rules';
 import type { CharacterId, ImpactId, MeterId, TrackId } from '@astrolabe/rules';
-import type { AstrolabeEvent, Delta, EntityId } from '@astrolabe/shared';
+import type {
+  AstrolabeEvent,
+  CampaignState,
+  CharacterState,
+  Delta,
+  EntityId,
+  FieldProvenance,
+  MeterState,
+  TrackState,
+} from '@astrolabe/shared';
 
-import {
-  PROGRESS_TRACK_MAX_TICKS,
-  emptyState,
-  type CampaignState,
-  type CharacterState,
-  type FieldProvenance,
-  type MeterState,
-  type TrackState,
-} from './state.js';
+import { PROGRESS_TRACK_MAX_TICKS, emptyState } from './state.js';
 import { computeVoidState, isSuppressed, type VoidState } from './void-state.js';
 
 /**

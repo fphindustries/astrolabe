@@ -1,6 +1,7 @@
-import { buildNarrativeLog, type NarrativeEntry } from '../projection/narrative-log.js';
+import type { CampaignState, NarrativeEntry } from '@astrolabe/shared';
+
+import { buildNarrativeLog } from '../projection/narrative-log.js';
 import { project } from '../projection/project.js';
-import type { CampaignState } from '../projection/state.js';
 import { createDb, databaseUrlFromEnv } from '../db/client.js';
 import { readEvents, readNarrativeEvents } from '../db/event-store.js';
 import { migrate } from '../db/migrate.js';

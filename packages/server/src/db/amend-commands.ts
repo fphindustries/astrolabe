@@ -1,9 +1,15 @@
 import { MOMENTUM_MIN, momentumMax } from '@astrolabe/rules';
-import type { Actor, AstrolabeEvent, CampaignId, CommandId, EventId } from '@astrolabe/shared';
+import type {
+  Actor,
+  AstrolabeEvent,
+  CampaignId,
+  CampaignState,
+  CommandId,
+  EventId,
+} from '@astrolabe/shared';
 import type { Sql } from 'postgres';
 
 import { project } from '../projection/project.js';
-import type { CampaignState } from '../projection/state.js';
 import { computeVoidState, isSuppressed } from '../projection/void-state.js';
 
 import { appendCommand, readEvents, type AppendResult } from './event-store.js';

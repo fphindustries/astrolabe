@@ -36,3 +36,4 @@ export {
   type CreateCharacterRequest,
   type CreatedCharacter,
 } from './character-commands.js';
+export { listCampaigns } from './campaign-queries.js';

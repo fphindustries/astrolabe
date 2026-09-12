@@ -9,8 +9,8 @@
   "scripts": {
     "build": "tsc --build",
     "clean": "tsc --build --clean",
-    "dev": "tsx watch src/index.ts",
-    "start": "node dist/index.js",
+    "dev": "tsx watch src/http/serve.ts",
+    "start": "node dist/http/serve.js",
     "migrate": "tsx src/db/cli.ts",
     "harness": "tsx src/harness/cli.ts"
   },
