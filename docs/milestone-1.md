@@ -8,11 +8,13 @@ Nothing outside that scope ships in this milestone. When something feels missing
 
 ## In scope
 
-Campaign setup (truths, sector as a location list, inciting incident) · concept-first character creation · the play screen · relevant-moves panel · move resolution for Session, Adventure, Quest, Fate, and Suffer moves (Automated) and Threshold moves (Guided) · server-authoritative animated dice · oracle rolls and oracle-grounded generation · AI narration with latitude and length scaling · suggested actions on request · clocks, vows, and progress tracks · NPC and location tracking · the event log · void-and-redo · manual overrides · narration corrections · session recap, start, and end · token counter.
+Campaign setup (truths, sector as a location list, inciting incident) · concept-first character creation · the play screen · relevant-moves panel · move resolution at the Automated level for the moves the golden session exercises (D-59) · server-authoritative animated dice · oracle rolls and oracle-grounded generation from declared recipes (D-65) · AI narration with latitude and length scaling, via the provider interface and the Claude implementation (D-60) · suggested actions on request · clocks, vows, and progress tracks · NPC and location tracking · the event log · void-and-redo · manual overrides · narration corrections · session recap, start, and end · token counter.
+
+**Automated moves (D-59).** Begin a Session, End a Session, Gather Information, Secure an Advantage, Face Danger, Pay the Price, Endure Harm, Ask the Oracle, Swear an Iron Vow, Reach a Milestone. Aid Your Ally is a flag on an invocation rather than its own spec (D-62). Every other move runs at Reference.
 
 ## Out of scope
 
-Multiplayer and real-time sync · authentication · combat, exploration, recovery, connection, legacy, and scene-challenge automation (Reference level only) · the visual starmap · portraits · lines and veils · mobile and tablet layouts · asset automation beyond the Guided level.
+Multiplayer and real-time sync · authentication · the OpenAI provider implementation (D-60) · AI-proposed scene transitions (D-71) · automation for any move the golden session does not exercise, including the Threshold moves (D-59) · combat, exploration, recovery, connection, legacy, and scene-challenge automation · the visual starmap · portraits · lines and veils · mobile and tablet layouts · asset automation beyond the Guided level.
 
 ---
 
@@ -28,7 +30,7 @@ Each maps to a beat of the golden session.
 | A4 | A result card leads with the outcome; the dice math opens on click | 3 |
 | A5 | A weak-hit complication can be written by the player or chosen from AI-offered options | 3 |
 | A6 | "What now?" returns suggested actions anchored in current state, and the AI never nudges unasked | 4 |
-| A7 | One user can act as any of three characters, and Aid Your Ally applies the benefit to the aided character | 5 |
+| A7 | One user can act as any of three characters, and Aid Your Ally applies the move's benefits to the aided character | 5 |
 | A8 | The app offers to burn momentum when it would improve an outcome, showing the cost | 5 |
 | A9 | An oracle result that doesn't fit is rerolled visibly, and the discarded chip stays struck through | 6 |
 | A10 | An AI-created NPC appears as a tracked entity badged as AI-established | 6 |
@@ -55,8 +57,8 @@ Issue-sized. Each task should land in one sitting and leave the build working.
 - [ ] 1.4 Dice: action roll, progress roll, oracle roll; seedable for tests
 - [ ] 1.5 Outcome resolution: strong hit, weak hit, miss, match detection
 - [ ] 1.6 Momentum: gain, loss, reset, burn, and when burning changes an outcome
-- [ ] 1.7 Move automation for Automated-level moves: effects with no choice, inline choices, chained moves
-- [ ] 1.8 Move relevance rules driven by situation state
+- [ ] 1.7 Move automation for the Automated-level moves listed under In scope (D-59): effects with no choice, inline choices, chained moves
+- [ ] 1.8 Move relevance rules driven by situation state; the flag set is proposed and approved first (D-66)
 - [ ] 1.9 Unit tests across 1.4–1.8, including matches and chained Pay the Price → suffer moves
 - [ ] 1.10 Attribution screen content for Datasworn's CC BY licence
 
@@ -113,7 +115,7 @@ Issue-sized. Each task should land in one sitting and leave the build working.
 
 - [ ] 7.1 Provider interface: streaming, structured output, token accounting
 - [ ] 7.2 Claude implementation
-- [ ] 7.3 OpenAI implementation
+- [ ] ~~7.3 OpenAI implementation~~ — moved to Milestone 2 (D-60)
 - [ ] 7.4 Context assembly from projected state, not raw transcript
 - [ ] 7.5 Structured response schema and validation, with retry on failure
 - [ ] 7.6 Narration latitude (Minimal, Color, Full voice) enforced in the prompt
@@ -125,7 +127,7 @@ Issue-sized. Each task should land in one sitting and leave the build working.
 
 ### 8. Oracle-grounded generation
 
-- [ ] 8.1 Oracle roll API the AI calls instead of inventing results
+- [ ] 8.1 Oracle roll API the AI calls instead of inventing results, including declared recipes per entity type (D-65)
 - [ ] 8.2 Oracle chips under narration, linked to the passage they informed
 - [ ] 8.3 Visible reroll with the discarded chip struck through, capped per campaign settings
 - [ ] 8.4 AI-set odds on yes/no world questions
@@ -136,7 +138,7 @@ Issue-sized. Each task should land in one sitting and leave the build working.
 ### 9. Session lifecycle
 
 - [ ] 9.1 Begin a session, with a recap generated from the event log
-- [ ] 9.2 Scene proposals: inline, one click to accept, editable title
+- [ ] ~~9.2 Scene proposals: inline, one click to accept, editable title~~ — moved out of M1 (D-71). The scene model and header binding stay, under 5.3
 - [ ] 9.3 "What now?" suggested actions
 - [ ] 9.4 End a session: summary and open threads
 - [ ] 9.5 Resume a campaign from committed state
@@ -146,5 +148,5 @@ Issue-sized. Each task should land in one sitting and leave the build working.
 - [ ] 10.1 Visual design pass: dark surfaces, amber accents, Starforged typographic rhythm
 - [ ] 10.2 Purpose-built treatments for progress tracks, clocks, meters, and momentum
 - [ ] 10.3 Keyboard navigation and focus states
-- [ ] 10.4 Golden session as an automated end-to-end test with a stubbed AI provider
+- [ ] 10.4 Golden session as an automated end-to-end test with a stubbed AI provider, a seeded RNG, and the session-1 fixture event log (D-72)
 - [ ] 10.5 Docker Compose packaging for the Linux home server

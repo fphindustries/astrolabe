@@ -36,7 +36,7 @@ The AI Guide has three jobs: **narrate** (give player decisions narrative depth)
 | D-06 | For solo playtesting, one user may control multiple characters. | 2 | Approved |
 | D-07 | Narration latitude setting (Minimal / Color / Full voice), with a campaign default and per-player override. | 2 | Approved |
 | D-08 | On a miss, Pay the Price is offered with its rule options, with the oracle table roll as the highlighted default. The AI narrates the result but does not choose it. | 2 | Approved |
-| D-09 | The AI grounds generated story content in oracle rolls (see §4). | 2 | Approved; remaining details Open |
+| D-09 | The AI grounds generated story content in oracle rolls (see §4). | 2 | Approved (details closed by D-65) |
 | D-10 | Nudges happen only on request ("What now?") and take the form of suggested actions. | 2 | Approved |
 | D-11 | Narration length scales to the dramatic weight of the moment, with a campaign-level adjustment. | 2 | Approved |
 | D-12 | Sessions run 3–4 hours and open with an AI recap. | 2 | Approved |
@@ -50,14 +50,14 @@ The AI Guide has three jobs: **narrate** (give player decisions narrative depth)
 | D-20 | Roll results lead with the outcome; the full dice math opens in a popup. | 3 | Approved |
 | D-21 | Astrolabe owns its internal rules schema. Datasworn's Starforged data is imported through an adapter and can be replaced if it ever constrains the app. | 4 | Approved |
 | D-22 | Moves use three automation levels (Automated, Guided, Reference), assigned per move category (§5). | 4 | Approved |
-| D-23 | Combat moves are Guided and ship in Milestone 2. | 4 | Approved (Guided); Milestone 2 placement recommended, pending confirmation |
+| D-23 | Combat moves are Guided and ship in Milestone 2. | 4 | Approved (confirmed by D-76) |
 | D-24 | Asset abilities are Guided. Only assets used by the playtest characters get full automation. | 4 | Approved |
 | D-25 | The relevant-moves panel is rules-based, driven by explicit situation state. | 4 | Approved |
 | D-26 | Players can manually override any meter, track, or clock; every override is logged. | 4 | Approved |
 | D-27 | Players can void a roll and redo it; the voided roll stays in the log. | 4 | Approved |
 | D-28 | The AI may set the odds on its own yes/no oracle questions about the world. | 4 | Approved |
 | D-29 | Oracle rerolls are capped per result. The cap is campaign-configurable, default 2. | 4 | Approved |
-| D-30 | Target: about 30 minutes to create a character. Characters are created before the session, not during it. | 5 | Approved (pre-session timing recommended, pending confirmation) |
+| D-30 | Target: about 30 minutes to create a character. Characters are created before the session, not during it. | 5 | Approved (confirmed by D-77) |
 | D-31 | Truths offer all three options per question: pick, roll, or write your own. No one-line-pitch generation. | 5 | Approved |
 | D-32 | The starting sector is a list of locations and routes. A visual starmap comes in a later phase. | 5 | Approved |
 | D-33 | Character creation is concept-first: the player describes a character, and the AI proposes the mechanical build for review. Every field stays directly editable. | 5 | Approved |
@@ -86,6 +86,25 @@ The AI Guide has three jobs: **narrate** (give player decisions narrative depth)
 | D-56 | Milestone 1 is done when the golden session runs end to end with real rules data and real AI narration. Nothing beyond it ships. | 8 | Approved |
 | D-57 | Build order runs rules engine → event log → creation flows → play shell → move flow → AI → polish (see `milestone-1.md`). | 8 | Approved |
 | D-58 | The build prompt targets Claude Code. Repository conventions live in `CLAUDE.md`. | 8 | Approved |
+| D-59 | Milestone 1 hand-writes move automation only for the moves the golden session exercises (about eleven, including Swear an Iron Vow for campaign setup and Reach a Milestone for Beat 10). The rest of the Session, Adventure, Quest, Fate and Suffer categories, and all three Threshold moves, stay at Reference. This narrows §5's assignment table for Milestone 1 only. | 9 | Approved |
+| D-60 | Milestone 1 ships the AI provider interface, the Claude implementation, and the stubbed provider the golden-session test needs. The OpenAI implementation moves to Milestone 2. D-50 is satisfied by the abstraction existing. | 9 | Approved |
+| D-61 | When a golden-session beat contradicts the rules data, the rules data wins; the beat is amended. | 9 | Approved |
+| D-62 | Aid Your Ally is a flag on a single move invocation, not a separately logged move. On a hit, effect targets resolve to the aided character. | 9 | Approved |
+| D-63 | The Datasworn adapter targets version 0.0.10, consumed at build time as a development dependency. | 9 | Approved |
+| D-64 | §7, §9, §10 and §12 are promoted from Draft to Approved. | 9 | Approved |
+| D-65 | Oracle-grounded generation uses declared recipes held in the rules data, one per generated entity type. The AI requests a recipe by name, the server rolls the set, the AI interprets. Closes §4's open detail. | 9 | Approved |
+| D-66 | The relevant-moves panel is driven by a minimal situation-flag set scoped to the golden session. Each move declares the flags it requires, sets and clears. The enumerated list is proposed for approval before the panel is built. | 9 | Approved; flag list Open |
+| D-67 | A Pay the Price result that maps to no suffer move applies no mechanical effect. The result grounds the AI's narration, and the AI may propose a clock or an entity under the authority it already has. | 9 | Approved |
+| D-68 | A Pay the Price "roll twice" result recurses to a depth of two; a nested repeat is rerolled rather than recursed. Both results appear as their own oracle chips. | 9 | Approved |
+| D-69 | The oracle reroll cap (D-29) counts per individual roll. | 9 | Approved |
+| D-70 | The AI rerolls without interrupting the beat. The discarded chip stays visible and struck through with its stated reason, and the player may correct or reinstate it afterward under §3. | 9 | Approved |
+| D-71 | Milestone 1 builds the scene data model and binds the scene header to it, but a session opens one scene and stays in it. AI-proposed scene transitions (D-43) move out of Milestone 1. | 9 | Approved |
+| D-72 | The golden session runs against a committed fixture event log for session 1, so the recap is genuinely built from events. | 9 | Approved |
+| D-73 | A corrected narration passage replaces the original in the rendered log, marked with an affordance that opens the original and the player's note. Both are retained as events. | 9 | Approved |
+| D-74 | Momentum implements the full rule: maximum is 10 minus marked impacts, reset is 2 minus marked impacts, both projected from character state. | 9 | Approved |
+| D-75 | Each AI call appends an event carrying its input and output token counts. The session token counter is a projection over those events, so it survives reload and resumption. | 9 | Approved |
+| D-76 | D-23 confirmed: combat moves are Guided and ship in Milestone 2; Reference in Milestone 1. | 9 | Approved |
+| D-77 | D-30 confirmed: characters are created before the session, on each player's own time. | 9 | Approved |
 
 ---
 
@@ -108,7 +127,7 @@ The AI Guide has three jobs: **narrate** (give player decisions narrative depth)
 
 ---
 
-## 4. Oracle-Grounded Generation — Approved (details Open)
+## 4. Oracle-Grounded Generation — v1.1 (Approved)
 
 When the AI Guide creates story content (NPCs, locations, derelicts, factions, complications, answers to open questions about the world), it grounds that content in Starforged oracle rolls instead of inventing freely.
 
@@ -116,9 +135,9 @@ When the AI Guide creates story content (NPCs, locations, derelicts, factions, c
 
 **How.** The AI never produces random results itself. It asks the rules engine for rolls, which the server generates, and then interprets the results. Each roll is logged as an event recording the table, the value rolled, and the result, and it links to the narration it inspired. The dice supply the result; the AI supplies the interpretation. Rolls appear as chips under the narration. If a result doesn't fit the fiction, the AI rerolls it, and the discarded chip stays visible, struck through.
 
-The AI sets the odds on its own yes/no questions about the world. Rerolls are capped per result (campaign setting, default 2); once the cap is reached, the AI works with the final result *(Draft)*.
+The AI sets the odds on its own yes/no questions about the world. Rerolls are capped per individual roll (campaign setting, default 2); once the cap is reached, the AI works with the final result (D-69). The AI rerolls without interrupting the beat — narration commits, the discarded chip stays visible with its reason, and the player may correct or reinstate it afterward (D-70).
 
-**Open details:** How many rolls a single beat should use.
+**How many rolls per beat.** Each generated entity type has a declared **recipe** in the rules data: a named list of oracle tables and the slot each one fills. `npc` rolls role, goal, first look, disposition and name; `derelict` rolls type, condition and first looks. The AI requests a recipe by name, the server rolls the whole set and returns the results with their slots, and the AI interprets them. Recipes make a beat's grounding reproducible, so the golden session can assert it (D-65).
 
 ---
 
@@ -144,9 +163,11 @@ The AI sets the odds on its own yes/no questions about the world. Rerolls are ca
 | Exploration, Recover | Reference | — | Automated (Sojourn stays Guided) |
 | Connection, Legacy, Scene Challenge | Reference | — | Guided |
 
+The Milestone 1 column is the *eventual* assignment for those categories. D-59 narrows what Milestone 1 actually builds: automation is hand-written only for the moves the golden session exercises, and every other move — including the Threshold moves — runs at Reference until a later milestone needs it. Datasworn supplies move text but no structured effects, so each Automated move costs a hand-authored effect specification; that cost is what the narrowing buys back.
+
 **Assets.** Asset abilities are Guided. When a player picks a move, the abilities from their assets that apply to it are surfaced, and the player taps to apply them. Only assets used by the playtest characters get full automation.
 
-**Relevant-moves panel.** Relevance is rules-based. It comes from explicit situation state that moves set and clear (for example, Enter the Fray puts the characters in a fight), plus categories that are always relevant. Relevance rules live in the rules data, and the full move list is always one click away *(Draft)*.
+**Relevant-moves panel.** Relevance is rules-based. It comes from explicit situation state that moves set and clear (for example, Enter the Fray puts the characters in a fight), plus categories that are always relevant. Relevance rules live in the rules data: each move declares the situation flags it requires, sets and clears. The full move list is always one click away. Milestone 1 uses a minimal flag set scoped to the golden session; the enumerated list is approved before the panel is built (D-66) *(flag list Open)*.
 
 **Overrides and corrections.** Players can directly edit any meter, track, or clock. Every edit is logged with who made it, and it's shown differently from automated changes. Players can also void a roll and redo it. The voided roll stays in the log, visible and struck through *(display is Draft)*.
 
@@ -154,7 +175,7 @@ The AI sets the odds on its own yes/no questions about the world. Rerolls are ca
 
 ## 6. Campaign and Character Creation — v1.0 (Approved)
 
-**Time budget.** About 30 minutes per character. Character creation happens before the session, on each player's own time, not as a shared activity at the table *(recommended, pending confirmation — see note below)*. Campaign setup (truths, sector, inciting incident) is a shared activity.
+**Time budget.** About 30 minutes per character. Character creation happens before the session, on each player's own time, not as a shared activity at the table (confirmed by D-77 — see note below). Campaign setup (truths, sector, inciting incident) is a shared activity.
 
 **Truths.** Each truth question offers three paths: pick from the book's options, roll for one, or write your own. All three are equally prominent.
 
@@ -168,11 +189,11 @@ The AI sets the odds on its own yes/no questions about the world. Rerolls are ca
 
 **Deferred:** lines and veils, visual starmap, portraits, importing an existing campaign.
 
-**Note on six-player setup.** At 30 minutes each, six characters created serially would consume an entire evening. The recommendation is that players build characters independently between sessions, with the shared setup evening covering truths, the sector, the inciting incident, and crew bonds. Worth confirming.
+**Note on six-player setup.** At 30 minutes each, six characters created serially would consume an entire evening. Players therefore build characters independently between sessions, with the shared setup evening covering truths, the sector, the inciting incident, and crew bonds (D-77).
 
 ---
 
-## 7. Golden Session — Draft v0.3
+## 7. Golden Session — v1.0 (Approved)
 
 **Purpose.** A scripted slice of ideal play, used as both the acceptance test and the fun test. If a feature doesn't appear in a golden session, it isn't MVP. The mechanics here are illustrative; exact move text and table results will come from the rules data.
 
@@ -204,9 +225,11 @@ Christopher combines two of them: Rook covers the airlock while Vesna runs the s
 *Tests:* nudge only on request, suggestions anchored in current state, player free to remix suggestions.
 
 ### Beat 5 — Helping an ally, and a momentum decision (0:11)
-Christopher picks Secure an Advantage for Rook and marks it as direct support for Vesna. The app applies Aid Your Ally and explains that the benefit goes to her. Rook rolls a strong hit, and Christopher chooses to give Vesna +1 on her next move. Vesna's scan is Gather Information +wits, with the +1 already applied. The result card reads **Weak hit**; clicking it shows an action score of 5 against challenge dice of 6 and 3. The app sees that Vesna's +7 momentum would beat both dice and offers: *"Burn momentum to upgrade to a strong hit? Momentum resets to +2."* Christopher accepts.
+Christopher picks Secure an Advantage for Rook and marks it as direct support for Vesna. The app applies Aid Your Ally and explains that the benefits go to her. Rook rolls a strong hit, so Vesna takes both benefits: +2 momentum and +1 on her next move. Vesna's scan is Gather Information +wits, with the +1 already applied. The result card reads **Weak hit**; clicking it shows an action score of 5 against challenge dice of 6 and 3. The app sees that Vesna's +7 momentum would beat both dice and offers: *"Burn momentum to upgrade to a strong hit? Momentum resets to +2."* Christopher accepts.
 
-*Tests:* controlling multiple characters, choices within a move, a rule the player didn't think to ask about surfaced when it matters, clear cost for a choice, outcome first with math on demand.
+*Tests:* controlling multiple characters, benefits redirected to an aided ally, a rule the player didn't think to ask about surfaced when it matters, clear cost for a choice, outcome first with math on demand.
+
+*(Amended under D-61: Secure an Advantage grants both benefits on a strong hit with no choice. The choice sits on the weak hit.)*
 
 ### Beat 6 — The world gets a new face (0:14)
 On the strong hit, Vesna finds a heat signature: someone is alive aboard. The AI rolls character oracles for role, goal, first look, disposition, and name. One result contradicts what the evacuation logs established, so the AI rerolls it, and the discarded chip stays visible, struck through. An NPC card appears in the side panel, badged as AI-established. The AI narrates the first contact over comms, and the NPC's wariness comes straight from the disposition roll.
@@ -271,7 +294,7 @@ Only the narrative log scrolls. Everything else holds still.
 
 ---
 
-## 9. Architecture — v1.0 (Draft)
+## 9. Architecture — v1.0 (Approved)
 
 **Stack**
 
@@ -305,7 +328,7 @@ Only the narrative log scrolls. Everything else holds still.
 
 ---
 
-## 10. Non-Functional Requirements — v1.0 (Draft)
+## 10. Non-Functional Requirements — v1.0 (Approved)
 
 | Requirement | Target |
 |---|---|
@@ -333,9 +356,9 @@ Only the narrative log scrolls. Everything else holds still.
 
 ---
 
-## 12. Fun Budget — Draft
+## 12. Fun Budget — v1.0 (Approved)
 
-Proposed experience targets. These will become non-functional requirements once approved.
+Experience targets, binding alongside §10.
 
 | Target | Proposed threshold |
 |---|---|
