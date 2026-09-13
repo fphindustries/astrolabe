@@ -99,11 +99,11 @@ narrative log is a second read model with its own paged query.
 
 ### 4. Campaign setup
 
-- [ ] 4.1 Campaign model and creation
-- [ ] 4.2 Truths: pick, roll, or write, per question
-- [ ] 4.3 Sector as a location list with routes
-- [ ] 4.4 Inciting incident: AI proposals or player-written; becomes the first vow
-- [ ] 4.5 Campaign settings: narration latitude, narration length, reroll cap
+- [x] 4.1 Campaign model and creation
+- [x] 4.2 Truths: pick, roll, or write, per question
+- [x] 4.3 Sector as a location list with routes
+- [x] 4.4 Inciting incident: AI proposals or player-written; becomes the first vow — player-written path only (D-101)
+- [x] 4.5 Campaign settings: narration latitude, narration length, reroll cap
 
 ### 5. Play screen shell
 
@@ -656,3 +656,157 @@ state `zustand` would have held, which is why D-96 drops it.
   golden-campaign walkthrough are written and typecheck but were not run
   against a real database. Run `npm run db:up && npm run migrate && npm test`
   before trusting 5.0 fully.
+
+---
+
+## Implementation notes (section 4, campaign setup)
+
+4.1–4.5 are done. Decisions: D-101–D-103. This section's server half landed
+first, then the web wizard; the shape of both is set out here rather than
+restated in code comments.
+
+### The two deferrals, and why they don't just show up as missing features
+
+D-32 and D-34 both describe generation the AI grounds in oracle rolls, but
+the AI provider (group 7) and the oracle-recipe API (task 8.1) both run
+*after* group 4 in the work order (`milestone-1.md`'s order line). Rather
+than block all of group 4 on groups 7–8, or silently build something
+narrower than the design record without saying so, this session asked and
+recorded the answer as new decisions:
+
+- **4.4** builds the player pick/edit/write path and the vow it produces.
+  No AI-proposed incidents yet (D-101) — same treatment as 3.3.
+- **4.3** builds a manual location-and-routes editor: the player writes a
+  location's name and description directly, no roll (D-102). No `location`
+  `OracleRecipe` is declared anywhere yet — that's task 8.1's job, not
+  4.3's — so there was nothing to ground a roll in even if the AI existed.
+
+Both are additive later: the AI-proposal half of each lands on top of the
+same forms this session built, not as a replacement for them.
+
+### What was already there versus what this session added
+
+`campaign.created` (with `CampaignSettingsSchema` embedded — 4.1 and 4.5
+are one command, not two) and the `createCampaign` option on
+`appendCommand` already existed from section 2. Genuinely new: the
+`campaign-commands.ts` functions that call them (`createCampaign`,
+`setTruth`, `addSectorLocation`, `addSectorRoute`, `swearIncitingVow`), the
+four new `POST /api/campaigns/*` routes, two new event types
+(`truth.set`, `sector.route_added` — the shared/events/index.ts comment's
+"land with the features that write them" plan, exercised for the first
+time), two new `CampaignState` slices (`truths`, `sector`), and the
+projector cases for both.
+
+### `campaignId` is client-minted, unlike every other server-minted ID
+
+`createCampaign` is the one command where minting the id server-side
+(`uuidv7()`, as `characterId` does) would be unsafe rather than merely
+redundant: `campaignId` is also `campaigns.id`'s own primary key and the
+first half of `appendCommand`'s idempotency key. A fresh id on every call
+defeats replay detection entirely — the `campaigns` insert never collides,
+so a retry silently writes a second full campaign. The fix, once traced
+through: the client mints `campaignId` the same way it already mints
+`commandId`, so a retry reuses both and collides on `campaigns.id` instead
+— a thrown error, not a silent duplicate. `campaign-commands.ts`'s comment
+on `createCampaign` has the full trace, including the one thing this
+didn't fix: the collision surfaces as a raw `campaigns_pkey` violation, not
+`appendCommand`'s usual replay-with-the-original-response path, because the
+`campaigns` insert runs before the `commands` insert `isCommandReplay`
+watches. Making the first command of a campaign fully replay-safe is a
+change to `appendCommand` itself (section 2's code), out of this group's
+scope. Worth knowing: `createCharacter` has a related but harmless version
+of the same shape — it returns the locally-minted `characterId` on a
+replay rather than the one `result.response` actually stored — harmless
+there only because `characterId` isn't a partition key, so nothing
+double-writes.
+
+### Truths reuse `OracleTable`, not a new schema
+
+Datasworn's `TruthOption` carries its own `min`/`max` d100 range per
+option — the same shape as an `OracleRow`. So `rules/src/adapter/truths.ts`
+adapts each of the 14 truths straight into an `OracleTable`
+(`packages/rules/src/schema/oracles.ts`'s existing type), reusing
+`rollOracle` unchanged rather than inventing a `TruthQuestion` type or a
+`truth:`-prefixed ID. `oracleIdFromSource`'s `'truths'` marker
+(`id-mapping.ts`, anticipated since task 1.3) already produces the right
+`oracle:` id from a truth's Datasworn source id — e.g.
+`starforged/truths/cataclysm` → `oracle:cataclysm` — so `truth.set`'s
+payload just carries an `OracleId`, validated by the schema everything else
+already uses.
+
+**Deliberately not imported**: each option's `quest_starter` text (no use
+until AI-proposed incidents exist, D-101) and the nested per-option
+elaboration table some options embed via `{{table:...}}` (e.g. Cataclysm's
+"what caused it" sub-roll) — importing those would mean minting ids for
+tables Datasworn itself doesn't `_id`, for a feature nothing in Milestone 1
+reads. The `{{table:...}}` markup is stripped from the option text at
+adapt time rather than left to render as literal templating syntax; the
+adapter test (`truths.test.ts`) asserts both the count (14) and the strip.
+
+**The server rolls, never the client.** `setTruth`'s `'rolled'` request
+carries no die result at all — the command calls `rollOracle` itself,
+against `cryptoRandomSource()` (`server/src/random-source.ts`, new: the
+first non-seeded `RandomSource` in the codebase, since no move-resolution
+endpoint has needed real dice yet). A `'picked'` request names a row by
+index rather than sending text, for the same reason: trusting client-sent
+text as "picked from the book" would let a compromised client write
+arbitrary text under that provenance. Only `'written'` text comes from the
+client verbatim.
+
+### Sector locations reuse `entity.established`; only routes are new
+
+`entity.established` already had `kind: 'location'` and a
+`provenance.establishedBy: 'player' | 'ai'` field from section 2 — a
+manually-added sector location is exactly this event with
+`establishedBy: 'player'`, `groundedIn: []`, no `recipeId`. Routes are the
+one relation `entity.established`'s per-entity `fields: Record<string,
+string>` bag can't hold well (D-103), so `sector.route_added` is new; its
+`EVENT_TYPE_META.references` names both endpoints, which is what will let
+D-83's containment check refuse deleting a location a route still points
+at, once void-and-redo UI (6.10) reaches this far.
+
+### The inciting incident is assembly, not new machinery
+
+`swearIncitingVow` writes exactly the `track.created(kind: 'vow')` shape
+`character-commands.ts`'s background vow already writes — no `characterId`
+by default, since the golden session's own inciting vow ("recover the
+flight recorder of *Meridian's Hope*") belongs to the crew, not to one
+character (`harness/golden-beats.ts` writes it the same way). Nothing here
+calls `resolveActionMove` — `automation/specs/swear-an-iron-vow.ts`'s own
+comment already says the vow's rank and text are player input gathered at
+setup, upstream of what that move's automation resolves.
+
+### The web wizard
+
+`CampaignCreationScreen.tsx` is a four-step wizard kept as component state
+(`Step = 'settings' | 'truths' | 'sector' | 'incident'`), not four routes:
+every step after the first writes against the campaign step one just
+created, and nothing else needed a URL of its own. `campaigns/campaign-
+setup.ts` holds the pure view-model helpers (`unansweredTruths`,
+`sectorLocations`, `sectorRouteViews`) in the same out-of-JSX,
+DOM-free-tested style as `characters/creation-form.ts` and
+`play/crew/crew.ts`. The truths step does not gate "Next" on every question
+being answered — it tracks progress, not completeness, since nothing in
+the golden session's fixture needs every truth answered, only that the
+flow can produce one.
+
+`harness/golden-beats.ts` was deliberately **not** rewired through
+`createCampaign` — it already builds its campaign+crew opening as one raw
+`appendCommand` call, consistent with how it constructs `character.created`
+payloads directly rather than calling `createCharacter`; the harness stays
+a low-level, direct-to-event-store check by design, not a caller of the
+command layer.
+
+### Verification gap
+
+Same as every prior section: this sandbox has no Docker/Postgres, so
+`campaign-commands.test.ts` and the four new blocks in `http/app.test.ts`
+are written, typecheck (`npm run typecheck`, which covers test files too —
+use this rather than a bare `tsc --build`), and pass everything vitest can
+run without a database, but the database-backed cases themselves were not
+run. `CampaignCreationScreen`'s settings step **was** exercised in a live
+`npm run dev` + browser pass (form fill, submit, error path rendered
+correctly on the expected network failure with no backend running); the
+truths/sector/incident steps were not, since they need a real API to do
+anything. Run `npm run db:up && npm run migrate && npm test` before
+trusting the rest.

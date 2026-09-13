@@ -1,4 +1,12 @@
-import type { AssetId, CharacterId, ImpactId, MeterId, StatId, TrackId } from '@astrolabe/rules';
+import type {
+  AssetId,
+  CharacterId,
+  ImpactId,
+  MeterId,
+  OracleId,
+  StatId,
+  TrackId,
+} from '@astrolabe/rules';
 
 import type { ActorKind, Timestamp } from '../envelope.js';
 import type { CampaignId, EntityId, EventId, SceneId, SessionId } from '../ids.js';
@@ -152,6 +160,22 @@ export interface CanonState {
   readonly sessionSummaries: readonly SessionSummary[];
 }
 
+/** One answered setting truth (task 4.2, D-31): keyed by which question, not a list position. */
+export interface TruthAnswer {
+  readonly text: string;
+  readonly source: 'picked' | 'rolled' | 'written';
+}
+
+/** A route between two established locations (task 4.3, D-103). The locations themselves are `entities` of `kind: 'location'`. */
+export interface SectorRoute {
+  readonly from: EntityId;
+  readonly to: EntityId;
+}
+
+export interface SectorState {
+  readonly routes: readonly SectorRoute[];
+}
+
 export interface CampaignState {
   readonly campaign: CampaignInfo | null;
   readonly session: SessionState | null;
@@ -160,4 +184,6 @@ export interface CampaignState {
   readonly tracks: Readonly<Record<TrackId, TrackState>>;
   readonly entities: Readonly<Record<EntityId, EntityState>>;
   readonly canon: CanonState;
+  readonly truths: Readonly<Record<OracleId, TruthAnswer>>;
+  readonly sector: SectorState;
 }

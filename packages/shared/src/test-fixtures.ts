@@ -239,6 +239,16 @@ export const SAMPLE_PAYLOADS: { [T in EventType]: PayloadFor<T> } = {
     outputTokens: 180,
     latencyMs: 900,
   },
+  'truth.set': {
+    oracleId: 'oracle:cataclysm',
+    source: 'rolled',
+    text: 'The Sun Plague extinguished the stars in our home galaxy.',
+    roll: 12,
+  },
+  'sector.route_added': {
+    fromLocationId: STATION,
+    toLocationId: SURVIVOR,
+  },
 };
 
 /** Every sample as a complete, valid event, in catalogue order. */

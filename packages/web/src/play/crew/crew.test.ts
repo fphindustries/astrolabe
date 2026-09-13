@@ -43,6 +43,7 @@ const RULES: AdaptedRuleset = {
   oracles: [],
   assets: [{ id: 'asset:path/bold' as AssetId, name: 'Bold' } as AdaptedRuleset['assets'][number]],
   assetCategories: [],
+  truths: [],
 };
 
 describe('toCrewCard', () => {

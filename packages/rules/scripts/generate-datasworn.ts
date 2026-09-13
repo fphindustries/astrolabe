@@ -31,5 +31,6 @@ writeFileSync(outPath, `${JSON.stringify(adapted, null, 2)}\n`);
 
 console.log(
   `Wrote ${adapted.moves.length} moves, ${adapted.oracles.length} oracles, ` +
-    `${adapted.assets.length} assets (Datasworn ${ruleset.datasworn_version}) to ${outPath}`,
+    `${adapted.assets.length} assets, ${adapted.truths.length} truths ` +
+    `(Datasworn ${ruleset.datasworn_version}) to ${outPath}`,
 );

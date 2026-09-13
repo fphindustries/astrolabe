@@ -1,5 +1,6 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 
+import { CampaignCreationScreen } from '../campaigns/CampaignCreationScreen.js';
 import { CampaignListScreen } from '../campaigns/CampaignListScreen.js';
 import { CharacterCreationScreen } from '../characters/CharacterCreationScreen.js';
 import { NotFoundScreen } from '../play/NotFoundScreen.js';
@@ -11,10 +12,9 @@ import { useRoute } from './routes.js';
 
 /**
  * The app root: providers, then the route switch. Campaign setup
- * (`/campaigns/new`, group 4) is routed but not yet built — it renders a
- * pointer to its task rather than 404ing, since the route itself is real
- * (D-100). Character creation (`/campaigns/:id/characters/new`, tasks
- * 3.2/3.4) is now built.
+ * (`/campaigns/new`, group 4) and character creation
+ * (`/campaigns/:id/characters/new`, tasks 3.2/3.4) are both full-page routes
+ * (D-100).
  */
 export function App() {
   return (
@@ -35,7 +35,7 @@ function Routed() {
     case 'play':
       return <PlayScreen campaignId={route.campaignId} />;
     case 'campaign-new':
-      return <NotFoundScreen message="Campaign setup lands with group 4." />;
+      return <CampaignCreationScreen />;
     case 'character-new':
       return <CharacterCreationScreen campaignId={route.campaignId} />;
     case 'not-found':

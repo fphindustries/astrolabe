@@ -14,21 +14,24 @@ import {
   NarrationWrittenSchema,
 } from './narration.js';
 import { SceneStartedSchema } from './scene.js';
+import { SectorRouteAddedSchema } from './sector.js';
 import { SessionBeganSchema, SessionEndedSchema } from './session.js';
 import { StateChangedSchema, StateOverriddenSchema } from './state.js';
 import { TrackAdvancedSchema, TrackCreatedSchema } from './track.js';
+import { TruthSetSchema } from './truth.js';
 import { EventVoidedSchema } from './void.js';
 
 /**
  * The event catalogue: every type Milestone 1's event log can hold, mapped
  * to the schema that validates its payload.
  *
- * These eighteen are the spine — what the projector and the section 2
- * harness need. The rest of Milestone 1's types (oracle rolls, truths,
- * inline choices, proposed amounts, complications, the scene header,
- * provider failures) are designed in `docs/design-event-log.md` and land
- * with the features that write them, so their payloads are shaped by a real
- * caller rather than guessed at a month early.
+ * The original eighteen are the spine — what the projector and the
+ * section 2 harness need. `truth.set` and `sector.route_added` (task 4.2,
+ * 4.3) are the first two of the rest landing with the features that write
+ * them, as planned: the remaining types (oracle rolls, inline choices,
+ * proposed amounts, complications, the scene header, provider failures) are
+ * designed in `docs/design-event-log.md` and land the same way, so their
+ * payloads are shaped by a real caller rather than guessed at a month early.
  *
  * That is safe because this map is the single definition: adding a type
  * here fails the compile at every exhaustive switch over `EventType`, which
@@ -53,6 +56,8 @@ export const PAYLOAD_SCHEMAS = {
   'narration.revised': NarrationRevisedSchema,
   'event.voided': EventVoidedSchema,
   'ai.completed': AiCompletedSchema,
+  'truth.set': TruthSetSchema,
+  'sector.route_added': SectorRouteAddedSchema,
 } as const;
 
 export type EventType = keyof typeof PAYLOAD_SCHEMAS;
@@ -104,6 +109,8 @@ export const EventSchema = z.discriminatedUnion('type', [
   eventMember('narration.revised'),
   eventMember('event.voided'),
   eventMember('ai.completed'),
+  eventMember('truth.set'),
+  eventMember('sector.route_added'),
 ]);
 
 /**
@@ -169,7 +176,9 @@ export * from './entity.js';
 export * from './move.js';
 export * from './narration.js';
 export * from './scene.js';
+export * from './sector.js';
 export * from './session.js';
 export * from './state.js';
 export * from './track.js';
+export * from './truth.js';
 export * from './void.js';

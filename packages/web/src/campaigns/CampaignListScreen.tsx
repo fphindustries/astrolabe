@@ -3,11 +3,7 @@ import { Link } from '../app/routes.js';
 
 import styles from './CampaignListScreen.module.css';
 
-/**
- * `/` — the list of campaigns. Minimal for 5.1: names as links to the play
- * screen. Campaign creation (group 4, `/campaigns/new`) adds the "new
- * campaign" affordance here.
- */
+/** `/` — the list of campaigns, names as links to the play screen, plus the new-campaign affordance (group 4). */
 export function CampaignListScreen() {
   const { data, isLoading, isError } = useCampaignList();
 
@@ -26,6 +22,9 @@ export function CampaignListScreen() {
           ))}
         </ul>
       )}
+      <Link className={styles.newCampaign} href="/campaigns/new">
+        New campaign
+      </Link>
     </div>
   );
 }

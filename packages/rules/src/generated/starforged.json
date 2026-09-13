@@ -34110,5 +34110,497 @@
         "url": "https://ironswornrpg.com"
       }
     }
+  ],
+  "truths": [
+    {
+      "id": "oracle:cataclysm",
+      "name": "Cataclysm",
+      "dice": "1d100",
+      "kind": "text",
+      "rows": [
+        {
+          "min": 1,
+          "max": 33,
+          "text": "The anomaly traveled at incredible speeds, many times faster than light itself, and snuffed out the stars around us before we realized it was coming. Few of us survived as we made our way to this new galaxy. Here in the Forge, the stars are still aflame. We cling to their warmth like weary travelers huddled around a fire.\n\nWe suspect the sun plague was caused by:"
+        },
+        {
+          "min": 34,
+          "max": 67,
+          "text": "Without warning, these implacable and enigmatic beings ravaged our homeworlds. We could not stand against them. With the last of our defenses destroyed, our hope gone, we cast our fate to the Forge. Here, we can hide. Survive.\n\nThese entities took the form of:"
+        },
+        {
+          "min": 68,
+          "max": 100,
+          "text": "Over millennia, we consumed resources and shattered lives as we fueled the engines of industry, expansion, and war. In the end, a powerful foe took advantage of our rivalries in a violent bid for power. Fleeing the devastation, we assembled our fleets and traveled to the Forge. A new home. A fresh start.\n\nIn this final war, we were set upon by:"
+        }
+      ],
+      "suggests": [],
+      "source": {
+        "sourceId": "starforged/truths/cataclysm",
+        "sourceVersion": "0.0.10",
+        "book": "Ironsworn: Starforged Rulebook",
+        "page": 84,
+        "authors": [
+          "Shawn Tomkin"
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0",
+        "url": "https://ironswornrpg.com"
+      }
+    },
+    {
+      "id": "oracle:exodus",
+      "name": "Exodus",
+      "dice": "1d100",
+      "kind": "text",
+      "rows": [
+        {
+          "min": 1,
+          "max": 33,
+          "text": "The refugees built a rich legacy of culture and tradition during the Exodus. Some even remained in the ships after their arrival in the Forge, unwilling or unable to leave their familiar confines. Those vessels, the Ironhomes, still sail the depths of this galaxy."
+        },
+        {
+          "min": 34,
+          "max": 67,
+          "text": "The experimental drives used by the Exodus fleet are forbidden, but the damage is done. The Sundering spreads across our reality like cracks on the surface of an icy pond. Those fissures unleash even more perilous realities upon our own. Did we flee one cataclysm, only to inadvertently create another?"
+        },
+        {
+          "min": 68,
+          "max": 100,
+          "text": "In the midst of the cataclysm, our ancestors found a strange metal pillar on our homeworld's moon. A map on the surface of this alien relic detailed the deep-space locations of the Iron Gates—massive devices that powered artificial wormholes. With no other options, the Exodus ships fled through the gates and emerged here in the Forge."
+        }
+      ],
+      "suggests": [],
+      "source": {
+        "sourceId": "starforged/truths/exodus",
+        "sourceVersion": "0.0.10",
+        "book": "Ironsworn: Starforged Rulebook",
+        "page": 86,
+        "authors": [
+          "Shawn Tomkin"
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0",
+        "url": "https://ironswornrpg.com"
+      }
+    },
+    {
+      "id": "oracle:communities",
+      "name": "Communities",
+      "dice": "1d100",
+      "kind": "text",
+      "rows": [
+        {
+          "min": 1,
+          "max": 33,
+          "text": "Our settlements are often small, starved for resources, and on the brink of ruin. Hundreds of far-flung settlements are lost and isolated within the untamed chaos of this galaxy, and we do not know their fate."
+        },
+        {
+          "min": 34,
+          "max": 67,
+          "text": "We have a tentative foothold in this galaxy. Each of the five Founder Clans honor the name and legacy of a leader who guided their people in the chaotic time after the Exodus. Vast reaches of the settled domains are claimed by the clans, and territorial skirmishes are common."
+        },
+        {
+          "min": 68,
+          "max": 100,
+          "text": "Starships navigate along bustling trade routes between settlements. We've built burgeoning outposts on the fringes of known sectors, and bold spacers chart new paths into unexplored domains. But this hard-earned success is threatened by the chaotic balefires, intense energy anomalies that cut off trade routes and threaten entire planets."
+        }
+      ],
+      "suggests": [],
+      "source": {
+        "sourceId": "starforged/truths/communities",
+        "sourceVersion": "0.0.10",
+        "book": "Ironsworn: Starforged Rulebook",
+        "page": 87,
+        "authors": [
+          "Shawn Tomkin"
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0",
+        "url": "https://ironswornrpg.com"
+      }
+    },
+    {
+      "id": "oracle:iron",
+      "name": "Iron",
+      "dice": "1d100",
+      "kind": "text",
+      "rows": [
+        {
+          "min": 1,
+          "max": 33,
+          "text": "Many of our outposts were built from the iron bones of the Exodus ships. Fragments of the ships were also given to survivors as a remembrance, and passed from one generation to the next. Today, the Ironsworn swear vows upon the shards to honor the sacrifice of their forebears, the essence of the places left behind, and the souls of those great ships."
+        },
+        {
+          "min": 34,
+          "max": 67,
+          "text": "Black iron was first forged by a long-dead civilization. Some say it is a living metal, attuned to the hidden depths of the universe. Remnants of this prized resource are found within ancient sites throughout the Forge. It is resistant to damage and corrosion, but can be molded using superheated plasma at specialized facilities. The Ironsworn carry weapons, armor, or tokens crafted from black iron, and swear vows upon it."
+        },
+        {
+          "min": 68,
+          "max": 100,
+          "text": "Aboard a starship, where stray gunfire can destroy fragile equipment or pierce hulls, the brutal practicality of a sword makes for a useful weapon. A few also favor the silent efficiency of a blade for infiltration or espionage. Most importantly, when the Ironsworn swear a vow upon a sword, they bind their commitment to the metal. If they forsake a vow, that iron must be abandoned. To be Ironsworn without a blade is to be disgraced."
+        }
+      ],
+      "suggests": [],
+      "source": {
+        "sourceId": "starforged/truths/iron",
+        "sourceVersion": "0.0.10",
+        "book": "Ironsworn: Starforged Rulebook",
+        "page": 88,
+        "authors": [
+          "Shawn Tomkin"
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0",
+        "url": "https://ironswornrpg.com"
+      }
+    },
+    {
+      "id": "oracle:laws",
+      "name": "Laws",
+      "dice": "1d100",
+      "kind": "text",
+      "rows": [
+        {
+          "min": 1,
+          "max": 33,
+          "text": "Powers rise and fall in the Forge, so any authority is fleeting. In the end, we must fend for ourselves. A few communities are bastions of successful autonomy, but many are corrupted or preyed upon by petty despots, criminals, and raiders."
+        },
+        {
+          "min": 34,
+          "max": 67,
+          "text": "Through tradition and influence, bounty hunter guilds are given free rein to track and capture fugitives in most settled places. Only the foolish stand between a determined bounty hunter and their target."
+        },
+        {
+          "min": 68,
+          "max": 100,
+          "text": "Most settlements are still governed under the Covenant and yield to the authority of the Keepers. But a few view the Covenant as a dogmatic, impractical, and unjust relic of our past; in those places, the Keepers find no welcome."
+        }
+      ],
+      "suggests": [],
+      "source": {
+        "sourceId": "starforged/truths/laws",
+        "sourceVersion": "0.0.10",
+        "book": "Ironsworn: Starforged Rulebook",
+        "page": 89,
+        "authors": [
+          "Shawn Tomkin"
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0",
+        "url": "https://ironswornrpg.com"
+      }
+    },
+    {
+      "id": "oracle:religion",
+      "name": "Religion",
+      "dice": "1d100",
+      "kind": "text",
+      "rows": [
+        {
+          "min": 1,
+          "max": 33,
+          "text": "The Exodus was a tipping point. The gods offered no help to the billions who died in the cataclysm, and spirituality has little meaning in the Forge. Most now see religion as a useless relic of our past. But the search for meaning continues, and many are all-too-willing to follow a charismatic leader who claims to offer a better way."
+        },
+        {
+          "min": 34,
+          "max": 67,
+          "text": "Many have no religion, or offer an occasional prayer out of habit. Others pay homage to the gods of our forebears as a way of connecting to their roots. Some idealize the natural order of the universe, and see the divine in the gravitational dance of stars or the complex mechanisms of a planetary ecosystem. And many now worship the Primordials—gods of a fallen people who once dwelt within the Forge."
+        },
+        {
+          "min": 68,
+          "max": 100,
+          "text": "Our communities are often sworn to serve one of the three doctrines of the Triumvirate. For many, faith offers purpose and meaning. But it also divides us. Throughout our brief history in the Forge, the leaders of the Triumvirate have pitted us against one another. For this reason, some are apostates who disavow these religions and follow a different path."
+        }
+      ],
+      "suggests": [],
+      "source": {
+        "sourceId": "starforged/truths/religion",
+        "sourceVersion": "0.0.10",
+        "book": "Ironsworn: Starforged Rulebook",
+        "page": 90,
+        "authors": [
+          "Shawn Tomkin"
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0",
+        "url": "https://ironswornrpg.com"
+      }
+    },
+    {
+      "id": "oracle:magic",
+      "name": "Magic",
+      "dice": "1d100",
+      "kind": "text",
+      "rows": [
+        {
+          "min": 1,
+          "max": 33,
+          "text": "Some look to superstition and age-old traditions for comfort in this unforgiving galaxy. But that is foolishness. What some call magic is simply a product of technologies or natural forces we aren’t yet equipped to understand."
+        },
+        {
+          "min": 34,
+          "max": 67,
+          "text": "While not magic in the truest sense, the abilities of the paragons are as close to magic as we can conjure.\n\nThese powers are born of:"
+        },
+        {
+          "min": 68,
+          "max": 100,
+          "text": "Soon after our arrival, some displayed the ability to harness the Forge's energies. Today, mystics invoke this power to manipulate matter or see beyond the veils of our own universe. But this can be a corrupting force, and the most powerful mystics are respected and feared in equal measure."
+        }
+      ],
+      "suggests": [],
+      "source": {
+        "sourceId": "starforged/truths/magic",
+        "sourceVersion": "0.0.10",
+        "book": "Ironsworn: Starforged Rulebook",
+        "page": 91,
+        "authors": [
+          "Shawn Tomkin"
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0",
+        "url": "https://ironswornrpg.com"
+      }
+    },
+    {
+      "id": "oracle:communication-and-data",
+      "name": "Communication and Data",
+      "dice": "1d100",
+      "kind": "text",
+      "rows": [
+        {
+          "min": 1,
+          "max": 33,
+          "text": "The knowledge that remains is a commodity as valuable as the rarest resource. Information is collected, hoarded, and jealously guarded. Ships and outposts endure prolonged periods of isolation, and rumors or disinformation are used to gain advantage or undermine foes."
+        },
+        {
+          "min": 34,
+          "max": 67,
+          "text": "Direct communication and transmissions beyond the near-space of a ship or outpost are impossible. Digital archives are available at larger outposts, but the information is not always up-to-date or reliable. Therefore, the most important communications and discoveries are carried by couriers who swear vows to see that data safely to its destination."
+        },
+        {
+          "min": 68,
+          "max": 100,
+          "text": "Because of their importance, Weave hubs are often targets for sabotage, and communication blackouts are not uncommon. Beyond the most populous sectors, travelers and outposts are still commonly isolated and entirely off the grid."
+        }
+      ],
+      "suggests": [],
+      "source": {
+        "sourceId": "starforged/truths/communication_and_data",
+        "sourceVersion": "0.0.10",
+        "book": "Ironsworn: Starforged Rulebook",
+        "page": 92,
+        "authors": [
+          "Shawn Tomkin"
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0",
+        "url": "https://ironswornrpg.com"
+      }
+    },
+    {
+      "id": "oracle:medicine",
+      "name": "Medicine",
+      "dice": "1d100",
+      "kind": "text",
+      "rows": [
+        {
+          "min": 1,
+          "max": 33,
+          "text": "Healers are rare and ill-equipped. Untold numbers have succumbed to sickness, injury, and disease. Those who survive often bear the scars of a hard and dangerous life in the Forge."
+        },
+        {
+          "min": 34,
+          "max": 67,
+          "text": "Much was lost in the Exodus, and what remains of our medical technologies and expertise is co-opted by the privileged and powerful. For most, advanced medical care is out of reach. When someone suffers a grievous injury, they'll often turn to a rigger for a makeshift mechanical solution."
+        },
+        {
+          "min": 68,
+          "max": 100,
+          "text": "Life-saving advanced care is available within larger communities throughout the settled sectors of the Forge. Even remote communities are often served by a novice healer, or can request help from a healer's guild in an emergency."
+        }
+      ],
+      "suggests": [],
+      "source": {
+        "sourceId": "starforged/truths/medicine",
+        "sourceVersion": "0.0.10",
+        "book": "Ironsworn: Starforged Rulebook",
+        "page": 93,
+        "authors": [
+          "Shawn Tomkin"
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0",
+        "url": "https://ironswornrpg.com"
+      }
+    },
+    {
+      "id": "oracle:artificial-intelligence",
+      "name": "Artificial Intelligence",
+      "dice": "1d100",
+      "kind": "text",
+      "rows": [
+        {
+          "min": 1,
+          "max": 33,
+          "text": "Our computers are limited to simple digital systems and the most basic machine intelligence. This is because:\n\n\n\nThe Adepts serve in place of those advanced systems. They utilize mind-altering drugs to see the universe as a dazzling lattice of data, identifying trends and predicting outcomes with uncanny accuracy. But to gain this insight they sacrifice much of themselves."
+        },
+        {
+          "min": 34,
+          "max": 67,
+          "text": "Much of our AI technology was lost in the Exodus. What remains is under the control of powerful organizations and people, and is often wielded as a weapon or deterrent. The rest of us must make do with primitive systems."
+        },
+        {
+          "min": 68,
+          "max": 100,
+          "text": "Our ships, digital assistants, bots, and other systems often house advanced AI. For a lone traveler, machine intelligence can provide companionship and aid within the perilous depths of the Forge."
+        }
+      ],
+      "suggests": [],
+      "source": {
+        "sourceId": "starforged/truths/artificial_intelligence",
+        "sourceVersion": "0.0.10",
+        "book": "Ironsworn: Starforged Rulebook",
+        "page": 94,
+        "authors": [
+          "Shawn Tomkin"
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0",
+        "url": "https://ironswornrpg.com"
+      }
+    },
+    {
+      "id": "oracle:war",
+      "name": "War",
+      "dice": "1d100",
+      "kind": "text",
+      "rows": [
+        {
+          "min": 1,
+          "max": 33,
+          "text": "Weapons are simple and cheap. Starships are often cobbled together from salvage. Most communities rely on ragtag bands of poorly equipped conscripts or volunteers to defend their holdings, and raiders prowl the Forge in search of easy prey."
+        },
+        {
+          "min": 34,
+          "max": 67,
+          "text": "Mercenary guilds wield power in the Forge. Some are scrappy outfits of no more than a dozen soldiers. Others are sector-spanning enterprises deploying legions of skilled fighting forces and fleets of powerful starships. Most hold no loyalty except to the highest bidder."
+        },
+        {
+          "min": 68,
+          "max": 100,
+          "text": "Those in power have access to weapons of horrific destructive potential. Skirmishes and wars flare across the settled domains, and most are pawns or casualties in these destructive campaigns."
+        }
+      ],
+      "suggests": [],
+      "source": {
+        "sourceId": "starforged/truths/war",
+        "sourceVersion": "0.0.10",
+        "book": "Ironsworn: Starforged Rulebook",
+        "page": 95,
+        "authors": [
+          "Shawn Tomkin"
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0",
+        "url": "https://ironswornrpg.com"
+      }
+    },
+    {
+      "id": "oracle:lifeforms",
+      "name": "Lifeforms",
+      "dice": "1d100",
+      "kind": "text",
+      "rows": [
+        {
+          "min": 1,
+          "max": 33,
+          "text": "Life in the Forge is diverse. Planets are often home to a vast array of creatures, and our starships cruise with spaceborne lifeforms riding their wake. Even animals from our homeworld—carried aboard the Exodus ships—have adapted to live with us in the Forge."
+        },
+        {
+          "min": 34,
+          "max": 67,
+          "text": "The forgespawn are hostile creatures born of the chaotic energies of this galaxy. Hundreds of abandoned or devastated outposts and derelict ships stand as testament to their dreadful power and cunning."
+        },
+        {
+          "min": 68,
+          "max": 100,
+          "text": "The Essentia are the architects of life within the Forge. These omniscient beings are rarely encountered, and have powers and purpose beyond our comprehension. Some worship them. Others resist or rebel against them. But trying to defy the will of the Essentia is like standing at the shore of an ocean to thwart the tide. They are inevitable."
+        }
+      ],
+      "suggests": [],
+      "source": {
+        "sourceId": "starforged/truths/lifeforms",
+        "sourceVersion": "0.0.10",
+        "book": "Ironsworn: Starforged Rulebook",
+        "page": 96,
+        "authors": [
+          "Shawn Tomkin"
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0",
+        "url": "https://ironswornrpg.com"
+      }
+    },
+    {
+      "id": "oracle:precursors",
+      "name": "Precursors",
+      "dice": "1d100",
+      "kind": "text",
+      "rows": [
+        {
+          "min": 1,
+          "max": 33,
+          "text": "Incomprehensible technologies, inexorable time, and the strange energies of the Forge have corrupted the vaults of the precursors. Despite the perils, grubs scour those places for useful resources and discoveries. But some secrets are best left buried, and many have been lost to the forsaken depths of the vaults."
+        },
+        {
+          "min": 34,
+          "max": 67,
+          "text": "Ascendancy vaults can appear spontaneously, washed up like flotsam in the tides of time. Their gravity and atmospheres pay no heed to natural laws. Some are corrupted and ruined. Others are unmarred and intact. Some are both at once. They are chaos."
+        },
+        {
+          "min": 68,
+          "max": 100,
+          "text": "On scarred planets and within precursor vaults throughout the Forge, the Remnants still guard ancient secrets and fight unending wars."
+        }
+      ],
+      "suggests": [],
+      "source": {
+        "sourceId": "starforged/truths/precursors",
+        "sourceVersion": "0.0.10",
+        "book": "Ironsworn: Starforged Rulebook",
+        "page": 97,
+        "authors": [
+          "Shawn Tomkin"
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0",
+        "url": "https://ironswornrpg.com"
+      }
+    },
+    {
+      "id": "oracle:horrors",
+      "name": "Horrors",
+      "dice": "1d100",
+      "kind": "text",
+      "rows": [
+        {
+          "min": 1,
+          "max": 33,
+          "text": "Within the Forge, space and time are as mutable and unstable as a flooding river. When reality can't be trusted, we are bound to encounter unsettling phenomenon."
+        },
+        {
+          "min": 34,
+          "max": 67,
+          "text": "When you travel the depths of the Forge, be wary. Some say we are cursed by those who did not survive the cataclysm, and the veil between life and death is forever weakened. Supernatural occurrences and entities are especially common near a white dwarf star. These stellar objects, which spacers call ghost lights, are the decaying remnants of a dead star."
+        },
+        {
+          "min": 68,
+          "max": 100,
+          "text": "The woken dead are a plague within the Forge. Some of these beings are benevolent or seek absolution, but most are hollowed and corrupted by death. They are driven by hate and a hunger for the warmth of life that is forever lost to them. The Soulbinders are dedicated to putting them to rest—whatever the cost."
+        }
+      ],
+      "suggests": [],
+      "source": {
+        "sourceId": "starforged/truths/horrors",
+        "sourceVersion": "0.0.10",
+        "book": "Ironsworn: Starforged Rulebook",
+        "page": 98,
+        "authors": [
+          "Shawn Tomkin"
+        ],
+        "license": "https://creativecommons.org/licenses/by/4.0",
+        "url": "https://ironswornrpg.com"
+      }
+    }
   ]
 }

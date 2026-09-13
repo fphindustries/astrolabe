@@ -220,6 +220,24 @@ export const EVENT_TYPE_META: MetaTable = {
     introduces: none,
     references: none,
   },
+  'truth.set': {
+    // Setup bookkeeping, not a play-screen beat — the golden session's
+    // narrative log starts at session 2, after campaign setup is done.
+    narrative: false,
+    significant: false,
+    mutatesState: true,
+    voidable: true,
+    introduces: none,
+    references: none,
+  },
+  'sector.route_added': {
+    narrative: false,
+    significant: false,
+    mutatesState: true,
+    voidable: true,
+    introduces: none,
+    references: (p) => [entity(p.fromLocationId), entity(p.toLocationId)],
+  },
 };
 
 /** The event types the narrative log renders (task 5.4's query). */

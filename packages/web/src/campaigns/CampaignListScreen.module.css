@@ -37,3 +37,9 @@
 .empty {
   color: var(--text-muted);
 }
+
+.newCampaign {
+  display: inline-block;
+  margin-top: var(--space-6);
+  color: var(--accent);
+}

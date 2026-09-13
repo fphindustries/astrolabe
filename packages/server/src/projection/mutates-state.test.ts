@@ -36,6 +36,8 @@ interface Probe {
 }
 
 const OTHER_CHARACTER = '0a0a0a0a-0a0a-4a0a-8a0a-0a0a0a0a0a0a';
+const LOCATION_A = '0b0b0b0b-0b0b-4b0b-8b0b-0b0b0b0b0b0b';
+const LOCATION_B = '0c0c0c0c-0c0c-4c0c-8c0c-0c0c0c0c0c0c';
 
 const PROBES: { readonly [T in EventType]: Probe } = {
   'campaign.created': {
@@ -191,6 +193,21 @@ const PROBES: { readonly [T in EventType]: Probe } = {
         { provider: 'anthropic', model: 'm', purpose: 'probe', inputTokens: 10, outputTokens: 5 },
         { actor: AI_ACTOR },
       ),
+  },
+  'truth.set': {
+    probe: (b) =>
+      b.add('truth.set', {
+        oracleId: 'oracle:cataclysm',
+        source: 'written',
+        text: 'A slow climate collapse, not a single cataclysm.',
+      }),
+  },
+  'sector.route_added': {
+    probe: (b) =>
+      b.add('sector.route_added', {
+        fromLocationId: LOCATION_A as never,
+        toLocationId: LOCATION_B as never,
+      }),
   },
 };
 

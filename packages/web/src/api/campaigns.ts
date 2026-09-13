@@ -1,12 +1,14 @@
-import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   CampaignListResponse,
+  CampaignSettings,
   CampaignState,
   CampaignStateResponse,
+  CreateCampaignResponse,
   NarrativeLogResponse,
 } from '@astrolabe/shared';
 
-import { apiGet } from './http.js';
+import { apiGet, apiPost } from './http.js';
 
 /**
  * Campaign queries, mirroring the two read models (task 5.0) rather than
@@ -27,6 +29,35 @@ export function useCampaignList() {
   return useQuery({
     queryKey: campaignKeys.list(),
     queryFn: () => apiGet<CampaignListResponse>('/campaigns'),
+  });
+}
+
+export interface CreateCampaignInput {
+  readonly name: string;
+  readonly settings?: Partial<CampaignSettings>;
+}
+
+/**
+ * Campaign creation (task 4.1). Both `campaignId` and `commandId` are minted
+ * here, client-side — `campaignId` too, unlike character creation, because
+ * this is the command that creates the campaign row itself (see
+ * `campaign-commands.ts`'s note on why that id can't be safely re-minted on
+ * a retry).
+ */
+export function useCreateCampaign() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateCampaignInput) =>
+      apiPost<CreateCampaignResponse>('/campaigns', {
+        campaignId: crypto.randomUUID(),
+        commandId: crypto.randomUUID(),
+        name: input.name,
+        ...(input.settings !== undefined ? { settings: input.settings } : {}),
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: campaignKeys.list() });
+    },
   });
 }
 

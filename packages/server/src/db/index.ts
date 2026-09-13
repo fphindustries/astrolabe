@@ -37,3 +37,22 @@ export {
   type CreatedCharacter,
 } from './character-commands.js';
 export { listCampaigns } from './campaign-queries.js';
+export {
+  createCampaign,
+  setTruth,
+  addSectorLocation,
+  addSectorRoute,
+  swearIncitingVow,
+  TruthRejectedError,
+  SectorRouteRejectedError,
+  IncitingVowRejectedError,
+  type CreateCampaignRequest,
+  type CreatedCampaign,
+  type SetTruthRequest,
+  type SetTruth,
+  type AddSectorLocationRequest,
+  type AddedSectorLocation,
+  type AddSectorRouteRequest,
+  type SwearIncitingVowRequest,
+  type SwornIncitingVow,
+} from './campaign-commands.js';

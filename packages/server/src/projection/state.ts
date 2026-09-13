@@ -25,6 +25,8 @@ export function emptyState(): CampaignState {
     tracks: {},
     entities: {},
     canon: { sessionSummaries: [] },
+    truths: {},
+    sector: { routes: [] },
   };
 }
 

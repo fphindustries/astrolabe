@@ -5,6 +5,8 @@ import {
   PLAYER_ACTOR,
   ROOK,
   SESSION_ID,
+  STATION,
+  SURVIVOR,
   VESNA,
   rawEvent,
   testEvent,
@@ -16,8 +18,11 @@ import { EVENT_TYPES, PAYLOAD_SCHEMAS, isEventType, parseEvent, safeParseEvent }
 const sessionBegan = testEvent('session.began', { sessionId: SESSION_ID, number: 2 });
 
 describe('the catalogue', () => {
-  it('holds the eighteen spine types section 2 builds', () => {
-    expect(EVENT_TYPES).toHaveLength(18);
+  it('holds the eighteen spine types section 2 builds, plus one per later feature that has landed', () => {
+    // truth.set (task 4.2) and sector.route_added (task 4.3) are the first
+    // two of the rest, landing with the features that write them, as
+    // events/index.ts's own comment plans.
+    expect(EVENT_TYPES).toHaveLength(20);
   });
 
   it('exposes every type through isEventType, and rejects anything else', () => {
@@ -310,6 +315,71 @@ describe('track.created', () => {
           segments: 5,
           cause: { kind: 'ai_judgement', reason: 'why' },
         }),
+      ).success,
+    ).toBe(false);
+  });
+});
+
+describe('truth.set', () => {
+  it('accepts a rolled answer with its die result (task 4.2)', () => {
+    expect(
+      safeParseEvent(
+        testEvent('truth.set', {
+          oracleId: 'oracle:cataclysm',
+          source: 'rolled',
+          text: 'The Sun Plague extinguished the stars in our home galaxy.',
+          roll: 12,
+        }),
+      ).success,
+    ).toBe(true);
+  });
+
+  it('accepts a written answer with no roll at all', () => {
+    expect(
+      safeParseEvent(
+        testEvent('truth.set', {
+          oracleId: 'oracle:cataclysm',
+          source: 'written',
+          text: 'A slow climate collapse, not a single cataclysm.',
+        }),
+      ).success,
+    ).toBe(true);
+  });
+
+  it('rejects an oracle id without its prefix', () => {
+    expect(
+      safeParseEvent(rawEvent('truth.set', { oracleId: 'cataclysm', source: 'written', text: 'x' }))
+        .success,
+    ).toBe(false);
+  });
+
+  it('rejects a roll outside 1-100', () => {
+    expect(
+      safeParseEvent(
+        rawEvent('truth.set', {
+          oracleId: 'oracle:cataclysm',
+          source: 'rolled',
+          text: 'x',
+          roll: 101,
+        }),
+      ).success,
+    ).toBe(false);
+  });
+});
+
+describe('sector.route_added', () => {
+  it('accepts a route between two established locations (task 4.3)', () => {
+    expect(
+      safeParseEvent(
+        testEvent('sector.route_added', { fromLocationId: STATION, toLocationId: SURVIVOR }),
+      ).success,
+    ).toBe(true);
+  });
+
+  it('rejects a non-uuid location id', () => {
+    expect(
+      safeParseEvent(
+        rawEvent('sector.route_added', { fromLocationId: 'not-a-uuid', toLocationId: SURVIVOR }),
       ).success,
     ).toBe(false);
   });

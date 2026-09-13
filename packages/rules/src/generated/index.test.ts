@@ -10,10 +10,11 @@ import { STARFORGED } from './index.js';
  * adapter/*.test.ts already covers against the live @datasworn package).
  */
 describe('STARFORGED', () => {
-  it('loads the frozen artifact with every Starforged move, oracle and asset', () => {
+  it('loads the frozen artifact with every Starforged move, oracle, asset and truth', () => {
     expect(STARFORGED.moves).toHaveLength(56);
     expect(STARFORGED.oracles.length).toBeGreaterThan(200);
     expect(STARFORGED.assets).toHaveLength(87);
+    expect(STARFORGED.truths).toHaveLength(14);
   });
 
   it('finds Face Danger by its Astrolabe ID', () => {

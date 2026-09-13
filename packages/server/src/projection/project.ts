@@ -263,6 +263,30 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
       // appear earlier in the log, which a forward pass cannot do.
       return state;
 
+    case 'truth.set': {
+      const { payload } = event;
+      return {
+        ...state,
+        truths: {
+          ...state.truths,
+          [payload.oracleId]: { text: payload.text, source: payload.source },
+        },
+      };
+    }
+
+    case 'sector.route_added': {
+      const { payload } = event;
+      return {
+        ...state,
+        sector: {
+          routes: [
+            ...state.sector.routes,
+            { from: payload.fromLocationId, to: payload.toLocationId },
+          ],
+        },
+      };
+    }
+
     case 'ai.completed': {
       if (state.session === null) {
         return state;
