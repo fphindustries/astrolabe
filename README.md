@@ -34,6 +34,17 @@ npm test
 
 The `rules` package and the state projection are pure and need no database. Only the store does.
 
+To run the app, copy `.env.example` to `.env` and fill in `ANTHROPIC_API_KEY`. The server's `dev`, `migrate` and `harness` scripts read it; a variable already set in the shell takes precedence. `npm test` does not read it.
+
+```bash
+npm run db:up
+npm run db:seed                             # fixture campaigns; open "session 2 open" to play (D-122)
+npm run dev --workspace @astrolabe/server   # :3000
+npm run dev --workspace @astrolabe/web      # :5173
+```
+
+`npm run db:reset -- --yes` wipes the database back to the seeded fixtures. It drops and recreates the schema, then migrates and seeds, because the event log can't be deleted from. It removes **every** campaign, so without `--yes` it only lists what it would drop.
+
 ## Documentation
 
 | Document | What it is |

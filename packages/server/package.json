@@ -9,10 +9,12 @@
   "scripts": {
     "build": "tsc --build",
     "clean": "tsc --build --clean",
-    "dev": "tsx watch src/http/serve.ts",
+    "dev": "tsx watch --env-file-if-exists=../../.env src/http/serve.ts",
     "start": "node dist/http/serve.js",
-    "migrate": "tsx src/db/cli.ts",
-    "harness": "tsx src/harness/cli.ts"
+    "migrate": "tsx --env-file-if-exists=../../.env src/db/cli.ts",
+    "harness": "tsx --env-file-if-exists=../../.env src/harness/cli.ts",
+    "seed": "tsx --env-file-if-exists=../../.env src/fixtures/cli.ts seed",
+    "reset": "tsx --env-file-if-exists=../../.env src/fixtures/cli.ts reset"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",

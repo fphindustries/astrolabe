@@ -143,7 +143,7 @@ export async function playGoldenBeats(sql: Sql): Promise<GoldenRun> {
       {
         type: 'move.invoked',
         payload: {
-          moveId: 'move:adventure/gather_information',
+          moveId: 'move:adventure/gather-information',
           actorCharacterId: juno,
           using: { using: 'stat', stat: 'wits' },
           adds: [{ amount: 2, label: 'wits' }],
@@ -172,7 +172,7 @@ export async function playGoldenBeats(sql: Sql): Promise<GoldenRun> {
         payload: {
           cause: {
             kind: 'move_outcome',
-            moveId: 'move:adventure/gather_information',
+            moveId: 'move:adventure/gather-information',
             tier: 'weak_hit',
           },
           changes: [
@@ -196,7 +196,7 @@ export async function playGoldenBeats(sql: Sql): Promise<GoldenRun> {
       {
         type: 'move.invoked',
         payload: {
-          moveId: 'move:adventure/secure_an_advantage',
+          moveId: 'move:adventure/secure-an-advantage',
           actorCharacterId: rook,
           // D-62: the flag, not a move of its own.
           aidingAllyId: vesna,
@@ -227,7 +227,7 @@ export async function playGoldenBeats(sql: Sql): Promise<GoldenRun> {
         payload: {
           cause: {
             kind: 'move_outcome',
-            moveId: 'move:adventure/secure_an_advantage',
+            moveId: 'move:adventure/secure-an-advantage',
             tier: 'strong_hit',
           },
           // Both benefits already resolved to Vesna at write time.
@@ -257,7 +257,7 @@ export async function playGoldenBeats(sql: Sql): Promise<GoldenRun> {
       {
         type: 'move.invoked',
         payload: {
-          moveId: 'move:adventure/gather_information',
+          moveId: 'move:adventure/gather-information',
           actorCharacterId: vesna,
           using: { using: 'stat', stat: 'wits' },
           adds: [
@@ -388,7 +388,7 @@ export async function playGoldenBeats(sql: Sql): Promise<GoldenRun> {
       {
         type: 'move.invoked',
         payload: {
-          moveId: 'move:adventure/face_danger',
+          moveId: 'move:adventure/face-danger',
           actorCharacterId: rook,
           using: { using: 'stat', stat: 'edge' },
           adds: [{ amount: 2, label: 'edge' }],
@@ -417,7 +417,7 @@ export async function playGoldenBeats(sql: Sql): Promise<GoldenRun> {
         payload: {
           cause: {
             kind: 'move_outcome',
-            moveId: 'move:adventure/face_danger',
+            moveId: 'move:adventure/face-danger',
             tier: 'strong_hit',
           },
           changes: [
@@ -447,7 +447,7 @@ export async function playGoldenBeats(sql: Sql): Promise<GoldenRun> {
       {
         type: 'move.invoked',
         payload: {
-          moveId: 'move:adventure/face_danger',
+          moveId: 'move:adventure/face-danger',
           actorCharacterId: rook,
           using: { using: 'stat', stat: 'iron' },
           adds: [{ amount: 3, label: 'iron' }],
@@ -485,7 +485,7 @@ export async function playGoldenBeats(sql: Sql): Promise<GoldenRun> {
       {
         type: 'state.changed',
         payload: {
-          cause: { kind: 'move_outcome', moveId: 'move:suffer/endure_harm', tier: 'weak_hit' },
+          cause: { kind: 'move_outcome', moveId: 'move:suffer/endure-harm', tier: 'weak_hit' },
           changes: [
             {
               delta: { kind: 'meter', characterId: rook, meter: 'health', delta: -1 },

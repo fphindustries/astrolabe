@@ -42,6 +42,8 @@ Each maps to a beat of the golden session.
 | A16 | Any meter, track, or clock can be edited manually, logged and visually distinct from automated changes | 9 |
 | A17 | Ending a session produces a summary and open threads that feed the next session's recap | 10 |
 | A18 | Narration begins streaming within 5 seconds, and dice and state changes never wait on the AI | all |
+| A19 | A player who describes an action without picking a move gets an AI suggestion: the move, the verbatim trigger text it relies on, a stated reason, and a confidence. The player can open it to see why, and it never blocks picking a move directly (D-14, D-120) | 3 |
+| A20 | When a chosen move's trigger doesn't fit the described action, the AI notes it on the beat, with the trigger text, a reason and a confidence, without blocking or delaying the roll (D-37, D-121) | none (D-121) |
 
 ---
 
@@ -49,15 +51,21 @@ Each maps to a beat of the golden session.
 
 Issue-sized. Each task should land in one sitting and leave the build working.
 
-**Order (D-88, D-94).** Task numbers are stable, so references to them keep
+**Order (D-88, D-94, D-57 as amended).** Task numbers are stable, so references to them keep
 resolving; the order they are *worked* in is:
 
-> 1 · 2 · **3.1, 3.5** · **5.0, 5.1, 5.2** · 3.2, 3.4 · 4 · 5.3–5.7 · 6 · 7 · 3.3 · 8 · 9 · 10
+> 1 · 2 · **3.1, 3.5** · **5.0, 5.1, 5.2** · 3.2, 3.4 · 4 · 5.3–5.7 · 6 · **7.1, 7.2, 7.4, 7.5** (with 7.6–7.11) · 3.3 · 7.12, 7.13 · 8 · 9 · 10
 
 The play-screen shell comes before the creation and campaign-setup UI because
 those have no React app to live in — `web` is a bare Vite scaffold. The
 server-side halves of groups 3 and 4 stay ahead of it, since they need no UI
-at all. 3.3 waits on the AI provider in group 7.
+at all.
+
+The provider core (7.1, 7.2, 7.4, 7.5) comes before every task that needs a
+working AI provider: 3.3, 4.4's AI-proposal half, 7.12, 7.13, and groups 8 and
+9 (D-57 as amended). 7.6–7.11 landed in the same commit as the core, so the
+remaining group 7 work, 7.12 and 7.13, follows 3.3. 7.3 (OpenAI) stays in
+Milestone 2 (D-60).
 
 ### 1. Rules package
 
@@ -93,7 +101,7 @@ narrative log is a second read model with its own paged query.
 
 - [x] 3.1 Character data model: stats, meters, momentum, impacts, assets, vows
 - [x] 3.2 Manual creation UI with rule validation on every field
-- [ ] 3.3 Concept-first flow: prompt, AI proposal, review, accept or edit per field — blocked on the AI provider (7.1, 7.2)
+- [ ] 3.3 Concept-first flow: prompt, AI proposal, review, accept or edit per field. Unblocked: the provider core landed with group 7 (D-57 as amended)
 - [x] 3.4 Asset selection with rule constraints
 - [x] 3.5 Creation writes character-created events
 
@@ -142,6 +150,8 @@ narrative log is a second read model with its own paged query.
 - [x] 7.9 Narration correction: flag, rewrite, log
 - [x] 7.10 Token counter in the UI
 - [x] 7.11 Graceful stop when the provider is unavailable, with state intact
+- [ ] 7.12 AI move suggestion when an action is described without a move: move and roll option, verbatim trigger text, reason and confidence, inspectable, never blocking a direct pick (D-14, D-120, A19)
+- [ ] 7.13 Trigger-mismatch note on a beat whose move doesn't fit the described action, with the same traceability, never blocking or delaying the roll (D-37, D-121, A20). No golden-session beat exercises it
 
 ### 8. Oracle-grounded generation
 
@@ -166,7 +176,7 @@ narrative log is a second read model with its own paged query.
 - [ ] 10.1 Visual design pass: dark surfaces, amber accents, Starforged typographic rhythm
 - [ ] 10.2 Purpose-built treatments for progress tracks, clocks, meters, and momentum
 - [ ] 10.3 Keyboard navigation and focus states
-- [ ] 10.4 Golden session as an automated end-to-end test with a stubbed AI provider, a seeded RNG, and the session-1 fixture event log (D-72)
+- [ ] 10.4 Golden session as an automated end-to-end test with a stubbed AI provider, a seeded RNG, and the session-1 fixture event log (D-72), from the shared fixture mechanism (D-122)
 - [ ] 10.5 Docker Compose packaging for the Linux home server
 
 ---
@@ -439,8 +449,8 @@ the seed of D-72's committed session fixture.
 
 ## Implementation notes (section 3, character creation)
 
-3.1, 3.2, 3.4 and 3.5 are done. 3.3 (concept-first) still waits on the AI
-provider (group 7) — it reuses this session's form rather than replacing it.
+3.1, 3.2, 3.4 and 3.5 are done. 3.3 (concept-first) waited on the AI
+provider, which has since landed (D-57 as amended). It reuses this session’s form rather than replacing it.
 Decisions: D-89 to D-93, D-105.
 
 - **The background vow is written atomically with the character** (D-105):
@@ -1022,8 +1032,9 @@ route begins a session yet (task 9.1) for a live campaign to have one.
 
 ## Implementation notes (section 7, the AI provider and narration)
 
-7.1, 7.2 and 7.4–7.11 are done (7.3 moved to Milestone 2, D-60). Decisions:
-D-110–D-119. Group 7's own visible output is `role: 'beat'` narration after a
+7.1, 7.2 and 7.4–7.11 are done (7.3 moved to Milestone 2, D-60). 7.12 and
+7.13 were added in round 18 (D-120, D-121) and are still open; they follow 3.3
+in the work order. Decisions: D-110–D-119. Group 7's own visible output is `role: 'beat'` narration after a
 move flow, the narration correction, the token counter and the pause.
 Complications (8.7), AI oracle rolls and chips (8.1–8.5), the recap (9.1), the
 summary (9.4) and "What now?" (9.3) run through the same engine but are not
@@ -1196,3 +1207,70 @@ For that live pass:
   `ai.completed` events survives. The second is rolled back by the uniqueness
   check, so the counter under-reports that spend (D-75). The UI queue prevents
   this.
+
+---
+
+## Implementation notes (dev fixtures and reset, D-122)
+
+These were built ahead of 10.4, because the dev database and 10.4 need the
+same thing: a campaign in a known state that can be thrown away and rebuilt.
+
+### Shape
+
+- **`server/src/fixtures/`** holds the fixture code.
+  - `session-one.ts` plays D-72's `session-1` through the real commands:
+    campaign, three truths, a three-location sector with routes, the crew
+    (validated by `createCharacter`), the formidable vow, and four session-1
+    moves. Each move is narrated through `runBeatNarration` with a scripted
+    `StubProvider`, and the session ends with a summary and three open
+    threads. It lands on the golden session's Setup: momentum Vesna +7,
+    Rook +2, Juno +3.
+  - `session-two-open.ts` plays the same session 1 under its own campaign
+    id, then opens session 2 at Varga Relay. `session-1` has no open
+    session, and nothing in the app can open one until 9.1. Without this
+    fixture, a reset would leave nothing to play, and moves would attach to
+    the ended session 1. Once 9.1 lands, retire it.
+  - `ids.ts` derives version-8 uuids from the fixture name and a key. It
+    covers the campaign, every command, and the session and scene.
+  - `loaded-dice.ts` is a `RandomSource` that lands on scripted faces and
+    throws if the rules draw more dice than were scripted. The rules engine
+    still scores each roll, and the fixture checks the tier it expected.
+  - `index.ts` is the registry: `FIXTURES` and `seedFixture`, which skips a
+    campaign that is already present.
+- **`server/src/db/reset.ts`** has `resetSchema`, which drops and recreates
+  the connection's current schema, and `summariseCampaigns`.
+- **Scripts:**
+  - `npm run db:seed [-- name…]` adds fixtures that aren't present yet.
+  - `npm run db:reset -- --yes` drops, migrates and seeds. Without `--yes`
+    it lists the campaigns it would drop; under `NODE_ENV=production` it
+    refuses.
+- **`npm run harness`** now plays into a throwaway schema and drops it. Every
+  earlier run had added another "Lantern Wake" to the dev database. If a run
+  crashes before cleanup, it leaves a `test_harness_*` schema behind. That's
+  harmless, and `db:reset` doesn't remove it because it only drops `public`.
+- **`resetSchema` changes `public`'s owner** from `pg_database_owner` to the
+  connecting role. That doesn't matter for a single-user local database.
+
+### Known limits
+
+- **Only the ids the fixture chooses are stable.** Event, character, track
+  and entity ids are still minted by the commands, and timestamps are real.
+  `fixtures.test.ts` therefore compares replays by event shape and by crew
+  values keyed by callsign. If 10.4 needs byte-identical logs, the commands
+  will need an injectable id source.
+- **Fixture rolls are recorded as `rng: { source: 'crypto' }`.** `invokeMove`
+  hard-codes that value, including when a test overrides the RNG. It's
+  existing behaviour, left as is.
+- **`session.began` and `session.ended` are appended directly** until 9.1
+  and 9.4 build their commands.
+- **The vow has no progress.** Reach a Milestone has no effects yet (see its
+  spec), and faking ticks with an override would mark the vow as manually
+  edited.
+- **The harness's `golden-beats.ts` used move ids the rules data doesn't
+  define** (`gather_information` rather than `gather-information`), which
+  the UI couldn't resolve. It now uses the real ids. Unit tests elsewhere
+  still use underscore ids as opaque strings; nothing resolves them there.
+- **For 10.4:** seed `session-1` into a test schema, then play session 2
+  through the HTTP routes. Narration should come from a scripted stub queue
+  and dice from loaded dice, so the provider path is exercised rather than
+  bypassed.

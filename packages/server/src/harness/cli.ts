@@ -2,9 +2,9 @@ import type { CampaignState, NarrativeEntry } from '@astrolabe/shared';
 
 import { buildNarrativeLog } from '../projection/narrative-log.js';
 import { project } from '../projection/project.js';
-import { createDb, databaseUrlFromEnv } from '../db/client.js';
+import { databaseUrlFromEnv } from '../db/client.js';
 import { readEvents, readNarrativeEvents } from '../db/event-store.js';
-import { migrate } from '../db/migrate.js';
+import { createTestDatabase } from '../db/testing.js';
 
 import { playGoldenBeats } from './golden-beats.js';
 
@@ -15,11 +15,16 @@ import { playGoldenBeats } from './golden-beats.js';
  * Section 2 has no UI, so this is how a person checks that a session's worth
  * of events adds up: the numbers below should match the golden session's,
  * and the log below should read like the beats it describes.
+ *
+ * It plays into a throwaway schema that is dropped afterwards (D-122).
+ * Writing into the dev database left one more "Lantern Wake" behind on every
+ * run; a campaign to open in the browser comes from `npm run db:seed`.
  */
 async function main(): Promise<void> {
-  const sql = createDb(databaseUrlFromEnv(), { max: 2 });
+  databaseUrlFromEnv(); // Fail with the helpful message before anything else.
+  const db = await createTestDatabase('harness');
+  const { sql } = db;
   try {
-    await migrate(sql);
     const run = await playGoldenBeats(sql);
 
     const events = await readEvents(sql, run.campaignId);
@@ -31,7 +36,7 @@ async function main(): Promise<void> {
     print(run.notes, state, events.length);
     printLog(page.beats);
   } finally {
-    await sql.end();
+    await db.close();
   }
 }
 

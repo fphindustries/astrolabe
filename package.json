@@ -25,6 +25,8 @@
     "db:up": "docker compose up -d db",
     "db:down": "docker compose down",
     "migrate": "npm run migrate --workspace @astrolabe/server",
+    "db:seed": "npm run seed --workspace @astrolabe/server --",
+    "db:reset": "npm run reset --workspace @astrolabe/server --",
     "harness": "npm run harness --workspace @astrolabe/server"
   },
   "devDependencies": {
