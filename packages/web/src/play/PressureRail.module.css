@@ -1,5 +1,73 @@
-.rail {
+.empty {
   padding: var(--space-4);
   color: var(--text-muted);
   font-size: var(--text-sm);
+}
+
+.rail {
+  height: 100%;
+  overflow: hidden;
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
+  width: 100%;
+  text-align: left;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  color: inherit;
+  cursor: pointer;
+}
+
+.row:hover {
+  border-color: var(--accent);
+}
+
+.rowTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowProgress {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.overflow {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  text-align: left;
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+}
+
+.overflow:hover {
+  color: var(--text-primary);
 }

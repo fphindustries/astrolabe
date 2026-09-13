@@ -1,4 +1,4 @@
-import { STARFORGED, type CharacterId } from '@astrolabe/rules';
+import { STARFORGED, type AssetId, type CharacterId } from '@astrolabe/rules';
 
 import { useCampaignState } from '../../api/campaigns.js';
 import { Drawer } from '../../ui/Drawer.js';
@@ -9,19 +9,20 @@ import { toCharacterSheet } from './crew.js';
 import styles from './CharacterDrawer.module.css';
 
 /**
- * §8: clicking a crew card opens this drawer (D-98). Display only —
- * editing a meter, track or clock is A16's manual-override UI, which has
- * no task yet (flagged in the plan; likely 5.7) and no move-flow controls
- * live here either (group 6).
+ * §8: clicking a crew card opens this drawer (D-98). Display only — A16's
+ * manual-override editing has no task of its own and stays out (group 5's
+ * plan). `onOpenAsset` opens task 5.7's asset drawer for full ability text.
  */
 export function CharacterDrawer({
   campaignId,
   characterId,
   onClose,
+  onOpenAsset,
 }: {
   readonly campaignId: string;
   readonly characterId: CharacterId;
   readonly onClose: () => void;
+  readonly onOpenAsset: (assetId: AssetId) => void;
 }) {
   const { data } = useCampaignState(campaignId, (state) => ({
     character: state.characters[characterId],
@@ -92,7 +93,15 @@ export function CharacterDrawer({
             ) : (
               <ul className={styles.list}>
                 {sheet.assets.map((asset) => (
-                  <li key={asset.id}>{asset.name}</li>
+                  <li key={asset.id}>
+                    <button
+                      type="button"
+                      className={styles.assetButton}
+                      onClick={() => onOpenAsset(asset.id)}
+                    >
+                      {asset.name}
+                    </button>
+                  </li>
                 ))}
               </ul>
             )}

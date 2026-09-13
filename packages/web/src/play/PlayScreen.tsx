@@ -11,11 +11,18 @@ import { NotFoundScreen } from './NotFoundScreen.js';
 import { CrewRail } from './crew/CrewRail.js';
 import { CharacterDrawer } from './crew/CharacterDrawer.js';
 import { toCrewCard } from './crew/crew.js';
+import { EntityRail } from './entities/EntityRail.js';
+import { EntityDrawer } from './entities/EntityDrawer.js';
+import { entityCards } from './entities/entities.js';
+import { TrackerDrawer } from './pressure/TrackerDrawer.js';
+import { MoveDrawer } from './moves/MoveDrawer.js';
+import { AssetDrawer } from './assets/AssetDrawer.js';
 import { PlayUiProvider, useDrawer, useDrawerActions } from './play-ui.js';
+import styles from './PlayScreen.module.css';
 
 /**
- * `/campaigns/:id` — the play screen (task 5.1, 5.2). The campaign's home
- * (D-100): opening a campaign lands here.
+ * `/campaigns/:id` — the play screen (task 5.1, 5.2, 5.3–5.7). The
+ * campaign's home (D-100): opening a campaign lands here.
  *
  * Three states, not one: an unknown campaign (404) gets its own screen; a
  * still-loading campaign gets the *real* layout with placeholder zones,
@@ -38,8 +45,16 @@ function PlayScreenContent({ campaignId }: { readonly campaignId: string }) {
   const crew = useCampaignState(campaignId, (state) =>
     Object.values(state.characters).map(toCrewCard),
   );
+  const entities = useCampaignState(campaignId, (state) => entityCards(state.entities));
   const drawer = useDrawer();
-  const { openCharacterDrawer, closeDrawer } = useDrawerActions();
+  const {
+    openCharacterDrawer,
+    openEntityDrawer,
+    openTrackDrawer,
+    openAssetDrawer,
+    openMovesDrawer,
+    closeDrawer,
+  } = useDrawerActions();
 
   if (header.error instanceof ApiError && header.error.status === 404) {
     return <NotFoundScreen message={`No campaign found with id ${campaignId}.`} />;
@@ -56,12 +71,22 @@ function PlayScreenContent({ campaignId }: { readonly campaignId: string }) {
             campaignName={campaignName}
             sessionNumber={header.data?.sessionNumber}
             connected={connected}
+            onOpenMoves={openMovesDrawer}
           />
         }
-        left={<CrewRail crew={crew.data ?? []} onOpen={openCharacterDrawer} />}
-        sceneHeader={<SceneHeader />}
+        left={
+          <div className={styles.leftRail}>
+            <div className={styles.crewSection}>
+              <CrewRail crew={crew.data ?? []} onOpen={openCharacterDrawer} />
+            </div>
+            <div className={styles.entitySection}>
+              <EntityRail entities={entities.data ?? []} onOpen={openEntityDrawer} />
+            </div>
+          </div>
+        }
+        sceneHeader={<SceneHeader campaignId={campaignId} />}
         log={<NarrativeLog campaignId={campaignId} />}
-        right={<PressureRail />}
+        right={<PressureRail campaignId={campaignId} onOpenTrackerDrawer={openTrackDrawer} />}
         composer={<Composer />}
       />
       {drawer?.kind === 'character' && (
@@ -69,8 +94,21 @@ function PlayScreenContent({ campaignId }: { readonly campaignId: string }) {
           campaignId={campaignId}
           characterId={drawer.characterId}
           onClose={closeDrawer}
+          onOpenAsset={openAssetDrawer}
         />
       )}
+      {drawer?.kind === 'entity' && (
+        <EntityDrawer campaignId={campaignId} entityId={drawer.entityId} onClose={closeDrawer} />
+      )}
+      {drawer?.kind === 'track' && (
+        <TrackerDrawer
+          campaignId={campaignId}
+          trackKind={drawer.trackKind}
+          onClose={closeDrawer}
+        />
+      )}
+      {drawer?.kind === 'asset' && <AssetDrawer assetId={drawer.assetId} onClose={closeDrawer} />}
+      {drawer?.kind === 'moves' && <MoveDrawer onClose={closeDrawer} />}
     </>
   );
 }

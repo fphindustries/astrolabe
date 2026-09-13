@@ -42,3 +42,16 @@
   color: var(--text-muted);
   font-size: var(--text-sm);
 }
+
+.assetButton {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+
+.assetButton:hover {
+  color: var(--accent-strong);
+}

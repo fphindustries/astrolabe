@@ -1,7 +1,20 @@
 .header {
-  padding: var(--space-4);
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--surface-border);
   background: var(--surface-1);
-  color: var(--text-muted);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  color: var(--text-primary);
+}
+
+.location {
+  color: var(--text-secondary);
   font-size: var(--text-sm);
 }

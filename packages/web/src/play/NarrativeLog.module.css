@@ -3,3 +3,52 @@
   color: var(--text-muted);
   font-size: var(--text-sm);
 }
+
+.entries {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.beat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.beat[data-voided='true'] {
+  opacity: 0.6;
+}
+
+.entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.entry[data-voided='true'] .text {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.text {
+  color: var(--text-primary);
+}
+
+.voidReason {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.correction {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.correction summary {
+  cursor: pointer;
+  color: var(--provenance-override);
+}

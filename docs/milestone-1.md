@@ -110,11 +110,11 @@ narrative log is a second read model with its own paged query.
 - [x] 5.0 HTTP read API: list campaigns, campaign state, narrative log page (D-94)
 - [x] 5.1 Layout: top bar, left rail, centre, right rail, composer
 - [x] 5.2 Crew mini-cards (callsign, health, momentum) and the character drawer
-- [ ] 5.3 Scene header bound to scene state
-- [ ] 5.4 Narrative log rendering events in order
-- [ ] 5.5 Pressure rail: clocks, vows, progress tracks, with detail popovers
-- [ ] 5.6 NPC and location cards with provenance badges
-- [ ] 5.7 Drawers and popovers for moves, assets, NPCs, and trackers
+- [x] 5.3 Scene header bound to scene state
+- [x] 5.4 Narrative log rendering events in order
+- [x] 5.5 Pressure rail: clocks, vows, progress tracks, with detail popovers
+- [x] 5.6 NPC and location cards with provenance badges
+- [x] 5.7 Drawers and popovers for moves, assets, NPCs, and trackers
 
 ### 6. Move flow
 
@@ -572,14 +572,17 @@ writes through it (3.2, then 6.x). (8.1's oracle interface for the AI and
 
 ---
 
-## Implementation notes (section 5, play screen shell — partial)
+## Implementation notes (section 5, play screen shell)
 
-Tasks 5.0–5.2 are done: the HTTP read API, the four-zone layout, and the
-crew mini-cards with the character drawer. 5.3–5.7 come later, once 3.2, 3.4
-and group 4 have used the app shell (D-88). Decisions: D-94–D-100. This
-session set the frontend conventions the rest of the milestone follows —
-recorded here rather than in the design record, since these are build
-conventions, not product decisions.
+Section 5 (tasks 5.0–5.7) is done. 5.0–5.2 (the HTTP read API, the
+four-zone layout, crew mini-cards and the character drawer) landed first,
+once 3.2, 3.4 and group 4 had used the app shell (D-88); 5.3–5.7 (the scene
+header, narrative log, pressure rail, NPC/location cards, and the
+remaining drawers/popovers) landed in a later session. Decisions:
+D-94–D-100 for 5.0–5.2, D-104 for 5.3–5.7. This session set the frontend
+conventions the rest of the milestone follows — recorded here rather than
+in the design record, since these are build conventions, not product
+decisions.
 
 ### App structure
 
@@ -638,6 +641,81 @@ component library dependency: focus trap, Esc, backdrop click, and
 top-layer stacking all come from the platform. `play/play-ui.tsx` holds
 which drawer is open in a `useReducer` + context pair — the only client
 state `zustand` would have held, which is why D-96 drops it.
+`DrawerState`'s union grew four variants in 5.6/5.7 (`entity`, `track`,
+`asset`, `moves`) exactly as its own comment anticipated, each with a
+matching `open*Drawer` action.
+
+### Tasks 5.3–5.7: binding the remaining zones
+
+All four are read-only: they bind the placeholder zones 5.1 left
+(`SceneHeader`, `NarrativeLog`, `PressureRail`) and two new rail sections
+(`EntityRail` in the left rail, `PressureRail`'s three sections in the
+right) to `CampaignState`/`NarrativeLog` as already served by 5.0's GET
+routes. No event schema changed, no command endpoint was added — see
+D-104's own note for the one place a new UI entry point (the top bar's
+"Moves" button) was added instead of building a trigger that had no
+natural home yet.
+
+- **The scene header stays bound to `SceneState` as it exists today**
+  (`title`, `locationId` resolved against `state.entities`) — no
+  `scene.header_updated` event, no `stakes` field. A1 only needs location,
+  vow and meters; Beat 2's stakes land in scene-opening narration prose
+  (rendered by 5.4), not the header, and nothing writes a header-authored
+  field until the AI provider (group 7) exists to write it.
+- **The narrative log's per-event-type rendering (`play/log/entries.ts`)
+  is a `switch` over `NarrativeEntry.event.type`** with an `unknown`
+  fallback, not a hand-maintained allowlist — the server already filters
+  to `EVENT_TYPE_META[type].narrative` before this code ever sees an
+  event, so the client's job is only rendering, and a future narrative
+  type that isn't in the switch yet shows up as its raw type name instead
+  of vanishing.
+- **`useCampaignLog` pages backward** (`before`/`nextCursor`, newest page
+  first, each page's own beats oldest-first) — `orderedBeats` (`entries.ts`)
+  reverses the page array before flattening to get reading order. Loading
+  an older page prepends above the current view; `NarrativeLog.tsx`
+  captures `scrollHeight` before the fetch and restores the offset by the
+  delta afterward so the viewport doesn't jump, and lands at the bottom on
+  first load. The scrollable element is `PlayLayout`'s own `.log` div
+  (D-40's one scroll region) — `NarrativeLog` doesn't render a second
+  scroll container, it reaches its parent via `ref.current.parentElement`
+  to read and restore scroll position and to attach the scroll listener.
+- **No `Popover.tsx` existed before 5.5.** It wraps the native Popover API
+  in `auto` mode (outside-click/Escape dismissal for free, same convention
+  as `Drawer.tsx`'s `<dialog>`), positioned from the trigger's own
+  `getBoundingClientRect()` rather than CSS anchor positioning, which
+  isn't universally supported yet. A pressure-rail row's popover is local
+  component state, not `play-ui.tsx` state — only drawers go through that
+  reducer; a lightweight, single-row popover doesn't need cross-component
+  coordination.
+- **D-97's "+N more opens a drawer" is wired for the pressure rail
+  (`TrackerDrawer`, scoped to one `TrackKind`) but stays static text for
+  crew and for present entities (`EntityRail`)**, matching `CrewRail`'s
+  own precedent: Milestone 1's golden session never has enough crew or
+  entities to overflow six visible, so for those two rails it is headroom
+  rather than something exercised, and a drawer that can never open is not
+  worth wiring. The pressure rail gets a real one because task 5.7 names
+  "trackers" as one of its four drawer targets regardless.
+- **NPC and location cards share one view-model and component**
+  (`entities/entities.ts`'s `entityCards`, filtered to `kind: 'npc' |
+  'location'`) — factions and the ship entity are deliberately excluded,
+  since no task asks for either and the visual starmap stays out of scope.
+- **The moves reference browser (`play/moves/`) is D-104's new decision**:
+  built now rather than waiting for task 6.1's relevant-moves panel, since
+  moves had no other trigger surface yet. It groups `STARFORGED.moves` by
+  category (rulebook order) and drills into one move's trigger/outcome
+  text; outcome and trigger prose render as the verbatim imported text,
+  including Datasworn's own `__emphasis__`/`[link](id:...)` markup
+  unrendered — no markdown renderer exists anywhere in the app yet, and
+  adding one for this alone would be scope beyond the task.
+- **The asset chip in `CharacterDrawer` is now a button**, opening
+  `play/assets/AssetDrawer.tsx` (full name/category/requirement/ability
+  text from `STARFORGED.assets`) — the one edit to an already-"done" 5.2
+  file, needed because 5.7 names assets as one of its four drawer targets
+  and the chip was the only existing surface that could trigger it.
+- **No manual-override editing UI.** `CharacterDrawer.tsx`'s own comment
+  used to flag this as maybe landing in 5.7; it doesn't — none of 5.3–5.7's
+  task wording asks for it, and A16's editing needs a command endpoint
+  group 5 has no reason to add.
 
 ### What the next session needs to know
 
@@ -651,11 +729,18 @@ state `zustand` would have held, which is why D-96 drops it.
 - **The bundle ships the whole `STARFORGED` JSON** (character drawer needs
   asset/impact names). ~840 KB / 178 KB gzip today. Accepted for a desktop
   home-server app; revisit only if load time shows it.
-- **Verification gap:** this session's sandbox had no Docker/Postgres, so
-  `http/app.test.ts`'s database-backed tests and the harness-seeded
-  golden-campaign walkthrough are written and typecheck but were not run
-  against a real database. Run `npm run db:up && npm run migrate && npm test`
-  before trusting 5.0 fully.
+- **Verification gap for 5.0–5.2:** that session's sandbox had no
+  Docker/Postgres, so `http/app.test.ts`'s database-backed tests and the
+  harness-seeded golden-campaign walkthrough were written and typechecked
+  but not run against a real database.
+- **5.3–5.7 closed that gap.** This session's sandbox had Docker/Postgres
+  already running: `npm run db:up && npm run migrate && npm test` passes
+  619 tests (0 skipped) against the real database, and `npm run harness`
+  plus a live `npm run dev` (server and web) pass in the browser exercised
+  every one of 5.3–5.7 against the golden session's own fixture data —
+  scene header, ordered log with the struck-through void/reroll and the
+  correction disclosure, the clock's popover reason, the AI-established
+  NPC card and drawer, and the moves browser. Console was clean throughout.
 
 ---
 

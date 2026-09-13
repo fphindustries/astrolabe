@@ -1,0 +1,64 @@
+.section {
+  margin-bottom: var(--space-4);
+}
+
+.sectionTitle {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.moveButton {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  padding: var(--space-1) 0;
+  cursor: pointer;
+}
+
+.moveButton:hover {
+  color: var(--accent-strong);
+}
+
+.back {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  padding: 0 0 var(--space-3);
+  cursor: pointer;
+}
+
+.back:hover {
+  color: var(--text-primary);
+}
+
+.trigger {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.outcome {
+  margin-bottom: var(--space-3);
+}
+
+.outcomeTier {
+  margin: 0;
+  text-transform: capitalize;
+  color: var(--accent-strong);
+}
+
+.oracles {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}

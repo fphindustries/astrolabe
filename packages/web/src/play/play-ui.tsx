@@ -1,20 +1,32 @@
 import { createContext, useContext, useReducer, type Dispatch, type ReactNode } from 'react';
 
-import type { CharacterId } from '@astrolabe/rules';
+import type { AssetId, CharacterId } from '@astrolabe/rules';
+import type { EntityId, TrackKind } from '@astrolabe/shared';
 
 /**
  * Play-screen-local UI state: which drawer is open, if any.
  *
  * This is what's left in the client after server state moves to
  * react-query (D-96) — small enough for `useReducer` plus context, so
- * `zustand` was dropped rather than kept unused. Extend `DrawerState`'s
- * union as later tasks add drawer kinds (npc, track, move, asset — 5.6, 5.7).
+ * `zustand` was dropped rather than kept unused. Tasks 5.6/5.7 add the
+ * `entity`, `track`, `asset` and `moves` kinds this comment used to
+ * anticipate.
  */
 
-export type DrawerState = { readonly kind: 'character'; readonly characterId: CharacterId } | null;
+export type DrawerState =
+  | { readonly kind: 'character'; readonly characterId: CharacterId }
+  | { readonly kind: 'entity'; readonly entityId: EntityId }
+  | { readonly kind: 'track'; readonly trackKind: TrackKind }
+  | { readonly kind: 'asset'; readonly assetId: AssetId }
+  | { readonly kind: 'moves' }
+  | null;
 
 type PlayUiAction =
   | { readonly type: 'open-character-drawer'; readonly characterId: CharacterId }
+  | { readonly type: 'open-entity-drawer'; readonly entityId: EntityId }
+  | { readonly type: 'open-track-drawer'; readonly trackKind: TrackKind }
+  | { readonly type: 'open-asset-drawer'; readonly assetId: AssetId }
+  | { readonly type: 'open-moves-drawer' }
   | { readonly type: 'close-drawer' };
 
 interface PlayUiState {
@@ -25,6 +37,14 @@ function playUiReducer(state: PlayUiState, action: PlayUiAction): PlayUiState {
   switch (action.type) {
     case 'open-character-drawer':
       return { drawer: { kind: 'character', characterId: action.characterId } };
+    case 'open-entity-drawer':
+      return { drawer: { kind: 'entity', entityId: action.entityId } };
+    case 'open-track-drawer':
+      return { drawer: { kind: 'track', trackKind: action.trackKind } };
+    case 'open-asset-drawer':
+      return { drawer: { kind: 'asset', assetId: action.assetId } };
+    case 'open-moves-drawer':
+      return { drawer: { kind: 'moves' } };
     case 'close-drawer':
       return { drawer: null };
   }
@@ -64,12 +84,20 @@ export function useDrawer(): DrawerState {
 
 export function useDrawerActions(): {
   openCharacterDrawer: (characterId: CharacterId) => void;
+  openEntityDrawer: (entityId: EntityId) => void;
+  openTrackDrawer: (trackKind: TrackKind) => void;
+  openAssetDrawer: (assetId: AssetId) => void;
+  openMovesDrawer: () => void;
   closeDrawer: () => void;
 } {
   const dispatch = usePlayUiDispatch();
   return {
     openCharacterDrawer: (characterId: CharacterId) =>
       dispatch({ type: 'open-character-drawer', characterId }),
+    openEntityDrawer: (entityId: EntityId) => dispatch({ type: 'open-entity-drawer', entityId }),
+    openTrackDrawer: (trackKind: TrackKind) => dispatch({ type: 'open-track-drawer', trackKind }),
+    openAssetDrawer: (assetId: AssetId) => dispatch({ type: 'open-asset-drawer', assetId }),
+    openMovesDrawer: () => dispatch({ type: 'open-moves-drawer' }),
     closeDrawer: () => dispatch({ type: 'close-drawer' }),
   };
 }

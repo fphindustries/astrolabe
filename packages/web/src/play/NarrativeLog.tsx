@@ -1,26 +1,137 @@
+import { useEffect, useLayoutEffect, useRef } from 'react';
+
 import { useCampaignLog } from '../api/campaigns.js';
 
+import { orderedBeats, toBeatView, type BeatView, type EntryView } from './log/entries.js';
 import styles from './NarrativeLog.module.css';
 
 /**
- * The narrative log, wired to `useCampaignLog` but not yet rendered as
- * prose (that's task 5.4 — grouping into beats, rolls, oracle chips,
- * void strike-throughs). This confirms the paging seam works end to end:
- * the query, the cursor, and the scrolling region that will hold it.
+ * The narrative log (task 5.4). `PlayLayout`'s `.log` div is the shell's one
+ * scrolling region (D-40) and is the parent this component renders into —
+ * not a scroll container of its own — so the anchor ref below reaches up to
+ * that ancestor to read and restore scroll position.
  */
 export function NarrativeLog({ campaignId }: { readonly campaignId: string }) {
-  const { data, isLoading } = useCampaignLog(campaignId);
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useCampaignLog(campaignId);
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const prevScrollHeight = useRef<number | null>(null);
+  const scrolledToBottom = useRef(false);
+
+  const beats = data === undefined ? [] : orderedBeats(data.pages).map(toBeatView);
+  const pageCount = data?.pages.length ?? 0;
+
+  // Older pages prepend above the current view. Restore the offset by the
+  // height they added so the viewport doesn't jump; on first load, land at
+  // the bottom (the most recent beat) instead.
+  useLayoutEffect(() => {
+    const el = anchorRef.current?.parentElement ?? null;
+    if (el === null) {
+      return;
+    }
+    if (!scrolledToBottom.current) {
+      if (beats.length > 0) {
+        el.scrollTop = el.scrollHeight;
+        scrolledToBottom.current = true;
+      }
+    } else if (prevScrollHeight.current !== null) {
+      el.scrollTop += el.scrollHeight - prevScrollHeight.current;
+    }
+    prevScrollHeight.current = el.scrollHeight;
+  }, [pageCount, beats.length]);
+
+  useEffect(() => {
+    const el = anchorRef.current?.parentElement ?? null;
+    if (el === null) {
+      return;
+    }
+    const onScroll = () => {
+      if (el.scrollTop < 200 && hasNextPage === true && !isFetchingNextPage) {
+        void fetchNextPage();
+      }
+    };
+    el.addEventListener('scroll', onScroll);
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   if (isLoading) {
     return <div className={styles.empty}>Loading the log…</div>;
   }
 
-  const beatCount = data?.pages.reduce((total, page) => total + page.beats.length, 0) ?? 0;
   return (
-    <div className={styles.empty}>
-      {beatCount === 0
-        ? 'Nothing has happened yet.'
-        : `${beatCount} beat${beatCount === 1 ? '' : 's'} logged — rendered in task 5.4.`}
+    <div ref={anchorRef} className={styles.entries}>
+      {beats.length === 0 ? (
+        <div className={styles.empty}>Nothing has happened yet.</div>
+      ) : (
+        beats.map((beat) => <Beat key={beat.commandId} beat={beat} />)
+      )}
     </div>
   );
+}
+
+function Beat({ beat }: { readonly beat: BeatView }) {
+  return (
+    <div className={styles.beat} data-voided={beat.voided}>
+      {beat.entries.map((entry) => (
+        <Entry key={entry.eventId} entry={entry} />
+      ))}
+    </div>
+  );
+}
+
+function Entry({ entry }: { readonly entry: EntryView }) {
+  const body = entry.body;
+  return (
+    <div className={styles.entry} data-voided={entry.voided}>
+      <span className={styles.text}>{describeEntry(entry)}</span>
+      {body.kind === 'narration' && body.corrected && (
+        <details className={styles.correction}>
+          <summary>Corrected</summary>
+          {body.original !== undefined && <p>Originally: {body.original}</p>}
+          {body.note !== undefined && <p>Why: {body.note}</p>}
+        </details>
+      )}
+      {entry.voidMarks.map((mark, index) => (
+        <span key={index} className={styles.voidReason}>
+          {mark.kind === 'reroll' ? 'Rerolled' : 'Voided'}: {mark.reason}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function describeEntry(entry: EntryView): string {
+  const body = entry.body;
+  switch (body.kind) {
+    case 'scene':
+      return `Scene: ${body.title}`;
+    case 'move':
+      return (
+        `Move: ${body.moveId}${body.aiding ? ' (aiding an ally)' : ''}` +
+        (body.actionText === undefined ? '' : ` — ${body.actionText}`)
+      );
+    case 'roll':
+      return (
+        `Roll: ${body.tier.replace('_', ' ')}${body.isMatch ? ' (match)' : ''}` +
+        (body.burnOffered ? (body.burnTaken ? ' — burned momentum' : ' — burn offered') : '')
+      );
+    case 'burn':
+      return `Momentum burned: ${body.tierBefore.replace('_', ' ')} → ${body.tierAfter.replace('_', ' ')}`;
+    case 'track_created':
+      return `Track created: ${body.title}`;
+    case 'track_advanced':
+      return `Track advanced by ${body.ticks}${body.reason === undefined ? '' : ` — ${body.reason}`}`;
+    case 'entity_established':
+      return `Entity established: ${body.name}`;
+    case 'narration':
+      return body.text;
+    case 'override':
+      return `Override: ${body.from} → ${body.to}${body.reason === undefined ? '' : ` (${body.reason})`}`;
+    case 'void':
+      return `Voided ${body.cascadedCount} event${body.cascadedCount === 1 ? '' : 's'}: ${body.reason}`;
+    case 'session_ended':
+      return `Session ended: ${body.summary}`;
+    case 'unknown':
+      return body.type;
+  }
 }
