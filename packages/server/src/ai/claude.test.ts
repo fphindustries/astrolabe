@@ -165,6 +165,12 @@ describe('classifyError', () => {
     expect(
       classifyError(new Anthropic.InternalServerError(529, undefined, 'overloaded', headers)),
     ).toBe('unavailable');
+    expect(classifyError(new Anthropic.BadRequestError(400, undefined, 'bad shape', headers))).toBe(
+      'rejected',
+    );
+    expect(classifyError(new Anthropic.NotFoundError(404, undefined, 'no model', headers))).toBe(
+      'rejected',
+    );
     expect(classifyError(new Anthropic.APIConnectionError({ message: 'offline' }))).toBe(
       'unavailable',
     );

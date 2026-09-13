@@ -1144,7 +1144,7 @@ its content together, so tokens and the text they bought can't be separated.
 ### Verification
 
 `npm run typecheck`, `npm run lint` and
-`npm run db:up && npm run migrate && npm test` all pass: 739 tests with 1
+`npm run db:up && npm run migrate && npm test` all pass: 740 tests with 1
 skipped, against real Postgres, and `npm run build --workspace
 @astrolabe/web` also passes. The database tests skip silently unless
 `DATABASE_URL` is exported
@@ -1171,3 +1171,28 @@ recovering from a mid-session outage in the browser. That last path is
 covered by `ai-routes.test.ts`. No API key was available in that session.
 Run the live pass with `ANTHROPIC_API_KEY` set and read `firstTokenMs` off
 the `ai.completed` events.
+
+For that live pass:
+
+- **Start with one harm proposal.** It is the only call that combines `create`,
+  `output_config.format`, the structured-outputs beta header and `fallbacks`.
+  If it fails with `rejected`, the request shape is wrong: read
+  `ai.failed.message`. Then run one beat for the streaming path.
+- **If Opus 5 at effort `low` misses A18's five seconds,** remember that the
+  first text token arrives only after the thinking pass. The next lever is the
+  model (`ASTROLABE_CLAUDE_MODEL=claude-sonnet-5`), not the UI.
+
+**Post-review fixes:**
+
+- **Reload lockout.** A server-reported failure that this client never saw
+  used to pause play, and nothing could clear it: no AI call could run while
+  paused, so play stayed locked until a restart. Now only a missing credential
+  pauses from the status alone. The indicator still shows other failures, and
+  the next call checks the provider again.
+- **Rejected requests.** A 400/404/422 from the provider now records
+  `errorKind: 'rejected'` (added to D-113) rather than reading as an outage.
+- **Double-charged retries.** If the same commandId is retried while its first
+  call is still running, both calls spend tokens but only one set of
+  `ai.completed` events survives. The second is rolled back by the uniqueness
+  check, so the counter under-reports that spend (D-75). The UI queue prevents
+  this.

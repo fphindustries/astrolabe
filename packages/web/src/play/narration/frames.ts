@@ -86,5 +86,7 @@ export function describeFailure(errorKind: AiErrorKind): string {
       return 'The Guide’s answer could not be used.';
     case 'unavailable':
       return 'The AI provider could not be reached.';
+    case 'rejected':
+      return 'The AI provider rejected the request — check the server log and configuration.';
   }
 }

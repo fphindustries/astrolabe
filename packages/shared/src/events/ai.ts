@@ -36,6 +36,8 @@ export const AiErrorKindSchema = z.enum([
   'refused',
   'invalid_output',
   'not_configured',
+  /** The provider rejected the request itself (400/404/422): a configuration fault, not an outage. */
+  'rejected',
 ]);
 
 export type AiErrorKind = z.infer<typeof AiErrorKindSchema>;

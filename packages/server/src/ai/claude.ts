@@ -32,6 +32,7 @@ import {
 export const DEFAULT_CLAUDE_MODEL = 'claude-opus-5';
 
 const FALLBACK_BETA = 'server-side-fallback-2026-07-01';
+const STRUCTURED_OUTPUTS_BETA = 'structured-outputs-2025-12-15';
 const MAX_TOKENS = 16_000;
 
 type StreamParams = Parameters<Anthropic['beta']['messages']['stream']>[0];
@@ -139,6 +140,8 @@ export class ClaudeProvider implements AiProvider {
       const params = this.#params(request);
       message = await client.beta.messages.create({
         ...params,
+        // The header the SDK's own `parse` helper sends with a format.
+        betas: [...params.betas, STRUCTURED_OUTPUTS_BETA],
         output_config: {
           ...params.output_config,
           format: betaZodOutputFormat(schema as never),
@@ -237,6 +240,15 @@ export function classifyError(error: unknown): AiErrorKind {
   }
   if (error instanceof Anthropic.RateLimitError) {
     return 'rate_limited';
+  }
+  // A malformed request, an unknown model, a beta the account lacks: the
+  // same call will fail the same way, so it must not read as an outage.
+  if (
+    error instanceof Anthropic.BadRequestError ||
+    error instanceof Anthropic.NotFoundError ||
+    error instanceof Anthropic.UnprocessableEntityError
+  ) {
+    return 'rejected';
   }
   return 'unavailable';
 }

@@ -42,8 +42,7 @@ import {
  * interleaving with it.
  *
  * A failure pauses play (D-116): `paused` is true until Retry succeeds, and
- * it is also true whenever the server reports the Guide unavailable (no
- * key configured, or a failure this client didn't see).
+ * from the start when the server has no credential configured.
  */
 
 export interface NarrationStream {
@@ -154,13 +153,18 @@ export function NarrationStreamProvider({
     [drain],
   );
 
-  const serverUnavailable = status.data !== undefined && !status.data.available;
-  const paused = failure !== null || serverUnavailable;
+  // Only a missing credential pauses from the server's word alone. A failure
+  // this client didn't see (another tab, or before a reload) has no request
+  // here to retry, and gating the composer on it would lock play until some
+  // AI call succeeded — which the lock itself prevents. The indicator still
+  // shows it; the next call re-probes the provider.
+  const notConfigured = status.data !== undefined && !status.data.configured;
+  const paused = failure !== null || notConfigured;
   const pauseReason =
     failure !== null
       ? describeFailure(failure.errorKind)
-      : serverUnavailable && status.data?.lastFailure !== undefined
-        ? describeFailure(status.data.lastFailure.errorKind)
+      : notConfigured
+        ? describeFailure('not_configured')
         : undefined;
 
   const value = useMemo<NarrationStream>(
