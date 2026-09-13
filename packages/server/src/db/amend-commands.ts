@@ -12,7 +12,7 @@ import type { Sql } from 'postgres';
 import { project } from '../projection/project.js';
 import { computeVoidState, isSuppressed } from '../projection/void-state.js';
 
-import { appendCommand, readEvents, type AppendResult } from './event-store.js';
+import { appendCommand, readEvents, type AppendResult, type NewEvent } from './event-store.js';
 
 /**
  * Amendments: the two ways to change something that already happened
@@ -210,6 +210,11 @@ export interface RevisionRequest {
    * nobody asked for should not outlive the asking.
    */
   readonly causedBy?: EventId;
+  /**
+   * The AI calls that produced this rewrite (D-75, D-113), written in the
+   * same command so the tokens and the text they bought land together.
+   */
+  readonly accounting?: readonly NewEvent<'ai.completed' | 'ai.failed'>[];
 }
 
 /** A15 / D-73, the AI's half: the rewrite that supersedes the passage in the log. */
@@ -224,6 +229,7 @@ export async function reviseNarration(sql: Sql, request: RevisionRequest): Promi
     actor: request.actor,
     causedBy: request.causedBy ?? null,
     events: [
+      ...(request.accounting ?? []).map((event) => ({ ...event, sessionId: target.sessionId })),
       {
         type: 'narration.revised',
         payload: { targetEventId: request.targetEventId, text: request.text },

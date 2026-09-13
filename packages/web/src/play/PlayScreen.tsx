@@ -4,6 +4,7 @@ import type { CharacterId } from '@astrolabe/rules';
 
 import { ApiError } from '../api/http.js';
 import { useCampaignState } from '../api/campaigns.js';
+import { useAiStatus } from '../api/narration.js';
 
 import { PlayLayout } from './PlayLayout.js';
 import { TopBar } from './TopBar.js';
@@ -21,6 +22,7 @@ import { entityCards } from './entities/entities.js';
 import { TrackerDrawer } from './pressure/TrackerDrawer.js';
 import { MoveDrawer } from './moves/MoveDrawer.js';
 import { MoveFlowProvider } from './moves/move-flow.js';
+import { NarrationStreamProvider } from './narration/narration-stream.js';
 import { AssetDrawer } from './assets/AssetDrawer.js';
 import { PlayUiProvider, useDrawer, useDrawerActions } from './play-ui.js';
 import styles from './PlayScreen.module.css';
@@ -38,7 +40,9 @@ export function PlayScreen({ campaignId }: { readonly campaignId: string }) {
   return (
     <PlayUiProvider>
       <MoveFlowProvider>
-        <PlayScreenContent campaignId={campaignId} />
+        <NarrationStreamProvider campaignId={campaignId}>
+          <PlayScreenContent campaignId={campaignId} />
+        </NarrationStreamProvider>
       </MoveFlowProvider>
     </PlayUiProvider>
   );
@@ -48,7 +52,9 @@ function PlayScreenContent({ campaignId }: { readonly campaignId: string }) {
   const header = useCampaignState(campaignId, (state) => ({
     name: state.campaign?.name,
     sessionNumber: state.session?.number,
+    tokens: state.session?.tokenUsage,
   }));
+  const guide = useAiStatus();
   const crew = useCampaignState(campaignId, (state) =>
     Object.values(state.characters).map(toCrewCard),
   );
@@ -81,6 +87,8 @@ function PlayScreenContent({ campaignId }: { readonly campaignId: string }) {
             campaignName={campaignName}
             sessionNumber={header.data?.sessionNumber}
             connected={connected}
+            guideAvailable={guide.data?.available}
+            tokens={header.data?.tokens}
             onOpenMoves={openMovesDrawer}
           />
         }

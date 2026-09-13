@@ -16,6 +16,8 @@ export interface TrackRowView {
   readonly maxTicks: number;
   readonly actorKind: string;
   readonly reason?: string;
+  /** A16: last set by hand. */
+  readonly overridden: boolean;
 }
 
 export interface GroupedTracks {
@@ -33,6 +35,7 @@ export function toTrackRow(track: TrackState): TrackRowView {
     ticks: track.ticks,
     maxTicks: track.maxTicks,
     actorKind: track.lastChangedBy.actorKind,
+    overridden: track.lastChangedBy.manual === true,
     ...(track.lastChangedBy.reason !== undefined ? { reason: track.lastChangedBy.reason } : {}),
   };
 }

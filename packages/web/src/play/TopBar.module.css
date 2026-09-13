@@ -37,8 +37,18 @@
   color: var(--text-primary);
 }
 
-.status {
+.spacer {
   margin-left: auto;
+}
+
+.tokens {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.status {
   display: flex;
   align-items: center;
   gap: var(--space-2);

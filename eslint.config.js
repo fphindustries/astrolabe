@@ -128,6 +128,54 @@ export default tseslint.config(
     },
   },
   {
+    // AI context assembly (tasks 7.4, 7.6, 7.7) is pure: projected state and
+    // events in, a request out. It may read rules content — move names and
+    // choice labels are what the AI needs to hear — but it never does I/O,
+    // never reads the clock, and never calls a provider, so what the AI is
+    // told stays unit-testable and provider-independent (design record §9).
+    files: ['packages/server/src/ai/context/**/*.ts'],
+    ignores: ['packages/server/src/ai/context/**/*.test.ts'],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        { name: 'process', message: 'Context assembly is pure: no I/O.' },
+        { name: 'crypto', message: 'Context assembly is pure.' },
+      ],
+      'no-restricted-properties': [
+        'error',
+        { object: 'Math', property: 'random', message: 'Context assembly is deterministic.' },
+        { object: 'Date', property: 'now', message: 'Context assembly is deterministic.' },
+      ],
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            { name: 'postgres', message: 'Context assembly does no I/O; the command layer reads the log.' },
+            {
+              name: '@anthropic-ai/sdk',
+              message: 'Context assembly builds a request; only a provider sends one.',
+            },
+          ],
+          patterns: [
+            { group: ['node:*', 'fs', 'path', 'crypto'], message: 'Context assembly is pure: no I/O.' },
+            { group: ['**/db/**'], message: 'Context assembly does no I/O; the command layer reads the log.' },
+            {
+              group: ['../claude.js', '../stub.js', '../create-provider.js'],
+              message: 'Context assembly is provider-independent; import only the request types.',
+            },
+          ],
+        },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'NewExpression[callee.name="Date"]',
+          message: 'Context assembly is deterministic.',
+        },
+      ],
+    },
+  },
+  {
     // Catches rules-of-hooks and stale-dependency bugs statically (D-96).
     files: ['packages/web/**/*.{ts,tsx}'],
     ignores: ['packages/web/**/*.test.{ts,tsx}'],

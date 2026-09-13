@@ -45,6 +45,12 @@ export type EntryBody =
     }
   | { readonly kind: 'oracle_rolled'; readonly roll: number; readonly rowText: string }
   | {
+      readonly kind: 'amount_proposed';
+      readonly amount: number;
+      readonly meter: 'health' | 'spirit' | 'supply';
+      readonly reason: string;
+    }
+  | {
       readonly kind: 'amount_committed';
       readonly amount: number;
       readonly meter: 'health' | 'spirit' | 'supply';
@@ -146,6 +152,13 @@ function toBody(entry: NarrativeEntry): EntryBody {
       };
     case 'oracle.rolled':
       return { kind: 'oracle_rolled', roll: event.payload.roll, rowText: event.payload.rowText };
+    case 'amount.proposed':
+      return {
+        kind: 'amount_proposed',
+        amount: event.payload.amount,
+        meter: event.payload.meter,
+        reason: event.payload.reason,
+      };
     case 'amount.committed':
       return {
         kind: 'amount_committed',

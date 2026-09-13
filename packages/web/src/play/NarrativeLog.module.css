@@ -52,3 +52,8 @@
   cursor: pointer;
   color: var(--provenance-override);
 }
+
+.pendingLabel {
+  font-size: var(--text-sm);
+  color: var(--provenance-ai);
+}

@@ -2,16 +2,15 @@ import { STARFORGED, type AssetId, type CharacterId } from '@astrolabe/rules';
 
 import { useCampaignState } from '../../api/campaigns.js';
 import { Drawer } from '../../ui/Drawer.js';
-import { Meter } from '../../ui/Meter.js';
-import { Signed } from '../../ui/Signed.js';
+import { OverrideControl } from '../overrides/OverrideControl.js';
 
 import { toCharacterSheet } from './crew.js';
 import styles from './CharacterDrawer.module.css';
 
 /**
- * §8: clicking a crew card opens this drawer (D-98). Display only — A16's
- * manual-override editing has no task of its own and stays out (group 5's
- * plan). `onOpenAsset` opens task 5.7's asset drawer for full ability text.
+ * §8: clicking a crew card opens this drawer (D-98). Meters and momentum
+ * are editable by hand here (A16, D-117), marked "edited" once they are.
+ * `onOpenAsset` opens task 5.7's asset drawer for full ability text.
  */
 export function CharacterDrawer({
   campaignId,
@@ -54,7 +53,17 @@ export function CharacterDrawer({
             <h3 className={styles.sectionTitle}>Meters</h3>
             <div className={styles.row}>
               {sheet.meters.map((meter) => (
-                <Meter key={meter.id} label={meter.id} value={meter.value} max={meter.max} />
+                <OverrideControl
+                  key={meter.id}
+                  campaignId={campaignId}
+                  target={{ kind: 'meter', characterId, meter: meter.id }}
+                  label={meter.id}
+                  value={meter.value}
+                  min={meter.min}
+                  max={meter.max}
+                  overridden={meter.overridden}
+                  format={(value) => `${value}/${meter.max}`}
+                />
               ))}
             </div>
           </section>
@@ -62,8 +71,17 @@ export function CharacterDrawer({
           <section className={styles.section}>
             <h3 className={styles.sectionTitle}>Momentum</h3>
             <p>
-              <Signed value={sheet.momentum.value} /> / {sheet.momentum.max} (reset{' '}
-              {sheet.momentum.resetValue})
+              <OverrideControl
+                campaignId={campaignId}
+                target={{ kind: 'momentum', characterId }}
+                label="Momentum"
+                value={sheet.momentum.value}
+                min={sheet.momentum.min}
+                max={sheet.momentum.max}
+                overridden={sheet.momentum.overridden}
+                format={(value) => `${value >= 0 ? '+' : ''}${value} / ${sheet.momentum.max}`}
+              />{' '}
+              (reset {sheet.momentum.resetValue})
             </p>
             {sheet.bonusNextMove !== undefined && (
               <p>

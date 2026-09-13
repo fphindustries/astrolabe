@@ -189,6 +189,13 @@ export const SAMPLE_PAYLOADS: { [T in EventType]: PayloadFor<T> } = {
     roll: 78,
     rowText: 'You are harmed.',
   },
+  'amount.proposed': {
+    moveId: 'move:suffer/endure-harm',
+    characterId: ROOK,
+    meter: 'health',
+    amount: -2,
+    reason: "A ruptured conduit sprays sparks across Rook's arm.",
+  },
   'amount.committed': {
     moveId: 'move:suffer/endure-harm',
     characterId: ROOK,
@@ -266,6 +273,14 @@ export const SAMPLE_PAYLOADS: { [T in EventType]: PayloadFor<T> } = {
     inputTokens: 1200,
     outputTokens: 180,
     latencyMs: 900,
+  },
+  'ai.failed': {
+    provider: 'anthropic',
+    model: 'claude-opus-5',
+    purpose: 'beat',
+    errorKind: 'unavailable',
+    message: 'The provider could not be reached.',
+    attempts: 1,
   },
   'truth.set': {
     oracleId: 'oracle:cataclysm',

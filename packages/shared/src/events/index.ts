@@ -3,8 +3,8 @@ import * as z from 'zod';
 import { EnvelopeFieldsSchema, type EnvelopeFields } from '../envelope.js';
 import type { DeepMutable, DeepReadonly } from '../readonly.js';
 
-import { AiCompletedSchema } from './ai.js';
-import { AmountCommittedSchema } from './amount.js';
+import { AiCompletedSchema, AiFailedSchema } from './ai.js';
+import { AmountCommittedSchema, AmountProposedSchema } from './amount.js';
 import { CampaignCreatedSchema } from './campaign.js';
 import { CharacterCreatedSchema } from './character.js';
 import { EntityEstablishedSchema } from './entity.js';
@@ -35,12 +35,14 @@ import { EventVoidedSchema } from './void.js';
  * to the schema that validates its payload.
  *
  * The original eighteen are the spine — what the projector and the
- * section 2 harness need. `truth.set` and `sector.route_added` (task 4.2,
- * 4.3) are the first two of the rest landing with the features that write
- * them, as planned: the remaining types (oracle rolls, inline choices,
- * proposed amounts, complications, the scene header, provider failures) are
- * designed in `docs/design-event-log.md` and land the same way, so their
- * payloads are shaped by a real caller rather than guessed at a month early.
+ * section 2 harness need. The rest land with the features that write them,
+ * as planned: `truth.set` and `sector.route_added` with campaign setup
+ * (4.2, 4.3), the move flow's choices, chains, oracle rolls and committed
+ * amounts with group 6, and `amount.proposed` and `ai.failed` with the AI
+ * provider (group 7, D-113, D-118). The remaining types (complications, the
+ * scene header) are designed in `docs/design-event-log.md` and land the
+ * same way, so their payloads are shaped by a real caller rather than
+ * guessed at a month early.
  *
  * That is safe because this map is the single definition: adding a type
  * here fails the compile at every exhaustive switch over `EventType`, which
@@ -59,6 +61,7 @@ export const PAYLOAD_SCHEMAS = {
   'move.method_chosen': MoveMethodChosenSchema,
   'move.chained': MoveChainedSchema,
   'oracle.rolled': OracleRolledSchema,
+  'amount.proposed': AmountProposedSchema,
   'amount.committed': AmountCommittedSchema,
   'state.changed': StateChangedSchema,
   'state.overridden': StateOverriddenSchema,
@@ -70,6 +73,7 @@ export const PAYLOAD_SCHEMAS = {
   'narration.revised': NarrationRevisedSchema,
   'event.voided': EventVoidedSchema,
   'ai.completed': AiCompletedSchema,
+  'ai.failed': AiFailedSchema,
   'truth.set': TruthSetSchema,
   'sector.route_added': SectorRouteAddedSchema,
 } as const;
@@ -117,6 +121,7 @@ export const EventSchema = z.discriminatedUnion('type', [
   eventMember('move.method_chosen'),
   eventMember('move.chained'),
   eventMember('oracle.rolled'),
+  eventMember('amount.proposed'),
   eventMember('amount.committed'),
   eventMember('state.changed'),
   eventMember('state.overridden'),
@@ -128,6 +133,7 @@ export const EventSchema = z.discriminatedUnion('type', [
   eventMember('narration.revised'),
   eventMember('event.voided'),
   eventMember('ai.completed'),
+  eventMember('ai.failed'),
   eventMember('truth.set'),
   eventMember('sector.route_added'),
 ]);

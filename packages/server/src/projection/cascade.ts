@@ -130,6 +130,23 @@ function collectCascade(
   events: readonly AstrolabeEvent[],
   target: AstrolabeEvent,
 ): readonly AstrolabeEvent[] {
+  const includedCommands = causalCommands(events, target.commandId);
+  return events.filter(
+    (event) => includedCommands.has(event.commandId) && EVENT_TYPE_META[event.type].voidable,
+  );
+}
+
+/**
+ * The commands in a command's causal subtree: the command itself, and every
+ * command caused — transitively — by an event inside it.
+ *
+ * Shared by void (what a cascade removes) and narration (what one passage
+ * narrates, D-110), so the two can never disagree about what a beat is.
+ */
+export function causalCommands(
+  events: readonly AstrolabeEvent[],
+  rootCommandId: CommandId,
+): ReadonlySet<CommandId> {
   const byCommand = new Map<CommandId, AstrolabeEvent[]>();
   for (const event of events) {
     const group = byCommand.get(event.commandId);
@@ -140,8 +157,8 @@ function collectCascade(
     }
   }
 
-  const includedCommands = new Set<CommandId>([target.commandId]);
-  const includedIds = new Set<EventId>((byCommand.get(target.commandId) ?? []).map((e) => e.id));
+  const includedCommands = new Set<CommandId>([rootCommandId]);
+  const includedIds = new Set<EventId>((byCommand.get(rootCommandId) ?? []).map((e) => e.id));
 
   // Transitive closure: any command caused by something already inside.
   let grew = true;
@@ -161,9 +178,7 @@ function collectCascade(
     }
   }
 
-  return events.filter(
-    (event) => includedCommands.has(event.commandId) && EVENT_TYPE_META[event.type].voidable,
-  );
+  return includedCommands;
 }
 
 /**

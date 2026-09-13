@@ -5,6 +5,8 @@ import type { TrackKind } from '@astrolabe/shared';
 import { useCampaignState } from '../api/campaigns.js';
 import { Popover } from '../ui/Popover.js';
 
+import { OverrideControl } from './overrides/OverrideControl.js';
+
 import { groupTracksByKind, rowsForKind, type GroupedTracks, type TrackRowView } from './pressure/pressure.js';
 import styles from './PressureRail.module.css';
 
@@ -21,7 +23,7 @@ const SECTIONS: readonly { readonly kind: TrackKind; readonly label: string }[] 
  * scrolling (D-97) — a section past `MAX_VISIBLE` truncates and its
  * `+N more` opens the tracker drawer (task 5.7) scoped to that kind. A row's
  * own click opens a lightweight popover with Beat 8's "who ticked it and
- * why" instead.
+ * why" instead, and the control to set its ticks by hand (A16, D-117).
  */
 export function PressureRail({
   campaignId,
@@ -44,6 +46,7 @@ export function PressureRail({
         <Section
           key={kind}
           label={label}
+          campaignId={campaignId}
           rows={rowsForKind(grouped, kind)}
           onOverflow={() => onOpenTrackerDrawer(kind)}
         />
@@ -53,10 +56,12 @@ export function PressureRail({
 }
 
 function Section({
+  campaignId,
   label,
   rows,
   onOverflow,
 }: {
+  readonly campaignId: string;
   readonly label: string;
   readonly rows: readonly TrackRowView[];
   readonly onOverflow: () => void;
@@ -71,7 +76,7 @@ function Section({
     <section className={styles.section}>
       <h3 className={styles.sectionTitle}>{label}</h3>
       {visible.map((row) => (
-        <TrackRow key={row.id} row={row} />
+        <TrackRow key={row.id} campaignId={campaignId} row={row} />
       ))}
       {overflow > 0 && (
         <button type="button" className={styles.overflow} onClick={onOverflow}>
@@ -82,7 +87,7 @@ function Section({
   );
 }
 
-function TrackRow({ row }: { readonly row: TrackRowView }) {
+function TrackRow({ campaignId, row }: { readonly campaignId: string; readonly row: TrackRowView }) {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -97,6 +102,7 @@ function TrackRow({ row }: { readonly row: TrackRowView }) {
         <span className={styles.rowTitle}>{row.title}</span>
         <span className={styles.rowProgress}>
           {row.ticks}/{row.maxTicks}
+          {row.overridden ? ' (edited)' : ''}
         </span>
       </button>
       <Popover open={open} onClose={() => setOpen(false)} anchorRef={buttonRef}>
@@ -105,6 +111,15 @@ function TrackRow({ row }: { readonly row: TrackRowView }) {
           Last changed by {row.actorKind}
           {row.reason === undefined ? '' : ` — ${row.reason}`}
         </p>
+        <OverrideControl
+          campaignId={campaignId}
+          target={{ kind: 'track', trackId: row.id }}
+          label="Ticks"
+          value={row.ticks}
+          min={0}
+          max={row.maxTicks}
+          overridden={row.overridden}
+        />
       </Popover>
     </>
   );

@@ -73,3 +73,19 @@ export {
   type ResolvePayThePriceRequest,
   type ResolvedPayThePrice,
 } from './move-commands.js';
+export {
+  prepareBeatNarration,
+  runBeatNarration,
+  prepareCorrection,
+  runCorrection,
+  proposeAmount,
+  AiRequestRefusedError,
+  type AiCommandResult,
+  type CorrectNarrationRequest,
+  type NarrateBeatRequest,
+  type Prepared,
+  type PreparedBeat,
+  type PreparedCorrection,
+  type ProposeAmountRequest,
+  type ProposedAmountResult,
+} from './narration-commands.js';

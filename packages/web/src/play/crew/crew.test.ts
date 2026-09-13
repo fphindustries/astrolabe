@@ -58,6 +58,40 @@ describe('toCrewCard', () => {
 });
 
 describe('toCharacterSheet', () => {
+  it('marks a meter or momentum the player set by hand, and carries the edit bounds (A16)', () => {
+    const byHand: FieldProvenance = { ...PROVENANCE, actorKind: 'player', manual: true };
+    const base = character();
+    const sheet = toCharacterSheet(
+      character({
+        meters: { ...base.meters, health: { ...base.meters.health, lastChangedBy: byHand } },
+        momentum: { ...base.momentum, lastChangedBy: byHand },
+      }),
+      RULES,
+      {},
+    );
+
+    expect(sheet.meters.map((m) => [m.id, m.overridden])).toEqual([
+      ['health', true],
+      ['spirit', false],
+      ['supply', false],
+    ]);
+    expect(sheet.meters[0]).toMatchObject({ min: 0, max: 5 });
+    expect(sheet.momentum).toMatchObject({ overridden: true, min: -6, max: 10 });
+  });
+
+  it('does not mark a value the player merely created as edited', () => {
+    const created: FieldProvenance = { ...PROVENANCE, actorKind: 'player' };
+    const base = character();
+    const sheet = toCharacterSheet(
+      character({
+        meters: { ...base.meters, health: { ...base.meters.health, lastChangedBy: created } },
+      }),
+      RULES,
+      {},
+    );
+    expect(sheet.meters[0]?.overridden).toBe(false);
+  });
+
   it('resolves asset names and impact labels from the rules, not the character', () => {
     const sheet = toCharacterSheet(
       character({

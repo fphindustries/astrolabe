@@ -17,6 +17,7 @@ import type {
 } from '@astrolabe/shared';
 
 import { playGoldenBeats, type GoldenRun } from '../harness/golden-beats.js';
+import { StubProvider } from '../ai/stub.js';
 import { createTestDatabase, hasTestDatabase, type TestDatabase } from '../db/testing.js';
 
 import { buildApp } from './app.js';
@@ -58,7 +59,7 @@ describe.skipIf(!hasTestDatabase)('the HTTP read API', () => {
   beforeAll(async () => {
     db = await createTestDatabase('http-app');
     run = await playGoldenBeats(db.sql);
-    app = buildApp({ sql: db.sql });
+    app = buildApp({ sql: db.sql, ai: new StubProvider() });
     await app.ready();
   }, 60_000);
 

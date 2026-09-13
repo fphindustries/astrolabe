@@ -1,0 +1,59 @@
+import { ClaudeProvider, DEFAULT_CLAUDE_MODEL } from './claude.js';
+import type { AiProvider } from './provider.js';
+import { StubProvider, type StubResponse } from './stub.js';
+
+/**
+ * Choose the provider from the environment (D-119).
+ *
+ * `ASTROLABE_AI_PROVIDER=stub` runs the app locally without a key or a
+ * token bill; anything else is Claude. Claude counts as configured when
+ * the SDK has a credential it reads from the environment — without one the
+ * server starts, and play starts paused (D-116), rather than failing to
+ * boot: the campaign's state is still worth reading.
+ */
+export function createProviderFromEnv(env: NodeJS.ProcessEnv = process.env): AiProvider {
+  if (env['ASTROLABE_AI_PROVIDER'] === 'stub') {
+    return new StubProvider({ fallback: devStubResponse });
+  }
+
+  const configured =
+    nonEmpty(env['ANTHROPIC_API_KEY']) ||
+    nonEmpty(env['ANTHROPIC_AUTH_TOKEN']) ||
+    nonEmpty(env['ANTHROPIC_PROFILE']);
+  const model = env['ASTROLABE_CLAUDE_MODEL'];
+  return new ClaudeProvider({
+    configured,
+    model: nonEmpty(model) ? model : DEFAULT_CLAUDE_MODEL,
+  });
+}
+
+function nonEmpty(value: string | undefined): value is string {
+  return value !== undefined && value.trim().length > 0;
+}
+
+/**
+ * Local-development answers for every purpose the app asks for, so a
+ * stubbed session plays through without pausing.
+ */
+function devStubResponse(
+  request: { readonly purpose: string },
+  mode: 'text' | 'structured',
+): StubResponse {
+  if (mode === 'structured' && request.purpose === 'harm_proposal') {
+    return {
+      kind: 'structured',
+      value: { amount: -1, reason: 'Stub proposal: a glancing blow.' },
+    };
+  }
+  if (mode === 'structured') {
+    return {
+      kind: 'error',
+      errorKind: 'invalid_output',
+      message: `No stub value for ${request.purpose}.`,
+    };
+  }
+  return {
+    kind: 'text',
+    text: 'Stub narration: the moment resolves as the dice said, described in a few plain sentences.',
+  };
+}

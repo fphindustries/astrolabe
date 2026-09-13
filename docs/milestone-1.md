@@ -131,17 +131,17 @@ narrative log is a second read model with its own paged query.
 
 ### 7. AI provider and narration
 
-- [ ] 7.1 Provider interface: streaming, structured output, token accounting
-- [ ] 7.2 Claude implementation
+- [x] 7.1 Provider interface: streaming, structured output, token accounting
+- [x] 7.2 Claude implementation — built and tested against a faked SDK client; not yet run against the live API (section 7 notes)
 - [ ] ~~7.3 OpenAI implementation~~ — moved to Milestone 2 (D-60)
-- [ ] 7.4 Context assembly from projected state, not raw transcript
-- [ ] 7.5 Structured response schema and validation, with retry on failure
-- [ ] 7.6 Narration latitude (Minimal, Color, Full voice) enforced in the prompt
-- [ ] 7.7 Narration length scaled to the weight of the moment
-- [ ] 7.8 Streaming into the narrative log within the 5-second target
-- [ ] 7.9 Narration correction: flag, rewrite, log
-- [ ] 7.10 Token counter in the UI
-- [ ] 7.11 Graceful stop when the provider is unavailable, with state intact
+- [x] 7.4 Context assembly from projected state, not raw transcript
+- [x] 7.5 Structured response schema and validation, with retry on failure
+- [x] 7.6 Narration latitude (Minimal, Color, Full voice) enforced in the prompt
+- [x] 7.7 Narration length scaled to the weight of the moment
+- [x] 7.8 Streaming into the narrative log within the 5-second target — streaming built and verified on the stub; the 5-second measurement against real Claude is still owed (section 7 notes)
+- [x] 7.9 Narration correction: flag, rewrite, log
+- [x] 7.10 Token counter in the UI
+- [x] 7.11 Graceful stop when the provider is unavailable, with state intact
 
 ### 8. Oracle-grounded generation
 
@@ -1017,3 +1017,157 @@ the aided character rather than the actor. The void control's *refusal*
 path (D-84, no active session on a fresh campaign) was exercised live;
 its success path is what the cascade test above covers, since no HTTP
 route begins a session yet (task 9.1) for a live campaign to have one.
+
+---
+
+## Implementation notes (section 7, the AI provider and narration)
+
+7.1, 7.2 and 7.4–7.11 are done (7.3 moved to Milestone 2, D-60). Decisions:
+D-110–D-119. Group 7's own visible output is `role: 'beat'` narration after a
+move flow, the narration correction, the token counter and the pause.
+Complications (8.7), AI oracle rolls and chips (8.1–8.5), the recap (9.1), the
+summary (9.4) and "What now?" (9.3) run through the same engine but are not
+built here, and `narration.written.groundedIn` is always `[]` until 8.x.
+
+### Shape
+
+- **`server/src/ai/`** holds the provider layer. `provider.ts` defines the
+  two-operation interface (D-112). `claude.ts` and `stub.ts` implement it.
+  `respond.ts` owns validation, the single re-ask, and turning an outcome
+  into accounting events, so the two providers can't disagree about what a
+  usable answer is. `status.ts` is the in-memory availability tracker.
+- **`server/src/ai/context/`** is pure prompt assembly: `beat-scope.ts`,
+  `describe-beat.ts`, `render-state.ts`, `latitude.ts`, `length.ts` and
+  `prompt.ts`. A new lint fence, modelled on `projection/`'s, bans I/O, the
+  clock, the provider SDK and the concrete providers. It was checked by
+  rejecting six seeded violations. Unlike projection, it *may* read
+  `STARFORGED`: move names and choice labels are what the AI needs to hear,
+  and nothing here is folded into state.
+- **`server/src/db/narration-commands.ts`** holds the three AI commands.
+  Streaming ones split into `prepare*` and `run*`, so every refusal is a 422
+  before the stream opens. A provider failure is an outcome that gets
+  committed, never a thrown error.
+- **`server/src/http/ai-routes.ts`** holds the new routes. The param
+  helpers moved out of `app.ts` into `params.ts` so both files share them.
+  `buildApp` now takes `{ sql, ai }`, and `serve.ts` builds the provider
+  from the environment.
+- **Web.** `api/narration.ts` and `api/ndjson.ts` are the HTTP layer.
+  `play/narration/` holds `frames.ts` (pure) and `narration-stream.tsx`, a
+  context alongside `move-flow.tsx` and `play-ui.tsx`.
+  `play/log/CorrectionControl.tsx` and `play/overrides/OverrideControl.tsx`
+  are the new controls, and `play/tokens.ts` formats the counter.
+
+### Deviations from the approved plan
+
+- **The harm-proposal route is `POST /campaigns/:id/amount-proposals`**,
+  not `/moves/harm-proposal`. It proposes for any move whose `preRoll`
+  declares a `proposed_amount` and writes `amount.proposed`, so it is named
+  for the fact rather than for Endure Harm.
+- **Override provenance gained `FieldProvenance.manual`.** The plan used
+  `actorKind === 'player'` for A16's "edited" marker, which the live pass
+  proved wrong: a player also *creates* characters and swears vows, so a
+  brand-new vow read as edited. `applyOverride` now sets `manual: true`,
+  and only that marks a field as edited. `design-event-log.md` §3 still
+  describes `actorKind` as the badge source, and that stays right for
+  player/AI/system provenance. It just can't separate "created" from
+  "overridden".
+- **Pause replaces the composer only when no move flow is open.** A flow
+  already under way can finish, so its already-committed mechanics are
+  never stranded behind the banner. A new move cannot start while paused.
+  If the harm proposal fails mid-composer, the player sets the amount by
+  hand.
+- **Before the proposal arrives, the harm amount starts at the range's
+  mildest end** (−1), not D-107's midpoint. A player who rolls before the
+  proposal lands never commits more harm than they chose.
+- **`TokenUsage` gained `cacheRead` and `cacheWrite`**, required rather
+  than optional, so the counter can never silently drop cached tokens. That
+  changed five `toEqual` expectations across the projection and harness
+  tests.
+
+### How a chain is narrated (D-110)
+
+`resolveBeatScope` walks `causedBy` from the named command up to the root
+move, then takes the root's causal subtree. That subtree comes from
+`causalCommands`, factored out of `cascade.ts`, the same walk a void uses,
+so "what one passage covers" and "what a void removes" can't drift apart.
+The passage's `causedBy` is the last live event of the chain, which is why
+voiding Face Danger's roll also voids the passage.
+`narration-commands.test.ts` asserts exactly that.
+
+`describeBeat` deliberately **omits `amount.proposed`**. The passage follows
+the amount the player committed (Beat 7). Naming the AI's −2 "serious burn"
+would invite prose that contradicts the −1 the player chose.
+
+### Accounting (D-113)
+
+Every attempt writes its own event. An attempt that returned, valid or not,
+writes `ai.completed`. A failed call closes with `ai.failed`, which carries
+tokens only when a thrown attempt reported partial usage, so a rejected
+attempt is never counted twice. Both are exempt from void (D-85), and the
+meta test now lists three exempt types. A command writes its accounting and
+its content together, so tokens and the text they bought can't be separated.
+
+### Things worth knowing before 8.x and 9.x use this
+
+- **Everything is on the beta messages surface**, because that's where
+  `fallbacks: "default"` lives (D-119). A mid-stream fallback continues from
+  the partial text, so concatenated text deltas are still one passage.
+  `@anthropic-ai/sdk` went from 0.68 to 0.125 for `output_config` and
+  `effort`. 0.68 had neither.
+- **Structured output uses `create` plus `betaZodOutputFormat`, not
+  `parse`.** The SDK's `parse` throws on a schema failure and loses the
+  usage the call still spent. JSON-schema range constraints may be dropped
+  in conversion, so bounds such as the harm range are enforced by our own
+  zod check, and a violation is re-asked.
+- **Adaptive thinking stays on.** `max_tokens` is a generous 16k ceiling,
+  because thinking tokens count against it. Length is asked for in the
+  prompt (D-115); a `max_tokens` stop is treated as a failed attempt, not
+  committed.
+- **The cache breakpoint sits after the latitude block.** The system prompt
+  is byte-stable per campaign, and everything per-call is in the user turn.
+  The rules and latitude blocks together may be under Opus 5's minimum
+  cacheable prefix. If `cacheReadTokens` stays at 0 on real calls, that's
+  why, not a silent invalidator.
+- **`ASTROLABE_AI_PROVIDER=stub`** runs the app with no key. Its dev
+  fallback answers every text call and `harm_proposal`. Any new structured
+  purpose (8.7's complications, 9.3's suggestions) needs a stub answer
+  added in `create-provider.ts`, or play pauses on it locally.
+- **Availability is in-memory** (`AiStatus`). It resets on restart, and a
+  server with no credential starts unavailable. "Configured" means
+  `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` or `ANTHROPIC_PROFILE` is set.
+- **Two known gaps, both acceptable for single-user Milestone 1.** Two
+  narration requests for the same chain with *different* commandIds, sent
+  concurrently, can both commit; the UI's one-at-a-time queue prevents it.
+  The correction popover also sits low and shows a small inner scrollbar at
+  1568px, which 10.1 can pick up.
+
+### Verification
+
+`npm run typecheck`, `npm run lint` and
+`npm run db:up && npm run migrate && npm test` all pass: 739 tests with 1
+skipped, against real Postgres, and `npm run build --workspace
+@astrolabe/web` also passes. The database tests skip silently unless
+`DATABASE_URL` is exported
+(`postgres://astrolabe:astrolabe@localhost:5433/astrolabe`), which is how an
+earlier run showed 161 skipped.
+
+A live `npm run harness` plus a browser pass on the golden campaign, against
+the **stub** provider, covered:
+
+- a Gather Information flow reaching Done, with the passage streaming,
+  committing and rendering with Flag/Void controls;
+- the token counter rising and surviving a reload;
+- a correction (flag, note, then Rewrite) committing behind "Corrected";
+- Endure Harm opening with "The Guide proposes -1: …" and the proposal
+  logged;
+- Juno's momentum overridden from +5 to +6, showing "edited", updating the
+  crew card, and logged as "Override: 5 → 6";
+- a server with no API key starting paused, with the banner, a disabled
+  Flag, "Guide unavailable" in the top bar, and state intact.
+
+The console stayed clean. **Not verified live:** real Claude narration, the
+five-second first-token target (A18), `cacheReadTokens > 0`, and Retry
+recovering from a mid-session outage in the browser. That last path is
+covered by `ai-routes.test.ts`. No API key was available in that session.
+Run the live pass with `ANTHROPIC_API_KEY` set and read `firstTokenMs` off
+the `ai.completed` events.

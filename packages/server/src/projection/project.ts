@@ -119,7 +119,7 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
           id: event.payload.sessionId,
           number: event.payload.number,
           startedAt: event.occurredAt,
-          tokenUsage: { input: 0, output: 0 },
+          tokenUsage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
         },
       };
 
@@ -165,6 +165,7 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
     case 'move.method_chosen':
     case 'move.chained':
     case 'oracle.rolled':
+    case 'amount.proposed':
     case 'amount.committed':
       // None of these change projected state. Rolls, chains, oracle results,
       // choice picks and committed amounts all belong to the beat the player
@@ -294,20 +295,30 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
       };
     }
 
-    case 'ai.completed': {
+    case 'ai.completed':
+    case 'ai.failed': {
       if (state.session === null) {
         return state;
       }
       // D-85: counted even inside a voided cascade. `isSuppressed` never
-      // skips this type, because the tokens were spent whatever the fiction
-      // now says.
+      // skips these types, because the tokens were spent whatever the
+      // fiction now says. A failed call counts whatever it spent before it
+      // failed (D-113).
+      const { payload } = event;
+      const cached =
+        'cacheReadTokens' in payload || 'cacheWriteTokens' in payload
+          ? { read: payload.cacheReadTokens ?? 0, write: payload.cacheWriteTokens ?? 0 }
+          : { read: 0, write: 0 };
+      const usage = state.session.tokenUsage;
       return {
         ...state,
         session: {
           ...state.session,
           tokenUsage: {
-            input: state.session.tokenUsage.input + event.payload.inputTokens,
-            output: state.session.tokenUsage.output + event.payload.outputTokens,
+            input: usage.input + (payload.inputTokens ?? 0),
+            output: usage.output + (payload.outputTokens ?? 0),
+            cacheRead: usage.cacheRead + cached.read,
+            cacheWrite: usage.cacheWrite + cached.write,
           },
         },
       };
@@ -432,7 +443,11 @@ function applyOverride(
   // `from` is a write-time display value ("+3 → +4"), never an assertion:
   // after a void reprojects the log it is legitimately stale, so nothing
   // here gates on it.
-  const provenance: FieldProvenance = { ...by, ...(reason !== undefined ? { reason } : {}) };
+  const provenance: FieldProvenance = {
+    ...by,
+    ...(reason !== undefined ? { reason } : {}),
+    manual: true,
+  };
 
   switch (target.kind) {
     case 'momentum':

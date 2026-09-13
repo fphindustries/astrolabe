@@ -135,7 +135,12 @@ describe.skipIf(!hasTestDatabase)('the golden session beats', () => {
   });
 
   it('counts the tokens the AI spent, and keeps them through a void (D-75, D-85)', async () => {
-    expect((await state()).session?.tokenUsage).toEqual({ input: 1840, output: 210 });
+    expect((await state()).session?.tokenUsage).toEqual({
+      input: 1840,
+      output: 210,
+      cacheRead: 0,
+      cacheWrite: 0,
+    });
   });
 
   it('projects identically on a second read', async () => {

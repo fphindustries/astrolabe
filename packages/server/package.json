@@ -15,9 +15,9 @@
     "harness": "tsx src/harness/cli.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.125.0",
     "@astrolabe/rules": "*",
     "@astrolabe/shared": "*",
-    "@anthropic-ai/sdk": "^0.68.0",
     "fastify": "^5.6.0",
     "postgres": "^3.4.0",
     "zod": "^4.1.0"

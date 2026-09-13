@@ -46,6 +46,12 @@ export interface FieldProvenance {
   readonly actorKind: ActorKind;
   readonly reason?: string;
   readonly at: Timestamp;
+  /**
+   * Set only by a manual override (`state.overridden`). `actorKind: 'player'`
+   * alone cannot mark one: a player also creates characters and swears
+   * vows, and a freshly created meter is not an edited one (A16).
+   */
+  readonly manual?: true;
 }
 
 export interface MeterState {
@@ -123,8 +129,12 @@ export interface EntityState {
 }
 
 export interface TokenUsage {
+  /** Uncached input tokens. */
   readonly input: number;
   readonly output: number;
+  /** Input served from, and written to, the provider's prompt cache (D-113). */
+  readonly cacheRead: number;
+  readonly cacheWrite: number;
 }
 
 export interface SessionState {

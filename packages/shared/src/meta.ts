@@ -176,6 +176,16 @@ export const EVENT_TYPE_META: MetaTable = {
     introduces: none,
     references: none,
   },
+  'amount.proposed': {
+    // The AI's suggestion, shown in the beat so the player sees what they
+    // adjusted from (A13). The commitment is a separate player event.
+    narrative: true,
+    significant: false,
+    mutatesState: false,
+    voidable: true,
+    introduces: none,
+    references: (p) => [character(p.characterId)],
+  },
   'amount.committed': {
     // The meter delta rides in an accompanying `state.changed` under a
     // `preroll_effect` cause (amount.ts's own comment) — same split as
@@ -262,6 +272,16 @@ export const EVENT_TYPE_META: MetaTable = {
     references: none,
   },
   'ai.completed': {
+    narrative: false,
+    significant: false,
+    mutatesState: true,
+    voidable: false,
+    introduces: none,
+    references: none,
+  },
+  'ai.failed': {
+    // Accounting, like `ai.completed`: exempt from void (D-85), and never a
+    // beat in its own right — the play screen shows the pause (D-116).
     narrative: false,
     significant: false,
     mutatesState: true,

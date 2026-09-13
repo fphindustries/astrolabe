@@ -2,8 +2,11 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 
 import { useCampaignLog } from '../api/campaigns.js';
 
+import { CorrectionControl } from './log/CorrectionControl.js';
 import { orderedBeats, toBeatView, type BeatView, type EntryView } from './log/entries.js';
 import { VoidControl } from './log/VoidControl.js';
+import { useNarrationStream } from './narration/narration-stream.js';
+import type { PendingPassage } from './narration/frames.js';
 import styles from './NarrativeLog.module.css';
 
 /**
@@ -18,6 +21,9 @@ export function NarrativeLog({ campaignId }: { readonly campaignId: string }) {
   const anchorRef = useRef<HTMLDivElement>(null);
   const prevScrollHeight = useRef<number | null>(null);
   const scrolledToBottom = useRef(false);
+  const { pending } = useNarrationStream();
+  const pendingBeat = pending?.target.kind === 'beat' ? pending : null;
+  const pendingRevision = pending?.target.kind === 'revision' ? pending : null;
 
   const beats = data === undefined ? [] : orderedBeats(data.pages).map(toBeatView);
   const pageCount = data?.pages.length ?? 0;
@@ -41,6 +47,21 @@ export function NarrativeLog({ campaignId }: { readonly campaignId: string }) {
     prevScrollHeight.current = el.scrollHeight;
   }, [pageCount, beats.length]);
 
+  // Streaming text grows the log from the bottom — the opposite of paging.
+  // Follow it only if the reader was already at (or near) the bottom.
+  const pendingLength = pending?.text.length ?? -1;
+  useLayoutEffect(() => {
+    const el = anchorRef.current?.parentElement ?? null;
+    if (el === null || pendingLength < 0 || prevScrollHeight.current === null) {
+      return;
+    }
+    const wasNearBottom = prevScrollHeight.current - (el.scrollTop + el.clientHeight) < 80;
+    if (wasNearBottom) {
+      el.scrollTop = el.scrollHeight;
+    }
+    prevScrollHeight.current = el.scrollHeight;
+  }, [pendingLength]);
+
   useEffect(() => {
     const el = anchorRef.current?.parentElement ?? null;
     if (el === null) {
@@ -61,21 +82,57 @@ export function NarrativeLog({ campaignId }: { readonly campaignId: string }) {
 
   return (
     <div ref={anchorRef} className={styles.entries}>
-      {beats.length === 0 ? (
+      {beats.length === 0 && pendingBeat === null ? (
         <div className={styles.empty}>Nothing has happened yet.</div>
       ) : (
-        beats.map((beat) => <Beat key={beat.commandId} campaignId={campaignId} beat={beat} />)
+        beats.map((beat) => (
+          <Beat
+            key={beat.commandId}
+            campaignId={campaignId}
+            beat={beat}
+            pendingRevision={pendingRevision}
+          />
+        ))
+      )}
+      {pendingBeat !== null && (
+        <div className={styles.beat}>
+          <PendingText passage={pendingBeat} />
+        </div>
       )}
     </div>
   );
 }
 
-function Beat({ campaignId, beat }: { readonly campaignId: string; readonly beat: BeatView }) {
+function Beat({
+  campaignId,
+  beat,
+  pendingRevision,
+}: {
+  readonly campaignId: string;
+  readonly beat: BeatView;
+  readonly pendingRevision: PendingPassage | null;
+}) {
   return (
     <div className={styles.beat} data-voided={beat.voided}>
-      {beat.entries.map((entry) => (
-        <Entry key={entry.eventId} campaignId={campaignId} entry={entry} />
-      ))}
+      {beat.entries.map((entry) =>
+        pendingRevision?.target.kind === 'revision' &&
+        pendingRevision.target.targetEventId === entry.eventId ? (
+          <PendingText key={entry.eventId} passage={pendingRevision} />
+        ) : (
+          <Entry key={entry.eventId} campaignId={campaignId} entry={entry} />
+        ),
+      )}
+    </div>
+  );
+}
+
+function PendingText({ passage }: { readonly passage: PendingPassage }) {
+  return (
+    <div className={styles.entry} aria-live="polite" aria-busy="true">
+      <span className={styles.pendingLabel}>
+        {passage.status === 'retrying' ? 'The Guide is trying again…' : 'The Guide is writing…'}
+      </span>
+      {passage.text.length > 0 && <span className={styles.text}>{passage.text}</span>}
     </div>
   );
 }
@@ -85,6 +142,7 @@ function Entry({ campaignId, entry }: { readonly campaignId: string; readonly en
   return (
     <div className={styles.entry} data-voided={entry.voided}>
       <span className={styles.text}>{describeEntry(entry)}</span>
+      {body.kind === 'narration' && !entry.voided && <CorrectionControl eventId={entry.eventId} />}
       {/* A11/D-27: only a live, voidable event offers this — an already-voided one is history, not undone twice. */}
       {entry.voidable && !entry.voided && (
         <VoidControl campaignId={campaignId} eventId={entry.eventId} />
@@ -130,6 +188,8 @@ function describeEntry(entry: EntryView): string {
       return `Chains to ${body.toMoveId} (${body.mode}) — ${body.reason}`;
     case 'oracle_rolled':
       return `Oracle: ${body.roll} — ${body.rowText}`;
+    case 'amount_proposed':
+      return `Guide proposes ${body.amount >= 0 ? '+' : ''}${body.amount} ${body.meter} — ${body.reason}`;
     case 'amount_committed':
       return `Committed ${body.amount >= 0 ? '+' : ''}${body.amount} ${body.meter}`;
     case 'track_created':

@@ -38,7 +38,19 @@ describe('toTrackRow', () => {
       maxTicks: 4,
       actorKind: 'ai',
       reason: 'emergency load-shedding',
+      overridden: false,
     });
+  });
+
+  it('marks a track the player set by hand (A16)', () => {
+    expect(
+      toTrackRow(track({ lastChangedBy: { ...PROVENANCE, actorKind: 'player', manual: true } }))
+        .overridden,
+    ).toBe(true);
+    // Sworn by a player is not the same as edited by one.
+    expect(
+      toTrackRow(track({ lastChangedBy: { ...PROVENANCE, actorKind: 'player' } })).overridden,
+    ).toBe(false);
   });
 
   it('omits rank for a clock and reason when none was given', () => {

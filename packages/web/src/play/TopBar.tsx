@@ -1,3 +1,6 @@
+import type { TokenUsage } from '@astrolabe/shared';
+
+import { formatTokens } from './tokens.js';
 import styles from './TopBar.module.css';
 
 /**
@@ -7,8 +10,10 @@ import styles from './TopBar.module.css';
  * bar itself only needs what identifies the session at a glance.
  * "Connection status" means API reachability in Milestone 1 (D-99): there
  * is no realtime channel yet, so `connected` reflects whether the state
- * query is succeeding, not a socket. AI-provider availability gets its own
- * indicator in task 7.11 (D-53).
+ * query is succeeding, not a socket. The Guide's availability is its own
+ * indicator (task 7.11, D-53, D-116), beside the session's token counter
+ * (task 7.10, D-51) — a projection over `ai.completed` and `ai.failed`, so
+ * it survives a reload (D-75).
  *
  * `onOpenMoves` is task 5.7's seed entry point for the moves reference
  * browser (D-104) — task 6.1's relevant-moves panel reuses it rather than
@@ -18,11 +23,16 @@ export function TopBar({
   campaignName,
   sessionNumber,
   connected,
+  guideAvailable,
+  tokens,
   onOpenMoves,
 }: {
   readonly campaignName: string;
   readonly sessionNumber: number | undefined;
   readonly connected: boolean;
+  /** `undefined` while the status is still loading. */
+  readonly guideAvailable: boolean | undefined;
+  readonly tokens: TokenUsage | undefined;
   readonly onOpenMoves: () => void;
 }) {
   return (
@@ -34,6 +44,27 @@ export function TopBar({
       <button type="button" className={styles.movesButton} onClick={onOpenMoves}>
         Moves
       </button>
+      <span className={styles.spacer} />
+      {tokens !== undefined && (
+        <span
+          className={styles.tokens}
+          title={`Uncached input ${tokens.input.toLocaleString()}, output ${tokens.output.toLocaleString()}, cache read ${tokens.cacheRead.toLocaleString()}, cache write ${tokens.cacheWrite.toLocaleString()}`}
+        >
+          {formatTokens(tokens)} tokens this session
+        </span>
+      )}
+      <span className={styles.status}>
+        <span
+          className={styles.dot}
+          data-status={guideAvailable === false ? 'disconnected' : 'connected'}
+          aria-hidden="true"
+        />
+        {guideAvailable === undefined
+          ? 'Guide…'
+          : guideAvailable
+            ? 'Guide ready'
+            : 'Guide unavailable'}
+      </span>
       <span className={styles.status}>
         <span
           className={styles.dot}

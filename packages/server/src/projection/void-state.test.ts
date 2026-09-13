@@ -143,7 +143,12 @@ describe('the void fold', () => {
     const voids = computeVoidState(events);
     expect(isSuppressed(narration, voids)).toBe(true);
     expect(isSuppressed(aiCall, voids)).toBe(false);
-    expect(project(events).session?.tokenUsage).toEqual({ input: 900, output: 140 });
+    expect(project(events).session?.tokenUsage).toEqual({
+      input: 900,
+      output: 140,
+      cacheRead: 0,
+      cacheWrite: 0,
+    });
   });
 
   it('never suppresses a void itself', () => {

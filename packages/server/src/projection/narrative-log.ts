@@ -128,6 +128,29 @@ function resolveNarration(
   };
 }
 
+/**
+ * Every live passage's current text, in log order: a corrected passage
+ * reads as its latest revision (D-73), and a voided one is gone. This is
+ * the narration AI context assembly carries forward (task 7.4) — the same
+ * resolution the log renders, so the AI never reads a line the player
+ * already corrected.
+ */
+export function livePassages(
+  events: readonly AstrolabeEvent[],
+): readonly { readonly eventId: EventId; readonly text: string }[] {
+  const voids = computeVoidState(events);
+  const revisions = collectRevisions(events);
+  return events
+    .filter(
+      (event): event is Extract<AstrolabeEvent, { type: 'narration.written' }> =>
+        event.type === 'narration.written' && (voids.get(event.id)?.size ?? 0) === 0,
+    )
+    .map((event) => ({
+      eventId: event.id,
+      text: revisions.get(event.id)?.text ?? event.payload.text,
+    }));
+}
+
 interface Revision {
   readonly text: string;
   readonly note?: string;

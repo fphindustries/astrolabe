@@ -1,11 +1,12 @@
-import type {
-  AdaptedRuleset,
-  AssetId,
-  CharacterId,
-  ImpactId,
-  MeterId,
-  StatId,
-  TrackId,
+import {
+  MOMENTUM_MIN,
+  type AdaptedRuleset,
+  type AssetId,
+  type CharacterId,
+  type ImpactId,
+  type MeterId,
+  type StatId,
+  type TrackId,
 } from '@astrolabe/rules';
 import type { CharacterState, TrackState } from '@astrolabe/shared';
 
@@ -47,6 +48,9 @@ export interface StatView {
 
 export interface NamedMeterView extends MeterView {
   readonly id: MeterId;
+  readonly min: number;
+  /** A16: the value was last set by hand, so it reads differently from an automated change. */
+  readonly overridden: boolean;
 }
 
 export interface ImpactView {
@@ -72,7 +76,11 @@ export interface CharacterSheetView {
   readonly callsign: string;
   readonly stats: readonly StatView[];
   readonly meters: readonly NamedMeterView[];
-  readonly momentum: MeterView & { readonly resetValue: number };
+  readonly momentum: MeterView & {
+    readonly min: number;
+    readonly resetValue: number;
+    readonly overridden: boolean;
+  };
   readonly markedImpacts: readonly ImpactView[];
   readonly assets: readonly AssetView[];
   readonly bonusNextMove?: { readonly amount: number; readonly excludes?: 'progress_moves' };
@@ -104,12 +112,16 @@ export function toCharacterSheet(
     meters: METER_ORDER.map((id) => ({
       id,
       value: character.meters[id].value,
+      min: character.meters[id].min,
       max: character.meters[id].max,
+      overridden: character.meters[id].lastChangedBy.manual === true,
     })),
     momentum: {
       value: character.momentum.value,
+      min: MOMENTUM_MIN,
       max: character.momentum.max,
       resetValue: character.momentum.resetValue,
+      overridden: character.momentum.lastChangedBy.manual === true,
     },
     markedImpacts: (Object.keys(character.impacts) as ImpactId[]).map((id) => ({
       id,

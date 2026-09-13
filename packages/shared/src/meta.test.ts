@@ -41,7 +41,7 @@ describe('the metadata table', () => {
 
   it('exempts exactly token accounting and voids from being voided (D-85)', () => {
     const exempt = EVENT_TYPES.filter((type) => !EVENT_TYPE_META[type].voidable);
-    expect(exempt.sort()).toEqual(['ai.completed', 'event.voided']);
+    expect(exempt.sort()).toEqual(['ai.completed', 'ai.failed', 'event.voided']);
   });
 
   it('treats every significant type as narrative too, except session boundaries', () => {

@@ -2,6 +2,7 @@ import * as z from 'zod';
 
 import type { BurnOffer, CharacterId, MoveId, OutcomeTier, TrackId } from '@astrolabe/rules';
 
+import type { AiErrorKind } from './events/ai.js';
 import { CampaignSettingsSchema } from './events/campaign.js';
 import { CharacterStatsSchema } from './events/character.js';
 import { RollAdjustmentSchema, RollUsingSchema } from './events/move.js';
@@ -353,4 +354,111 @@ export type VoidEventRequestBody = z.infer<typeof VoidEventRequestBodySchema>;
 
 export interface VoidEventResponse {
   readonly cascaded: number;
+}
+
+/**
+ * Beat narration (task 7.8, D-110, D-111). The client names the commandId of
+ * the move-flow step it just finished; the server finds the chain it
+ * belongs to and narrates the whole of it.
+ */
+export const NarrateBeatRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  afterCommandId: CommandIdSchema,
+});
+
+export type NarrateBeatRequestBody = z.infer<typeof NarrateBeatRequestBodySchema>;
+
+/**
+ * Narration correction (task 7.9, A15). One action: the note is written and
+ * the rewrite streams back in the same request.
+ */
+export const CorrectNarrationRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  note: z.string().trim().min(1),
+});
+
+export type CorrectNarrationRequestBody = z.infer<typeof CorrectNarrationRequestBodySchema>;
+
+/**
+ * One line of a streamed narration response (D-111), sent as NDJSON.
+ *
+ * - `delta`: more text for the passage.
+ * - `reset`: discard everything streamed so far — a rejected attempt is
+ *   being re-asked (task 7.5).
+ * - `committed`: the passage is in the log as `eventId`; refetch.
+ * - `failed`: the call produced nothing usable and play pauses (D-116).
+ */
+export type NarrationFrame =
+  | { readonly type: 'delta'; readonly text: string }
+  | { readonly type: 'reset'; readonly reason: string }
+  | { readonly type: 'committed'; readonly eventId: EventId }
+  | {
+      readonly type: 'failed';
+      readonly errorKind: AiErrorKind;
+      readonly message: string;
+    };
+
+/** A 422 refusal from a narration route, returned before any stream opens. */
+export interface NarrationRefusalResponse {
+  readonly problem: string;
+  readonly reason: string;
+}
+
+/**
+ * D-118: ask the Guide to propose a suffer amount for a move whose pre-roll
+ * intake declares one. `chainedFromCommandId` names the chain that led here,
+ * so the proposal is judged from that fiction.
+ */
+export const ProposeAmountRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  moveId: MoveIdSchema,
+  actorCharacterId: CharacterIdSchema,
+  chainedFromCommandId: CommandIdSchema.optional(),
+});
+
+export type ProposeAmountRequestBody = z.infer<typeof ProposeAmountRequestBodySchema>;
+
+export type ProposeAmountResponse =
+  | {
+      readonly ok: true;
+      readonly eventId: EventId;
+      readonly amount: number;
+      readonly reason: string;
+    }
+  | { readonly ok: false; readonly errorKind: AiErrorKind; readonly message: string };
+
+/** A16 / D-117: set a meter, momentum, or a track's ticks by hand. */
+export const OverrideRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  target: z.discriminatedUnion('kind', [
+    z.object({ kind: z.literal('momentum'), characterId: CharacterIdSchema }),
+    z.object({
+      kind: z.literal('meter'),
+      characterId: CharacterIdSchema,
+      meter: z.enum(['health', 'spirit', 'supply']),
+    }),
+    z.object({ kind: z.literal('track'), trackId: z.string().min(1) }),
+  ]),
+  to: z.int(),
+  reason: z.string().trim().min(1).optional(),
+});
+
+export type OverrideRequestBody = z.infer<typeof OverrideRequestBodySchema>;
+
+export interface OverrideResponse {
+  readonly from: number;
+  readonly to: number;
+}
+
+/**
+ * Task 7.11 / D-116: whether the Guide can be reached. `available` is false
+ * when no credential is configured, or when the most recent call failed —
+ * until a later call succeeds.
+ */
+export interface AiStatusResponse {
+  readonly provider: string;
+  readonly model: string;
+  readonly configured: boolean;
+  readonly available: boolean;
+  readonly lastFailure?: { readonly errorKind: AiErrorKind; readonly message: string };
 }

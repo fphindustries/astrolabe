@@ -110,3 +110,9 @@
   opacity: 0.6;
   cursor: default;
 }
+
+/* D-118: the Guide's proposal and its reason, labelled as the Guide's own words. */
+.proposal {
+  font-size: var(--text-sm);
+  color: var(--provenance-ai);
+}

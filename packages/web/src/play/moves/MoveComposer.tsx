@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'react';
 
 import {
   MOVE_AUTOMATION_SPECS,
@@ -7,10 +8,11 @@ import {
   type MoveId,
   type RollOption,
 } from '@astrolabe/rules';
-import type { CommandId } from '@astrolabe/shared';
+import type { CommandId, ProposeAmountResponse } from '@astrolabe/shared';
 
 import { useInvokeMove } from '../../api/moves.js';
 import { useCampaignState } from '../../api/campaigns.js';
+import { aiKeys, useProposeAmount } from '../../api/narration.js';
 import type { CrewCardView } from '../crew/crew.js';
 
 import { AidAllyPicker } from './AidAllyPicker.js';
@@ -41,6 +43,12 @@ function optionKey(option: StatOrMeterOption): string {
  * The composing panel (tasks 6.2, 6.3, 6.9): picks how to roll, who to aid,
  * the freeform action text, and — for a move with a `preRoll` (Endure
  * Harm) — the harm amount, before ever calling the server.
+ *
+ * That amount is the Guide's to propose and the player's to commit (A13,
+ * D-16, D-118): the composer asks for a proposal as it opens and fills it in
+ * with its reason when it arrives. Nothing waits on it — the player can
+ * type a number and roll before the proposal lands, and a number they have
+ * already typed is never overwritten by one that arrives late.
  */
 export function MoveComposer({
   campaignId,
@@ -64,8 +72,9 @@ export function MoveComposer({
   const rollOptions = rollOptionsFor(moveId);
   const preRollEffect = automation?.preRoll?.effects.find((e) => e.effect.kind === 'proposed_amount')?.effect;
   const preRollRange = preRollEffect?.kind === 'proposed_amount' ? preRollEffect.range : undefined;
-  const placeholderAmount =
-    preRollRange !== undefined ? Math.round((preRollRange[0] + preRollRange[1]) / 2) : undefined;
+  // Until the proposal arrives: the range's mildest end, so rolling
+  // before it lands never commits more harm than the player chose.
+  const startingAmount = preRollRange !== undefined ? preRollRange[1] : undefined;
 
   const actor = useCampaignState(campaignId, (state) => state.characters[actorCharacterId]);
   const { moveResolved } = useMoveFlowActions();
@@ -78,7 +87,34 @@ export function MoveComposer({
   const [aidingAllyId, setAidingAllyId] = useState<CharacterId | undefined>(undefined);
   const [addLabel, setAddLabel] = useState('');
   const [addAmount, setAddAmount] = useState('');
-  const [harmAmount, setHarmAmount] = useState(placeholderAmount ?? 0);
+  const [harmAmount, setHarmAmount] = useState(startingAmount ?? 0);
+  const [harmEdited, setHarmEdited] = useState(false);
+  const [proposal, setProposal] = useState<ProposeAmountResponse | undefined>(undefined);
+  const propose = useProposeAmount(campaignId);
+  const queryClient = useQueryClient();
+  const proposalAsked = useRef(false);
+
+  useEffect(() => {
+    if (preRollRange === undefined || proposalAsked.current) {
+      return;
+    }
+    proposalAsked.current = true;
+    propose.mutate(
+      { moveId, actorCharacterId, ...(chainedFromCommandId !== undefined ? { chainedFromCommandId } : {}) },
+      {
+        onSuccess: (result) => {
+          setProposal(result);
+          void queryClient.invalidateQueries({ queryKey: aiKeys.status });
+        },
+      },
+    );
+  }, [preRollRange, propose, moveId, actorCharacterId, chainedFromCommandId, queryClient]);
+
+  useEffect(() => {
+    if (proposal?.ok === true && !harmEdited) {
+      setHarmAmount(proposal.amount);
+    }
+  }, [proposal, harmEdited]);
 
   if (move === undefined || automation === undefined) {
     return null;
@@ -173,15 +209,25 @@ export function MoveComposer({
       {preRollRange !== undefined && (
         <label className={styles.field}>
           <span className={styles.label}>
-            Harm amount (placeholder — no AI proposal yet, adjust as the fiction calls for)
+            Harm amount ({preRollRange[0]} to {preRollRange[1]}) — adjust it as the fiction calls for
           </span>
           <input
             type="number"
             min={preRollRange[0]}
             max={preRollRange[1]}
             value={harmAmount}
-            onChange={(event) => setHarmAmount(Number(event.target.value))}
+            onChange={(event) => {
+              setHarmEdited(true);
+              setHarmAmount(Number(event.target.value));
+            }}
           />
+          <span className={styles.proposal}>
+            {propose.isPending && 'The Guide is judging how bad this is…'}
+            {proposal?.ok === true &&
+              `The Guide proposes ${proposal.amount}: ${proposal.reason}${harmEdited && harmAmount !== proposal.amount ? ` (you set ${harmAmount})` : ''}`}
+            {proposal?.ok === false && `No proposal from the Guide (${proposal.message}). Set the amount yourself.`}
+            {propose.isError && 'No proposal from the Guide. Set the amount yourself.'}
+          </span>
         </label>
       )}
 

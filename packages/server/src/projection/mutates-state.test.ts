@@ -131,6 +131,20 @@ const PROBES: { readonly [T in EventType]: Probe } = {
         rowText: 'You are harmed.',
       }),
   },
+  'amount.proposed': {
+    probe: (b) =>
+      b.add(
+        'amount.proposed',
+        {
+          moveId: 'move:suffer/endure-harm',
+          characterId: VESNA,
+          meter: 'health',
+          amount: -2,
+          reason: 'probe',
+        },
+        { actor: AI_ACTOR },
+      ),
+  },
   'amount.committed': {
     probe: (b) =>
       b.add('amount.committed', {
@@ -234,6 +248,23 @@ const PROBES: { readonly [T in EventType]: Probe } = {
       b.add(
         'ai.completed',
         { provider: 'anthropic', model: 'm', purpose: 'probe', inputTokens: 10, outputTokens: 5 },
+        { actor: AI_ACTOR },
+      ),
+  },
+  'ai.failed': {
+    // With tokens, so the probe can see it counted (D-113).
+    probe: (b) =>
+      b.add(
+        'ai.failed',
+        {
+          provider: 'anthropic',
+          model: 'm',
+          purpose: 'probe',
+          errorKind: 'unavailable',
+          message: 'probe',
+          attempts: 1,
+          inputTokens: 10,
+        },
         { actor: AI_ACTOR },
       ),
   },

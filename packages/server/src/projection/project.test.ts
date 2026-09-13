@@ -84,7 +84,7 @@ describe('campaign, session and scene', () => {
   it('opens session 2 with an empty token count', () => {
     const state = project(goldenSessionPrelude().build());
     expect(state.session?.number).toBe(2);
-    expect(state.session?.tokenUsage).toEqual({ input: 0, output: 0 });
+    expect(state.session?.tokenUsage).toEqual({ input: 0, output: 0, cacheRead: 0, cacheWrite: 0 });
     expect(state.session?.endedAt).toBeUndefined();
   });
 
@@ -565,7 +565,12 @@ describe('token accounting (D-75)', () => {
         { actor: AI_ACTOR },
       )
       .build();
-    expect(project(events).session?.tokenUsage).toEqual({ input: 2000, output: 300 });
+    expect(project(events).session?.tokenUsage).toEqual({
+      input: 2000,
+      output: 300,
+      cacheRead: 0,
+      cacheWrite: 0,
+    });
   });
 
   it('starts a new count when a new session begins', () => {
@@ -578,7 +583,12 @@ describe('token accounting (D-75)', () => {
       .add('session.ended', { summary: 'done', openThreads: [] }, { actor: AI_ACTOR })
       .add('session.began', { sessionId: SESSION_ID, number: 3 })
       .build();
-    expect(project(events).session?.tokenUsage).toEqual({ input: 0, output: 0 });
+    expect(project(events).session?.tokenUsage).toEqual({
+      input: 0,
+      output: 0,
+      cacheRead: 0,
+      cacheWrite: 0,
+    });
   });
 });
 

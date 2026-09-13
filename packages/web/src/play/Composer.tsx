@@ -4,6 +4,7 @@ import type { CommandId } from '@astrolabe/shared';
 import type { CrewCardView } from './crew/crew.js';
 import { MoveComposer } from './moves/MoveComposer.js';
 import { useMoveFlow, useMoveFlowActions } from './moves/move-flow.js';
+import { useNarrationStream } from './narration/narration-stream.js';
 import { PayThePricePicker, PayThePriceResult } from './moves/PayThePriceFlow.js';
 import { RelevantMovesPanel } from './moves/RelevantMovesPanel.js';
 import { ResultCard } from './moves/ResultCard.js';
@@ -14,6 +15,11 @@ import styles from './Composer.module.css';
  * relevant-moves panel (6.1), and whichever move-flow step is currently in
  * progress. Capped at `--composer-max` so a growing panel squeezes the log
  * rather than the page (D-40).
+ *
+ * Finishing a flow ("Done") is what asks the Guide to narrate it (D-110):
+ * the flow's own commandId names the chain. While the Guide is unavailable
+ * the composer is replaced by the pause banner (D-116) — state is intact,
+ * but play does not go on without its narrator.
  */
 export function Composer({
   campaignId,
@@ -30,14 +36,50 @@ export function Composer({
 }) {
   const flow = useMoveFlow();
   const { selectMove, openPayThePrice, payThePriceResolved, reset } = useMoveFlowActions();
+  const narration = useNarrationStream();
 
   if (crew.length === 0) {
     return <div className={styles.composer}>No one to act yet.</div>;
   }
+
+  if (narration.paused && flow.step === 'idle') {
+    return (
+      <div className={styles.composer} role="alert">
+        <div className={styles.paused}>
+          <span className={styles.pausedTitle}>Guide unavailable — session paused</span>
+          <span className={styles.pausedReason}>
+            {narration.pauseReason ?? 'The Guide cannot be reached.'} Your campaign is saved as it
+            stands.
+          </span>
+          <button
+            type="button"
+            className={styles.retry}
+            onClick={narration.retry}
+            disabled={narration.pending !== null}
+          >
+            {narration.pending !== null ? 'Retrying…' : 'Retry'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const finish = (commandId: CommandId) => {
+    narration.narrateAfter(commandId);
+    reset();
+  };
   const actor = actingCharacterId ?? crew[0]?.characterId;
 
   return (
     <div className={styles.composer}>
+      {narration.notice !== undefined && (
+        <div className={styles.notice}>
+          {narration.notice}
+          <button type="button" className={styles.dismiss} onClick={narration.dismissNotice}>
+            Dismiss
+          </button>
+        </div>
+      )}
       <div className={styles.actingRow}>
         <span className={styles.actingLabel}>Acting as</span>
         <select
@@ -87,7 +129,7 @@ export function Composer({
           onOpenPayThePrice={(chainedFromCommandId: CommandId) =>
             openPayThePrice(flow.actorCharacterId, chainedFromCommandId)
           }
-          onDone={reset}
+          onDone={() => finish(flow.commandId)}
         />
       )}
 
@@ -113,7 +155,7 @@ export function Composer({
           onInvokeChain={(moveId, actorCharacterId, chainedFromCommandId) =>
             selectMove(moveId, actorCharacterId, chainedFromCommandId)
           }
-          onDone={reset}
+          onDone={() => finish(flow.commandId)}
         />
       )}
     </div>

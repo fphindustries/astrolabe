@@ -14,16 +14,31 @@ import { CharacterIdSchema, MoveIdSchema } from '../ids.js';
  * — so the shared envelope `commandId` already links them (move.ts's
  * `MoveMethodChosenSchema` comment has the fuller version of this reasoning).
  *
- * No `amount.proposed` yet: Milestone 1 has no AI provider (group 7) to
- * propose a number from the fiction. The composer shows a deterministic
- * placeholder (the effect's declared range's midpoint, labelled as a
- * placeholder, never as the AI's words) that the player adjusts before
- * committing — group 7 adds a real `amount.proposed` event and wires the
- * placeholder over to it additively, the same shape as D-101/D-102.
+ * The AI's proposal is its own event, `amount.proposed` below (D-118): the
+ * proposal and the commitment are two authorities' decisions, and the
+ * player may commit a number without ever waiting for a proposal.
  */
 export const AmountCommittedSchema = z.object({
   moveId: MoveIdSchema,
   characterId: CharacterIdSchema,
   meter: z.enum(['health', 'spirit', 'supply']),
   amount: z.int(),
+});
+
+/**
+ * A13 / D-16 / D-118 / Beat 7, the AI's half: "−2, a ruptured conduit
+ * sprays sparks across Rook's arm". The amount is within the
+ * `proposed_amount` effect's declared range, checked on write; the reason
+ * is one line of fiction, never a mechanical claim.
+ *
+ * Written as its own command, caused by whatever opened the harm intake
+ * (the Pay the Price chain), so voiding that chain removes the proposal
+ * with it.
+ */
+export const AmountProposedSchema = z.object({
+  moveId: MoveIdSchema,
+  characterId: CharacterIdSchema,
+  meter: z.enum(['health', 'spirit', 'supply']),
+  amount: z.int(),
+  reason: z.string().min(1),
 });

@@ -2,6 +2,7 @@ import type { TrackKind } from '@astrolabe/shared';
 
 import { useCampaignState } from '../../api/campaigns.js';
 import { Drawer } from '../../ui/Drawer.js';
+import { OverrideControl } from '../overrides/OverrideControl.js';
 
 import { groupTracksByKind, rowsForKind } from './pressure.js';
 import styles from './TrackerDrawer.module.css';
@@ -42,9 +43,16 @@ export function TrackerDrawer({
                   {row.title}
                   {row.rank === undefined ? '' : ` (${row.rank})`}
                 </span>
-                <span>
-                  {row.ticks}/{row.maxTicks}
-                </span>
+                <OverrideControl
+                  campaignId={campaignId}
+                  target={{ kind: 'track', trackId: row.id }}
+                  label="Ticks"
+                  value={row.ticks}
+                  min={0}
+                  max={row.maxTicks}
+                  overridden={row.overridden}
+                  format={(ticks) => `${ticks}/${row.maxTicks}`}
+                />
               </div>
               <p className={styles.provenance}>
                 Last changed by {row.actorKind}

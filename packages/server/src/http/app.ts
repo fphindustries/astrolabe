@@ -3,10 +3,8 @@ import {
   AddSectorRouteRequestBodySchema,
   ApplyMoveChoiceRequestBodySchema,
   BurnMomentumRequestBodySchema,
-  CampaignIdSchema,
   CreateCampaignRequestBodySchema,
   CreateCharacterRequestBodySchema,
-  EventIdSchema,
   InvokeMoveRequestBodySchema,
   LOCAL_PLAYER_ID,
   ResolvePayThePriceRequestBodySchema,
@@ -27,13 +25,17 @@ import {
   type VoidEventResponse,
   type VoidPreviewResult,
 } from '@astrolabe/shared';
-import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
+import Fastify, { type FastifyInstance } from 'fastify';
 import type { Sql } from 'postgres';
 import * as z from 'zod';
 
 import type { CharacterProblem } from '@astrolabe/rules';
 
+import type { AiProvider } from '../ai/provider.js';
+import { AiStatus } from '../ai/status.js';
 import { buildNarrativeLog } from '../projection/narrative-log.js';
+import { registerAiRoutes } from './ai-routes.js';
+import { parseCampaignId, parseEventId, requireCampaignExists } from './params.js';
 import { project } from '../projection/project.js';
 import {
   addSectorLocation,
@@ -84,6 +86,11 @@ import {
 
 export interface BuildAppOptions {
   readonly sql: Sql;
+  /**
+   * The AI provider (group 7), injected so every route that calls it runs
+   * against the stub in tests (D-60) and against Claude in `serve.ts`.
+   */
+  readonly ai: AiProvider;
 }
 
 interface CampaignParams {
@@ -105,8 +112,9 @@ const LogQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(200).optional(),
 });
 
-export function buildApp({ sql }: BuildAppOptions): FastifyInstance {
+export function buildApp({ sql, ai }: BuildAppOptions): FastifyInstance {
   const app = Fastify({ logger: false });
+  registerAiRoutes(app, { sql, ai, status: new AiStatus(ai) });
 
   app.get('/api/campaigns', async (): Promise<CampaignListResponse> => {
     return listCampaigns(sql);
@@ -578,44 +586,4 @@ export function buildApp({ sql }: BuildAppOptions): FastifyInstance {
   );
 
   return app;
-}
-
-/** Validates a route param and sets a 400 reply if it isn't a campaign ID, returning `undefined` either way to signal the caller to stop. */
-function parseCampaignId(raw: string, reply: FastifyReply) {
-  const parsed = CampaignIdSchema.safeParse(raw);
-  if (!parsed.success) {
-    reply.code(400);
-    return undefined;
-  }
-  return parsed.data;
-}
-
-/** Same shape as `parseCampaignId`, for the `:eventId` void routes. */
-function parseEventId(raw: string, reply: FastifyReply) {
-  const parsed = EventIdSchema.safeParse(raw);
-  if (!parsed.success) {
-    reply.code(400);
-    return undefined;
-  }
-  return parsed.data;
-}
-
-/**
- * Existence follows the same rule every read route uses: a campaign that
- * exists has at least one event, because creating one and writing its
- * first event happen in the same command. Sets a 404 reply and returns
- * `false` when it doesn't, so a command route can 404 the way the
- * characters route already did before this helper existed.
- */
-async function requireCampaignExists(
-  sql: Sql,
-  id: ReturnType<typeof CampaignIdSchema.parse>,
-  reply: FastifyReply,
-): Promise<boolean> {
-  const existing = await readEvents(sql, id);
-  if (existing.length === 0) {
-    reply.code(404);
-    return false;
-  }
-  return true;
 }
