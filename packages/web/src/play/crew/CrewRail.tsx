@@ -15,9 +15,12 @@ const MAX_VISIBLE = 6;
 
 export function CrewRail({
   crew,
+  actingCharacterId,
   onOpen,
 }: {
   readonly crew: readonly CrewCardView[];
+  /** D-98: set from the composer's own control, not from clicking the card. */
+  readonly actingCharacterId?: CharacterId;
   readonly onOpen: (characterId: CharacterId) => void;
 }) {
   const visible = crew.slice(0, MAX_VISIBLE);
@@ -26,7 +29,12 @@ export function CrewRail({
   return (
     <div className={styles.rail}>
       {visible.map((card) => (
-        <CrewCard key={card.characterId} crew={card} onOpen={onOpen} />
+        <CrewCard
+          key={card.characterId}
+          crew={card}
+          isActing={card.characterId === actingCharacterId}
+          onOpen={onOpen}
+        />
       ))}
       {overflow > 0 && <div className={styles.overflow}>+{overflow} more</div>}
     </div>

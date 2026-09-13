@@ -161,11 +161,18 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
 
     case 'dice.rolled':
     case 'momentum.burned':
-      // Neither changes projected state. The roll's numbers and its burn
-      // offer belong to the beat the player is reading, so they are part of
-      // the narrative log read model (task 2.4b), not this bounded one. The
-      // momentum reset a burn causes rides in the accompanying
-      // `state.changed` as a `momentum_reset` delta.
+    case 'move.choice_made':
+    case 'move.method_chosen':
+    case 'move.chained':
+    case 'oracle.rolled':
+    case 'amount.committed':
+      // None of these change projected state. Rolls, chains, oracle results,
+      // choice picks and committed amounts all belong to the beat the player
+      // is reading, so they are part of the narrative log read model (task
+      // 2.4b), not this bounded one. Whatever mechanical change a choice or
+      // a committed amount causes rides in an accompanying `state.changed`,
+      // the same split `momentum.burned`/its `momentum_reset` delta already
+      // uses.
       return state;
 
     case 'state.changed': {

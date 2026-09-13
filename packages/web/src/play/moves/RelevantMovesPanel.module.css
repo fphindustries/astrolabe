@@ -1,0 +1,35 @@
+.panel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.list {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.moveButton {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: var(--text-sm);
+}
+
+.moveButton:hover {
+  border-color: var(--accent);
+}
+
+.fullList {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  text-decoration: underline;
+}

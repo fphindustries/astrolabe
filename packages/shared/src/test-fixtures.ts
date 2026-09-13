@@ -167,6 +167,34 @@ export const SAMPLE_PAYLOADS: { [T in EventType]: PayloadFor<T> } = {
     tierBefore: 'weak_hit',
     tierAfter: 'strong_hit',
   },
+  'move.choice_made': {
+    moveId: 'move:suffer/endure-harm',
+    tier: 'weak_hit',
+    choiceId: 'eh-weak',
+    optionIds: ['lose-momentum-for-health'],
+    rollEventId: testEventId(5),
+  },
+  'move.method_chosen': {
+    moveId: 'move:suffer/pay_the_price',
+    optionId: 'table',
+  },
+  'move.chained': {
+    fromMoveId: 'move:adventure/face_danger',
+    toMoveId: 'move:suffer/pay_the_price',
+    mode: 'offer',
+    reason: 'miss',
+  },
+  'oracle.rolled': {
+    oracleId: 'oracle:moves/pay_the_price',
+    roll: 78,
+    rowText: 'You are harmed.',
+  },
+  'amount.committed': {
+    moveId: 'move:suffer/endure-harm',
+    characterId: ROOK,
+    meter: 'health',
+    amount: -1,
+  },
   'state.changed': {
     cause: {
       kind: 'move_outcome',

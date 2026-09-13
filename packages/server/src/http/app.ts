@@ -1,20 +1,31 @@
 import {
   AddSectorLocationRequestBodySchema,
   AddSectorRouteRequestBodySchema,
+  ApplyMoveChoiceRequestBodySchema,
+  BurnMomentumRequestBodySchema,
   CampaignIdSchema,
   CreateCampaignRequestBodySchema,
   CreateCharacterRequestBodySchema,
+  EventIdSchema,
+  InvokeMoveRequestBodySchema,
   LOCAL_PLAYER_ID,
+  ResolvePayThePriceRequestBodySchema,
   SetTruthRequestBodySchema,
   SwearIncitingVowRequestBodySchema,
+  VoidEventRequestBodySchema,
   type AddSectorLocationResponse,
+  type BurnMomentumResponse,
   type CampaignListResponse,
   type CampaignStateResponse,
   type CreateCampaignResponse,
   type CreateCharacterResponse,
+  type InvokeMoveResponse,
   type NarrativeLogResponse,
+  type ResolvePayThePriceResponse,
   type SetTruthResponse,
   type SwearIncitingVowResponse,
+  type VoidEventResponse,
+  type VoidPreviewResult,
 } from '@astrolabe/shared';
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import type { Sql } from 'postgres';
@@ -27,17 +38,25 @@ import { project } from '../projection/project.js';
 import {
   addSectorLocation,
   addSectorRoute,
+  applyMoveChoice,
+  burnMomentum,
   CharacterRejectedError,
   createCampaign,
   createCharacter,
   IncitingVowRejectedError,
+  invokeMove,
   listCampaigns,
+  MoveRejectedError,
+  previewVoid,
   readEvents,
   readNarrativeEvents,
+  resolvePayThePriceMethod,
   SectorRouteRejectedError,
   setTruth,
   swearIncitingVow,
   TruthRejectedError,
+  voidEvent,
+  VoidRefusedError,
 } from '../db/index.js';
 
 /**
@@ -69,6 +88,11 @@ export interface BuildAppOptions {
 
 interface CampaignParams {
   readonly id: string;
+}
+
+interface EventParams {
+  readonly id: string;
+  readonly eventId: string;
 }
 
 interface LogQuery {
@@ -332,12 +356,243 @@ export function buildApp({ sql }: BuildAppOptions): FastifyInstance {
     },
   );
 
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/moves',
+    async (request, reply): Promise<InvokeMoveResponse | { problem: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
+        return undefined;
+      }
+
+      const parsedBody = InvokeMoveRequestBodySchema.safeParse(request.body);
+      if (!parsedBody.success) {
+        reply.code(400);
+        return undefined;
+      }
+      const {
+        commandId,
+        moveId,
+        actorCharacterId,
+        aidingAllyId,
+        using,
+        adds,
+        actionText,
+        preRollAmount,
+        chainedFromCommandId,
+      } = parsedBody.data;
+
+      try {
+        const invoked = await invokeMove(sql, {
+          campaignId: id,
+          commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          moveId,
+          actorCharacterId,
+          adds,
+          ...(aidingAllyId !== undefined ? { aidingAllyId } : {}),
+          ...(using !== undefined ? { using } : {}),
+          ...(actionText !== undefined ? { actionText } : {}),
+          ...(preRollAmount !== undefined ? { preRollAmount } : {}),
+          ...(chainedFromCommandId !== undefined ? { chainedFromCommandId } : {}),
+        });
+        reply.code(201);
+        return {
+          invocationEventId: invoked.invocationEventId,
+          rollEventId: invoked.rollEventId,
+          roll: { kind: 'action', ...invoked.roll },
+          ...(invoked.pendingChoice !== undefined ? { pendingChoice: invoked.pendingChoice } : {}),
+          ...(invoked.chain !== undefined ? { chain: invoked.chain } : {}),
+        };
+      } catch (error) {
+        if (error instanceof MoveRejectedError) {
+          reply.code(422);
+          return { problem: error.message };
+        }
+        throw error;
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/moves/choice',
+    async (request, reply): Promise<Record<string, never> | { problem: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
+        return undefined;
+      }
+
+      const parsedBody = ApplyMoveChoiceRequestBodySchema.safeParse(request.body);
+      if (!parsedBody.success) {
+        reply.code(400);
+        return undefined;
+      }
+      const { commandId, rollEventId, choiceId, optionIds } = parsedBody.data;
+
+      try {
+        await applyMoveChoice(sql, {
+          campaignId: id,
+          commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          rollEventId,
+          choiceId,
+          optionIds,
+        });
+        reply.code(201);
+        return {};
+      } catch (error) {
+        if (error instanceof MoveRejectedError) {
+          reply.code(422);
+          return { problem: error.message };
+        }
+        throw error;
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/moves/burn',
+    async (request, reply): Promise<BurnMomentumResponse | { problem: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
+        return undefined;
+      }
+
+      const parsedBody = BurnMomentumRequestBodySchema.safeParse(request.body);
+      if (!parsedBody.success) {
+        reply.code(400);
+        return undefined;
+      }
+      const { commandId, rollEventId } = parsedBody.data;
+
+      try {
+        const burned = await burnMomentum(sql, {
+          campaignId: id,
+          commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          rollEventId,
+        });
+        reply.code(201);
+        return { tierAfter: burned.tierAfter };
+      } catch (error) {
+        if (error instanceof MoveRejectedError) {
+          reply.code(422);
+          return { problem: error.message };
+        }
+        throw error;
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/pay-the-price',
+    async (
+      request,
+      reply,
+    ): Promise<ResolvePayThePriceResponse | { problem: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
+        return undefined;
+      }
+
+      const parsedBody = ResolvePayThePriceRequestBodySchema.safeParse(request.body);
+      if (!parsedBody.success) {
+        reply.code(400);
+        return undefined;
+      }
+      const { commandId, actorCharacterId, optionId, chainedFromCommandId } = parsedBody.data;
+
+      try {
+        const resolved = await resolvePayThePriceMethod(sql, {
+          campaignId: id,
+          commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          actorCharacterId,
+          optionId,
+          ...(chainedFromCommandId !== undefined ? { chainedFromCommandId } : {}),
+        });
+        reply.code(201);
+        return {
+          invocationEventId: resolved.invocationEventId,
+          ...(resolved.oracle !== undefined ? { oracle: resolved.oracle } : {}),
+          ...(resolved.chain !== undefined ? { chain: resolved.chain } : {}),
+        };
+      } catch (error) {
+        if (error instanceof MoveRejectedError) {
+          reply.code(422);
+          return { problem: error.message };
+        }
+        throw error;
+      }
+    },
+  );
+
+  app.get<{ Params: EventParams }>(
+    '/api/campaigns/:id/events/:eventId/void-preview',
+    async (request, reply): Promise<VoidPreviewResult | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      const eventId = parseEventId(request.params.eventId, reply);
+      if (id === undefined || eventId === undefined) {
+        return undefined;
+      }
+
+      const plan = await previewVoid(sql, id, eventId);
+      return plan;
+    },
+  );
+
+  app.post<{ Params: EventParams }>(
+    '/api/campaigns/:id/events/:eventId/void',
+    async (request, reply): Promise<VoidEventResponse | { problem: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      const eventId = parseEventId(request.params.eventId, reply);
+      if (id === undefined || eventId === undefined) {
+        return undefined;
+      }
+
+      const parsedBody = VoidEventRequestBodySchema.safeParse(request.body);
+      if (!parsedBody.success) {
+        reply.code(400);
+        return undefined;
+      }
+      const { commandId, reason } = parsedBody.data;
+
+      try {
+        const result = await voidEvent(sql, {
+          campaignId: id,
+          commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          targetEventId: eventId,
+          reason,
+          kind: 'player_void',
+        });
+        reply.code(201);
+        return result.response as VoidEventResponse;
+      } catch (error) {
+        if (error instanceof VoidRefusedError) {
+          reply.code(422);
+          return { problem: error.plan.detail };
+        }
+        throw error;
+      }
+    },
+  );
+
   return app;
 }
 
 /** Validates a route param and sets a 400 reply if it isn't a campaign ID, returning `undefined` either way to signal the caller to stop. */
 function parseCampaignId(raw: string, reply: FastifyReply) {
   const parsed = CampaignIdSchema.safeParse(raw);
+  if (!parsed.success) {
+    reply.code(400);
+    return undefined;
+  }
+  return parsed.data;
+}
+
+/** Same shape as `parseCampaignId`, for the `:eventId` void routes. */
+function parseEventId(raw: string, reply: FastifyReply) {
+  const parsed = EventIdSchema.safeParse(raw);
   if (!parsed.success) {
     reply.code(400);
     return undefined;

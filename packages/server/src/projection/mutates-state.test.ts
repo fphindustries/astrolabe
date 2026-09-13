@@ -97,6 +97,49 @@ const PROBES: { readonly [T in EventType]: Probe } = {
         tierAfter: 'strong_hit',
       }),
   },
+  'move.choice_made': {
+    probe: (b) =>
+      b.add('move.choice_made', {
+        moveId: 'move:suffer/endure-harm',
+        tier: 'weak_hit',
+        choiceId: 'eh-weak',
+        optionIds: [],
+        rollEventId: b.at(1).id,
+      }),
+  },
+  'move.method_chosen': {
+    probe: (b) =>
+      b.add('move.method_chosen', {
+        moveId: 'move:suffer/pay_the_price',
+        optionId: 'table',
+      }),
+  },
+  'move.chained': {
+    probe: (b) =>
+      b.add('move.chained', {
+        fromMoveId: 'move:adventure/face_danger',
+        toMoveId: 'move:suffer/pay_the_price',
+        mode: 'offer',
+        reason: 'miss',
+      }),
+  },
+  'oracle.rolled': {
+    probe: (b) =>
+      b.add('oracle.rolled', {
+        oracleId: 'oracle:moves/pay_the_price',
+        roll: 78,
+        rowText: 'You are harmed.',
+      }),
+  },
+  'amount.committed': {
+    probe: (b) =>
+      b.add('amount.committed', {
+        moveId: 'move:suffer/endure-harm',
+        characterId: VESNA,
+        meter: 'health',
+        amount: -1,
+      }),
+  },
   'state.changed': {
     probe: (b) =>
       b.add('state.changed', {

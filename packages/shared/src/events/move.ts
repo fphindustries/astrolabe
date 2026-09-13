@@ -2,10 +2,10 @@ import * as z from 'zod';
 
 import { CharacterIdSchema, EventIdSchema, MoveIdSchema, TrackIdSchema } from '../ids.js';
 
-const OutcomeTierSchema = z.enum(['strong_hit', 'weak_hit', 'miss']);
+export const OutcomeTierSchema = z.enum(['strong_hit', 'weak_hit', 'miss']);
 
 /** Mirrors `RollAdjustment` in `rules`: an add with the label that explains it. */
-const RollAdjustmentSchema = z.object({
+export const RollAdjustmentSchema = z.object({
   amount: z.int(),
   /** e.g. "wits", "bonus from Secure an Advantage". */
   label: z.string().min(1),
@@ -18,7 +18,7 @@ const RollAdjustmentSchema = z.object({
  * belong to moves that stay at Reference until a later milestone, and get
  * added here when one of them is first rollable.
  */
-const RollUsingSchema = z.discriminatedUnion('using', [
+export const RollUsingSchema = z.discriminatedUnion('using', [
   z.object({ using: z.literal('stat'), stat: z.enum(['edge', 'heart', 'iron', 'shadow', 'wits']) }),
   z.object({
     using: z.literal('condition_meter'),
@@ -118,4 +118,69 @@ export const MomentumBurnedSchema = z.object({
   rollEventId: EventIdSchema,
   tierBefore: OutcomeTierSchema,
   tierAfter: OutcomeTierSchema,
+});
+
+/**
+ * The player's pick from a `Choice` the resolved outcome offered (task 6.6).
+ * `optionIds` rather than one id because `Choice.pick` allows more than one
+ * (Endure Harm's weak hit is `{min: 0, max: 1}` — an empty array records
+ * the player declining an optional choice, which is itself a decision worth
+ * logging rather than silently writing nothing).
+ *
+ * The chosen option's effects ride in an accompanying `state.changed` under
+ * the same `move_outcome` cause as the rest of the tier's effects — the
+ * player's pick is what selected *which* effects, not a different kind of
+ * cause for them.
+ */
+export const MoveChoiceMadeSchema = z.object({
+  moveId: MoveIdSchema,
+  tier: OutcomeTierSchema,
+  choiceId: z.string().min(1),
+  optionIds: z.array(z.string().min(1)),
+  /** The `dice.rolled` event whose outcome offered this choice. */
+  rollEventId: EventIdSchema,
+});
+
+/**
+ * The player's pick from a `no_roll` move's `MethodSpec.options` — Pay the
+ * Price's three methods (D-08's table roll highlighted as the default among
+ * them). Plays the same role for a `no_roll` move that `dice.rolled` plays
+ * for a rolled one: the fact of how the move resolved.
+ *
+ * No `invocationEventId`: this is written in the same command as the
+ * `move.invoked` it resolves (one player decision — "I'm doing Pay the
+ * Price via this method" — the same bundling `character.created` already
+ * uses for its background vow), so the shared envelope `commandId` is
+ * already the link. A field that only ever equals a sibling event's
+ * commandId would be redundant, not a second source of truth.
+ */
+export const MoveMethodChosenSchema = z.object({
+  moveId: MoveIdSchema,
+  optionId: z.string().min(1),
+});
+
+/**
+ * D-08/D-67/D-68: a resolved outcome or method declares a `ChainSpec` to
+ * another move, `auto` (Pay the Price's table result naming a suffer move)
+ * or `offer` (Face Danger's miss offering Pay the Price). Written
+ * unconditionally alongside the roll or method-pick it belongs to —
+ * `system` authority, no state change of its own (`EVENT_TYPE_META.
+ * mutatesState: false`) — whether the player takes an `offer` chain is a
+ * separate `move.invoked` for the target move, not recorded here.
+ *
+ * No `fromEventId`: it would name a sibling event in the same command
+ * (the `dice.rolled` or `move.method_chosen` this chain belongs to), whose
+ * id does not exist yet at the point this payload is built — the store
+ * mints every event's id at append time (`event-store.ts`). The envelope's
+ * own `commandId` already identifies "the command that offered this chain,"
+ * which is exactly what a follow-up invocation needs to prove it is taking
+ * a real offer rather than an invented one (`resolveChainedFrom` in
+ * `move-commands.ts`) — the client already knows that `commandId`, since it
+ * minted it for the call that produced this event.
+ */
+export const MoveChainedSchema = z.object({
+  fromMoveId: MoveIdSchema,
+  toMoveId: MoveIdSchema,
+  mode: z.enum(['auto', 'offer']),
+  reason: z.string().min(1),
 });

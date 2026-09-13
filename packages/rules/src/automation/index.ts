@@ -1,3 +1,4 @@
+export * from './condition.js';
 export * from './resolve-action-move.js';
 export * from './resolve-effect-target.js';
 export * from './resolve-method.js';

@@ -118,16 +118,16 @@ narrative log is a second read model with its own paged query.
 
 ### 6. Move flow
 
-- [ ] 6.1 Relevant-moves panel driven by situation state, with the full list one click away
-- [ ] 6.2 Move selection and freeform action input
-- [ ] 6.3 Modifier and asset-ability surfacing at the Guided level
-- [ ] 6.4 Animated dice, skippable
-- [ ] 6.5 Result card: outcome first, math on click
-- [ ] 6.6 Choice prompts for moves that offer them
-- [ ] 6.7 Momentum-burn offer when it would change the outcome
-- [ ] 6.8 Pay the Price flow, and the chained suffer move with an adjustable proposed amount
-- [ ] 6.9 Aid Your Ally
-- [ ] 6.10 Void-and-redo in the UI
+- [x] 6.1 Relevant-moves panel driven by situation state, with the full list one click away
+- [x] 6.2 Move selection and freeform action input
+- [x] 6.3 Modifier and asset-ability surfacing at the Guided level
+- [x] 6.4 Animated dice, skippable
+- [x] 6.5 Result card: outcome first, math on click
+- [x] 6.6 Choice prompts for moves that offer them
+- [x] 6.7 Momentum-burn offer when it would change the outcome
+- [x] 6.8 Pay the Price flow, and the chained suffer move with an adjustable proposed amount
+- [x] 6.9 Aid Your Ally
+- [x] 6.10 Void-and-redo in the UI
 
 ### 7. AI provider and narration
 
@@ -903,3 +903,117 @@ correctly on the expected network failure with no backend running); the
 truths/sector/incident steps were not, since they need a real API to do
 anything. Run `npm run db:up && npm run migrate && npm test` before
 trusting the rest.
+
+---
+
+## Implementation notes (section 6, the move flow)
+
+6.1–6.10 are done. Decisions: D-106–D-109. This section had no read/write
+API of its own in the task list — group 6 is the first real caller of
+`resolveActionMove`/`resolveMethodOption`/`resolveEffectTarget`/
+`resolvePayThePriceChain`, so building the write API these tasks need was
+foundational work folded in alongside 6.2, the same way D-94 covered
+group 5's read API.
+
+### What's new versus what group 6 reused
+
+Reused unchanged: every `rules/automation` resolver, `MOVE_AUTOMATION_SPECS`,
+`relevantMoves`, the server's command pattern (`db/*-commands.ts`),
+`cryptoRandomSource()`, `previewVoid`/`voidEvent` (written in section 2,
+never routed until now), `play-ui.tsx`'s drawer-reducer pattern, `play/moves/`
+(`moves.ts`, `MoveDrawer.tsx`), `crew/crew.ts`'s view-model split,
+`Drawer`/`Popover`, and both API-layer conventions (`useCampaignState`'s
+`select`, `useCreateCharacter`'s client-minted `commandId` + invalidate).
+
+New: `rules/automation/condition.ts` (`evaluateCondition`, D-109); five
+event types (`move.choice_made`, `move.method_chosen`, `move.chained`,
+`oracle.rolled`, `amount.committed`) plus a `preroll_effect` `ChangeCause`
+kind; `server/src/db/move-commands.ts` (`invokeMove`, `applyMoveChoice`,
+`burnMomentum`, `resolvePayThePriceMethod`) and six new HTTP routes
+(four for the move flow, two for void); narrative-log rendering for all
+five new event types; and, in `web`, a `move-flow.tsx` reducer+context
+sibling to `play-ui.tsx`, the whole `play/moves/` UI (`MoveComposer`,
+`ResultCard`, `ChoicePrompt`, `BurnOfferPopover`, `PayThePriceFlow`,
+`AidAllyPicker`, `DiceAnimation`, `RelevantMovesPanel`), `api/moves.ts`,
+and `play/log/VoidControl.tsx`.
+
+### The write API's shape (D-106)
+
+One command per player decision, following `design-event-log.md` §1's own
+worked example almost verbatim: `move.invoked`, `dice.rolled` and (when the
+tier has no pending choice) `state.changed` land together in one
+`POST /campaigns/:id/moves`. A tier that offers a `Choice` leaves its
+choice-dependent effects for `applyMoveChoice` — the player hasn't decided
+yet. Endure Harm's harm intake is bundled into `invokeMove`'s own command
+rather than split into its own step (D-107): the harm precedes the roll
+it's part of, and it's one player decision, not two.
+
+The one real design wrinkle: `chainedFromCommandId`. A client following an
+offered or auto chain (Face Danger's miss → Pay the Price; Pay the Price's
+table result → Endure Harm) needs to prove it's taking a real offer, not
+forging one. The natural id to check against — the event that declared the
+chain — doesn't exist yet at the point a *same-command* payload would need
+to embed it (ids are minted at append time). The client already has the
+right id in scope, though: the `commandId` it minted for the call that
+produced the offer. So the follow-up call names that commandId, and the
+server looks for a `move.chained` event with a matching envelope
+`commandId` naming the requested move before accepting it as `causedBy`.
+
+### `oracle.rolled` and the Condition evaluator (D-108, D-109)
+
+`oracle.rolled` was designed in section 2 but had no caller until Pay the
+Price's table method (Beat 7) — introduced now, narrower than group 8's
+eventual use, reused unchanged when 8.x rolls NPC/location/faction recipes.
+
+`evaluateCondition` (`rules/automation/condition.ts`) handles the whole
+`Condition` union even though Milestone 1 only exercises Endure Harm's
+`not: hasImpact` — a partial evaluator would silently fall through on a
+guard nobody's tested yet. It takes facts (`hasImpact`, `meterValue`) as
+parameters, the same shape `resolveActionMove` already takes
+`markedImpacts: number` in — `rules` still never reads campaign state.
+
+### Web conventions this section set
+
+- **`move-flow.tsx` is a sibling to `play-ui.tsx`, not folded into it.** A
+  roll is a multi-step decision (`idle → composing → result →
+  pay-the-price → pay-the-price-result`); a drawer is a single overlay
+  choice. Once a step's component has its data, further refinements
+  (a choice pick, a burn accept, the Aid Your Ally note) are that
+  component's own local state, not more reducer actions — they don't
+  change *which* panel is showing.
+- **D-98 lands here, not in group 5.** `CrewCard`'s `isActing` prop existed
+  since section 5 as a placeholder; `Composer.tsx` now owns the acting-
+  character `<select>`, lifted into `PlayScreenContent` as plain
+  `useState` (not the move-flow reducer) since it outlives any one move.
+- **The Guided level (6.3) surfaces text, never parses it.** An asset
+  ability's `enhances: readonly MoveId[]` (built in section 1, unused
+  until now) filters which abilities to show next to a plain label+amount
+  "adds" input; the player decides whether it applies and types the
+  number. The base stat/meter add itself is computed server-side from
+  `using` — the trust boundary is exactly `setTruth`'s: name *which* stat,
+  never its value.
+- **`DiceAnimation` wraps already-settled data.** The roll is final before
+  the animation starts (§10/A18); skipping just reveals the children
+  early, never triggers a re-roll.
+- **Void's HTTP half was a pure routing gap.** `previewVoid`/`voidEvent`
+  existed since section 2; `VoidControl.tsx` is a `Popover` built from a
+  one-shot `fetchVoidPreview` call, not a live query. "Redo" has no
+  mechanism of its own (D-27) — it's the same move-flow, reopened.
+
+### Verification
+
+`npm run typecheck`, `npm run db:up && npm run migrate && npm test` — 669
+tests passing (1 skipped: `db:migrate.test.ts`'s own no-op case) against a
+real Postgres, including a `move-commands.test.ts` cascade test that voids
+a Face-Danger miss and confirms the whole chain it caused (Pay the Price's
+table roll, the auto-chain, Endure Harm's harm and roll) disappears —
+Beat 7's exact shape, three commands deep. A live `npm run dev` + browser
+pass exercised Beats 3, 5 and 7 end to end against a fresh campaign: Face
+Danger miss → Pay the Price (table, landing on "You are harmed") → Endure
+Harm (harm committed, then a weak-hit choice applied, health and momentum
+both updating live) — and, separately, Secure an Advantage aiding an
+ally, confirming the redirect note and the strong-hit momentum landing on
+the aided character rather than the actor. The void control's *refusal*
+path (D-84, no active session on a fresh campaign) was exercised live;
+its success path is what the cascade test above covers, since no HTTP
+route begins a session yet (task 9.1) for a live campaign to have one.

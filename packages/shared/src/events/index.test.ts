@@ -19,10 +19,11 @@ const sessionBegan = testEvent('session.began', { sessionId: SESSION_ID, number:
 
 describe('the catalogue', () => {
   it('holds the eighteen spine types section 2 builds, plus one per later feature that has landed', () => {
-    // truth.set (task 4.2) and sector.route_added (task 4.3) are the first
-    // two of the rest, landing with the features that write them, as
-    // events/index.ts's own comment plans.
-    expect(EVENT_TYPES).toHaveLength(20);
+    // truth.set and sector.route_added (§4) were the first two of the rest;
+    // move.choice_made, move.method_chosen, move.chained, oracle.rolled and
+    // amount.committed (§6, the move flow) are the next five, landing with
+    // the features that write them, as events/index.ts's own comment plans.
+    expect(EVENT_TYPES).toHaveLength(25);
   });
 
   it('exposes every type through isEventType, and rejects anything else', () => {

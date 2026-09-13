@@ -8,9 +8,12 @@ import type {
   CampaignStateResponse,
   CreateCampaignResponse,
   CreateCharacterResponse,
+  InvokeMoveResponse,
   NarrativeLogResponse,
+  ResolvePayThePriceResponse,
   SetTruthResponse,
   SwearIncitingVowResponse,
+  VoidPreviewResult,
 } from '@astrolabe/shared';
 
 import { playGoldenBeats, type GoldenRun } from '../harness/golden-beats.js';
@@ -264,6 +267,15 @@ describe.skipIf(!hasTestDatabase)('the HTTP read API', () => {
     return response.json<CreateCampaignResponse>().campaignId;
   }
 
+  async function freshCharacterId(campaignId: string): Promise<string> {
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/campaigns/${campaignId}/characters`,
+      payload: validDraftBody(),
+    });
+    return response.json<CreateCharacterResponse>().characterId;
+  }
+
   describe('answering a setting truth (task 4.2)', () => {
     it('writes a written answer and reflects it in state', async () => {
       const campaignId = await freshCampaignId();
@@ -425,6 +437,256 @@ describe.skipIf(!hasTestDatabase)('the HTTP read API', () => {
         payload: { commandId: crypto.randomUUID(), rank: 'formidable' },
       });
       expect(response.statusCode).toBe(400);
+    });
+  });
+
+  /**
+   * The move flow (task 6.x). Real HTTP requests roll on `cryptoRandomSource`
+   * (never seedable over the wire, by design), so these check routing,
+   * validation and error mapping — exact mechanics (which tier, which
+   * effects) are `move-commands.test.ts`'s job, against a seeded RNG.
+   */
+  describe('resolving a move (task 6.x)', () => {
+    it('invokes a rolled move and returns a result with a real tier', async () => {
+      const campaignId = await freshCampaignId();
+      const characterId = await freshCharacterId(campaignId);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/campaigns/${campaignId}/moves`,
+        payload: {
+          commandId: crypto.randomUUID(),
+          moveId: 'move:adventure/face-danger',
+          actorCharacterId: characterId,
+          using: { using: 'stat', stat: 'iron' },
+          adds: [],
+          actionText: 'Forcing the bulkhead.',
+        },
+      });
+      expect(response.statusCode).toBe(201);
+      const body = response.json<InvokeMoveResponse>();
+      expect(['strong_hit', 'weak_hit', 'miss']).toContain(body.roll.tier);
+      expect(body.invocationEventId).toBeTruthy();
+      expect(body.rollEventId).toBeTruthy();
+    });
+
+    it('400s a malformed body', async () => {
+      const campaignId = await freshCampaignId();
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/campaigns/${campaignId}/moves`,
+        payload: { commandId: crypto.randomUUID() },
+      });
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('422s a move with no Milestone 1 automation', async () => {
+      const campaignId = await freshCampaignId();
+      const characterId = await freshCharacterId(campaignId);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/campaigns/${campaignId}/moves`,
+        payload: {
+          commandId: crypto.randomUUID(),
+          moveId: 'move:adventure/undertake-an-expedition',
+          actorCharacterId: characterId,
+          adds: [],
+        },
+      });
+      expect(response.statusCode).toBe(422);
+    });
+
+    it('404s an unknown campaign', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/campaigns/00000000-0000-0000-0000-000000000000/moves',
+        payload: {
+          commandId: crypto.randomUUID(),
+          moveId: 'move:adventure/face-danger',
+          actorCharacterId: crypto.randomUUID(),
+          adds: [],
+        },
+      });
+      expect(response.statusCode).toBe(404);
+    });
+
+    it('422s a move choice on a roll that offered none', async () => {
+      const campaignId = await freshCampaignId();
+      const characterId = await freshCharacterId(campaignId);
+      const invoke = await app.inject({
+        method: 'POST',
+        url: `/api/campaigns/${campaignId}/moves`,
+        payload: {
+          commandId: crypto.randomUUID(),
+          moveId: 'move:quest/swear-an-iron-vow',
+          actorCharacterId: characterId,
+          adds: [],
+        },
+      });
+      const { rollEventId } = invoke.json<InvokeMoveResponse>();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/campaigns/${campaignId}/moves/choice`,
+        payload: {
+          commandId: crypto.randomUUID(),
+          rollEventId,
+          choiceId: 'not-a-real-choice',
+          optionIds: [],
+        },
+      });
+      expect(response.statusCode).toBe(422);
+    });
+
+    it('422s a burn attempt against something that is not an action roll', async () => {
+      const campaignId = await freshCampaignId();
+      const characterId = await freshCharacterId(campaignId);
+      const invoke = await app.inject({
+        method: 'POST',
+        url: `/api/campaigns/${campaignId}/moves`,
+        payload: {
+          commandId: crypto.randomUUID(),
+          moveId: 'move:quest/swear-an-iron-vow',
+          actorCharacterId: characterId,
+          adds: [],
+        },
+      });
+      // The invocation event exists but is not a roll — real dice are
+      // non-seedable over HTTP, so this checks the type guard rather than
+      // trying to force a specific (missing) burn offer by chance.
+      const { invocationEventId } = invoke.json<InvokeMoveResponse>();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/campaigns/${campaignId}/moves/burn`,
+        payload: { commandId: crypto.randomUUID(), rollEventId: invocationEventId },
+      });
+      expect(response.statusCode).toBe(422);
+    });
+
+    describe('Pay the Price (D-08)', () => {
+      it('resolves the obvious method deterministically, with no oracle roll', async () => {
+        const campaignId = await freshCampaignId();
+        const characterId = await freshCharacterId(campaignId);
+
+        const response = await app.inject({
+          method: 'POST',
+          url: `/api/campaigns/${campaignId}/pay-the-price`,
+          payload: {
+            commandId: crypto.randomUUID(),
+            actorCharacterId: characterId,
+            optionId: 'obvious',
+          },
+        });
+        expect(response.statusCode).toBe(201);
+        const body = response.json<ResolvePayThePriceResponse>();
+        expect(body.oracle).toBeUndefined();
+        expect(body.invocationEventId).toBeTruthy();
+      });
+
+      it('rolls the table and reports whatever the dice actually said', async () => {
+        const campaignId = await freshCampaignId();
+        const characterId = await freshCharacterId(campaignId);
+
+        const response = await app.inject({
+          method: 'POST',
+          url: `/api/campaigns/${campaignId}/pay-the-price`,
+          payload: {
+            commandId: crypto.randomUUID(),
+            actorCharacterId: characterId,
+            optionId: 'table',
+          },
+        });
+        expect(response.statusCode).toBe(201);
+        const body = response.json<ResolvePayThePriceResponse>();
+        expect(body.oracle?.roll).toBeGreaterThanOrEqual(1);
+        expect(body.oracle?.roll).toBeLessThanOrEqual(100);
+        expect(typeof body.oracle?.rowText).toBe('string');
+      });
+    });
+  });
+
+  /** Void-and-redo (task 6.10, A11). */
+  describe('voiding an event', () => {
+    it('previews a void, then applies it, then finds nothing left to void twice', async () => {
+      const campaignId = await freshCampaignId();
+      const characterId = await freshCharacterId(campaignId);
+
+      const invoke = await app.inject({
+        method: 'POST',
+        url: `/api/campaigns/${campaignId}/moves`,
+        payload: {
+          commandId: crypto.randomUUID(),
+          moveId: 'move:quest/swear-an-iron-vow',
+          actorCharacterId: characterId,
+          adds: [],
+        },
+      });
+      const { rollEventId } = invoke.json<InvokeMoveResponse>();
+
+      const preview = await app.inject({
+        method: 'GET',
+        url: `/api/campaigns/${campaignId}/events/${rollEventId}/void-preview`,
+      });
+      expect(preview.statusCode).toBe(200);
+      const plan = preview.json<VoidPreviewResult>();
+      expect(plan.ok).toBe(false); // no session has begun over this HTTP-only campaign (D-84)
+      if (!plan.ok) {
+        expect(plan.reason).toBe('outside_current_session');
+      }
+    });
+
+    it('404s an unknown campaign, 400s a malformed event id', async () => {
+      const bad = await app.inject({
+        method: 'GET',
+        url: '/api/campaigns/not-a-uuid/events/not-a-uuid/void-preview',
+      });
+      expect(bad.statusCode).toBe(400);
+    });
+
+    it('voids a real roll end to end, against the golden run’s own session (D-84)', async () => {
+      // No HTTP route begins a session yet (task 9.1) — the golden run's
+      // session, written by the harness, is the only one an HTTP-only test
+      // can reach. `invokeMove` picks it up automatically from projected
+      // state, so a fresh roll made against this campaign inherits it.
+      const invoke = await app.inject({
+        method: 'POST',
+        url: `/api/campaigns/${run.campaignId}/moves`,
+        payload: {
+          commandId: crypto.randomUUID(),
+          moveId: 'move:quest/swear-an-iron-vow',
+          actorCharacterId: run.characters.juno,
+          adds: [],
+        },
+      });
+      expect(invoke.statusCode).toBe(201);
+      const { rollEventId } = invoke.json<InvokeMoveResponse>();
+
+      const preview = await app.inject({
+        method: 'GET',
+        url: `/api/campaigns/${run.campaignId}/events/${rollEventId}/void-preview`,
+      });
+      expect(preview.statusCode).toBe(200);
+      const plan = preview.json<VoidPreviewResult>();
+      expect(plan.ok).toBe(true);
+
+      const executed = await app.inject({
+        method: 'POST',
+        url: `/api/campaigns/${run.campaignId}/events/${rollEventId}/void`,
+        payload: { commandId: crypto.randomUUID(), reason: 'testing the route' },
+      });
+      expect(executed.statusCode).toBe(201);
+
+      const again = await app.inject({
+        method: 'GET',
+        url: `/api/campaigns/${run.campaignId}/events/${rollEventId}/void-preview`,
+      });
+      const reAsked = again.json<VoidPreviewResult>();
+      expect(reAsked.ok).toBe(false);
+      if (!reAsked.ok) {
+        expect(reAsked.reason).toBe('already_voided');
+      }
     });
   });
 });

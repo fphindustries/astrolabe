@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useCampaignLog } from '../api/campaigns.js';
 
 import { orderedBeats, toBeatView, type BeatView, type EntryView } from './log/entries.js';
+import { VoidControl } from './log/VoidControl.js';
 import styles from './NarrativeLog.module.css';
 
 /**
@@ -63,27 +64,31 @@ export function NarrativeLog({ campaignId }: { readonly campaignId: string }) {
       {beats.length === 0 ? (
         <div className={styles.empty}>Nothing has happened yet.</div>
       ) : (
-        beats.map((beat) => <Beat key={beat.commandId} beat={beat} />)
+        beats.map((beat) => <Beat key={beat.commandId} campaignId={campaignId} beat={beat} />)
       )}
     </div>
   );
 }
 
-function Beat({ beat }: { readonly beat: BeatView }) {
+function Beat({ campaignId, beat }: { readonly campaignId: string; readonly beat: BeatView }) {
   return (
     <div className={styles.beat} data-voided={beat.voided}>
       {beat.entries.map((entry) => (
-        <Entry key={entry.eventId} entry={entry} />
+        <Entry key={entry.eventId} campaignId={campaignId} entry={entry} />
       ))}
     </div>
   );
 }
 
-function Entry({ entry }: { readonly entry: EntryView }) {
+function Entry({ campaignId, entry }: { readonly campaignId: string; readonly entry: EntryView }) {
   const body = entry.body;
   return (
     <div className={styles.entry} data-voided={entry.voided}>
       <span className={styles.text}>{describeEntry(entry)}</span>
+      {/* A11/D-27: only a live, voidable event offers this — an already-voided one is history, not undone twice. */}
+      {entry.voidable && !entry.voided && (
+        <VoidControl campaignId={campaignId} eventId={entry.eventId} />
+      )}
       {body.kind === 'narration' && body.corrected && (
         <details className={styles.correction}>
           <summary>Corrected</summary>
@@ -117,6 +122,16 @@ function describeEntry(entry: EntryView): string {
       );
     case 'burn':
       return `Momentum burned: ${body.tierBefore.replace('_', ' ')} → ${body.tierAfter.replace('_', ' ')}`;
+    case 'move_choice_made':
+      return `Choice: ${body.choiceId}${body.optionIds.length === 0 ? ' (declined)' : ` — ${body.optionIds.join(', ')}`}`;
+    case 'move_method_chosen':
+      return `Method: ${body.optionId}`;
+    case 'move_chained':
+      return `Chains to ${body.toMoveId} (${body.mode}) — ${body.reason}`;
+    case 'oracle_rolled':
+      return `Oracle: ${body.roll} — ${body.rowText}`;
+    case 'amount_committed':
+      return `Committed ${body.amount >= 0 ? '+' : ''}${body.amount} ${body.meter}`;
     case 'track_created':
       return `Track created: ${body.title}`;
     case 'track_advanced':

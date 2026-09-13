@@ -4,15 +4,24 @@ import { EnvelopeFieldsSchema, type EnvelopeFields } from '../envelope.js';
 import type { DeepMutable, DeepReadonly } from '../readonly.js';
 
 import { AiCompletedSchema } from './ai.js';
+import { AmountCommittedSchema } from './amount.js';
 import { CampaignCreatedSchema } from './campaign.js';
 import { CharacterCreatedSchema } from './character.js';
 import { EntityEstablishedSchema } from './entity.js';
-import { DiceRolledSchema, MomentumBurnedSchema, MoveInvokedSchema } from './move.js';
+import {
+  DiceRolledSchema,
+  MomentumBurnedSchema,
+  MoveChainedSchema,
+  MoveChoiceMadeSchema,
+  MoveInvokedSchema,
+  MoveMethodChosenSchema,
+} from './move.js';
 import {
   NarrationCorrectionRequestedSchema,
   NarrationRevisedSchema,
   NarrationWrittenSchema,
 } from './narration.js';
+import { OracleRolledSchema } from './oracle.js';
 import { SceneStartedSchema } from './scene.js';
 import { SectorRouteAddedSchema } from './sector.js';
 import { SessionBeganSchema, SessionEndedSchema } from './session.js';
@@ -46,6 +55,11 @@ export const PAYLOAD_SCHEMAS = {
   'move.invoked': MoveInvokedSchema,
   'dice.rolled': DiceRolledSchema,
   'momentum.burned': MomentumBurnedSchema,
+  'move.choice_made': MoveChoiceMadeSchema,
+  'move.method_chosen': MoveMethodChosenSchema,
+  'move.chained': MoveChainedSchema,
+  'oracle.rolled': OracleRolledSchema,
+  'amount.committed': AmountCommittedSchema,
   'state.changed': StateChangedSchema,
   'state.overridden': StateOverriddenSchema,
   'track.created': TrackCreatedSchema,
@@ -99,6 +113,11 @@ export const EventSchema = z.discriminatedUnion('type', [
   eventMember('move.invoked'),
   eventMember('dice.rolled'),
   eventMember('momentum.burned'),
+  eventMember('move.choice_made'),
+  eventMember('move.method_chosen'),
+  eventMember('move.chained'),
+  eventMember('oracle.rolled'),
+  eventMember('amount.committed'),
   eventMember('state.changed'),
   eventMember('state.overridden'),
   eventMember('track.created'),
@@ -170,11 +189,13 @@ export function isEventType(value: string): value is EventType {
 }
 
 export * from './ai.js';
+export * from './amount.js';
 export * from './campaign.js';
 export * from './character.js';
 export * from './entity.js';
 export * from './move.js';
 export * from './narration.js';
+export * from './oracle.js';
 export * from './scene.js';
 export * from './sector.js';
 export * from './session.js';

@@ -1,4 +1,4 @@
-import type { NarrativeBeat, NarrativeEntry, NarrativeLog } from '@astrolabe/shared';
+import { EVENT_TYPE_META, type NarrativeBeat, type NarrativeEntry, type NarrativeLog } from '@astrolabe/shared';
 
 /**
  * Pure view-model for the narrative log (task 5.4). The server already
@@ -31,6 +31,24 @@ export type EntryBody =
       readonly burnTaken: boolean;
     }
   | { readonly kind: 'burn'; readonly tierBefore: string; readonly tierAfter: string }
+  | {
+      readonly kind: 'move_choice_made';
+      readonly choiceId: string;
+      readonly optionIds: readonly string[];
+    }
+  | { readonly kind: 'move_method_chosen'; readonly optionId: string }
+  | {
+      readonly kind: 'move_chained';
+      readonly toMoveId: string;
+      readonly mode: 'auto' | 'offer';
+      readonly reason: string;
+    }
+  | { readonly kind: 'oracle_rolled'; readonly roll: number; readonly rowText: string }
+  | {
+      readonly kind: 'amount_committed';
+      readonly amount: number;
+      readonly meter: 'health' | 'spirit' | 'supply';
+    }
   | { readonly kind: 'track_created'; readonly title: string }
   | { readonly kind: 'track_advanced'; readonly ticks: number; readonly reason?: string }
   | { readonly kind: 'entity_established'; readonly name: string }
@@ -51,6 +69,8 @@ export interface EntryView {
   readonly body: EntryBody;
   readonly voided: boolean;
   readonly voidMarks: readonly VoidMarkView[];
+  /** Task 6.10: whether this event is a legal void target at all (`EVENT_TYPE_META.voidable`). */
+  readonly voidable: boolean;
 }
 
 export interface BeatView {
@@ -75,6 +95,11 @@ export function toEntryView(entry: NarrativeEntry): EntryView {
     body: toBody(entry),
     voided: entry.voided,
     voidMarks: entry.voidedBy.map((mark) => ({ kind: mark.kind, reason: mark.reason })),
+    // Guarded rather than a direct index: this view-model must survive a
+    // type the running build doesn't know yet, the same tolerance toBody's
+    // own `unknown` fallback gives it.
+    voidable: (EVENT_TYPE_META as Record<string, { readonly voidable: boolean }>)[entry.event.type]
+      ?.voidable ?? false,
   };
 }
 
@@ -103,6 +128,29 @@ function toBody(entry: NarrativeEntry): EntryBody {
         kind: 'burn',
         tierBefore: event.payload.tierBefore,
         tierAfter: event.payload.tierAfter,
+      };
+    case 'move.choice_made':
+      return {
+        kind: 'move_choice_made',
+        choiceId: event.payload.choiceId,
+        optionIds: event.payload.optionIds,
+      };
+    case 'move.method_chosen':
+      return { kind: 'move_method_chosen', optionId: event.payload.optionId };
+    case 'move.chained':
+      return {
+        kind: 'move_chained',
+        toMoveId: event.payload.toMoveId,
+        mode: event.payload.mode,
+        reason: event.payload.reason,
+      };
+    case 'oracle.rolled':
+      return { kind: 'oracle_rolled', roll: event.payload.roll, rowText: event.payload.rowText };
+    case 'amount.committed':
+      return {
+        kind: 'amount_committed',
+        amount: event.payload.amount,
+        meter: event.payload.meter,
       };
     case 'track.created':
       return { kind: 'track_created', title: event.payload.title };

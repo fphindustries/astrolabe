@@ -1,3 +1,7 @@
+import { useState } from 'react';
+
+import type { CharacterId } from '@astrolabe/rules';
+
 import { ApiError } from '../api/http.js';
 import { useCampaignState } from '../api/campaigns.js';
 
@@ -16,6 +20,7 @@ import { EntityDrawer } from './entities/EntityDrawer.js';
 import { entityCards } from './entities/entities.js';
 import { TrackerDrawer } from './pressure/TrackerDrawer.js';
 import { MoveDrawer } from './moves/MoveDrawer.js';
+import { MoveFlowProvider } from './moves/move-flow.js';
 import { AssetDrawer } from './assets/AssetDrawer.js';
 import { PlayUiProvider, useDrawer, useDrawerActions } from './play-ui.js';
 import styles from './PlayScreen.module.css';
@@ -32,7 +37,9 @@ import styles from './PlayScreen.module.css';
 export function PlayScreen({ campaignId }: { readonly campaignId: string }) {
   return (
     <PlayUiProvider>
-      <PlayScreenContent campaignId={campaignId} />
+      <MoveFlowProvider>
+        <PlayScreenContent campaignId={campaignId} />
+      </MoveFlowProvider>
     </PlayUiProvider>
   );
 }
@@ -47,6 +54,9 @@ function PlayScreenContent({ campaignId }: { readonly campaignId: string }) {
   );
   const entities = useCampaignState(campaignId, (state) => entityCards(state.entities));
   const drawer = useDrawer();
+  // D-98: choosing the acting character is the composer's own control, not
+  // the crew card's click — that still opens the character drawer.
+  const [actingCharacterId, setActingCharacterId] = useState<CharacterId | undefined>(undefined);
   const {
     openCharacterDrawer,
     openEntityDrawer,
@@ -77,7 +87,11 @@ function PlayScreenContent({ campaignId }: { readonly campaignId: string }) {
         left={
           <div className={styles.leftRail}>
             <div className={styles.crewSection}>
-              <CrewRail crew={crew.data ?? []} onOpen={openCharacterDrawer} />
+              <CrewRail
+                crew={crew.data ?? []}
+                {...(actingCharacterId !== undefined ? { actingCharacterId } : {})}
+                onOpen={openCharacterDrawer}
+              />
             </div>
             <div className={styles.entitySection}>
               <EntityRail entities={entities.data ?? []} onOpen={openEntityDrawer} />
@@ -87,7 +101,15 @@ function PlayScreenContent({ campaignId }: { readonly campaignId: string }) {
         sceneHeader={<SceneHeader campaignId={campaignId} />}
         log={<NarrativeLog campaignId={campaignId} />}
         right={<PressureRail campaignId={campaignId} onOpenTrackerDrawer={openTrackDrawer} />}
-        composer={<Composer />}
+        composer={
+          <Composer
+            campaignId={campaignId}
+            crew={crew.data ?? []}
+            actingCharacterId={actingCharacterId}
+            onSetActing={setActingCharacterId}
+            onOpenMovesDrawer={openMovesDrawer}
+          />
+        }
       />
       {drawer?.kind === 'character' && (
         <CharacterDrawer

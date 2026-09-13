@@ -138,6 +138,55 @@ export const EVENT_TYPE_META: MetaTable = {
     introduces: none,
     references: (p) => [character(p.characterId)],
   },
+  'move.choice_made': {
+    // The chosen option's effects ride in an accompanying `state.changed`
+    // (move.ts's own comment) — this event is the fact of the pick.
+    narrative: true,
+    significant: false,
+    mutatesState: false,
+    voidable: true,
+    introduces: none,
+    references: none,
+  },
+  'move.method_chosen': {
+    narrative: true,
+    significant: false,
+    mutatesState: false,
+    voidable: true,
+    introduces: none,
+    references: none,
+  },
+  'move.chained': {
+    // Declares a possible chain; taking an `offer` chain is a separate
+    // `move.invoked` for the target move, not a mutation here.
+    narrative: true,
+    significant: false,
+    mutatesState: false,
+    voidable: true,
+    introduces: none,
+    references: none,
+  },
+  'oracle.rolled': {
+    // Same treatment as `dice.rolled`: the roll belongs to the narrative
+    // log's beat, not to bounded campaign state.
+    narrative: true,
+    significant: false,
+    mutatesState: false,
+    voidable: true,
+    introduces: none,
+    references: none,
+  },
+  'amount.committed': {
+    // The meter delta rides in an accompanying `state.changed` under a
+    // `preroll_effect` cause (amount.ts's own comment) — same split as
+    // `momentum.burned`/its `state.changed(momentum_reset)`.
+    narrative: true,
+    significant: false,
+    mutatesState: false,
+    voidable: true,
+    introduces: none,
+    references: (p) => [character(p.characterId)],
+  },
   'state.changed': {
     narrative: false,
     significant: false,

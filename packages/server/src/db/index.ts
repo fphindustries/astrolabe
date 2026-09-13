@@ -56,3 +56,20 @@ export {
   type SwearIncitingVowRequest,
   type SwornIncitingVow,
 } from './campaign-commands.js';
+export {
+  applyMoveChoice,
+  burnMomentum,
+  invokeMove,
+  resolvePayThePriceMethod,
+  MoveRejectedError,
+  type ApplyMoveChoiceRequest,
+  type BurnMomentumRequest,
+  type BurnedMomentum,
+  type ChainView,
+  type InvokeMoveRequest,
+  type InvokedMove,
+  type InvokedMoveRoll,
+  type PendingChoiceView,
+  type ResolvePayThePriceRequest,
+  type ResolvedPayThePrice,
+} from './move-commands.js';

@@ -1,19 +1,26 @@
 import * as z from 'zod';
 
-import type { CharacterId, TrackId } from '@astrolabe/rules';
+import type { BurnOffer, CharacterId, MoveId, OutcomeTier, TrackId } from '@astrolabe/rules';
 
 import { CampaignSettingsSchema } from './events/campaign.js';
 import { CharacterStatsSchema } from './events/character.js';
+import { RollAdjustmentSchema, RollUsingSchema } from './events/move.js';
 import { ChallengeRankSchema } from './events/track.js';
 import {
   AssetIdSchema,
   CampaignIdSchema,
+  CharacterIdSchema,
   CommandIdSchema,
   EntityIdSchema,
+  EventIdSchema,
+  MoveIdSchema,
   OracleIdSchema,
   type CampaignId,
+  type CommandId,
   type EntityId,
+  type EventId,
 } from './ids.js';
+import type { EntityRef } from './meta.js';
 import type { CampaignState, NarrativeLog } from './read-models/index.js';
 
 /**
@@ -160,4 +167,190 @@ export type SwearIncitingVowRequestBody = z.infer<typeof SwearIncitingVowRequest
 
 export interface SwearIncitingVowResponse {
   readonly vowTrackId: TrackId;
+}
+
+/**
+ * The move flow (task 6.x). The write API D-94 left for later: it did not
+ * get its own task number in the list, and lands with 6.2, the first UI
+ * that needs it.
+ *
+ * The trust boundary throughout mirrors `setTruth`'s: the client names
+ * *which* stat/meter it is rolling with (`using`), never its numeric value
+ * — the server reads that off the projection. `adds` carries only the
+ * amounts a player is asserting from the fiction (an asset ability's text,
+ * D-59's Guided level) or that the server cannot derive from state alone;
+ * the base stat/meter add and any pending `bonusNextMove` are computed and
+ * prepended server-side.
+ */
+
+/** The body of `POST /campaigns/:id/moves` (task 6.2). */
+export const InvokeMoveRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  moveId: MoveIdSchema,
+  actorCharacterId: CharacterIdSchema,
+  /** D-62: Aid Your Ally is a flag on the invocation, not its own move. */
+  aidingAllyId: CharacterIdSchema.optional(),
+  using: RollUsingSchema.optional(),
+  adds: z.array(RollAdjustmentSchema),
+  actionText: z.string().optional(),
+  /**
+   * Endure Harm's harm intake (A13, D-16): required when the move's
+   * automation declares a `preRoll`, committed in the same command as the
+   * roll it precedes. The composer shows a deterministic placeholder (the
+   * effect's declared range's midpoint) for the player to adjust — there is
+   * no AI yet (group 7) to propose a real one.
+   */
+  preRollAmount: z.int().optional(),
+  /**
+   * Following an `offer` or `auto` chain from an earlier move (Face
+   * Danger's miss offering Pay the Price; Pay the Price's table result
+   * auto-chaining to Endure Harm): the `commandId` of the call that
+   * produced the `move.chained` naming this move as its target — the same
+   * id the client minted for that earlier call, not a new server-issued
+   * reference. Checked against the log — a `chainedFromCommandId` that does
+   * not match a real `move.chained` naming this `moveId` is rejected —
+   * rather than accepted as `causedBy` outright (move.ts's own comment on
+   * `MoveChainedSchema` has the full reasoning).
+   */
+  chainedFromCommandId: CommandIdSchema.optional(),
+});
+
+export type InvokeMoveRequestBody = z.infer<typeof InvokeMoveRequestBodySchema>;
+
+export interface MoveChoiceOptionView {
+  readonly id: string;
+  readonly label: string;
+  /** Evaluated server-side against the acting character's current state. */
+  readonly available: boolean;
+}
+
+export interface MoveChoiceView {
+  readonly moveId: MoveId;
+  readonly tier: OutcomeTier;
+  readonly choiceId: string;
+  readonly prompt: string;
+  readonly pick: { readonly min: number; readonly max: number };
+  readonly optional: boolean;
+  readonly options: readonly MoveChoiceOptionView[];
+  /** The `dice.rolled` event this choice belongs to. */
+  readonly rollEventId: EventId;
+}
+
+/**
+ * No id to echo back: the client already knows the `commandId` it minted
+ * for the call that produced this chain, and that is exactly what
+ * `chainedFromCommandId` expects on the follow-up invocation.
+ */
+export interface MoveChainView {
+  readonly toMoveId: MoveId;
+  readonly mode: 'auto' | 'offer';
+  readonly reason: string;
+}
+
+export interface ActionRollView {
+  readonly kind: 'action';
+  readonly actionDie: number;
+  readonly adds: readonly { readonly amount: number; readonly label: string }[];
+  readonly actionScore: number;
+  readonly challengeDice: readonly [number, number];
+  readonly tier: OutcomeTier;
+  readonly isMatch: boolean;
+  readonly burnOffer?: BurnOffer;
+}
+
+export interface InvokeMoveResponse {
+  readonly invocationEventId: EventId;
+  readonly rollEventId: EventId;
+  readonly roll: ActionRollView;
+  readonly pendingChoice?: MoveChoiceView;
+  readonly chain?: MoveChainView;
+}
+
+/** The body of `POST /campaigns/:id/moves/choice` (task 6.6). */
+export const ApplyMoveChoiceRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  rollEventId: EventIdSchema,
+  choiceId: z.string().min(1),
+  optionIds: z.array(z.string().min(1)),
+});
+
+export type ApplyMoveChoiceRequestBody = z.infer<typeof ApplyMoveChoiceRequestBodySchema>;
+
+/** The body of `POST /campaigns/:id/moves/burn` (task 6.7, A8). */
+export const BurnMomentumRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  rollEventId: EventIdSchema,
+});
+
+export type BurnMomentumRequestBody = z.infer<typeof BurnMomentumRequestBodySchema>;
+
+export interface BurnMomentumResponse {
+  readonly tierAfter: OutcomeTier;
+}
+
+/**
+ * The body of `POST /campaigns/:id/pay-the-price` (task 6.8, D-08). No roll
+ * inputs: Pay the Price is `no_roll` — the player picks a method, not a
+ * stat.
+ */
+export const ResolvePayThePriceRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  actorCharacterId: CharacterIdSchema,
+  optionId: z.enum(['obvious', 'oracle', 'table']),
+  /** Following Face Danger/Gather Information/Secure an Advantage's miss offer. */
+  chainedFromCommandId: CommandIdSchema.optional(),
+});
+
+export type ResolvePayThePriceRequestBody = z.infer<typeof ResolvePayThePriceRequestBodySchema>;
+
+export interface ResolvePayThePriceResponse {
+  readonly invocationEventId: EventId;
+  readonly oracle?: { readonly roll: number; readonly rowText: string };
+  readonly chain?: MoveChainView;
+}
+
+/**
+ * Void-and-redo (task 6.10, A11, D-27, D-83, D-84). Two routes over the
+ * same pure `planVoid`, mirroring `previewVoid`/`voidEvent`'s split in
+ * `server/src/db/void-command.ts`: the player sees what a void would remove
+ * before confirming it. These DTOs restate `VoidPreview`/`VoidRefusal`'s
+ * shape rather than importing them — those live in `server`'s projection
+ * layer, which `shared` must not depend on.
+ *
+ * The route always writes `kind: 'player_void'` — `'reroll'` is D-18/D-70's
+ * AI-only mechanism, triggered server-side by the provider's own code
+ * (group 8), never by a player-facing request.
+ */
+export interface VoidPreviewResponse {
+  readonly ok: true;
+  readonly targetEventId: EventId;
+  readonly cascaded: readonly EventId[];
+  readonly commands: readonly CommandId[];
+  readonly summary: readonly string[];
+}
+
+export interface VoidRefusalResponse {
+  readonly ok: false;
+  readonly reason:
+    | 'not_found'
+    | 'not_voidable'
+    | 'already_voided'
+    | 'outside_current_session'
+    | 'referenced_outside_cascade';
+  readonly detail: string;
+  readonly blockedBy?: readonly { readonly eventId: EventId; readonly ref: EntityRef }[];
+}
+
+export type VoidPreviewResult = VoidPreviewResponse | VoidRefusalResponse;
+
+/** The body of `POST /campaigns/:id/events/:eventId/void` (task 6.10). */
+export const VoidEventRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  reason: z.string().min(1),
+});
+
+export type VoidEventRequestBody = z.infer<typeof VoidEventRequestBodySchema>;
+
+export interface VoidEventResponse {
+  readonly cascaded: number;
 }

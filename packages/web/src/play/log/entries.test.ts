@@ -90,6 +90,35 @@ describe('toEntryView', () => {
     });
   });
 
+  it('marks a dice.rolled event voidable, and an already-inert one (ai.completed) not (task 6.10)', () => {
+    const roll = toEntryView(
+      entry({
+        ...envelope(),
+        type: 'dice.rolled',
+        payload: {
+          kind: 'action',
+          actionDie: 2,
+          adds: [],
+          actionScore: 5,
+          challengeDice: [6, 3],
+          tier: 'weak_hit',
+          isMatch: false,
+          rng: { source: 'seeded', seed: 103 },
+        },
+      }),
+    );
+    expect(roll.voidable).toBe(true);
+
+    const completed = toEntryView(
+      entry({
+        ...envelope(),
+        type: 'ai.completed',
+        payload: { provider: 'anthropic', model: 'm', purpose: 'x', inputTokens: 1, outputTokens: 1 },
+      }),
+    );
+    expect(completed.voidable).toBe(false);
+  });
+
   it('renders a momentum.burned event', () => {
     const view = toEntryView(
       entry({
@@ -260,11 +289,98 @@ describe('toEntryView', () => {
     expect(view.body).toEqual({ kind: 'session_ended', summary: 'The crew secured the relay station.' });
   });
 
-  it('falls back to an unknown-type marker instead of vanishing or throwing', () => {
+  it('renders move.choice_made', () => {
     const view = toEntryView(
-      entry({ ...envelope(), type: 'oracle.rolled', payload: {} } as unknown as AstrolabeEvent),
+      entry({
+        ...envelope(),
+        type: 'move.choice_made',
+        payload: {
+          moveId: 'move:suffer/endure_harm',
+          tier: 'weak_hit',
+          choiceId: 'eh-weak',
+          optionIds: ['lose-momentum-for-health'],
+          rollEventId: 'evt-roll' as never,
+        },
+      }),
     );
-    expect(view.body).toEqual({ kind: 'unknown', type: 'oracle.rolled' });
+    expect(view.body).toEqual({
+      kind: 'move_choice_made',
+      choiceId: 'eh-weak',
+      optionIds: ['lose-momentum-for-health'],
+    });
+  });
+
+  it('renders move.method_chosen', () => {
+    const view = toEntryView(
+      entry({
+        ...envelope(),
+        type: 'move.method_chosen',
+        payload: { moveId: 'move:fate/pay_the_price', optionId: 'table' },
+      }),
+    );
+    expect(view.body).toEqual({ kind: 'move_method_chosen', optionId: 'table' });
+  });
+
+  it('renders move.chained', () => {
+    const view = toEntryView(
+      entry({
+        ...envelope(),
+        type: 'move.chained',
+        payload: {
+          fromMoveId: 'move:adventure/face_danger',
+          toMoveId: 'move:fate/pay_the_price',
+          mode: 'offer',
+          reason: 'Face Danger, miss',
+        },
+      }),
+    );
+    expect(view.body).toEqual({
+      kind: 'move_chained',
+      toMoveId: 'move:fate/pay_the_price',
+      mode: 'offer',
+      reason: 'Face Danger, miss',
+    });
+  });
+
+  it('renders oracle.rolled', () => {
+    const view = toEntryView(
+      entry({
+        ...envelope(),
+        type: 'oracle.rolled',
+        payload: { oracleId: 'oracle:moves/pay_the_price', roll: 76, rowText: 'You are harmed' },
+      }),
+    );
+    expect(view.body).toEqual({ kind: 'oracle_rolled', roll: 76, rowText: 'You are harmed' });
+  });
+
+  it('renders amount.committed', () => {
+    const view = toEntryView(
+      entry({
+        ...envelope(),
+        type: 'amount.committed',
+        payload: {
+          moveId: 'move:suffer/endure_harm',
+          characterId: 'char-rook' as never,
+          meter: 'health',
+          amount: -1,
+        },
+      }),
+    );
+    expect(view.body).toEqual({ kind: 'amount_committed', amount: -1, meter: 'health' });
+  });
+
+  it('falls back to an unknown-type marker instead of vanishing or throwing', () => {
+    // A real type from design-event-log.md's table that hasn't landed with
+    // a feature yet (§4) — stands in for "some future type this switch
+    // doesn't know," which is the case this fallback exists for.
+    const view = toEntryView(
+      entry({
+        ...envelope(),
+        type: 'complication.offered',
+        payload: {},
+      } as unknown as AstrolabeEvent),
+    );
+    expect(view.body).toEqual({ kind: 'unknown', type: 'complication.offered' });
   });
 
   it('maps void marks through, kind and reason only', () => {

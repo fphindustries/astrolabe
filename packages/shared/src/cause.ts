@@ -23,6 +23,12 @@ export const ChangeCauseSchema = z.discriminatedUnion('kind', [
   /** A8 / Beat 5: the player accepted the burn offer. */
   z.object({ kind: z.literal('momentum_burn') }),
   /**
+   * A13 / Beat 7: a move's `preRoll` effect (Endure Harm's harm intake),
+   * committed before any tier exists to cite — `amount.committed` is the
+   * fact of the commitment, this is why the resulting delta happened.
+   */
+  z.object({ kind: z.literal('preroll_effect'), moveId: MoveIdSchema }),
+  /**
    * A14 / Beat 8: the AI acting under its own authority — creating or
    * ticking a clock, for instance. The reason is required, because section
    * 3 grants the AI clocks only "always visible with a stated reason".

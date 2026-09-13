@@ -1,5 +1,29 @@
 .composer {
-  padding: var(--space-4);
-  color: var(--text-muted);
+  padding: var(--space-2) var(--space-4);
+  color: var(--text-primary);
   font-size: var(--text-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: var(--composer-max);
+  overflow-y: auto;
+}
+
+.actingRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.actingLabel {
+  color: var(--text-muted);
+}
+
+.actingSelect {
+  background: var(--surface-1);
+  color: var(--text-primary);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  font-weight: 600;
 }
