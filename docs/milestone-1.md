@@ -441,7 +441,15 @@ the seed of D-72's committed session fixture.
 
 3.1, 3.2, 3.4 and 3.5 are done. 3.3 (concept-first) still waits on the AI
 provider (group 7) — it reuses this session's form rather than replacing it.
-Decisions: D-89 to D-93.
+Decisions: D-89 to D-93, D-105.
+
+- **The background vow is written atomically with the character** (D-105):
+  `createCharacter` (`server/src/db/character-commands.ts`) pushes
+  `character.created` and, when `backgroundVow` is given, `track.created`
+  into the same command. The manual creation screen exercises this via its
+  own "swear a background vow now" checkbox — not spec'd as a group-3 task
+  in its own right, but built now since concept-first (3.3) will need the
+  same write path once it proposes one.
 
 ### Where the creation rules live
 
