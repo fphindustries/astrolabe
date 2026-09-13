@@ -54,7 +54,7 @@ Issue-sized. Each task should land in one sitting and leave the build working.
 **Order (D-88, D-94, D-57 as amended).** Task numbers are stable, so references to them keep
 resolving; the order they are *worked* in is:
 
-> 1 · 2 · **3.1, 3.5** · **5.0, 5.1, 5.2** · 3.2, 3.4 · 4 · 5.3–5.7 · 6 · **7.1, 7.2, 7.4, 7.5** (with 7.6–7.11) · 3.3 · 7.12, 7.13 · 8 · 9 · 10
+> 1 · 2 · **3.1, 3.5** · **5.0, 5.1, 5.2** · 3.2, 3.4 · 4 · 5.3–5.7 · 6 · **7.1, 7.2, 7.4, 7.5** (with 7.6–7.11) · 3.3 · 4.6 · 7.12, 7.13 · 8 · 9 · 10
 
 The play-screen shell comes before the creation and campaign-setup UI because
 those have no React app to live in — `web` is a bare Vite scaffold. The
@@ -62,9 +62,9 @@ server-side halves of groups 3 and 4 stay ahead of it, since they need no UI
 at all.
 
 The provider core (7.1, 7.2, 7.4, 7.5) comes before every task that needs a
-working AI provider: 3.3, 4.4's AI-proposal half, 7.12, 7.13, and groups 8 and
+working AI provider: 3.3, 4.6 (4.4's AI-proposal half, D-126), 7.12, 7.13, and groups 8 and
 9 (D-57 as amended). 7.6–7.11 landed in the same commit as the core, so the
-remaining group 7 work, 7.12 and 7.13, follows 3.3. 7.3 (OpenAI) stays in
+remaining group 7 work, 7.12 and 7.13, follows 3.3 and 4.6. 7.3 (OpenAI) stays in
 Milestone 2 (D-60).
 
 ### 1. Rules package
@@ -112,6 +112,7 @@ narrative log is a second read model with its own paged query.
 - [x] 4.3 Sector as a location list with routes
 - [x] 4.4 Inciting incident: AI proposals or player-written; becomes the first vow — player-written path only (D-101)
 - [x] 4.5 Campaign settings: narration latitude, narration length, reroll cap
+- [ ] 4.6 AI-proposed inciting incidents, grounded in the incident oracle and the characters' backgrounds, on 3.3's proposal plumbing; the player picks, edits or writes their own (D-34, D-101, D-126)
 
 ### 5. Play screen shell
 
