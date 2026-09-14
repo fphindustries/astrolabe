@@ -504,6 +504,51 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
     expect(again.statusCode).toBe(422);
   });
 
+  it('runs the world pass after a committed passage, once (8.1, D-138)', async () => {
+    const { campaignId, moveCommandId } = await moveMade();
+    const narrated = frames(
+      (
+        await app.inject({
+          method: 'POST',
+          url: `/api/campaigns/${campaignId}/narrations`,
+          payload: { commandId: newId(), afterCommandId: moveCommandId },
+        })
+      ).body,
+    ).at(-1);
+    if (narrated?.type !== 'committed') throw new Error('expected a committed passage');
+    ai.enqueue({ kind: 'structured', value: { review: 'Nothing new.', recipes: [] } });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/campaigns/${campaignId}/world-passes`,
+      payload: { commandId: newId(), passageEventId: narrated.eventId },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(frames(response.body).at(-1)?.type).toBe('committed');
+
+    const again = await app.inject({
+      method: 'POST',
+      url: `/api/campaigns/${campaignId}/world-passes`,
+      payload: { commandId: newId(), passageEventId: narrated.eventId },
+    });
+    expect(again.statusCode).toBe(422);
+    expect(again.json()).toMatchObject({ reason: 'already_passed' });
+  });
+
+  it('refuses to frame when the session has no scene, before any stream opens (D-141)', async () => {
+    const { campaignId } = await moveMade();
+
+    const refused = await app.inject({
+      method: 'POST',
+      url: `/api/campaigns/${campaignId}/scene-frames`,
+      payload: { commandId: newId() },
+    });
+
+    expect(refused.statusCode).toBe(422);
+    expect(refused.json()).toMatchObject({ reason: 'no_scene' });
+  });
+
   it('overrides momentum by hand, and refuses an out-of-range value (A16, D-117)', async () => {
     const { campaignId, characterId } = await moveMade();
 

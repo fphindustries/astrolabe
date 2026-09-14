@@ -45,4 +45,23 @@ describe('toSceneHeaderView', () => {
     );
     expect(view).toEqual({ title: 'The relay station' });
   });
+
+  it('offers to frame an open scene with no frame, and only that (D-141)', () => {
+    const scene = { id: 'scene-1' as never, title: 'The relay station' };
+    const open = {
+      id: 's2' as never,
+      number: 2,
+      startedAt: '2026-01-01T00:00:00.000Z' as never,
+      tokenUsage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+    };
+    expect(toSceneHeaderView(scene, {}, open).canFrame).toBe(true);
+    expect(
+      toSceneHeaderView({ ...scene, framedBy: 'evt-1' as never }, {}, open).canFrame,
+    ).toBeUndefined();
+    expect(
+      toSceneHeaderView(scene, {}, { ...open, endedAt: '2026-01-02T00:00:00.000Z' as never })
+        .canFrame,
+    ).toBeUndefined();
+    expect(toSceneHeaderView(scene, {}, null).canFrame).toBeUndefined();
+  });
 });

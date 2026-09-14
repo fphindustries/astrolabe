@@ -22,6 +22,7 @@ import {
   harmProposalSchema,
   renderFacts,
   resolveBeatScope,
+  groundedInOf,
   resolveSegments,
   segmentContext,
   type BeatFacts,
@@ -98,7 +99,7 @@ export function envelopeOf(campaignId: CampaignId, state: CampaignState): Envelo
   };
 }
 
-function settingsOf(state: CampaignState) {
+export function settingsOf(state: CampaignState) {
   if (state.campaign === null) {
     throw new AiRequestRefusedError('no_campaign', 'That campaign has not been created.');
   }
@@ -129,7 +130,7 @@ export function accounting(
 }
 
 /** A checked call's accounting, withdrawals and any failure, enveloped (D-128). */
-function checkedAccounting(
+export function checkedAccounting(
   ai: AiProvider,
   purpose: string,
   checker: AiProvider,
@@ -147,7 +148,7 @@ function checkedAccounting(
   );
 }
 
-function recordEnding(status: AiStatus | undefined, result: CheckedResult<unknown>): void {
+export function recordEnding(status: AiStatus | undefined, result: CheckedResult<unknown>): void {
   if (result.ending.ok) {
     status?.recordSuccess();
   } else {
@@ -156,7 +157,7 @@ function recordEnding(status: AiStatus | undefined, result: CheckedResult<unknow
 }
 
 /** What the checker is told about the campaign, whatever it is checking. */
-function checkContextOf(
+export function checkContextOf(
   state: CampaignState,
   latitude: CampaignSettings['narrationLatitude'],
   facts: string | undefined,
@@ -292,7 +293,7 @@ export async function runBeatNarration(
                 payload: {
                   role: 'beat',
                   text: outcome.value.text,
-                  groundedIn: [],
+                  groundedIn: groundedInOf(outcome.value.segments, prepared.segments),
                   segments: resolveSegments(outcome.value.segments, prepared.segments),
                 },
               } as NewEvent<'narration.written'>,

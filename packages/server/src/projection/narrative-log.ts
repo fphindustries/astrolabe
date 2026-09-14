@@ -7,6 +7,7 @@ import {
   type NarrativeEntry,
   type NarrativeLog,
   type NarrativeLogOptions,
+  type OracleChip,
   type ResolvedNarration,
   type VoidMark,
 } from '@astrolabe/shared';
@@ -67,8 +68,28 @@ export function buildNarrativeLog(
       (options.before === undefined || event.seq < options.before),
   );
 
+  const rolls = new Map(
+    events.flatMap((event) => (event.type === 'oracle.rolled' ? [[event.id, event]] : [])),
+  );
+  const chipsOf = (ids: readonly EventId[]): readonly OracleChip[] =>
+    ids.flatMap((id) => {
+      const roll = rolls.get(id);
+      return roll === undefined
+        ? []
+        : [
+            {
+              eventId: roll.id,
+              oracleId: roll.payload.oracleId,
+              ...(roll.payload.slot !== undefined ? { slot: roll.payload.slot } : {}),
+              roll: roll.payload.roll,
+              rowText: roll.payload.rowText,
+              voided: (voids.get(roll.id)?.size ?? 0) > 0,
+            },
+          ];
+    });
+
   const beats = groupIntoBeats(renderable, (event) =>
-    toEntry(event, voids, voidMarks, revisions, burnedRolls),
+    toEntry(event, voids, voidMarks, revisions, burnedRolls, chipsOf),
   );
 
   const limit = options.limit ?? DEFAULT_LIMIT;
@@ -81,6 +102,7 @@ function toEntry(
   voidMarks: ReadonlyMap<EventId, VoidMark>,
   revisions: ReadonlyMap<EventId, Revision>,
   burnedRolls: ReadonlySet<EventId>,
+  chipsOf: (ids: readonly EventId[]) => readonly OracleChip[],
 ): NarrativeEntry {
   const activeVoids = [...(voids.get(event.id) ?? [])];
   const voidedBy = activeVoids
@@ -97,7 +119,13 @@ function toEntry(
   };
 
   if (event.type === 'narration.written') {
-    return { ...entry, narration: resolveNarration(event, revisions) };
+    // D-17: the rolls the passage was grounded in sit under it as chips.
+    const chips = chipsOf(event.payload.groundedIn);
+    return {
+      ...entry,
+      narration: resolveNarration(event, revisions),
+      ...(chips.length > 0 ? { chips } : {}),
+    };
   }
   // Only an action roll can carry a burn offer: momentum stands in for the
   // action score, which a progress roll does not have.

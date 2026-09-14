@@ -397,6 +397,27 @@ export const NarrateBeatRequestBodySchema = z.object({
 export type NarrateBeatRequestBody = z.infer<typeof NarrateBeatRequestBodySchema>;
 
 /**
+ * D-138 (amended): once a beat's passage has committed, the client asks for
+ * the world pass that follows it — the Guide deciding whether the world
+ * needs anything the dice should ground. Streamed like narration, and
+ * answered with the same frames.
+ */
+export const WorldPassRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  /** The committed `narration.written` the world pass follows. */
+  passageEventId: EventIdSchema,
+});
+
+export type WorldPassRequestBody = z.infer<typeof WorldPassRequestBodySchema>;
+
+/** D-141: frame the open scene. The server knows which scene; the client only asks. */
+export const SceneFrameRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+});
+
+export type SceneFrameRequestBody = z.infer<typeof SceneFrameRequestBodySchema>;
+
+/**
  * Narration correction (task 7.9, A15). One action: the note is written and
  * the rewrite streams back in the same request.
  */
@@ -411,6 +432,8 @@ export type CorrectNarrationRequestBody = z.infer<typeof CorrectNarrationRequest
  * One line of a streamed narration response (D-111), sent as NDJSON.
  *
  * - `delta`: more text for the passage.
+ * - `world`: a world pass has committed its rolls and entities (8.2);
+ *   what it established is in state now, ahead of the passage about it.
  * - `reset`: discard everything streamed so far — a rejected attempt is
  *   being re-asked (task 7.5).
  * - `checking`: the passage has finished arriving and is being checked
@@ -422,6 +445,8 @@ export type CorrectNarrationRequestBody = z.infer<typeof CorrectNarrationRequest
  */
 export type NarrationFrame =
   | { readonly type: 'delta'; readonly text: string }
+  /** D-138: a world pass committed what it established; refetch before its passage arrives. */
+  | { readonly type: 'world' }
   | { readonly type: 'reset'; readonly reason: string }
   | { readonly type: 'checking' }
   | { readonly type: 'withdrawn'; readonly reason: string; readonly rejectedText: string }

@@ -1,3 +1,4 @@
+import { STARFORGED } from '@astrolabe/rules';
 import {
   EVENT_TYPE_META,
   withdrawalReason,
@@ -76,6 +77,8 @@ export type EntryBody =
   | {
       readonly kind: 'narration';
       readonly text: string;
+      /** D-17, 8.2: the rolls the passage was grounded in, as chips under it. */
+      readonly chips: readonly ChipView[];
       readonly corrected: boolean;
       readonly original?: string;
       readonly note?: string;
@@ -98,6 +101,16 @@ export type EntryBody =
   | { readonly kind: 'void'; readonly cascadedCount: number; readonly reason: string }
   | { readonly kind: 'session_ended'; readonly summary: string }
   | { readonly kind: 'unknown'; readonly type: string };
+
+/** One oracle chip: what was rolled, labelled by the recipe slot it filled or its table. */
+export interface ChipView {
+  readonly eventId: string;
+  readonly label: string;
+  readonly roll: number;
+  readonly rowText: string;
+  /** Struck through (D-18): discarded by a reroll or voided with its beat. */
+  readonly struck: boolean;
+}
 
 export interface EntryView {
   readonly eventId: string;
@@ -220,6 +233,16 @@ function toBody(entry: NarrativeEntry): EntryBody {
       return {
         kind: 'narration',
         text: narration?.text ?? event.payload.text,
+        chips: (entry.chips ?? []).map((chip) => ({
+          eventId: chip.eventId,
+          label:
+            chip.slot !== undefined
+              ? chip.slot.replace(/_/g, ' ')
+              : (STARFORGED.oracles.find((t) => t.id === chip.oracleId)?.name ?? chip.oracleId),
+          roll: chip.roll,
+          rowText: chip.rowText,
+          struck: chip.voided,
+        })),
         corrected: narration?.corrected === true,
         ...(narration?.original !== undefined ? { original: narration.original } : {}),
         ...(narration?.note !== undefined ? { note: narration.note } : {}),
@@ -251,6 +274,29 @@ function toBody(entry: NarrativeEntry): EntryBody {
     default:
       return { kind: 'unknown', type: event.type };
   }
+}
+
+/**
+ * A roll that a passage shows as a chip isn't shown again as a row of its
+ * own (8.2). A roll no loaded passage cites keeps its row: dice that were
+ * rolled stay visible.
+ */
+export function withoutChippedRolls(beats: readonly BeatView[]): readonly BeatView[] {
+  const chipped = new Set(
+    beats.flatMap((beat) =>
+      beat.entries.flatMap((entry) =>
+        entry.body.kind === 'narration' ? entry.body.chips.map((chip) => chip.eventId) : [],
+      ),
+    ),
+  );
+  return beats
+    .map((beat) => ({
+      ...beat,
+      entries: beat.entries.filter(
+        (entry) => !(entry.body.kind === 'oracle_rolled' && chipped.has(entry.eventId)),
+      ),
+    }))
+    .filter((beat) => beat.entries.length > 0);
 }
 
 /**

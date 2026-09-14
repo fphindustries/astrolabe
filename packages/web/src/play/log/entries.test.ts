@@ -7,7 +7,7 @@ import type {
   NarrativeLog,
 } from '@astrolabe/shared';
 
-import { orderedBeats, toEntryView } from './entries.js';
+import { orderedBeats, toBeatView, toEntryView, withoutChippedRolls } from './entries.js';
 
 function envelope(overrides: Partial<EnvelopeFields> = {}): EnvelopeFields {
   return {
@@ -227,6 +227,7 @@ describe('toEntryView', () => {
     expect(uncorrected.body).toEqual({
       kind: 'narration',
       text: 'Original passage.',
+      chips: [],
       corrected: false,
     });
 
@@ -250,6 +251,7 @@ describe('toEntryView', () => {
     expect(corrected.body).toEqual({
       kind: 'narration',
       text: 'Revised passage.',
+      chips: [],
       corrected: true,
       original: 'Original passage.',
       note: 'Rook is a veteran.',
@@ -513,5 +515,92 @@ describe('orderedBeats', () => {
 
     // react-query's pages array is fetch order: newest page first.
     expect(orderedBeats([newestPage, olderPage]).map((b) => b.seq)).toEqual([1, 2, 3, 4]);
+  });
+});
+
+describe('oracle chips (8.2, D-17)', () => {
+  const roll = (id: string, slot?: string) =>
+    entry({
+      ...envelope({ id: id as never }),
+      type: 'oracle.rolled',
+      payload: {
+        oracleId: 'oracle:characters/role',
+        roll: 41,
+        rowText: 'Navigator',
+        ...(slot !== undefined ? { slot } : {}),
+      },
+    });
+
+  it('labels a chip by its recipe slot, or by its table, and strikes a discarded one', () => {
+    const view = toEntryView(
+      entry(
+        {
+          ...envelope(),
+          type: 'narration.written',
+          payload: { role: 'world', text: 'A voice on comms.', groundedIn: ['r1' as never] },
+        },
+        {
+          chips: [
+            {
+              eventId: 'r1' as never,
+              oracleId: 'oracle:characters/first-look',
+              slot: 'first_look',
+              roll: 12,
+              rowText: 'Wiry',
+              voided: false,
+            },
+            {
+              eventId: 'r2' as never,
+              oracleId: 'oracle:characters/role',
+              roll: 41,
+              rowText: 'Navigator',
+              voided: true,
+            },
+          ],
+        },
+      ),
+    );
+    expect(view.body.kind === 'narration' && view.body.chips).toEqual([
+      { eventId: 'r1', label: 'first look', roll: 12, rowText: 'Wiry', struck: false },
+      { eventId: 'r2', label: 'Character Role', roll: 41, rowText: 'Navigator', struck: true },
+    ]);
+  });
+
+  it('hides a roll shown as a chip, keeps one no passage cites, and drops an emptied beat', () => {
+    const beat = (commandId: string, entries: NarrativeEntry[]) =>
+      toBeatView({
+        commandId: commandId as never,
+        seq: 1,
+        occurredAt: '2026-01-01T00:00:00.000Z' as never,
+        actorKind: 'system',
+        entries,
+        voided: false,
+      });
+    const passage = entry(
+      {
+        ...envelope({ id: 'p1' as never }),
+        type: 'narration.written',
+        payload: { role: 'world', text: 'x', groundedIn: ['r1' as never] },
+      },
+      {
+        chips: [
+          {
+            eventId: 'r1' as never,
+            oracleId: 'oracle:characters/role',
+            roll: 41,
+            rowText: 'Navigator',
+            voided: false,
+          },
+        ],
+      },
+    );
+
+    const beats = withoutChippedRolls([
+      beat('world', [roll('r1', 'role')]),
+      beat('lonely', [roll('r9')]),
+      beat('passage', [passage]),
+    ]);
+
+    expect(beats.map((b) => b.commandId)).toEqual(['lonely', 'passage']);
   });
 });

@@ -16,13 +16,16 @@ import {
   correctNarrationPath,
   narrateBeatPath,
   streamNarration,
+  sceneFramePath,
   useAiStatus,
+  worldPassPath,
 } from '../../api/narration.js';
 
 import {
   applyFrame,
   closeWithoutFrame,
   describeFailure,
+  followUp,
   startPassage,
   type NarrationFailure,
   type NarrationTarget,
@@ -54,6 +57,8 @@ export interface NarrationStream {
   /** A request the server refused outright — not an outage, so it does not pause. */
   readonly notice: string | undefined;
   narrateAfter(afterCommandId: string): void;
+  /** D-141: frame the open scene. */
+  frameScene(): void;
   correct(targetEventId: string, note: string): void;
   retry(): void;
   dismissNotice(): void;
@@ -87,13 +92,21 @@ export function NarrationStreamProvider({
       const [path, body] =
         target.kind === 'beat'
           ? [narrateBeatPath(campaignId), { commandId, afterCommandId: target.afterCommandId }]
-          : [
-              correctNarrationPath(campaignId, target.targetEventId),
-              { commandId, note: target.note },
-            ];
+          : target.kind === 'world'
+            ? [worldPassPath(campaignId), { commandId, passageEventId: target.passageEventId }]
+            : target.kind === 'scene_frame'
+              ? [sceneFramePath(campaignId), { commandId }]
+              : [
+                  correctNarrationPath(campaignId, target.targetEventId),
+                  { commandId, note: target.note },
+                ];
 
       try {
         await streamNarration(path, body, (frame) => {
+          if (frame.type === 'world') {
+            // The world pass committed what it established: show it now, ahead of its passage.
+            invalidateCampaign();
+          }
           outcome = applyFrame(outcome, frame);
           if (outcome.kind === 'pending') {
             setPending(outcome.passage);
@@ -103,9 +116,10 @@ export function NarrationStreamProvider({
       } catch (error) {
         if (error instanceof ApiError && error.status === 422) {
           const problem = (error.body as { problem?: string; reason?: string } | undefined) ?? {};
-          // A beat that already has its passage needs nothing more; anything
-          // else refused is worth telling the player, but it is not an outage.
-          if (problem.reason !== 'already_narrated') {
+          // A beat that already has its passage, or a passage the world has
+          // already followed, needs nothing more; anything else refused is
+          // worth telling the player, but it is not an outage.
+          if (problem.reason !== 'already_narrated' && problem.reason !== 'already_passed') {
             setNotice(problem.problem ?? 'The Guide could not do that.');
           }
           outcome = { kind: 'committed', eventId: '' };
@@ -124,6 +138,12 @@ export function NarrationStreamProvider({
       }
       invalidateCampaign();
       void queryClient.invalidateQueries({ queryKey: aiKeys.status });
+      // The world pass goes next, ahead of any beat queued behind this one:
+      // it follows the passage just written (D-138, amended).
+      const next = followUp(target, outcome);
+      if (next !== undefined) {
+        queue.current.unshift(next);
+      }
       return outcome.kind !== 'failed';
     },
     [campaignId, invalidateCampaign, queryClient],
@@ -175,6 +195,7 @@ export function NarrationStreamProvider({
       pauseReason,
       notice,
       narrateAfter: (afterCommandId) => enqueue({ kind: 'beat', afterCommandId }),
+      frameScene: () => enqueue({ kind: 'scene_frame' }),
       correct: (targetEventId, note) => enqueue({ kind: 'revision', targetEventId, note }),
       retry: () => {
         if (failure !== null) {

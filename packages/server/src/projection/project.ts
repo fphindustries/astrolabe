@@ -266,6 +266,12 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
     }
 
     case 'narration.written':
+      // D-141: a scene is framed once; the header offers to frame it until then.
+      return event.payload.role === 'scene_frame' &&
+        state.scene !== null &&
+        event.sceneId === state.scene.id
+        ? { ...state, scene: { ...state.scene, framedBy: event.id } }
+        : state;
     case 'narration.correction_requested':
     case 'narration.revised':
     case 'narration.withdrawn':

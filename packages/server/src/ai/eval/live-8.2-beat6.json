@@ -1,0 +1,214 @@
+{
+  "date": "2026-09-14",
+  "narrator": "claude-opus-5",
+  "checker": "claude-sonnet-5",
+  "runs": [
+    {
+      "run": 0,
+      "frame": {
+        "ok": true,
+        "ms": 15740,
+        "firstTextMs": 5953,
+        "plan": [3837],
+        "rolls": [
+          "condition: Impending destruction",
+          "outer_first_look: Hazardous readings",
+          "inner_first_look: Nesting or feeding creatures"
+        ],
+        "groundedIn": 3,
+        "withdrawals": [],
+        "text": "Varga Relay hangs against the black like a thing abandoned mid-sentence, its long spine of habitat rings furred with a generation of frost. The scorched docking collar gapes; the one lit row of windows flickers at a rhythm no living crew would keep. The station is dying, and not slowly enough. Its orbit has decayed into a shallow tumble, the outermost ring already shedding plating in lazy spirals, and the whole structure groans on a frequency the comms pick up as a low, continuous complaint. The Lantern Wake's readings come back wrong in three directions at once: a radiation bloom leaking from the reactor spine, atmosphere pressures that swing wildly deck to deck, and a hot corrosive haze venting from a split seam near the collar. Through the lit windows, movement. Something has built in there, thick ropy masses lashed across the corridor mouths, and shapes crawl over the mass in numbers, feeding, unhurried, at home. Somewhere inside that failing hull, the Meridian's Hope beacon is still repeating, and every hour the station holds together is one fewer than the last."
+      },
+      "beat6": {
+        "ok": true,
+        "ms": 19518,
+        "entityCommittedMs": 11093,
+        "passageFirstTextMs": 13310,
+        "reviews": [
+          "The beat reveals a power circuit and transmission source within the already-established derelict station; no new person or entity has entered the story yet. [NO RECIPE, forced]"
+        ],
+        "entities": [
+          {
+            "name": "Kiri Ruiz",
+            "fields": {
+              "goal": "Ruiz is here to learn a truth, not to salvage: the repeating signal is being kept alive deliberately, tapped and listened to until it gives up what it means.",
+              "role": "A miner by trade, kitted for cutting and hauling rather than station work — the one living load on that auxiliary circuit, camped where the lit windows are.",
+              "first_look": "Grim-faced and hollowed out, dust-grey at the creases, with the flat stare of someone who has been awake too long in the dark.",
+              "disposition": "Despite the look, Ruiz is friendly — inclined to share the lit room, the heat, and what the circuit has already revealed."
+            }
+          }
+        ],
+        "groundedIn": 6,
+        "withdrawals": [],
+        "scanPassage": {
+          "role": "beat",
+          "text": "Vesna walks the Sensor Array along the station's power draw, narrowing the sweep until the returns thin to a single thread of current running the length of the spine. The trace comes back clean. Most of the relay is cold iron, but one line still carries load: it runs from an auxiliary cell beneath the reactor spine, up past the flooded rings, and terminates in the lit row of windows, where the flicker matches the beacon's repeat exactly. Whatever is transmitting Meridian's Hope is bolted to that circuit, and the circuit has a shape a pilot can follow. The picture arrives whole, and the Lantern Wake seems to sit a little more forward on its own axis, engines idling half a note higher.",
+          "groundedIn": [],
+          "segments": [
+            {
+              "about": "character_does",
+              "characterId": "01a0a1c2-ce7c-7d21-b149-64a54a3c42ae",
+              "basis": ["01a0a1c3-0c72-74cc-8728-2b0f250e6281"],
+              "text": "Vesna walks the Sensor Array along the station's power draw, narrowing the sweep until the returns thin to a single thread of current running the length of the spine."
+            },
+            {
+              "about": "world",
+              "characterId": null,
+              "basis": ["01a0a1c3-0c72-7f74-80a5-f55ce14beb37"],
+              "text": "The trace comes back clean. Most of the relay is cold iron, but one line still carries load: it runs from an auxiliary cell beneath the reactor spine, up past the flooded rings, and terminates in the lit row of windows, where the flicker matches the beacon's repeat exactly."
+            },
+            {
+              "about": "world",
+              "characterId": null,
+              "basis": ["01a0a1c3-0c72-7f74-80a5-f55ce14beb37"],
+              "text": "Whatever is transmitting Meridian's Hope is bolted to that circuit, and the circuit has a shape a pilot can follow."
+            },
+            {
+              "about": "character_undergoes",
+              "characterId": "01a0a1c2-ce7c-7d21-b149-64a54a3c42ae",
+              "basis": ["01a0a1c3-0c72-752e-8f0b-ffb9fdd36581"],
+              "text": "The picture arrives whole, and the Lantern Wake seems to sit a little more forward on its own axis, engines idling half a note higher."
+            }
+          ]
+        },
+        "text": "The single thread of current carries more than the beacon. Down at the far end of it, in the lit row of windows, a second load pulls at the circuit in ragged bursts — a cutting rig, a heater, the appetite of something alive. Then the comms open from the station side, unencrypted, tired. \"Whoever's parked behind the ice — I see your power signature. Name's Ruiz. Miner, not a ghost.\" The voice is dust-scraped, flat with too many hours awake. \"That signal repeats because somebody keeps it repeating. I've been tapping the line to find out who. There's heat in here, and room, if you want it.\""
+      }
+    },
+    {
+      "run": 1,
+      "frame": {
+        "ok": true,
+        "ms": 14899,
+        "firstTextMs": 4930,
+        "plan": [3038],
+        "rolls": [
+          "condition: Limited power",
+          "outer_first_look: Corpses",
+          "inner_first_look: Watchful AI"
+        ],
+        "groundedIn": 3,
+        "withdrawals": [],
+        "text": "Varga Relay hangs against the dark like a spent cartridge, its ring of habitat modules scorched along one flank and its docking collar peeled back where something burned through it. Only one row of windows still carries light, and that light pulses at long intervals, brightening and dimming as though the station is rationing what little it has left. Along the outer hull, caught in the frozen exhalation of a blown seal, drift the bodies. A generation of vacuum has kept them: three, four, more, turning slowly in their old station coveralls, tethered by cables that never let go. Inside that lit row, something is keeping the lamps on. A sensor cluster on the collar tracks in a slow arc and stops, and the station's floodlamp stutters on for two seconds before the power budget swallows it again. Whatever still thinks in there has been alone with those bodies for forty years, and it is repeating the Meridian's Hope's call out into the sector for reasons no one has asked it. The flight recorder's trail ends here, behind a hull that has already killed its crew once."
+      },
+      "beat6": {
+        "ok": true,
+        "ms": 20699,
+        "entityCommittedMs": 12048,
+        "passageFirstTextMs": 13913,
+        "reviews": [
+          "The beat reveals a power layout inside the derelict station\ne no new person or entity is introduced\ne just technical detail on an already-established location. [NO RECIPE, forced]"
+        ],
+        "entities": [
+          {
+            "name": "Quinn Quint",
+            "fields": {
+              "goal": "They are here to strip the relay of anything that sells: the shielded core, the sensor cluster on the collar, whatever sits deeper and spikes with the floodlamp.",
+              "role": "A spacer squatting in the lit row amidships, living off the station's last live trunk line — the measured pulses of current are their doing, rationed to keep one module warm.",
+              "first_look": "Young — too young for the years this place has been dark — in a patched vacuum suit cut down to fit.",
+              "disposition": "Wary and territorial, treating every new power signature on the skin of the station as competition for the salvage."
+            }
+          }
+        ],
+        "groundedIn": 6,
+        "withdrawals": [],
+        "scanPassage": {
+          "role": "beat",
+          "text": "Vesna walks the Sensor Array along the station's skin, tracing the power draw module by module until the returns stop being noise and start being a map. The picture resolves clean: everything aft is cold iron, drawing nothing, but a single trunk line runs live from a shielded core amidships out to that one lit row, bleeding current in slow measured pulses. Two smaller taps branch off it, one to the sensor cluster on the collar, one to something deeper that spikes each time the floodlamp stutters. The readout holds steady on the panel in front of Vesna, every line of it legible.",
+          "groundedIn": [],
+          "segments": [
+            {
+              "about": "character_does",
+              "characterId": "01a0a1c3-801f-7d81-90dc-4379e8e651a5",
+              "basis": ["01a0a1c3-bab4-7719-9b61-76c15e92cc3a"],
+              "text": "Vesna walks the Sensor Array along the station's skin, tracing the power draw module by module until the returns stop being noise and start being a map."
+            },
+            {
+              "about": "world",
+              "characterId": null,
+              "basis": ["01a0a1c3-bab4-7b3a-8464-732dd114d3da"],
+              "text": "The picture resolves clean: everything aft is cold iron, drawing nothing, but a single trunk line runs live from a shielded core amidships out to that one lit row, bleeding current in slow measured pulses. Two smaller taps branch off it, one to the sensor cluster on the collar, one to something deeper that spikes each time the floodlamp stutters."
+            },
+            {
+              "about": "character_undergoes",
+              "characterId": "01a0a1c3-801f-7d81-90dc-4379e8e651a5",
+              "basis": ["01a0a1c3-bab4-7486-bbc3-1ef4142b1b3e"],
+              "text": "The readout holds steady on the panel in front of Vesna, every line of it legible."
+            }
+          ]
+        },
+        "text": "In the lit row, a shadow crosses the windows — small, quick, wrong for a station that has been dark a generation. The pulses on the trunk line stutter out of their measured rhythm, then resume, as if a hand has been laid on a switch somewhere amidships. A voice cuts onto the open band, young and thin and pushed hard: \"That's my draw you're reading. Core's mine, collar cluster's mine, whatever's under it is mine.\" Behind the words comes the scrape of a patched suit against a bulkhead, breath loud in a helmet mic. The sensor cluster on the collar swings off its slow arc and locks toward the ice slab, and the floodlamp gutters awake and holds."
+      }
+    },
+    {
+      "run": 2,
+      "frame": {
+        "ok": true,
+        "ms": 15003,
+        "firstTextMs": 5366,
+        "plan": [3150],
+        "rolls": [
+          "condition: Limited power",
+          "outer_first_look: Mutated structure",
+          "inner_first_look: Creaking hull"
+        ],
+        "groundedIn": 3,
+        "withdrawals": [],
+        "text": "Varga Relay hangs in the ice-light with most of its length gone lightless, a spine of iron dark for a generation. Only the one row of windows carries any glow, and that glow stutters — a station running on whatever trickle it can still scrape together. Up close the outer structure is wrong. The hull has grown: plating swollen and reknit into ridges that no shipwright laid, antenna masts fused into branching shapes, the scorched docking collar rimmed with a crust that spreads across the metal like something that fed there. Beyond the collar the interior breathes in long, groaning intervals, bulkheads flexing against pressure they were never meant to hold, each creak carrying down the corridors and dying in the dark. Emergency strips wake a meter ahead and gutter out a meter behind, the power too thin to light more than that. Somewhere inside that grinding iron, the beacon of the Meridian's Hope is still repeating itself into empty space, and the flight recorder it points toward waits in a station that is slowly ceasing to be a station."
+      },
+      "beat6": {
+        "ok": true,
+        "ms": 18313,
+        "entityCommittedMs": 8700,
+        "passageFirstTextMs": 10791,
+        "reviews": [
+          "The beat reveals a power thread leading to the station's core \\u2014 a location detail, not a person; no new character has entered the story. [NO RECIPE, forced]"
+        ],
+        "entities": [
+          {
+            "name": "Ulan Wade",
+            "fields": {
+              "goal": "Wade is building something down there — an object assembled from the relay's salvaged parts, and the slow pulse of the beacon is the rhythm of that work.",
+              "role": "A cultist keeping vigil at the station's core, tending the one live thread of power as an act of devotion rather than maintenance.",
+              "first_look": "Wiry and stripped thin, all cord and knuckle, the kind of body a generation of rationed air makes.",
+              "disposition": "Unfriendly toward anything that comes aboard; the core is Wade's alone, and intrusion is treated as theft before it is treated as contact."
+            }
+          }
+        ],
+        "groundedIn": 6,
+        "withdrawals": [],
+        "scanPassage": {
+          "role": "beat",
+          "text": "Vesna walks the Sensor Array across the relay's spine, tracing the power draw line by line through the dead sections. The returns come back cleaner than they have any right to: the trickle does not come from the lit windows at all, but from somewhere below them, a single hot thread running aft through the swollen plating toward the station's core. Everything else on the display is cold iron and crust. The one thread pulses in the same slow interval as the beacon, and the groaning bulkheads keep time with it. The reading settles under Vesna's hands, steady, and the Lantern Wake's screens hold it there without drift.",
+          "groundedIn": [],
+          "segments": [
+            {
+              "about": "character_does",
+              "characterId": "01a0a1c4-2b22-765e-82f1-3e894bd9e490",
+              "basis": ["01a0a1c4-661f-7f69-810a-399bad807d86"],
+              "text": "Vesna walks the Sensor Array across the relay's spine, tracing the power draw line by line through the dead sections."
+            },
+            {
+              "about": "world",
+              "characterId": null,
+              "basis": ["01a0a1c4-661f-7881-8bca-74d7dad99c9f"],
+              "text": "The returns come back cleaner than they have any right to: the trickle does not come from the lit windows at all, but from somewhere below them, a single hot thread running aft through the swollen plating toward the station's core."
+            },
+            {
+              "about": "world",
+              "characterId": null,
+              "basis": ["01a0a1c4-661f-7881-8bca-74d7dad99c9f"],
+              "text": "Everything else on the display is cold iron and crust. The one thread pulses in the same slow interval as the beacon, and the groaning bulkheads keep time with it."
+            },
+            {
+              "about": "character_undergoes",
+              "characterId": "01a0a1c4-2b22-765e-82f1-3e894bd9e490",
+              "basis": ["01a0a1c4-661f-7959-8155-b69cf23de126"],
+              "text": "The reading settles under Vesna's hands, steady, and the Lantern Wake's screens hold it there without drift."
+            }
+          ]
+        },
+        "text": "Deep in the relay's aft core, the hot thread terminates in a compartment where hand-strung lamps burn low, and a figure moves within it — wiry, stripped thin, all cord and knuckle, the body a generation of rationed air makes. Ulan Wade works over a shape assembled from the station's own bones: relay housings, antenna spars, the gutted spine of a signal amp, all lashed into something that has no name on any manifest. Each time the beacon pulses, Wade sets another piece, keeping the rhythm the way a devotee keeps a liturgy, and the bulkheads groan along. Then the work stops. Wade's head lifts toward the ceiling, toward the swept touch of a scan, and a voice goes out on the station's one live channel, thin and flat: \"That's mine. All of it down here is mine. Come and take it, thieves, and see what it costs.\""
+      }
+    }
+  ]
+}

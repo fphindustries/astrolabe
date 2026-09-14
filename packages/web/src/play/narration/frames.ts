@@ -9,7 +9,11 @@ import type { AiErrorKind, NarrationFrame } from '@astrolabe/shared';
 /** What a streaming request is for, and so how to retry it. */
 export type NarrationTarget =
   | { readonly kind: 'beat'; readonly afterCommandId: string }
-  | { readonly kind: 'revision'; readonly targetEventId: string; readonly note: string };
+  | { readonly kind: 'revision'; readonly targetEventId: string; readonly note: string }
+  /** D-138 (amended): the world pass that follows a beat's committed passage, and its own passage. */
+  | { readonly kind: 'world'; readonly passageEventId: string }
+  /** D-141: the open scene's framing passage. */
+  | { readonly kind: 'scene_frame' };
 
 /** A passage struck while it streamed (D-128): never quietly replaced. */
 export interface WithdrawnPassage {
@@ -52,6 +56,9 @@ export function applyFrame(outcome: StreamOutcome, frame: NarrationFrame): Strea
   }
   const { passage } = outcome;
   switch (frame.type) {
+    case 'world':
+      // Nothing to show in the passage itself; the stream owner refetches state.
+      return outcome;
     case 'delta':
       return {
         kind: 'pending',
@@ -79,6 +86,20 @@ export function applyFrame(outcome: StreamOutcome, frame: NarrationFrame): Strea
         failure: { target: passage.target, errorKind: frame.errorKind, message: frame.message },
       };
   }
+}
+
+/**
+ * What a finished request leads to. A beat's committed passage is followed
+ * by its world pass (D-138, amended); nothing else is. A refused request
+ * commits no passage, so it leads nowhere.
+ */
+export function followUp(
+  target: NarrationTarget,
+  outcome: StreamOutcome,
+): NarrationTarget | undefined {
+  return target.kind === 'beat' && outcome.kind === 'committed' && outcome.eventId !== ''
+    ? { kind: 'world', passageEventId: outcome.eventId }
+    : undefined;
 }
 
 /** A stream that closed without a closing frame lost its connection, not its answer. */

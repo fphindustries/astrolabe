@@ -74,6 +74,14 @@ export function narrateBeatPath(campaignId: string) {
   return `/campaigns/${campaignId}/narrations`;
 }
 
+export function sceneFramePath(campaignId: string) {
+  return `/campaigns/${campaignId}/scene-frames`;
+}
+
+export function worldPassPath(campaignId: string) {
+  return `/campaigns/${campaignId}/world-passes`;
+}
+
 export function correctNarrationPath(campaignId: string, eventId: string) {
   return `/campaigns/${campaignId}/narrations/${eventId}/corrections`;
 }

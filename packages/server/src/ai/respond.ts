@@ -57,6 +57,8 @@ export interface TextSink {
   reset(reason: string): void;
   checking?(): void;
   withdrawn?(reason: string, rejectedText: string): void;
+  /** D-138: a world pass committed what it established, before its passage (8.2). */
+  world?(): void;
 }
 
 /** The one rule a passage of prose has to pass: it ended on its own, and it says something. */

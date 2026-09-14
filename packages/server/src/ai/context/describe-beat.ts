@@ -40,7 +40,17 @@ import { computeVoidState, isSuppressed } from '../../projection/void-state.js';
  * D-127's kinds, plus `move` for which move was made and what it chained
  * into. An oracle result is a `roll`; a momentum burn is an `effect`.
  */
-export type FactKind = 'move' | 'declared_action' | 'roll' | 'choice' | 'effect' | 'injury';
+export type FactKind =
+  | 'move'
+  | 'declared_action'
+  | 'roll'
+  | 'choice'
+  | 'effect'
+  | 'injury'
+  /** D-141: the scene a frame opens. */
+  | 'scene'
+  /** D-138: an entity a world pass established. */
+  | 'entity';
 
 export interface BeatFact {
   /** `F1`, `F2`, … in log order: what a segment's `basis` cites. */
@@ -50,6 +60,12 @@ export interface BeatFact {
   readonly characterId?: CharacterId;
   readonly eventId: EventId;
   readonly text: string;
+  /**
+   * The oracle rolls behind the fact (8.2): a passage citing it is grounded
+   * in them, and they become its chips. A roll fact is grounded in itself;
+   * an entity in the rolls it was built from.
+   */
+  readonly grounds?: readonly EventId[];
 }
 
 export interface BeatFacts {
@@ -91,13 +107,19 @@ export function describeBeat(
     id === undefined ? 'The crew' : (state.characters[id as never]?.callsign ?? 'A crew member');
 
   let event: AstrolabeEvent;
-  const push = (kind: FactKind, characterId: CharacterId | undefined, text: string): void => {
+  const push = (
+    kind: FactKind,
+    characterId: CharacterId | undefined,
+    text: string,
+    grounds?: readonly EventId[],
+  ): void => {
     facts.push({
       key: `F${facts.length + 1}`,
       kind,
       ...(characterId !== undefined ? { characterId } : {}),
       eventId: event.id,
       text,
+      ...(grounds !== undefined ? { grounds } : {}),
     });
   };
 
@@ -193,7 +215,9 @@ export function describeBeat(
         break;
       }
       case 'oracle.rolled':
-        push('roll', undefined, `Oracle result (${event.payload.roll}): ${event.payload.rowText}`);
+        push('roll', undefined, `Oracle result (${event.payload.roll}): ${event.payload.rowText}`, [
+          event.id,
+        ]);
         break;
       case 'move.chained': {
         const p = event.payload;

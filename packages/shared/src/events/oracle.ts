@@ -1,6 +1,6 @@
 import * as z from 'zod';
 
-import { OracleIdSchema } from '../ids.js';
+import { OracleIdSchema, RecipeIdSchema } from '../ids.js';
 
 /**
  * A server-rolled oracle table result (design-event-log.md §2: "stores the
@@ -19,4 +19,11 @@ export const OracleRolledSchema = z.object({
   oracleId: OracleIdSchema,
   roll: z.int().min(1).max(100),
   rowText: z.string().min(1),
+  /**
+   * D-142: the recipe and slot a world-pass roll fills (D-65), for the
+   * chip's label and so a beat's grounding can be asserted. Absent on a
+   * roll no recipe asked for, such as Pay the Price's table.
+   */
+  recipeId: RecipeIdSchema.optional(),
+  slot: z.string().min(1).optional(),
 });

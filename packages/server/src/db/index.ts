@@ -45,6 +45,21 @@ export {
   type SuggestMoveRequest,
 } from './suggestion-commands.js';
 export {
+  BEAT_RECIPES,
+  SCENE_FRAME_COMMAND_KIND,
+  SCENE_RECIPES,
+  WORLD_PASSAGE_COMMAND_KIND,
+  WORLD_PASS_COMMAND_KIND,
+  prepareSceneFrame,
+  prepareWorldPass,
+  runSceneFrame,
+  runWorldPass,
+  type PreparedSceneFrame,
+  type PreparedWorldPass,
+  type SceneFrameRequest,
+  type WorldPassRequest,
+} from './world-commands.js';
+export {
   proposeCharacter,
   proposeIncidents,
   type ProposalRequest,

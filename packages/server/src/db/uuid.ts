@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 
 /**
  * UUID v7: a 48-bit millisecond timestamp followed by randomness, so ids
@@ -36,4 +36,18 @@ export function uuidv7(now: number = Date.now()): string {
     hex.slice(16, 20),
     hex.slice(20, 32),
   ].join('-');
+}
+
+/**
+ * A uuid derived from another id (version 8, RFC 9562's layout for ids a
+ * program derives itself): a second command that follows from a
+ * client-minted one, such as a world pass's follow-up passage (8.2), gets
+ * the same id on every retry of the first, so a replay finds it.
+ */
+export function derivedUuid(from: string, purpose: string): string {
+  const bytes = createHash('sha256').update(`astrolabe:derived:${purpose}:${from}`).digest();
+  bytes[6] = ((bytes[6] as number) & 0x0f) | 0x80;
+  bytes[8] = ((bytes[8] as number) & 0x3f) | 0x80;
+  const hex = bytes.subarray(0, 16).toString('hex');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }

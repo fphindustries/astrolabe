@@ -46,6 +46,11 @@ export interface SegmentTags {
 
 export interface SegmentContext {
   readonly facts: readonly BeatFact[];
+  /**
+   * D-141: nothing was declared and no fact concerns a player character, so
+   * every segment is `world` (the scene frame, and a world pass's passage).
+   */
+  readonly worldOnly?: boolean;
   readonly latitude: CampaignSettings['narrationLatitude'];
   readonly characters: readonly {
     readonly id: CharacterId;
@@ -58,10 +63,12 @@ export function segmentContext(
   beat: BeatFacts,
   state: CampaignState,
   latitude: CampaignSettings['narrationLatitude'],
+  worldOnly = false,
 ): SegmentContext {
   return {
     facts: beat.facts,
     latitude,
+    ...(worldOnly ? { worldOnly } : {}),
     characters: Object.values(state.characters).map((c) => ({
       id: c.id,
       callsign: c.callsign,
@@ -107,6 +114,8 @@ const KIND_WORDS: Readonly<Record<FactKind, string>> = {
   choice: 'choice',
   effect: 'effect',
   injury: 'injury',
+  scene: 'scene',
+  entity: 'established',
 };
 
 /** `[F2] (declared action, Rook) The player declared: "…"` */
@@ -138,6 +147,11 @@ export function segmentInstructions(ctx: SegmentContext, declaredAction: boolean
       : '- character_says: a player character speaking. This latitude does not allow it; if you write it, label it so, and it will be rejected.',
     "Each segment's basis cites the keys of the facts it narrates.",
     ...(declaredAction ? [] : ['No action was declared: there is no declared-action fact.']),
+    ...(ctx.worldOnly === true
+      ? [
+          'Every segment in this passage is world. No player character, and not the crew together, does, says, feels or undergoes anything in it.',
+        ]
+      : []),
   ].join('\n');
 }
 
@@ -148,6 +162,9 @@ export function checkSegmentTags(tags: SegmentTags, ctx: SegmentContext): string
     return `A segment cites ${unknown.join(', ')}, which ${unknown.length === 1 ? 'is' : 'are'} not a fact of this beat.`;
   }
 
+  if (ctx.worldOnly === true && tags.about !== 'world') {
+    return 'This passage narrates the world only: no player character acts, undergoes, speaks or is described, so every segment is world.';
+  }
   if (tags.about === 'world') {
     return tags.character === null
       ? undefined
@@ -191,7 +208,7 @@ export function checkSegmentText(
   ctx: SegmentContext,
 ): string | undefined {
   if (tags.about === 'world') {
-    const named = ctx.characters.find((c) => namesOf(c).some((word) => containsWord(text, word)));
+    const named = namedCharacter(text, ctx.characters);
     return named === undefined
       ? undefined
       : `A world segment named ${named.callsign}; what happens to a player character must be labelled as theirs.`;
@@ -214,6 +231,20 @@ export function checkSegments(
     }
   }
   return joinSegments(segments).length === 0 ? 'The passage was empty.' : undefined;
+}
+
+/**
+ * `narration.written.groundedIn` (8.2, D-17): the oracle rolls behind the
+ * facts the segments cite, in the order first cited.
+ */
+export function groundedInOf(
+  segments: readonly Pick<Segment, 'basis'>[],
+  ctx: SegmentContext,
+): readonly EventId[] {
+  const cited = segments.flatMap((segment) =>
+    segment.basis.flatMap((key) => ctx.facts.find((fact) => fact.key === key)?.grounds ?? []),
+  );
+  return [...new Set(cited)];
 }
 
 /** The committed passage: the segments' text, in order, as one paragraph. */
@@ -245,6 +276,18 @@ export function resolveSegments(
       ],
       text: segment.text.trim(),
     }));
+}
+
+/**
+ * The first player character `text` names by callsign or a word of their
+ * name, whole-word and case-sensitive. D-127's world-segment check, and
+ * D-140's check on world text.
+ */
+export function namedCharacter<C extends SegmentContext['characters'][number]>(
+  text: string,
+  characters: readonly C[],
+): C | undefined {
+  return characters.find((c) => namesOf(c).some((word) => containsWord(text, word)));
 }
 
 function namesOf(character: SegmentContext['characters'][number]): readonly string[] {

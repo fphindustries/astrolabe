@@ -42,12 +42,30 @@ export interface ResolvedNarration {
   readonly note?: string;
 }
 
+/**
+ * An oracle chip (D-17, 8.2): a roll the passage was grounded in, with
+ * what it said, resolved from `narration.written.groundedIn`.
+ */
+export interface OracleChip {
+  readonly eventId: EventId;
+  readonly oracleId: string;
+  readonly slot?: string;
+  readonly roll: number;
+  readonly rowText: string;
+  readonly voided: boolean;
+}
+
 export interface NarrativeEntry {
   readonly event: AstrolabeEvent;
   readonly voided: boolean;
   readonly voidedBy: readonly VoidMark[];
   /** Present on `narration.written` only. */
   readonly narration?: ResolvedNarration;
+  /**
+   * Present on `narration.written` with grounding: its chips, in the order
+   * cited. A roll outside the fetched events is left out.
+   */
+  readonly chips?: readonly OracleChip[];
   /**
    * Present on a `dice.rolled` that carried a burn offer: whether the player
    * went on to take it. A8's offer is only still live while this is false.

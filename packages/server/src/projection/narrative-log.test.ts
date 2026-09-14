@@ -36,6 +36,60 @@ const ROLL = {
   rng: { source: 'seeded', seed: 7 },
 } as const;
 
+describe('oracle chips (8.2, D-17)', () => {
+  it('puts the rolls a passage was grounded in under it, struck when discarded', () => {
+    const builder = goldenSessionPrelude();
+    builder.add('oracle.rolled', {
+      oracleId: 'oracle:characters/role',
+      roll: 41,
+      rowText: 'Navigator',
+      recipeId: 'recipe:npc',
+      slot: 'role',
+    });
+    const kept = builder.last();
+    builder.add('oracle.rolled', {
+      oracleId: 'oracle:characters/goal',
+      roll: 7,
+      rowText: 'Obtain an object',
+    });
+    const discarded = builder.last();
+    builder.add('event.voided', {
+      targetEventId: discarded.id,
+      kind: 'reroll',
+      reason: 'Contradicts the logs',
+      cascaded: [discarded.id],
+    });
+    builder.add(
+      'narration.written',
+      { role: 'world', text: 'A voice on comms.', groundedIn: [kept.id, discarded.id] },
+      { actor: AI_ACTOR },
+    );
+    const passage = builder.last();
+
+    const entry = buildNarrativeLog(builder.build())
+      .beats.flatMap((b) => b.entries)
+      .find((e) => e.event.id === passage.id);
+
+    expect(entry?.chips).toEqual([
+      {
+        eventId: kept.id,
+        oracleId: 'oracle:characters/role',
+        slot: 'role',
+        roll: 41,
+        rowText: 'Navigator',
+        voided: false,
+      },
+      {
+        eventId: discarded.id,
+        oracleId: 'oracle:characters/goal',
+        roll: 7,
+        rowText: 'Obtain an object',
+        voided: true,
+      },
+    ]);
+  });
+});
+
 describe('grouping into beats', () => {
   it('renders one command as one beat, not one row per event', () => {
     const builder = goldenSessionPrelude();

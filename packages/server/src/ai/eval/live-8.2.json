@@ -1,0 +1,201 @@
+{
+  "date": "2026-09-14",
+  "narrator": "claude-opus-5",
+  "checker": "claude-sonnet-5",
+  "runs": [
+    {
+      "run": 0,
+      "frame": {
+        "ok": true,
+        "ms": 14672,
+        "firstTextMs": 5545,
+        "plan": [3473],
+        "rolls": [
+          "condition: Limited power",
+          "outer_first_look: Corpses",
+          "inner_first_look: Flashing strobe lights"
+        ],
+        "groundedIn": 3,
+        "withdrawals": [],
+        "text": "Varga Relay hangs at the sector's edge, a spindle of iron gone grey with forty years of micrometeorite pocking, its solar vanes cracked and half-folded like a dead insect's wings. Power crawls through it in a thin, failing trickle: one row of windows lit, the rest of the station a lightless hulk turning slow against the star field. Out along the scorched docking collar, the bodies are still there. Three of them, tethered or snagged, suit fabric bleached chalk-white by unfiltered starlight, drifting on their lines with the patience of things that stopped waiting a generation ago. Behind the lit windows, something strobes. A hard white pulse, three beats and a pause, three beats and a pause, throwing the shadows of interior stanchions across the glass and then swallowing them again, an alarm that nobody survived to silence. Somewhere inside that failing grid, the relay is still repeating the Meridian's Hope, still throwing a dead ship's voice out into the dark. Whatever answers for the station now has had a generation alone with it."
+      },
+      "beat6": {
+        "ok": true,
+        "ms": 3752,
+        "reviews": [
+          "The beat only clarifies a technical path — power routed to something deep in the station's core — which is already implied by the lit windows and strobe; no person is revealed yet, and the discovery stands fine as infrastructure. [NO RECIPE, forced]"
+        ],
+        "entities": [],
+        "groundedIn": 0,
+        "withdrawals": [],
+        "scanPassage": {
+          "role": "beat",
+          "text": "Vesna walks the Sensor Array along the station's hull, tracing the power draw line by line until the trickle of current resolves into a map. The draw is small and stubborn, and it does not go where it should. Most of the spindle is cold iron, but a single spine of conduit runs live from a cracked solar vane down past the lit windows to somewhere deep in the station's core, where the load pools and pulses in time with that three-beat strobe. Everything else, life support, docking, comms, has been stripped off the grid and left dark, as if the relay chose long ago what was worth keeping alive. The picture comes together clean on the display, and the Lantern Wake feels a half-step ahead of the dark for the first time since the Drift.",
+          "groundedIn": [],
+          "segments": [
+            {
+              "about": "character_does",
+              "characterId": "01a0a1c5-990e-773a-af14-d7cb462fcf03",
+              "basis": ["01a0a1c5-d2d6-7836-b743-0c0053baeb9d"],
+              "text": "Vesna walks the Sensor Array along the station's hull, tracing the power draw line by line until the trickle of current resolves into a map."
+            },
+            {
+              "about": "world",
+              "characterId": null,
+              "basis": ["01a0a1c5-d2d7-799b-abb6-9d2c0e27f7a1"],
+              "text": "The draw is small and stubborn, and it does not go where it should. Most of the spindle is cold iron, but a single spine of conduit runs live from a cracked solar vane down past the lit windows to somewhere deep in the station's core, where the load pools and pulses in time with that three-beat strobe."
+            },
+            {
+              "about": "world",
+              "characterId": null,
+              "basis": ["01a0a1c5-d2d7-799b-abb6-9d2c0e27f7a1"],
+              "text": "Everything else, life support, docking, comms, has been stripped off the grid and left dark, as if the relay chose long ago what was worth keeping alive."
+            },
+            {
+              "about": "character_undergoes",
+              "characterId": "01a0a1c5-990e-773a-af14-d7cb462fcf03",
+              "basis": ["01a0a1c5-d2d7-7f80-a0f0-776092c11a3b"],
+              "text": "The picture comes together clean on the display, and the Lantern Wake feels a half-step ahead of the dark for the first time since the Drift."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "run": 1,
+      "frame": {
+        "ok": true,
+        "ms": 15179,
+        "firstTextMs": 6333,
+        "plan": [4138],
+        "rolls": [
+          "condition: Damaged or breached",
+          "outer_first_look: Stripped exterior",
+          "inner_first_look: Nesting or feeding creatures"
+        ],
+        "groundedIn": 3,
+        "withdrawals": [],
+        "text": "Varga Relay hangs at the sector's edge with the slow spin of something no one has corrected in a generation, its ring canted against the starfield. A long gash runs from the docking collar aft, plating peeled outward, the breach rimed in frost that has bloomed and refrozen a thousand times. The exterior has been stripped to its bones: antenna masts sheared off at the mounts, hull panels cut away in neat rectangles, cable runs pulled from their conduits and left trailing like severed tendons. Whoever came before took everything worth the effort of taking, and took it with tools, not teeth. Behind the one lit row of windows, something moves against the glow, low and many-limbed, dragging pale strands across the panes. Shapes cluster there in a heap, the way creatures gather where it is warm and where there is something to feed on. And under all of it the relay still transmits, throwing the Meridian's Hope's forty-year-old call out into the dark, its recorder waiting somewhere past that breach and that glass."
+      },
+      "beat6": {
+        "ok": true,
+        "ms": 21485,
+        "entityCommittedMs": 13234,
+        "passageFirstTextMs": 15302,
+        "reviews": [
+          "The beat resolves to a technical sensor read — reactor, conduits, lit windows — with no person yet established as the source of the draw. Something is keeping that stack alive and the transmitter fed; a survivor or occupant is the natural discovery here."
+        ],
+        "entities": [
+          {
+            "name": "Jorunn Taylan",
+            "fields": {
+              "goal": "Taylan is chasing a truth believed to be buried somewhere in the station's silence, and preaches that the truth is owed — a debt that something or someone out there must finally pay.",
+              "role": "Jorunn Taylan is a preacher, and the lit compartment doubles as a chapel — hand-lettered scripture taped over dead panels, the transmitter mast kept warm to carry sermons out into the dark.",
+              "first_look": "A generation of thin air and unshielded reactor bleed has changed Taylan: skin gone gray and plated at the knuckles and jaw, eyes too large and too dark for the low light.",
+              "disposition": "Taylan is curious rather than guarded, forever measuring, listening, and asking after things — the sort who would rather question a newcomer than turn one away."
+            }
+          }
+        ],
+        "groundedIn": 7,
+        "withdrawals": [],
+        "scanPassage": {
+          "role": "beat",
+          "text": "Vesna traces the power draw with the Lantern Wake's sensors, walking the array's gain up notch by notch until the station's heat signature resolves out of the cold. The draw is small and stubborn: a single reactor stack running at a fraction of rated output, bleeding current aft through three intact conduits toward the lit row of windows and the transmitter mast beyond it. Everything else in the ring is dead — no draw at all past the breach, which means the corridors there are unpressurized and unheated. The picture arrives clean on the console glass, and the readout climbs with it.",
+          "groundedIn": [],
+          "segments": [
+            {
+              "about": "character_does",
+              "characterId": "01a0a1c6-0f6e-74eb-9183-2bbfff3b8d7f",
+              "basis": ["01a0a1c6-4b1e-794f-849b-2838cae7a5a3"],
+              "text": "Vesna traces the power draw with the Lantern Wake's sensors, walking the array's gain up notch by notch until the station's heat signature resolves out of the cold."
+            },
+            {
+              "about": "world",
+              "characterId": null,
+              "basis": ["01a0a1c6-4b1e-7c1a-9857-31154a4afc64"],
+              "text": "The draw is small and stubborn: a single reactor stack running at a fraction of rated output, bleeding current aft through three intact conduits toward the lit row of windows and the transmitter mast beyond it. Everything else in the ring is dead — no draw at all past the breach, which means the corridors there are unpressurized and unheated."
+            },
+            {
+              "about": "character_undergoes",
+              "characterId": "01a0a1c6-0f6e-74eb-9183-2bbfff3b8d7f",
+              "basis": ["01a0a1c6-4b1e-71ed-934a-71dcc6089045"],
+              "text": "The picture arrives clean on the console glass, and the readout climbs with it."
+            }
+          ]
+        },
+        "text": "Under the relay's forty-year-old call, a second carrier rides the same mast — closer, warmer, a voice speaking slow and steady into the dark. It has the cadence of scripture, and it has been running a long time. \"The truth was not lost,\" the voice says. \"It was taken, and what is taken is owed, and a debt is paid whether or not the debtor consents.\" Behind the lit windows a shape rises among the pale strands, taller than the rest, gray-skinned and plated at the knuckles and jaw, eyes too large and too dark for that low glow. Hand-lettered sheets are taped over the dead panels behind it. The sermon breaks off mid-line, and the carrier hangs open, listening."
+      }
+    },
+    {
+      "run": 2,
+      "frame": {
+        "ok": true,
+        "ms": 16504,
+        "firstTextMs": 5470,
+        "plan": [3402],
+        "rolls": [
+          "condition: Cold and dark",
+          "outer_first_look: Sending a signal or message",
+          "inner_first_look: Cramped spaces"
+        ],
+        "groundedIn": 3,
+        "withdrawals": [],
+        "text": "Varga Relay hangs against the black like a discarded tool, its spine of corridors furred with frost, the scorched docking collar blooming outward in petals of blackened alloy. No running lights, no heat bloom, nothing but the slow tumble of the ice field grinding past its flank. What atmosphere remains inside must be cold enough to fall as snow, and the hull's thermal read is a flat, dead grey from bow to stern. Only that one row of windows carries any glow at all, weak and yellowed, like a lamp left burning in an empty house. And the station is still talking. The relay dish, bent on its mount, holds its aim with stubborn precision and pushes the Meridian's Hope beacon out into the dark on a loop forty years long, a message someone rigged to keep sending long after the sending stopped mattering. Through the lit windows the interior shows itself in slivers: passages narrow as coffins, conduit bundles sagging low enough to force a crouch, bulkhead hatches set close together where a generation of scavenging has packed the guts of the station tighter and tighter. Somewhere behind that cramped, freezing warren is the transmitter that knows where the beacon truly came from — and whoever scrubbed those coordinates from the archive got here first."
+      },
+      "beat6": {
+        "ok": true,
+        "ms": 20354,
+        "entityCommittedMs": 10799,
+        "passageFirstTextMs": 12798,
+        "reviews": [
+          "The scan reveals a second, recent, unscheduled power drain deep in the station \" someone alive aboard a station dark for a generation. That survivor/scavenger is not yet established."
+        ],
+        "entities": [
+          {
+            "name": "Nassar Jefferies",
+            "fields": {
+              "goal": "Nassar is trying to shake off a faction — to lose whoever is tracking him and put the dead relay between himself and them.",
+              "role": "A scout by trade, camped in the warren aft of the crew ring where the live bus still runs — the one who tapped it, and who has been reading the station's dark corridors the way others read charts.",
+              "first_look": "Armed and openly so: a sidearm holstered at the thigh and a longer weapon slung within reach, kept close even where the air is thin.",
+              "disposition": "Hostile, and past reasoning with — anything that comes down that corridor is assumed to be the thing he is running from."
+            }
+          }
+        ],
+        "groundedIn": 7,
+        "withdrawals": [],
+        "scanPassage": {
+          "role": "beat",
+          "text": "Vesna walks the Sensor Array along the station's flank, tracing the thin thread of power draw from the lit windows back through the frozen spine. The return comes back clean: a single live bus running aft from the crew ring, feeding one compartment and the bent dish above it, everything else on the station cold and open-circuited. The draw pulses in a slow forty-second cycle, matched to the beacon. Beneath that steady rhythm sits a second, smaller drain, unscheduled and recent, drawing off the same bus somewhere deeper in the warren. The picture holds on the display, sharp-edged and unarguable, and the Lantern Wake's hull ticks quietly around Vesna as the ice grinds past.",
+          "groundedIn": [],
+          "segments": [
+            {
+              "about": "character_does",
+              "characterId": "01a0a1c6-be84-73e6-9c79-37363dc927e5",
+              "basis": ["01a0a1c6-ff5c-774f-9b84-70ea2661299c"],
+              "text": "Vesna walks the Sensor Array along the station's flank, tracing the thin thread of power draw from the lit windows back through the frozen spine."
+            },
+            {
+              "about": "world",
+              "characterId": null,
+              "basis": ["01a0a1c6-ff5c-70ba-9386-e68ca27c289a"],
+              "text": "The return comes back clean: a single live bus running aft from the crew ring, feeding one compartment and the bent dish above it, everything else on the station cold and open-circuited. The draw pulses in a slow forty-second cycle, matched to the beacon."
+            },
+            {
+              "about": "world",
+              "characterId": null,
+              "basis": ["01a0a1c6-ff5c-70ba-9386-e68ca27c289a"],
+              "text": "Beneath that steady rhythm sits a second, smaller drain, unscheduled and recent, drawing off the same bus somewhere deeper in the warren."
+            },
+            {
+              "about": "character_undergoes",
+              "characterId": "01a0a1c6-be84-73e6-9c79-37363dc927e5",
+              "basis": ["01a0a1c6-ff5c-797d-9d81-4156e9579134"],
+              "text": "The picture holds on the display, sharp-edged and unarguable, and the Lantern Wake's hull ticks quietly around Vesna as the ice grinds past."
+            }
+          ]
+        },
+        "text": "The second drain moves. It slides a few meters aft along the live bus and stops, and the sensor return resolves it into a shape: a portable heater, a tapped junction, a body warm enough to register against all that cold. In the slivers of lit window, a man crosses the gap between bulkheads — a scout's rig, a sidearm riding his thigh, a longer weapon slung where one hand can find it without looking. He stops at the hatch frame and looks back up the corridor he came from, holding there a long moment, watching the dark the way a man watches a door he expects to open. Then the bus flickers as something is cut into it, and a voice comes up raw and unmodulated on the open band: \"I see you. Come down that corridor and I'll put you in it.\""
+      }
+    }
+  ]
+}

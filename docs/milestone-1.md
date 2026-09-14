@@ -166,13 +166,13 @@ narrative log is a second read model with its own paged query.
 
 ### 8. Oracle-grounded generation
 
-- [ ] 8.1 Oracle roll API the AI calls instead of inventing results, including declared recipes per entity type (D-65)
-- [ ] 8.2 Oracle chips under narration, linked to the passage they informed
-- [ ] 8.3 Visible reroll with the discarded chip struck through, capped per campaign settings
-- [ ] 8.4 AI-set odds on yes/no world questions
-- [ ] 8.5 Entity creation from oracle results: NPCs, locations, factions
-- [ ] 8.6 Clock creation and ticks by the AI, with a stated reason
-- [ ] 8.7 Complication options on request for weak hits with no menu
+- [x] 8.1 Oracle roll API the AI calls instead of inventing results, including declared recipes per entity type (D-65, D-137–D-139). The world pass runs after the passage (D-138, amended by the step-0 spike). Verified live (see "Implementation notes (task 8.1)")
+- [x] 8.2 Oracle chips under narration, linked to the passage they informed; the scene frame is their first passage (D-138, D-141). Also the follow-up passage that narrates what a world pass established. Verified live; the scene frame misses A18 at 4.9–6.3 s (see "Implementation notes (task 8.2)")
+- [ ] 8.3 Visible reroll with the discarded chip struck through, capped per campaign settings (D-142)
+- [ ] 8.4 AI-set odds on yes/no world questions, minimal: a world-pass plan field (D-28, D-138). No golden-session beat exercises it
+- [ ] 8.5 Entity creation from oracle results: NPCs. Locations and factions deferred (D-144)
+- [ ] 8.6 Clock creation and ticks by the AI, with a stated reason (D-138, D-140)
+- [ ] 8.7 Weak-hit complications with no menu: written by the player or picked from AI options on request, required before Done (D-15, D-143)
 
 ### 9. Session lifecycle
 
@@ -1764,3 +1764,156 @@ This was 2026-09-14 with claude-opus-5 on the `session-2-open` fixture. Each mov
 - the log view model.
 
 A browser pass ran against live Claude, because the stub never notes anything. Juno typed "reads the station logs in the quiet of the cockpit" and rolled Face Danger. The card showed the miss straight away, and the note arrived a few seconds later. The log showed the note under the move with no controls. **Done** narrated the beat, and the passage's `causedBy` was the chain's last `move.chained`, not the note written just before it.
+
+## Implementation notes (task 8.1, the world pass)
+
+8.1 is done (D-65, D-137–D-139, D-140, D-144). Before any code, the step-0 spike measured the approved order: plan, roll and interpret, then narrate. It missed A18 badly, so D-138 was amended: the world pass follows the passage.
+
+### Step-0 spike
+
+The spike ran 2026-09-14 on `session-2-open`, with real Beat 6 and Beat 7 moves and Opus 5 narrating. Every run is in `ai/eval/live-spike-8.json`. The first run's file was overwritten, so its timings are given here.
+
+- **A plan that asked for nothing:** first text at 3.4–6.1 s with Sonnet 5 as planner, 5.1–5.7 s with Opus 5.
+- **A plan that generated an NPC or derelict:** first text at 12.1–15.0 s. Interpreting alone took 6.9–8.0 s on either model.
+- **Haiku 4.5 was no faster:** first text at 8.4–23.8 s.
+- **Quality findings:**
+  - Opus requested the derelict recipe for Varga Relay, already established, in 2 of 3 runs.
+  - A routine scan got a clock in 3 of 6 Opus and Sonnet runs.
+  - Without the move's outcome text, no run made Beat 6's NPC.
+
+### Shape
+
+- **Recipes** (`rules/src/recipes/`). `NPC_RECIPE` and `DERELICT_RECIPE` are in `ORACLE_RECIPES`. Each slot names its table, and a name slot is marked `name: true`. `OracleRecipe` gained a `label` for the prompt.
+  - `rollRecipe` rolls each slot in order. A slot holds one or more results:
+    - A **"Roll twice"** row gives exactly two results, and a nested "Roll twice" is rerolled once. This is D-68 applied to recipes.
+    - A row that **embeds tables** ("[Action] + [Theme]", "[Descriptor] + [Focus]") is resolved by rolling each embedded table.
+    - A row that only says what to roll is never itself a result.
+  - The first live pass found this gap: a goal of "Roll twice", which the Guide interpreted as a result.
+- **Prompt and checks** (`ai/context/world.ts`, pure).
+  - `outcomeTexts` gives each roll's outcome text at its final tier, after any burn.
+  - `buildWorldPlanRequest` sends state, beat facts, outcome text and the committed passage, plus the offered recipes.
+  - `worldPlanSchema` answers `{ recipes: [{ recipe, reason }] }`, at most 2.
+  - `buildWorldInterpretRequest` lists each result under a key (`E1.role`, or `E1.goal.1` and `E1.goal.2`).
+  - `checkWorldInterpretation` requires:
+    - one entity per instance;
+    - each field slot answered exactly once, citing one of its own results;
+    - a name citing only name rolls;
+    - D-140: no player character named in the name or any field, using `namedCharacter`, now exported from `segments.ts`.
+- **Command** (`db/world-commands.ts`). `prepareWorldPass` refuses before any stream opens:
+  - an event that isn't a beat passage;
+  - a voided passage;
+  - a passage already followed by a pass that succeeded (`already_passed`).
+
+  A failed pass can be retried. `runWorldPass` writes one command, `world.pass`, caused by the passage:
+  - the plan's accounting;
+  - every roll, as system-authored `oracle.rolled` with `recipeId` and `slot`, even when interpreting fails;
+  - the interpretation's accounting;
+  - `entity.established` (`establishedBy: 'ai'`, `recipeId`, every roll in `groundedIn`), or `ai.failed`.
+
+  Beat passes offer only `recipe:npc`, per D-138 amendment (b).
+- **Event.** `oracle.rolled` gained optional `recipeId` and `slot` (D-142). `rerollOf` and `question` come with 8.3 and 8.4.
+- **Route.** `POST /api/campaigns/:id/world-passes {commandId, passageEventId}` streams NDJSON, closing with `committed` or `failed`. 8.2's follow-up passage will stream on the same request.
+- **Web.** `NarrationTarget` gained `world`. `followUp` queues a beat's world pass right after its passage commits, ahead of any beat queued behind it. A world-pass failure pauses play with Retry, like narration. An `already_passed` refusal is silent. While a pass runs, the log shows "The Guide is considering whether the world holds anything new…".
+- **Dev stub.** `world_plan` asks for nothing, so a stubbed session plays without generating.
+
+### The SDK doesn't enforce enums
+
+`betaZodOutputFormat` in `@anthropic-ai/sdk` 0.125 keeps only `type`, `description`, `title`, `properties`, `required`, supported `format`s, `items` and `minItems`, and moves everything else (`enum`, `const`, `maxItems`, `minLength`) into the description (`lib/transform-json-schema.js`). **No enum in any schema is enforced during decoding.** Zod validates afterwards and a violation is re-asked, so nothing invalid has been committed. But the notes for 7.14 ("constrained decoding enforces every cited key exists"), 7.12 and 4.6 describe an enforcement that doesn't happen. In the first 8.1 live pass, 2 of 6 plans answered something other than `recipe:npc` on both attempts, and play would have paused. The plan now names recipes by entity kind (`npc`), the word the model writes, and `recipeOf` maps it back. Whether to send enums to the API directly, around the SDK helper, is an open question for the user.
+
+### Live pass
+
+The pass ran 2026-09-14 on `session-2-open`, with claude-opus-5 narrating and planning and claude-sonnet-5 checking. Beat 6's scan and Beat 7's chain were each narrated, checked and followed by a real world pass. Each run was 3 × 2 beats, run twice after the enum fix; the second run is in `ai/eval/live-world-pass-8.1.json`.
+
+- **Plans:** 12 of 12 valid. Before the fix, 2 of 6 failed.
+- **Beat 6:** an NPC in 3 of 6 runs (Magnus Malek, Luna Velez, Echo Silva). **Beat 7:** none in 6 of 6.
+- **Timing after the passage commits:** 1.97–3.36 s when the plan asks for nothing. With an NPC, 9.2–10.3 s, of which interpreting took 6.5–6.9 s.
+- **Entities:**
+  - Fields stayed with their rolls, and none named a player character.
+  - Some described an encounter that hasn't happened yet ("filling the lit doorway of the aft corridor", "unlikely to take a hailing ship's word at face value"). One, in the first live pass, referred to "the Lantern Wake's hail" when no one had hailed. D-140 can't catch the crew acting together; the checker isn't run on world text (D-140).
+- **Narration** (existing 7.15 path): 10.5–42.0 s to commit, the long ones after withdrawals.
+
+### Verification
+
+`npm run typecheck`, `npm run lint`, `npm test` (940 tests) and the web build pass. The new tests cover:
+
+- recipes naming real tables, seeded reproducibility, "Roll twice" and nested rerolls, and embedded tables;
+- the plan offering only what it's given, and outcome text at the burned tier;
+- the interpretation check, including multi-result slots and D-140's name check with its whole-word exemption;
+- the dev stub's plan;
+- the command:
+  - the request's contents;
+  - accounting only on an empty plan;
+  - rolls and an entity citing every roll;
+  - replay, and `already_passed`;
+  - a name-check re-ask ending in `ai.failed` with the rolls kept, then a retry;
+  - refusals, and the pass voided with its move;
+- the route;
+- `followUp`.
+
+A browser pass on the stub, on a freshly reset `session-2-open`, played Vesna's Gather Information to Done. The narration POST was followed by `/world-passes`. The world command, caused by the passage, held only the plan's accounting, and the log rendered normally.
+
+The console showed a **pre-existing** React duplicate-key warning from `MoveComposer.tsx:228`. Datasworn ability ids are per-asset indexes (`'0'`, `'1'`, `'2'`), so two assets' ability `1` collide. It is left for 6.3's owner or 10.1.
+
+**After the live pass, not yet run live.** Two changes followed review:
+
+- **The plan answers a `review` first:** what the beat brings that isn't established, and whether it needs a recipe. Beat 6 produced its NPC in only 3 of 6 runs, and a plan that requested nothing said nothing, so the next live pass could not tell a judgement from a miss. 8.5 inherits this.
+- **`INTERPRET_RULES` says a field is what the entity *is*,** never an encounter with the crew that hasn't happened. Entity fields reach every later prompt as established fact (`render-state.ts`), so an invented hail would become canon.
+
+The design record's claims that enums are enforced while decoding, in D-127 (2), D-132 and D-135, are corrected inline.
+
+## Implementation notes (task 8.2, chips, the follow-up passage and the scene frame)
+
+8.2 is done (D-17, D-138 as amended, D-141). A passage now carries the oracle rolls it cites as chips. A world pass that establishes something narrates it in a follow-up passage. The open scene can be framed.
+
+### Shape
+
+- **Grounding.** `BeatFact` gained `grounds`, the oracle rolls behind a fact: a roll fact is grounded in itself, and an entity fact in the rolls it was built from. `groundedInOf` collects the grounds of every fact the segments cite. Beat narration, the follow-up passage and the scene frame all write it to `narration.written.groundedIn`, which was always `[]` before. Beat 7's Pay the Price roll is now in its passage's grounding.
+- **Chips.** `buildNarrativeLog` resolves `groundedIn` to `NarrativeEntry.chips` (`OracleChip`: table, slot, roll, row text, voided). A roll outside the fetched events is left out. On the web:
+  - chips sit under the passage, labelled by recipe slot or by table name;
+  - a voided chip is struck through, with "(discarded)" for screen readers;
+  - `withoutChippedRolls` hides a roll's own row once a loaded passage shows it as a chip, and a roll no passage cites keeps its row.
+- **Follow-up passage** (`db/world-commands.ts`, `ai/context/world-narration.ts`).
+  - When a world pass establishes an entity, the same request goes on to narrate it. That passage is its own command (`narration.world`), caused by the entity, with its command id derived from the request's (`derivedUuid`) so a replay finds it.
+  - `narration.written` gained the role `world`. A world pass follows only a `beat`, so none follows a follow-up passage.
+  - The stream sends a new `world` frame when the entity commits, and the client refetches, so the NPC card appears before its passage.
+  - **Retry never rolls again.** If the world command succeeded but its passage failed, the next request (`mode: 'passage'`) writes only the passage.
+- **World-only segments.** `SegmentContext.worldOnly` makes `checkSegmentTags` refuse any non-`world` segment, and the instructions say so, the crew acting together included (D-141's rubric amendment). The follow-up passage and the scene frame both use it, and both go through D-128's checker. The follow-up is routine length; the frame uses the dramatic range (D-141).
+- **Scene frame** (`prepareSceneFrame`, `runSceneFrame`). It refuses when there is no session, no scene, or the scene is already framed. One command (`narration.scene_frame`), caused by the `scene.started`, writes:
+  - a plan offering only the derelict recipe (D-139);
+  - the rolls, with no interpret call, because a derelict amends no entity;
+  - the checked, world-only passage (role `scene_frame`).
+
+  `SceneState.framedBy` is projected from it. Route: `POST /api/campaigns/:id/scene-frames {commandId}`. The scene header shows **Frame the scene** while an open scene has no frame (D-141).
+- **Plan review.** The plan's `review` is not stored in any event. It exists to shape the model's answer, and the live pass recorded it through a wrapper.
+- **Dev stub.** It answers `scene_frame_plan` with nothing to roll, and `world_passage` and `scene_frame` with a world segment.
+
+### Live pass
+
+The pass ran 2026-09-14 on `session-2-open`, with claude-opus-5 narrating and planning and claude-sonnet-5 checking. It covered Beat 2's frame and Beat 6's scan, followed by its world pass. Results are in `ai/eval/live-8.2.json`, and `ai/eval/live-8.2-beat6.json` has the run with an NPC forced whenever the plan declined.
+
+- **Scene frame:** 9 of 9 committed, with no withdrawals. Each rolled the derelict recipe and cited all three rolls. First text reached the player at **4.9–6.3 s**, of which planning took 2.9–3.9 s, so **A18 is missed in most runs**. The frames interpreted the rolls ("Limited power", "Blocked access", "Esoteric writing or symbols") against what is established. One reconciled "Cold and dark" with the fixture's lit windows, and one ended on "a language nobody aboard the Lantern Wake can read", which the checker passed.
+- **Beat 6, before the prompt fix:** no NPC in 3 of 3. Every plan review said the scan revealed only a circuit and that "no person has entered the story yet". **The cause is structural.** The plan reads the scan passage, and the narrator may not introduce new people (`GUIDE_RULES`), so after D-138's reordering the passage the plan reads always stops short of a person. The plan prompt now says so: that silence is not evidence that no one is there, and the decision is the plan's. **After the fix:** an NPC in 2 of 3. The reviews read "a survivor or occupant is the natural discovery here" in two runs and "the discovery stands fine as infrastructure" in the third.
+- **Follow-up passage** (5 runs: 3 forced, 2 real):
+  - the NPC card committed 8.7–13.2 s after the world pass began;
+  - the passage's first text followed about 2 s later;
+  - all cited every roll, and none was withdrawn;
+  - each narrated first contact over comms in the NPC's own voice ("I see you. Come down that corridor and I'll put you in it."), with no player character acting.
+
+### Verification
+
+`npm run typecheck`, `npm run lint`, `npm test` (951 tests) and the web build pass. The new tests cover:
+
+- a beat passage grounded in the Pay the Price roll it cites;
+- log chips, including a discarded one;
+- the follow-up passage: its cause, grounding and prompt, the `world` frame arriving before text, a resume without re-rolling, and no world pass after a follow-up;
+- the scene frame: rolls, dramatic length, grounding, `framedBy` and `already_framed`, and a non-world segment withdrawn and re-asked;
+- the `no_scene` refusal on the route;
+- chip view models and hidden rows;
+- the header's frame offer.
+
+A browser pass on the stub, on a freshly reset `session-2-open`, used **Frame the scene**. The passage streamed into the log under the scene, the button disappeared once the scene was framed, the token counter rose, and the console was clean. Chips can't appear on the stub, whose plans roll nothing; the unit tests and the live pass cover them.
+
+### Open
+
+- **A18 on the scene frame.** The plan call puts first text past 5 s. Two options: run the frame's plan on Sonnet 5 (1.3–1.6 s in the spike), or skip the plan when the scene's location already reads as a derelict. Either is a change to D-141 for the user.
+- **The dev servers.** Stopping a background `tsx watch` or `vite` shell left its node child holding the port. Stop the process on 3000 or 5173 before restarting.

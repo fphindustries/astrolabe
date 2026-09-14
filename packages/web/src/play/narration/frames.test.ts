@@ -1,7 +1,13 @@
 import type { EventId } from '@astrolabe/shared';
 import { describe, expect, it } from 'vitest';
 
-import { applyFrame, closeWithoutFrame, startPassage, type StreamOutcome } from './frames.js';
+import {
+  applyFrame,
+  closeWithoutFrame,
+  followUp,
+  startPassage,
+  type StreamOutcome,
+} from './frames.js';
 
 const BEAT = { kind: 'beat', afterCommandId: 'c1' } as const;
 
@@ -81,5 +87,29 @@ describe('applyFrame (task 7.8)', () => {
       kind: 'committed',
       eventId: 'e1',
     });
+  });
+
+  it('follows a committed beat passage with its world pass, and nothing else (D-138)', () => {
+    const beat = { kind: 'beat', afterCommandId: 'cmd-1' } as const;
+    expect(followUp(beat, { kind: 'committed', eventId: 'evt-9' })).toEqual({
+      kind: 'world',
+      passageEventId: 'evt-9',
+    });
+    // A refused request is recorded as committed with no event: nothing follows it.
+    expect(followUp(beat, { kind: 'committed', eventId: '' })).toBeUndefined();
+    expect(
+      followUp(beat, {
+        kind: 'failed',
+        failure: { target: beat, errorKind: 'unavailable', message: 'down' },
+      }),
+    ).toBeUndefined();
+    const world = { kind: 'world', passageEventId: 'evt-9' } as const;
+    expect(followUp(world, { kind: 'committed', eventId: 'evt-10' })).toBeUndefined();
+    expect(
+      followUp(
+        { kind: 'revision', targetEventId: 'evt-9', note: 'n' },
+        { kind: 'committed', eventId: 'evt-11' },
+      ),
+    ).toBeUndefined();
   });
 });

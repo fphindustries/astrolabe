@@ -5,7 +5,14 @@ import { withoutLinks } from '@astrolabe/rules';
 import { useCampaignLog } from '../api/campaigns.js';
 
 import { CorrectionControl } from './log/CorrectionControl.js';
-import { orderedBeats, toBeatView, type BeatView, type EntryView } from './log/entries.js';
+import {
+  orderedBeats,
+  toBeatView,
+  withoutChippedRolls,
+  type BeatView,
+  type ChipView,
+  type EntryView,
+} from './log/entries.js';
 import { VoidControl } from './log/VoidControl.js';
 import { TriggerNote } from './moves/TriggerNote.js';
 import { useNarrationStream } from './narration/narration-stream.js';
@@ -25,10 +32,14 @@ export function NarrativeLog({ campaignId }: { readonly campaignId: string }) {
   const prevScrollHeight = useRef<number | null>(null);
   const scrolledToBottom = useRef(false);
   const { pending } = useNarrationStream();
-  const pendingBeat = pending?.target.kind === 'beat' ? pending : null;
+  // A scene frame streams like a beat's passage (D-141).
+  const pendingBeat =
+    pending?.target.kind === 'beat' || pending?.target.kind === 'scene_frame' ? pending : null;
   const pendingRevision = pending?.target.kind === 'revision' ? pending : null;
+  const pendingWorld = pending?.target.kind === 'world' ? pending : null;
 
-  const beats = data === undefined ? [] : orderedBeats(data.pages).map(toBeatView);
+  const beats =
+    data === undefined ? [] : withoutChippedRolls(orderedBeats(data.pages).map(toBeatView));
   const pageCount = data?.pages.length ?? 0;
 
   // Older pages prepend above the current view. Restore the offset by the
@@ -102,6 +113,17 @@ export function NarrativeLog({ campaignId }: { readonly campaignId: string }) {
           <PendingText passage={pendingBeat} />
         </div>
       )}
+      {pendingWorld !== null &&
+        (pendingWorld.status === 'waiting' && pendingWorld.withdrawn.length === 0 ? (
+          <div className={styles.pendingLabel} role="status">
+            The Guide is considering whether the world holds anything new…
+          </div>
+        ) : (
+          // What the world pass established, narrated (8.2).
+          <div className={styles.beat}>
+            <PendingText passage={pendingWorld} />
+          </div>
+        ))}
     </div>
   );
 }
@@ -202,6 +224,7 @@ function Entry({ campaignId, entry }: { readonly campaignId: string; readonly en
   return (
     <div className={styles.entry} data-voided={entry.voided}>
       <span className={styles.text}>{describeEntry(entry)}</span>
+      {body.kind === 'narration' && body.chips.length > 0 && <Chips chips={body.chips} />}
       {body.kind === 'narration' && !entry.voided && <CorrectionControl eventId={entry.eventId} />}
       {/* A11/D-27: only a live, voidable event offers this — an already-voided one is history, not undone twice. */}
       {entry.voidable && !entry.voided && (
@@ -220,6 +243,24 @@ function Entry({ campaignId, entry }: { readonly campaignId: string; readonly en
         </span>
       ))}
     </div>
+  );
+}
+
+/**
+ * D-17: the oracle rolls a passage was grounded in, under it. A discarded
+ * roll stays, struck through (D-18) — in text as well as style.
+ */
+function Chips({ chips }: { readonly chips: readonly ChipView[] }) {
+  return (
+    <ul className={styles.chips} aria-label="Oracle rolls">
+      {chips.map((chip) => (
+        <li key={chip.eventId} className={styles.chip} data-struck={chip.struck}>
+          <span className={styles.chipLabel}>{chip.label}</span> {withoutLinks(chip.rowText)}{' '}
+          <span className={styles.chipRoll}>({chip.roll})</span>
+          {chip.struck && <span className={styles.srOnly}> (discarded)</span>}
+        </li>
+      ))}
+    </ul>
   );
 }
 

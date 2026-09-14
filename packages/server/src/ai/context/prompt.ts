@@ -38,14 +38,14 @@ Do not suggest what anyone should do next, and do not end with a question to the
 
 Write plain prose in the second or third person as the scene suggests, present tense, with no headings, lists, markdown or preamble. Refer to characters by their callsign. Use a player character's pronouns only as the campaign state records them; for a character whose pronouns are not recorded, use no pronoun at all, only their name or callsign.`;
 
-function systemBlocks(settings: CampaignSettings): readonly AiSystemBlock[] {
+export function systemBlocks(settings: CampaignSettings): readonly AiSystemBlock[] {
   return [
     { text: GUIDE_RULES },
     { text: LATITUDE_INSTRUCTIONS[settings.narrationLatitude], cache: true },
   ];
 }
 
-function recentNarration(events: readonly AstrolabeEvent[]): string {
+export function recentNarration(events: readonly AstrolabeEvent[]): string {
   const passages = livePassages(events).slice(-RECENT_PASSAGES);
   return passages.length === 0
     ? 'No narration yet this campaign.'

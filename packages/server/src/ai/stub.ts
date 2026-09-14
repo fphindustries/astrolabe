@@ -199,7 +199,11 @@ function defaultFallback(request: AiRequest, mode: 'text' | 'structured'): StubR
       value: { review: 'Stub check: nothing to report.', violations: [] },
     };
   }
-  if (request.purpose === 'beat') {
+  if (
+    request.purpose === 'beat' ||
+    request.purpose === 'world_passage' ||
+    request.purpose === 'scene_frame'
+  ) {
     return {
       kind: 'structured',
       value: { segments: [{ about: 'world', character: null, basis: [], text }] },

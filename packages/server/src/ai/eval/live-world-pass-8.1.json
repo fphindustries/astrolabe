@@ -1,0 +1,184 @@
+{
+  "date": "2026-09-14",
+  "narrator": "claude-opus-5",
+  "checker": "claude-sonnet-5",
+  "runs": [
+    {
+      "run": 0,
+      "label": "beat6-scan",
+      "narrationMs": 10518,
+      "passage": "Vesna traces the power draw with the Lantern Wake's sensors, walking the array across the relay's hull in slow overlapping sweeps. The returns come back cleaner than they have any right to: a single live conduit threading up from the station's spine to that one lit row of windows, drawing steady and small. Everything else is cold iron, forty years of it, venting the last of its heat into the dark. The draw pulses on a fixed cycle, the signature of something old still running a loop nobody has come to stop. The scorched docking collar sits directly beneath the live line. The picture resolves on the display in front of Vesna, and the ship's quiet settles into something with forward lean in it.",
+      "worldMs": 2272,
+      "world": {
+        "ok": true,
+        "eventId": "01a0a183-8d69-779c-8d30-285e2e0905f2"
+      },
+      "accounting": [
+        {
+          "type": "ai.completed",
+          "provider": "anthropic",
+          "model": "claude-opus-5",
+          "purpose": "world_plan",
+          "inputTokens": 1118,
+          "outputTokens": 11,
+          "cacheReadTokens": 789,
+          "latencyMs": 2262
+        }
+      ],
+      "rolls": [],
+      "entities": []
+    },
+    {
+      "run": 0,
+      "label": "beat7-force",
+      "narrationMs": 28802,
+      "passage": "Rook sets against the sealed bulkhead and forces it, shoulder and boot driving into forty years of fused seal. The door does not give. What gives instead is the frame around it, a stress-warped panel that has been holding a load since before the station went dark, and it lets go all at once with a bang that travels the length of the corridor. The edge of it comes across at chest height and catches Rook, armor scraping, the impact folding through the plates and into the ribs beneath. There is a bright hot line under the undersuit and a warm wetness spreading where the seam bit through. The corridor tilts and rights itself; the pain settles into something carryable, though the arm on that side is slow to answer and the breath comes shallow now. The bulkhead stands exactly as it did, unmarked and shut, while somewhere above the live conduit keeps ticking through its old loop in the dark.",
+      "worldMs": 2439,
+      "world": {
+        "ok": true,
+        "eventId": "01a0a184-0779-7414-919e-13e5988dfdcd"
+      },
+      "accounting": [
+        {
+          "type": "ai.completed",
+          "provider": "anthropic",
+          "model": "claude-opus-5",
+          "purpose": "world_plan",
+          "inputTokens": 1336,
+          "outputTokens": 11,
+          "cacheReadTokens": 789,
+          "latencyMs": 2430
+        }
+      ],
+      "rolls": [],
+      "entities": []
+    },
+    {
+      "run": 1,
+      "label": "beat6-scan",
+      "narrationMs": 17992,
+      "passage": "Vesna walks the sensor array across the relay's hull, tracing the power draw line by line through the scorched plating. The return comes back clean and unhurried: a single live trunk running from a shielded core, feeding that one lit row of windows and nothing else. Everything forward of the docking collar is cold iron, dead forty years, and the draw cycles in a slow steady pulse — something still running on a schedule. The console lays it out without argument, the plot resolving faster than the sweep should allow, and the read sits there settled and legible under her hands.",
+      "worldMs": 2708,
+      "world": {
+        "ok": true,
+        "eventId": "01a0a184-5933-7746-a925-8508160620fa"
+      },
+      "accounting": [
+        {
+          "type": "ai.completed",
+          "provider": "anthropic",
+          "model": "claude-opus-5",
+          "purpose": "world_plan",
+          "inputTokens": 1075,
+          "outputTokens": 82,
+          "cacheReadTokens": 789,
+          "latencyMs": 2700
+        }
+      ],
+      "rolls": [],
+      "entities": []
+    },
+    {
+      "run": 1,
+      "label": "beat7-force",
+      "narrationMs": 11817,
+      "passage": "Rook sets against the sealed bulkhead and forces it, shoulder and boot driving into forty years of fused metal. The door gives all at once, not the way it was meant to — the frame shears, and a strip of plating springs loose from the pressure seam with the whole weight of that trapped decade behind it. The edge catches Rook across the ribs, punching through the armor's outer lamina and drawing a hot bright line beneath it. Blood goes tacky against the undersuit, warm and spreading in a slow patch. Beyond the ruined bulkhead the corridor exhales, stale air rolling out cold and metallic, and the dark past the threshold holds nothing but the far pulse of that single live trunk. The pain arrives late and settles, sharp at the edges but no worse than that; the armor holds its shape around the wound, and Rook is still standing in the broken doorway with the corridor open ahead.",
+      "worldMs": 2498,
+      "world": {
+        "ok": true,
+        "eventId": "01a0a184-9123-708e-9727-daf3a80bd7a0"
+      },
+      "accounting": [
+        {
+          "type": "ai.completed",
+          "provider": "anthropic",
+          "model": "claude-opus-5",
+          "purpose": "world_plan",
+          "inputTokens": 1351,
+          "outputTokens": 11,
+          "cacheReadTokens": 789,
+          "latencyMs": 2489
+        }
+      ],
+      "rolls": [],
+      "entities": []
+    },
+    {
+      "run": 2,
+      "label": "beat6-scan",
+      "narrationMs": 41983,
+      "passage": "Vesna walks the Sensor Array along the relay's hull, tracing the power draw through the scorched collar and the lit row of windows. The return comes back cleaner than a station dark for a generation has any right to give: a single feed line still hot, running from a buried reactor stub up through the spine to the lit deck, and a second, thinner draw bleeding off toward the transmitter mast that keeps the beacon looping. The load rises and falls in a slow, regular cycle, the way life support breathes when something is still being kept warm. The trace resolves under her hands, and the Lantern Wake settles into the drift of the ice slab with the quiet of a ship that has the measure of the thing ahead of it.",
+      "worldMs": 9222,
+      "world": {
+        "ok": true,
+        "eventId": "01a0a185-59f7-775f-8691-936a73f63a90"
+      },
+      "accounting": [
+        {
+          "type": "ai.completed",
+          "provider": "anthropic",
+          "model": "claude-opus-5",
+          "purpose": "world_plan",
+          "inputTokens": 1126,
+          "outputTokens": 64,
+          "cacheReadTokens": 789,
+          "latencyMs": 2556
+        },
+        {
+          "type": "ai.completed",
+          "provider": "anthropic",
+          "model": "claude-opus-5",
+          "purpose": "world_interpret",
+          "inputTokens": 1312,
+          "outputTokens": 316,
+          "cacheWriteTokens": 1202,
+          "latencyMs": 6651
+        }
+      ],
+      "rolls": [
+        "role: Leader",
+        "goal: Obtain an object",
+        "first_look: Wiry",
+        "disposition: Suspicious",
+        "given_name: Echo",
+        "family_name: Silva"
+      ],
+      "entities": [
+        {
+          "name": "Echo Silva",
+          "fields": {
+            "goal": "Silva wants a particular object, and everything on that deck is arranged around getting hold of it.",
+            "role": "Whoever is keeping the lit deck warm holds authority there — the one who decides how the last hot feed line is spent, and the others aboard, if any, answer to that call.",
+            "first_look": "Wiry and stripped down to cord and bone, the frame of someone who has spent a long time on rationed warmth.",
+            "disposition": "Suspicious of anything that arrives following the power trace, and unlikely to take a hailing ship's word at face value."
+          }
+        }
+      ]
+    },
+    {
+      "run": 2,
+      "label": "beat7-force",
+      "narrationMs": 11185,
+      "passage": "Rook sets against the sealed bulkhead and forces it, shoulder and armor driving into a door that has not moved in a generation. The frame gives all at once, not the way a door opens but the way something under pressure fails — a stressed seam tearing along its length with a sound like sheet metal screaming. A curl of torn plating comes through at chest height and rakes across the armor's shoulder joint, finding the gap, and heat blooms bright and wet under the undersuit. Blood runs warm down the inside of the sleeve and collects cold at the cuff. Beyond the ruined bulkhead, stale air spills out of the dark corridor, carrying the smell of old scorch and the faint, steady hum of the feed line running somewhere above. The wound settles into a deep, hot ache that does not stop the arm from working, though the shoulder answers slower than it did a moment ago.",
+      "worldMs": 1967,
+      "world": {
+        "ok": true,
+        "eventId": "01a0a185-8d61-7df1-bfe2-d69119f95382"
+      },
+      "accounting": [
+        {
+          "type": "ai.completed",
+          "provider": "anthropic",
+          "model": "claude-opus-5",
+          "purpose": "world_plan",
+          "inputTokens": 1537,
+          "outputTokens": 11,
+          "cacheReadTokens": 789,
+          "latencyMs": 1959
+        }
+      ],
+      "rolls": [],
+      "entities": []
+    }
+  ]
+}

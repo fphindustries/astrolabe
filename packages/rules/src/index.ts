@@ -77,6 +77,7 @@ export * from './relevance/index.js';
 export * from './characters/index.js';
 export * from './attribution/index.js';
 export * from './text/index.js';
+export * from './recipes/index.js';
 
 export type { AdaptedRuleset } from './adapter/index.js';
 export { STARFORGED };

@@ -73,7 +73,18 @@ function devStubResponse(
       },
     };
   }
-  if (mode === 'structured' && request.purpose === 'beat') {
+  if (mode === 'structured' && request.purpose === 'scene_frame_plan') {
+    return {
+      kind: 'structured',
+      value: { review: 'Stub plan: the place needs no rolls.', recipes: [] },
+    };
+  }
+  if (
+    mode === 'structured' &&
+    (request.purpose === 'beat' ||
+      request.purpose === 'world_passage' ||
+      request.purpose === 'scene_frame')
+  ) {
     // One world segment citing nothing: it passes D-127's checks for any beat.
     return {
       kind: 'structured',
@@ -112,6 +123,13 @@ function devStubResponse(
         reason: 'Stub check: the move fits.',
         confidence: 'low',
       },
+    };
+  }
+  if (mode === 'structured' && request.purpose === 'world_plan') {
+    // Most beats bring nothing new, and a stubbed session plays without generating.
+    return {
+      kind: 'structured',
+      value: { review: 'Stub plan: nothing new enters the world.', recipes: [] },
     };
   }
   if (mode === 'structured' && request.purpose === 'incident_proposal') {

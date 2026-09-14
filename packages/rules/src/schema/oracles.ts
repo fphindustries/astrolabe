@@ -32,6 +32,13 @@ export interface OracleRow {
  */
 export interface OracleRecipe {
   readonly id: RecipeId;
+  /** What the Guide builds from it, in words for the prompt: "a non-player character". */
+  readonly label: string;
+  /**
+   * `npc` becomes a tracked entity (8.5). `derelict` grounds a scene
+   * frame's narration only (D-139): Milestone 1 frames an established
+   * derelict and amends no entity (D-86).
+   */
   readonly entityKind: 'npc' | 'location' | 'derelict' | 'faction';
   readonly rolls: readonly OracleRecipeSlot[];
 }
@@ -40,4 +47,6 @@ export interface OracleRecipeSlot {
   /** Names the field this roll fills, e.g. "role", "disposition". */
   readonly slot: string;
   readonly oracle: OracleId;
+  /** A name roll: it grounds the entity's name, not a field of its own. */
+  readonly name?: true;
 }

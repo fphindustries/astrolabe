@@ -1,4 +1,4 @@
-import type { EntityId, EntityState, SceneState } from '@astrolabe/shared';
+import type { EntityId, EntityState, SceneState, SessionState } from '@astrolabe/shared';
 
 /**
  * Pure view-model for the scene header (task 5.3). Bound to `SceneState` as
@@ -11,6 +11,8 @@ import type { EntityId, EntityState, SceneState } from '@astrolabe/shared';
 export interface SceneHeaderView {
   readonly title: string;
   readonly locationName?: string;
+  /** D-141: an open scene with no frame yet can ask for one. */
+  readonly canFrame?: boolean;
 }
 
 const NO_SCENE: SceneHeaderView = { title: 'No scene yet' };
@@ -18,6 +20,7 @@ const NO_SCENE: SceneHeaderView = { title: 'No scene yet' };
 export function toSceneHeaderView(
   scene: SceneState | null,
   entities: Readonly<Record<EntityId, EntityState>>,
+  session: SessionState | null = null,
 ): SceneHeaderView {
   if (scene === null) {
     return NO_SCENE;
@@ -26,5 +29,8 @@ export function toSceneHeaderView(
   return {
     title: scene.title,
     ...(location !== undefined ? { locationName: location.name } : {}),
+    ...(session !== null && session.endedAt === undefined && scene.framedBy === undefined
+      ? { canFrame: true }
+      : {}),
   };
 }

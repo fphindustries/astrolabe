@@ -26,7 +26,12 @@ export const NarrationSegmentSchema = z.object({
  * grouping, because a command can contain rolls the passage did not use.
  */
 export const NarrationWrittenSchema = z.object({
-  role: z.enum(['recap', 'scene_frame', 'beat', 'summary']),
+  /**
+   * `world` is the follow-up passage that narrates what a world pass
+   * established (D-138, amended): Beat 6's first contact. It is not a beat,
+   * so no world pass follows it in turn.
+   */
+  role: z.enum(['recap', 'scene_frame', 'beat', 'summary', 'world']),
   /** For a segmented passage, the segments' text joined. */
   text: z.string().min(1),
   groundedIn: z.array(EventIdSchema),

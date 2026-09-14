@@ -154,6 +154,8 @@ export interface SceneState {
   readonly id: SceneId;
   readonly title: string;
   readonly locationId?: EntityId;
+  /** D-141: the live scene-frame passage, once the scene has one. */
+  readonly framedBy?: EventId;
 }
 
 /** A17: what the next session's recap is built from. */

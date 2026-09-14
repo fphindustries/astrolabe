@@ -218,6 +218,42 @@ describe.skipIf(!hasTestDatabase)('the AI commands (group 7)', () => {
   }
 
   describe('beat narration (task 7.8, D-110)', () => {
+    it('grounds the passage in the oracle rolls its segments cite (8.2, D-17)', async () => {
+      const chain = await beatSeven();
+      const request = {
+        campaignId: chain.campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        afterCommandId: chain.endureHarm,
+      };
+      const prepared = await prepareBeatNarration(db.sql, request);
+      if (prepared.kind !== 'run') throw new Error('expected a run');
+      const roll = prepared.segments.facts.find((fact) => fact.grounds !== undefined);
+      if (roll === undefined) throw new Error('expected the Pay the Price roll as a fact');
+      const ai = new StubProvider({
+        responses: [
+          passage(
+            ['world', null, [roll.key], 'The bulkhead’s seal lets go all at once.'],
+            ['world', null, [], 'Somewhere below, a pump coughs.'],
+          ),
+        ],
+      });
+
+      const result = await runBeatNarration(
+        db.sql,
+        ai,
+        new StubProvider(),
+        prepared,
+        recorder().sink,
+      );
+
+      if (!result.ok) throw new Error(result.message);
+      const written = (await readEvents(db.sql, chain.campaignId)).find(
+        (e) => e.id === result.eventId,
+      );
+      expect(written).toMatchObject({ payload: { groundedIn: roll.grounds } });
+    });
+
     it('streams one passage for the whole chain and commits it with its tokens', async () => {
       const chain = await beatSeven();
       const ai = new StubProvider({
