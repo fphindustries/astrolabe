@@ -344,6 +344,16 @@ describe.skipIf(!hasTestDatabase)('move suggestions (task 7.12, D-120, D-135)', 
         reason: 'already_checked',
       });
 
+      // D-136: a failed check is not retried either; the note is optional help.
+      const failedOnce = await rolled();
+      await check(
+        new StubProvider({ responses: [{ kind: 'error', errorKind: 'unavailable' }] }),
+        failedOnce,
+      );
+      await expect(check(new StubProvider(), failedOnce)).rejects.toMatchObject({
+        reason: 'already_checked',
+      });
+
       const unexplained = await rolled({ actionText: undefined });
       await expect(check(new StubProvider(), unexplained)).rejects.toMatchObject({
         reason: 'no_action',

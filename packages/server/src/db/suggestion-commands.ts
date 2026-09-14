@@ -169,7 +169,8 @@ export const TRIGGER_CHECK_COMMAND_KIND = 'move.check_trigger';
  *
  * A fit writes only the accounting; a mismatch adds `move.trigger_noted`.
  * Either way the command is caused by the `move.invoked`, so voiding the
- * move takes the note, and a second check of the same move is refused.
+ * move takes the note, and a second check of the same move is refused —
+ * after a failure too: the note is optional help, not retried (D-136).
  */
 export async function checkTrigger(
   sql: Sql,
