@@ -44,6 +44,7 @@ Each maps to a beat of the golden session.
 | A18 | Narration begins streaming within 5 seconds, and dice and state changes never wait on the AI | all |
 | A19 | A player who describes an action without picking a move gets an AI suggestion: the move, the verbatim trigger text it relies on, a stated reason, and a confidence. The player can open it to see why, and it never blocks picking a move directly (D-14, D-120) | 3 |
 | A20 | When a chosen move's trigger doesn't fit the described action, the AI notes it on the beat, with the trigger text, a reason and a confidence, without blocking or delaying the roll (D-37, D-121) | none (D-121) |
+| A21 | Narration never gives a player character an action beyond what the player declared, or a thought, emotion, intent, motivation, or claim that reaches beyond the beat (disposition, history, values, characteristic response), at any latitude. A passage that does is withdrawn unmistakably, with the reason in words and a logged event, then rewritten; a second failure pauses play with Retry (D-127–D-130) | 3, 7, 9 |
 
 ---
 
@@ -54,7 +55,7 @@ Issue-sized. Each task should land in one sitting and leave the build working.
 **Order (D-88, D-94, D-57 as amended).** Task numbers are stable, so references to them keep
 resolving; the order they are *worked* in is:
 
-> 1 · 2 · **3.1, 3.5** · **5.0, 5.1, 5.2** · 3.2, 3.4 · 4 · 5.3–5.7 · 6 · **7.1, 7.2, 7.4, 7.5** (with 7.6–7.11) · 3.3 · 4.6 · 7.12, 7.13 · 8 · 9 · 10
+> 1 · 2 · **3.1, 3.5** · **5.0, 5.1, 5.2** · 3.2, 3.4 · 4 · 5.3–5.7 · 6 · **7.1, 7.2, 7.4, 7.5** (with 7.6–7.11) · 3.3 · **7.16, 7.14, 7.15** · 4.6 · 7.12, 7.13 · 8 · 9 · 10
 
 The play-screen shell comes before the creation and campaign-setup UI because
 those have no React app to live in — `web` is a bare Vite scaffold. The
@@ -66,6 +67,11 @@ working AI provider: 3.3, 4.6 (4.4's AI-proposal half, D-126), 7.12, 7.13, and g
 9 (D-57 as amended). 7.6–7.11 landed in the same commit as the core, so the
 remaining group 7 work, 7.12 and 7.13, follows 3.3 and 4.6. 7.3 (OpenAI) stays in
 Milestone 2 (D-60).
+
+7.14–7.16 come before everything else that generates prose (4.6, 7.12, 7.13, groups
+8 and 9). 3.3's live pass found narration breaking the authority model, and every
+later AI feature would inherit that. 7.16 goes first because it changes the beat
+facts that 7.14's segments cite.
 
 ### 1. Rules package
 
@@ -141,18 +147,21 @@ narrative log is a second read model with its own paged query.
 ### 7. AI provider and narration
 
 - [x] 7.1 Provider interface: streaming, structured output, token accounting
-- [x] 7.2 Claude implementation — built and tested against a faked SDK client; not yet run against the live API (section 7 notes)
+- [x] 7.2 Claude implementation — built and tested against a faked SDK client, then run against the live API in round 20 (streaming, structured output and prompt caching all worked)
 - [ ] ~~7.3 OpenAI implementation~~ — moved to Milestone 2 (D-60)
 - [x] 7.4 Context assembly from projected state, not raw transcript
 - [x] 7.5 Structured response schema and validation, with retry on failure
 - [x] 7.6 Narration latitude (Minimal, Color, Full voice) enforced in the prompt
 - [x] 7.7 Narration length scaled to the weight of the moment
-- [x] 7.8 Streaming into the narrative log within the 5-second target — streaming built and verified on the stub; the 5-second measurement against real Claude is still owed (section 7 notes)
+- [x] 7.8 Streaming into the narrative log within the 5-second target — measured against live Claude in round 20: first text after 2.6 s (section 7 notes). That pass found the authority violations 7.14–7.16 address
 - [x] 7.9 Narration correction: flag, rewrite, log
 - [x] 7.10 Token counter in the UI
 - [x] 7.11 Graceful stop when the provider is unavailable, with state intact
 - [ ] 7.12 AI move suggestion when an action is described without a move: move and roll option, verbatim trigger text, reason and confidence, inspectable, never blocking a direct pick (D-14, D-120, A19)
 - [ ] 7.13 Trigger-mismatch note on a beat whose move doesn't fit the described action, with the same traceability, never blocking or delaying the roll (D-37, D-121, A20). No golden-session beat exercises it
+- [ ] 7.14 Segmented narration: fact keys and kinds, segments tagged and cited as they stream, checks that need no AI, D-115's routine cap for beats with no declared action (D-127, A21)
+- [ ] 7.15 Authority check: shared rubric in the narrator prompt and a second-model checker; provisional streaming, unmistakable logged withdrawal, one re-ask, pause on a second failure; recorded-violation regression tests, keyed eval, live matrix across all three latitudes (D-128, D-129, A21)
+- [ ] 7.16 Established injury: the harm proposal's injury carried into narration at the committed severity, with the committed amount linked to its proposal (D-130, A13)
 
 ### 8. Oracle-grounded generation
 
