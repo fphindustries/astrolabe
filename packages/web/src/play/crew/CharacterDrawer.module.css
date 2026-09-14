@@ -2,6 +2,11 @@
   margin-bottom: var(--space-6);
 }
 
+.identity {
+  margin: 0 0 var(--space-4);
+  color: var(--text-muted);
+}
+
 .sectionTitle {
   font-size: var(--text-sm);
   text-transform: uppercase;

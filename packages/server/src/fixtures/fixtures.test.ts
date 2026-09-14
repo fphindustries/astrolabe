@@ -37,6 +37,7 @@ function crewByCallsign(state: CampaignState) {
         supply: c.meters.supply.value,
         stats: c.stats,
         assets: c.assets,
+        pronouns: c.pronouns,
       },
     ]),
   );
@@ -99,6 +100,12 @@ describe.skipIf(!hasTestDatabase)('the session-1 fixture (D-72, D-122)', () => {
       rook: 2,
       juno: 3,
     });
+    // D-131: Beat 5's "her" for Vesna; Rook's and Juno's are never given.
+    expect([crew['Vesna']?.pronouns, crew['Rook']?.pronouns, crew['Juno']?.pronouns]).toEqual([
+      'she/her',
+      null,
+      null,
+    ]);
     expect(Object.values(state.tracks)).toContainEqual(
       expect.objectContaining({
         kind: 'vow',

@@ -9,10 +9,11 @@ import type { ChallengeRank, PayloadFor, ProposalRoll } from '@astrolabe/shared'
 
 export type CharacterProposal = PayloadFor<'character.proposed'>;
 
-export type ProposedField = 'name' | 'callsign' | 'stats' | 'assets' | 'vow' | 'hooks';
+export type ProposedField = 'name' | 'pronouns' | 'callsign' | 'stats' | 'assets' | 'vow' | 'hooks';
 
 export const PROPOSED_FIELDS: readonly ProposedField[] = [
   'name',
+  'pronouns',
   'callsign',
   'stats',
   'assets',
@@ -20,11 +21,22 @@ export const PROPOSED_FIELDS: readonly ProposedField[] = [
   'hooks',
 ];
 
+/**
+ * The fields this proposal fills. Pronouns only when the concept stated
+ * them (D-131): otherwise the field stays the player's, untouched and
+ * unmarked.
+ */
+export function proposedFields(proposal: CharacterProposal): readonly ProposedField[] {
+  return PROPOSED_FIELDS.filter((field) => field !== 'pronouns' || proposal.pronouns !== undefined);
+}
+
 export const MAX_HOOKS = 3;
 
 /** Everything the creation form holds. */
 export interface CreationForm {
   readonly name: string;
+  /** D-131: free text; blank means not recorded. */
+  readonly pronouns: string;
   readonly callsign: string;
   readonly stats: Readonly<Record<StatId, number>>;
   readonly slotSelections: Readonly<Partial<Record<string, AssetId>>>;
@@ -77,6 +89,11 @@ export function applyProposal(
       case 'name':
         next = { ...next, name: proposal.name.value };
         break;
+      case 'pronouns':
+        if (proposal.pronouns !== undefined) {
+          next = { ...next, pronouns: proposal.pronouns.value };
+        }
+        break;
       case 'callsign':
         next = { ...next, callsign: proposal.callsign.value };
         break;
@@ -124,6 +141,10 @@ export function guideNotes(
   const nameOf = (id: AssetId) => ruleset.assets.find((asset) => asset.id === id)?.name ?? id;
   return {
     name: { lines: [proposal.name.reason], rolls: cited(proposal.name.groundedIn) },
+    pronouns: {
+      lines: proposal.pronouns === undefined ? [] : [proposal.pronouns.reason],
+      rolls: [],
+    },
     callsign: { lines: [proposal.callsign.reason], rolls: cited(proposal.callsign.groundedIn) },
     stats: { lines: [proposal.stats.reason], rolls: [] },
     assets: {

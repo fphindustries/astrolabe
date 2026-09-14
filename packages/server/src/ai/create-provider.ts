@@ -99,4 +99,5 @@ const STUB_CHARACTER_PROPOSAL = {
       groundedIn: ['backstory-2'],
     },
   ],
+  pronouns: { value: null, reason: 'Stub proposal: the concept states none.' },
 };

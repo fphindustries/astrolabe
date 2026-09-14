@@ -87,6 +87,8 @@ export interface CharacterSheetView {
   readonly vows: readonly VowView[];
   /** D-124: backstory hooks from creation. */
   readonly hooks: readonly string[];
+  /** D-131: the player's words, or null when none were recorded. */
+  readonly pronouns: string | null;
 }
 
 /**
@@ -148,5 +150,6 @@ export function toCharacterSheet(
       };
     }),
     hooks: character.hooks,
+    pronouns: character.pronouns,
   };
 }

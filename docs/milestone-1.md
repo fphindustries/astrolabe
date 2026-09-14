@@ -55,7 +55,7 @@ Issue-sized. Each task should land in one sitting and leave the build working.
 **Order (D-88, D-94, D-57 as amended).** Task numbers are stable, so references to them keep
 resolving; the order they are *worked* in is:
 
-> 1 · 2 · **3.1, 3.5** · **5.0, 5.1, 5.2** · 3.2, 3.4 · 4 · 5.3–5.7 · 6 · **7.1, 7.2, 7.4, 7.5** (with 7.6–7.11) · 3.3 · **7.16, 7.14, 7.15** · 4.6 · 7.12, 7.13 · 8 · 9 · 10
+> 1 · 2 · **3.1, 3.5** · **5.0, 5.1, 5.2** · 3.2, 3.4 · 4 · 5.3–5.7 · 6 · **7.1, 7.2, 7.4, 7.5** (with 7.6–7.11) · 3.3 · 3.6 · **7.16, 7.14, 7.15** · 4.6 · 7.12, 7.13 · 8 · 9 · 10
 
 The play-screen shell comes before the creation and campaign-setup UI because
 those have no React app to live in — `web` is a bare Vite scaffold. The
@@ -110,6 +110,7 @@ narrative log is a second read model with its own paged query.
 - [x] 3.3 Concept-first flow: prompt, AI proposal, review, accept or edit per field (D-123–D-126). Built on the stub provider, then run against live Claude: concept names split by a callsign and wrong stat arrays were found and fixed (see "Implementation notes (task 3.3)")
 - [x] 3.4 Asset selection with rule constraints
 - [x] 3.5 Creation writes character-created events
+- [x] 3.6 Pronouns stored on the character: a creation input, the concept-first proposal (only when the concept states them), and a context line that says when none are recorded (D-131). No golden-session beat exercises it. Verified in the browser on the stub; not yet run against live Claude
 
 ### 4. Campaign setup
 

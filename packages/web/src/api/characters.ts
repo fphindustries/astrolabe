@@ -18,6 +18,8 @@ export interface CreateCharacterInput {
   readonly backgroundVow?: { readonly title: string; readonly rank: string };
   /** D-124. */
   readonly hooks?: readonly string[];
+  /** D-131: blank means not recorded. */
+  readonly pronouns?: string;
   /** D-124: the proposal this character was accepted from, if any. */
   readonly proposalCommandId?: string;
 }
@@ -32,6 +34,9 @@ export function useCreateCharacter(campaignId: string) {
         draft: input.draft,
         ...(input.backgroundVow !== undefined ? { backgroundVow: input.backgroundVow } : {}),
         ...(input.hooks !== undefined && input.hooks.length > 0 ? { hooks: input.hooks } : {}),
+        ...(input.pronouns !== undefined && input.pronouns.trim() !== ''
+          ? { pronouns: input.pronouns.trim() }
+          : {}),
         ...(input.proposalCommandId !== undefined
           ? { proposalCommandId: input.proposalCommandId }
           : {}),

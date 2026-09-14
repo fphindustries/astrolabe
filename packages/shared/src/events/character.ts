@@ -49,6 +49,8 @@ export const CharacterCreatedSchema = z.object({
   assets: z.array(AssetIdSchema),
   /** D-124: backstory hooks, from a concept-first proposal or written by hand. Optional, so no version bump. */
   hooks: z.array(z.string().min(1)).max(3).optional(),
+  /** D-131: the player's words ("she/her"). Absent means not recorded, never a default. Optional, so no version bump. */
+  pronouns: z.string().min(1).max(40).optional(),
 });
 
 /**
@@ -86,4 +88,6 @@ export const CharacterProposedSchema = z.object({
     )
     .min(1)
     .max(3),
+  /** D-131: present only when the concept states pronouns; the AI never chooses them. */
+  pronouns: z.object({ value: z.string().min(1).max(40), reason: ReasonSchema }).optional(),
 });

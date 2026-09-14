@@ -9,6 +9,7 @@ import {
   applyProposal,
   guideNotes,
   hooksToSend,
+  proposedFields,
   rollChip,
   slotsFromAssets,
   type CharacterProposal,
@@ -43,6 +44,7 @@ const PROPOSAL: CharacterProposal = {
 
 const EMPTY: CreationForm = {
   name: '',
+  pronouns: '',
   callsign: '',
   stats: emptyDraft().stats,
   slotSelections: {},
@@ -100,6 +102,24 @@ describe('applyProposal (3.3, D-124)', () => {
     const edited = { ...EMPTY, name: 'Isolde', callsign: 'Ghost' };
     const restored = applyProposal(edited, PROPOSAL, ['callsign'], CREATION_SLOTS, STARFORGED);
     expect(restored).toMatchObject({ name: 'Isolde', callsign: 'Wraith' });
+  });
+
+  it('leaves pronouns to the player unless the concept stated them (D-131)', () => {
+    const typed = { ...EMPTY, pronouns: 'they/them' };
+    expect(proposedFields(PROPOSAL)).not.toContain('pronouns');
+    expect(
+      applyProposal(typed, PROPOSAL, proposedFields(PROPOSAL), CREATION_SLOTS, STARFORGED).pronouns,
+    ).toBe('they/them');
+
+    const stated: CharacterProposal = {
+      ...PROPOSAL,
+      pronouns: { value: 'she/her', reason: 'The concept says so.' },
+    };
+    expect(proposedFields(stated)).toContain('pronouns');
+    expect(
+      applyProposal(typed, stated, proposedFields(stated), CREATION_SLOTS, STARFORGED).pronouns,
+    ).toBe('she/her');
+    expect(guideNotes(stated, [], STARFORGED).pronouns.lines).toEqual(['The concept says so.']);
   });
 });
 

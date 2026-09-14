@@ -206,8 +206,15 @@ export function buildApp({ sql, ai }: BuildAppOptions): FastifyInstance {
         reply.code(400);
         return undefined;
       }
-      const { commandId, draft, backgroundVow, grantCommandVehicle, hooks, proposalCommandId } =
-        parsedBody.data;
+      const {
+        commandId,
+        draft,
+        backgroundVow,
+        grantCommandVehicle,
+        hooks,
+        pronouns,
+        proposalCommandId,
+      } = parsedBody.data;
 
       try {
         const created = await createCharacter(sql, {
@@ -218,6 +225,7 @@ export function buildApp({ sql, ai }: BuildAppOptions): FastifyInstance {
           ...(backgroundVow !== undefined ? { backgroundVow } : {}),
           ...(grantCommandVehicle !== undefined ? { grantCommandVehicle } : {}),
           ...(hooks !== undefined ? { hooks } : {}),
+          ...(pronouns !== undefined ? { pronouns } : {}),
           ...(proposalCommandId !== undefined ? { proposalCommandId } : {}),
         });
         reply.code(201);

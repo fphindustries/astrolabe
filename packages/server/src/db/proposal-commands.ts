@@ -246,6 +246,9 @@ export async function proposeCharacter(
         assets: value.assets,
         backgroundVow: value.backgroundVow,
         hooks: value.hooks.map((hook) => ({ ...hook, groundedIn: hook.groundedIn.map(eventIdOf) })),
+        ...(value.pronouns.value !== null
+          ? { pronouns: { value: value.pronouns.value, reason: value.pronouns.reason } }
+          : {}),
       }),
     },
     status,

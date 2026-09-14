@@ -257,6 +257,7 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
           },
           { text: 'She owes a rival.', reason: 'Prompt.', groundedIn: ['backstory-2'] },
         ],
+        pronouns: { value: null, reason: 'The concept states none.' },
       },
     });
     const proposalCommandId = newId<CommandId>();

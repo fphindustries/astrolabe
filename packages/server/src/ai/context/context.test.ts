@@ -407,10 +407,24 @@ describe('prompt assembly (tasks 7.4, 7.6)', () => {
 describe('renderState (task 7.4)', () => {
   it('renders the crew, the scene and the vow from projected state', () => {
     const text = renderState(project(goldenSessionPrelude().build()));
-    expect(text).toContain('Rook Ilari, called Rook: health 5, spirit 5, supply 5, momentum 2');
+    expect(text).toContain('Rook Ilari, called Rook (pronouns not recorded');
+    expect(text).toContain('health 5, spirit 5, supply 5, momentum 2');
     expect(text).toContain('Current scene: The relay station');
     expect(text).toContain(
       'Vow (formidable) "Recover the flight recorder of Meridian\'s Hope": 0 of 10 progress boxes',
     );
+  });
+
+  it('names recorded pronouns, and says when none are recorded without implying a default (D-131)', () => {
+    const lines = renderState(project(goldenSessionPrelude().build())).split('\n');
+    const vesna = lines.find((line) => line.startsWith('- Vesna Kade'));
+    const rook = lines.find((line) => line.startsWith('- Rook Ilari'));
+
+    expect(vesna).toMatch(/^- Vesna Kade, called Vesna \(she\/her\): /);
+    expect(rook).toMatch(
+      /^- Rook Ilari, called Rook \(pronouns not recorded: refer to this character by name or callsign\): /,
+    );
+    // No pronoun of any kind is offered for a character with none recorded.
+    expect(rook).not.toMatch(/\b(she|her|he|him|his|they|them|their)\b/i);
   });
 });

@@ -137,6 +137,7 @@ export const SAMPLE_PAYLOADS: { [T in EventType]: PayloadFor<T> } = {
     },
     momentum: 7,
     assets: ['asset:path/pilot'],
+    pronouns: 'she/her',
   },
   'character.proposed': {
     concept: 'A pilot who flew evacuation runs and never stopped running.',

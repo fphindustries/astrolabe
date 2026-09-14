@@ -95,6 +95,8 @@ export interface CharacterState {
   readonly vowTrackIds: readonly TrackId[];
   /** D-124: backstory hooks the player accepted or wrote. Empty when none were. */
   readonly hooks: readonly string[];
+  /** D-131: the player's words, or null when none were recorded. */
+  readonly pronouns: string | null;
 }
 
 export type TrackKind = 'vow' | 'expedition' | 'clock';

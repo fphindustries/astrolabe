@@ -36,8 +36,14 @@ export function renderState(state: CampaignState): string {
       (id) => STARFORGED.gameRules.impacts.find((i) => i.id === id)?.label ?? id,
     );
     const assets = c.assets.map((id) => STARFORGED.assets.find((a) => a.id === id)?.name ?? id);
+    // D-131: named when recorded; when not, say so rather than leave the
+    // AI to pick a default.
+    const pronouns =
+      c.pronouns === null
+        ? 'pronouns not recorded: refer to this character by name or callsign'
+        : c.pronouns;
     return (
-      `- ${c.name}, called ${c.callsign}: ${meters}, momentum ${c.momentum.value}` +
+      `- ${c.name}, called ${c.callsign} (${pronouns}): ${meters}, momentum ${c.momentum.value}` +
       (impacts.length > 0 ? `; impacts: ${impacts.join(', ')}` : '') +
       (assets.length > 0 ? `; assets: ${assets.join(', ')}` : '') +
       (c.hooks.length > 0 ? `; backstory: ${c.hooks.join(' / ')}` : '')

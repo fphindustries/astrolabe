@@ -60,6 +60,7 @@ function goodProposal(overrides: Record<string, unknown> = {}) {
         groundedIn: ['backstory-2'],
       },
     ],
+    pronouns: { value: null, reason: 'The concept states none.' },
     ...overrides,
   };
 }
@@ -379,6 +380,7 @@ describe.skipIf(!hasTestDatabase)('character proposals (task 3.3, D-123, D-124)'
       },
       backgroundVow: proposed.proposal.backgroundVow,
       hooks: ['A settlement she could not evacuate still broadcasts.', '  '],
+      pronouns: '  she/her ',
       proposalCommandId,
     });
 
@@ -388,7 +390,74 @@ describe.skipIf(!hasTestDatabase)('character proposals (task 3.3, D-123, D-124)'
     expect(state.characters[created.characterId]).toMatchObject({
       callsign: 'Wick',
       hooks: ['A settlement she could not evacuate still broadcasts.'],
+      pronouns: 'she/her',
     });
+  });
+
+  it('records no pronouns for a blank field, rather than a default (D-131)', async () => {
+    const campaignId = await campaign();
+    const created = await createCharacter(db.sql, {
+      campaignId,
+      commandId: newId(),
+      actor: PLAYER,
+      draft: {
+        name: 'Rook Ilari',
+        callsign: 'Rook',
+        stats: { edge: 2, heart: 1, iron: 3, shadow: 1, wits: 2 },
+        assets: ['asset:path/veteran', 'asset:path/armored', 'asset:path/gunner'] as never,
+      },
+      pronouns: '   ',
+    });
+
+    const event = created.result.events.find((e) => e.type === 'character.created');
+    expect(event?.type === 'character.created' && 'pronouns' in event.payload).toBe(false);
+    const state = project(await readEvents(db.sql, campaignId));
+    expect(state.characters[created.characterId]?.pronouns).toBeNull();
+  });
+
+  it('fills pronouns only from the concept, and re-asks when the AI chose them (D-131)', async () => {
+    const campaignId = await campaign();
+    const ai = new StubProvider({
+      responses: [
+        {
+          kind: 'structured',
+          value: goodProposal({ pronouns: { value: 'she/her', reason: 'Sounds right.' } }),
+        },
+        {
+          kind: 'structured',
+          value: goodProposal({ pronouns: { value: 'they/them', reason: 'The concept says so.' } }),
+        },
+      ],
+    });
+
+    const result = await proposeCharacter(db.sql, ai, {
+      campaignId,
+      commandId: newId(),
+      actor: PLAYER,
+      concept: `${CONCEPT} They/them.`,
+      rng: rolls(),
+    });
+
+    expect(ai.requests[1]?.user).toMatch(/pronouns "she\/her" are not in the player's concept/);
+    expect(result).toMatchObject({
+      ok: true,
+      proposal: { pronouns: { value: 'they/them', reason: 'The concept says so.' } },
+    });
+  });
+
+  it('leaves pronouns out of the proposal when the concept states none (D-131)', async () => {
+    const campaignId = await campaign();
+    const ai = new StubProvider({ responses: [{ kind: 'structured', value: goodProposal() }] });
+
+    const result = await proposeCharacter(db.sql, ai, {
+      campaignId,
+      commandId: newId(),
+      actor: PLAYER,
+      concept: CONCEPT,
+      rng: rolls(),
+    });
+
+    expect(result.ok && 'pronouns' in result.proposal).toBe(false);
   });
 
   it('refuses a proposal command that holds no character proposal', async () => {

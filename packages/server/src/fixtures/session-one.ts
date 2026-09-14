@@ -144,19 +144,24 @@ export async function playSessionOne(
     callsign: string,
     stats: Record<StatId, number>,
     assets: readonly string[],
+    pronouns?: string,
   ) =>
     (
       await createCharacter(sql, {
         ...base,
         commandId: key(`character:${callsign}`),
         draft: { name, callsign, stats, assets: assets as readonly AssetId[] },
+        ...(pronouns !== undefined ? { pronouns } : {}),
       })
     ).characterId;
+  // D-131: the golden session calls Vesna "her" (Beat 5) and never gives
+  // Rook's or Juno's pronouns, so theirs stay unrecorded.
   const vesna = await character(
     'Vesna Kade',
     'Vesna',
     { edge: 3, heart: 2, iron: 1, shadow: 1, wits: 2 },
     ['asset:path/ace', 'asset:path/navigator', 'asset:module/sensor-array'],
+    'she/her',
   );
   const rook = await character(
     'Rook Ilari',

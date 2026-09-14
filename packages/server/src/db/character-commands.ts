@@ -68,6 +68,8 @@ export interface CreateCharacterRequest {
   readonly grantCommandVehicle?: boolean;
   /** D-124: backstory hooks, proposed or written by hand. Blank ones are dropped. */
   readonly hooks?: readonly string[];
+  /** D-131: the player's words. Blank means not recorded; the event schema caps the length. */
+  readonly pronouns?: string;
   /**
    * D-124: the proposal command this character was accepted from. Resolved
    * here to its `character.proposed` event, which becomes the cause; a
@@ -111,6 +113,7 @@ export async function createCharacter(
     causedBy = proposal.id;
   }
   const hooks = (request.hooks ?? []).map((hook) => hook.trim()).filter((hook) => hook !== '');
+  const pronouns = request.pronouns?.trim() ?? '';
 
   const state = project(await readEvents(sql, request.campaignId));
   const sessionId: SessionId | null = state.session?.id ?? null;
@@ -134,6 +137,7 @@ export async function createCharacter(
         // the starship back with the rest of the sheet is not penalised.
         assets: [...new Set([...request.draft.assets, ...granted])],
         ...(hooks.length > 0 ? { hooks } : {}),
+        ...(pronouns !== '' ? { pronouns } : {}),
       },
       sessionId,
       subjectCharacterId: characterId,

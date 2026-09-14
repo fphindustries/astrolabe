@@ -28,6 +28,7 @@ function character(overrides: Partial<CharacterState> = {}): CharacterState {
     assets: [],
     vowTrackIds: [],
     hooks: [],
+    pronouns: null,
     ...overrides,
   };
 }
@@ -100,6 +101,13 @@ describe('toCharacterSheet', () => {
       {},
     );
     expect(sheet.hooks).toEqual(['She still hears the channel.']);
+  });
+
+  it('carries recorded pronouns, and null rather than a default when none were (D-131)', () => {
+    expect(toCharacterSheet(character({ pronouns: 'she/her' }), RULES, {}).pronouns).toBe(
+      'she/her',
+    );
+    expect(toCharacterSheet(character(), RULES, {}).pronouns).toBeNull();
   });
 
   it('resolves asset names and impact labels from the rules, not the character', () => {

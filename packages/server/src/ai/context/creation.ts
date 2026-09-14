@@ -84,6 +84,7 @@ The build:
 - Assets: exactly three. Two must be paths. The third may be a module, support vehicle, companion or another path. Never a deed. The crew's starship is granted separately and does not count. Use only asset ids from the catalogue.
 - A background vow: one sentence the character has sworn, with a challenge rank (troublesome, dangerous, formidable, extreme or epic).
 - A name, a callsign, and two or three backstory hooks.
+- Pronouns: only if the player's concept states them, copied as written; otherwise null. Never choose pronouns for the character. Unless the concept states them, refer to the character by name or callsign in hooks and reasons.
 
 Grounding: the server has rolled oracle results for the name, callsign and backstory. Build the name, callsign and hooks from those results. You may choose between them, combine them or adapt them to the concept, and the player's own words take precedence where they already give a name. List, for each of those fields, the keys of the rolls you drew on. Every hook cites at least one roll. A name or callsign the player already wrote in the concept is kept exactly as written and cites none. Do not invent other named people, places or factions.
 
@@ -141,6 +142,7 @@ export function characterProposalSchema(rollKeys: readonly string[]) {
       .array(z.object({ text: z.string().min(1).max(300), reason, groundedIn: cites }))
       .min(2)
       .max(3),
+    pronouns: z.object({ value: z.string().min(1).max(40).nullable(), reason }),
   });
 }
 
@@ -150,6 +152,7 @@ export type CharacterProposalOutput = z.infer<ReturnType<typeof characterProposa
  * What the schema can't say: the creation rules themselves, and that the
  * fields D-123 grounds actually cite a roll. A name or callsign the player
  * already wrote into the concept needs no roll: their words come first.
+ * Pronouns must be the concept's own words or null (D-131).
  * Returns the problems in words, for the re-ask, or undefined.
  */
 export function checkCharacterProposal(
@@ -181,6 +184,12 @@ export function checkCharacterProposal(
     ['callsign', value.callsign.groundedIn, inConcept(value.callsign.value)],
     ...value.hooks.map((hook, i) => [`hook ${i + 1}`, hook.groundedIn, false] as const),
   ] as const;
+  // D-131: pronouns are only ever the player's own words.
+  if (value.pronouns.value !== null && !inConcept(value.pronouns.value)) {
+    problems.push(
+      `The pronouns "${value.pronouns.value}" are not in the player's concept; set them to null unless the concept states them.`,
+    );
+  }
   for (const [field, cites, playerWrote] of grounded) {
     if (cites.length === 0 && !playerWrote) {
       problems.push(`The ${field} cites no oracle roll; ground it in one of the rolls given.`);

@@ -37,6 +37,9 @@ export function CharacterDrawer({
         <p className={styles.empty}>Loading…</p>
       ) : (
         <>
+          <p className={styles.identity}>
+            {sheet.callsign} · {sheet.pronouns ?? 'Pronouns not recorded'}
+          </p>
           <section className={styles.section}>
             <h3 className={styles.sectionTitle}>Stats</h3>
             <div className={styles.row}>

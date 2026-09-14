@@ -29,10 +29,10 @@ import {
 import { AssetPicker } from './AssetPicker.js';
 import {
   MAX_HOOKS,
-  PROPOSED_FIELDS,
   applyProposal,
   guideNotes,
   hooksToSend,
+  proposedFields,
   rollChip,
   type CharacterProposal,
   type CreationForm,
@@ -44,6 +44,7 @@ const GRANTED = grantedAssetViews(STARFORGED, grantedAssets(STARFORGED));
 
 const EMPTY_FORM: CreationForm = {
   name: '',
+  pronouns: '',
   callsign: '',
   stats: emptyDraft().stats,
   slotSelections: {},
@@ -99,11 +100,12 @@ export function CharacterCreationScreen({ campaignId }: { readonly campaignId: s
   const fieldProblems = problemsByField(problems);
   const canSubmit = problems.length === 0 && !createCharacter.isPending;
   const notes = held === null ? undefined : guideNotes(held.proposal, held.rolls, STARFORGED);
+  const guided = held === null ? [] : proposedFields(held.proposal);
 
   /** Apply a player edit, and mark the field as no longer the Guide's. */
   const edit = (field: ProposedField, patch: Partial<CreationForm>) => {
     setForm((current) => ({ ...current, ...patch }));
-    if (held !== null && !edited.has(field)) {
+    if (guided.includes(field) && !edited.has(field)) {
       setEdited(new Set([...edited, field]));
     }
   };
@@ -129,7 +131,13 @@ export function CharacterCreationScreen({ campaignId }: { readonly campaignId: s
         }
         setHeld({ commandId, proposal: response.proposal, rolls: response.rolls });
         setForm((current) =>
-          applyProposal(current, response.proposal, PROPOSED_FIELDS, CREATION_SLOTS, STARFORGED),
+          applyProposal(
+            current,
+            response.proposal,
+            proposedFields(response.proposal),
+            CREATION_SLOTS,
+            STARFORGED,
+          ),
         );
         setEdited(new Set());
       },
@@ -155,6 +163,7 @@ export function CharacterCreationScreen({ campaignId }: { readonly campaignId: s
         draft,
         ...(form.swearVow ? { backgroundVow: { title: form.vowTitle, rank: form.vowRank } } : {}),
         hooks: hooksToSend(form.hooks),
+        pronouns: form.pronouns,
         ...(held !== null ? { proposalCommandId: held.commandId } : {}),
       },
       { onSuccess: () => navigate(`/campaigns/${campaignId}`) },
@@ -163,7 +172,7 @@ export function CharacterCreationScreen({ campaignId }: { readonly campaignId: s
 
   const guideUnavailable = guide.data !== undefined && !guide.data.configured;
   const note = (field: ProposedField): ReactNode =>
-    notes === undefined ? null : (
+    notes === undefined || !guided.includes(field) ? null : (
       <GuideMarker
         note={notes[field]}
         edited={edited.has(field)}
@@ -240,6 +249,27 @@ export function CharacterCreationScreen({ campaignId }: { readonly campaignId: s
           />
           {note('name')}
           <FieldErrors messages={fieldProblems.name} />
+
+          <label className={styles.label} htmlFor="pronouns">
+            Pronouns <span className={styles.optional}>(optional)</span>
+          </label>
+          <input
+            id="pronouns"
+            className={styles.input}
+            list="pronoun-suggestions"
+            maxLength={40}
+            value={form.pronouns}
+            onChange={(event) => edit('pronouns', { pronouns: event.target.value })}
+          />
+          <datalist id="pronoun-suggestions">
+            <option value="she/her" />
+            <option value="he/him" />
+            <option value="they/them" />
+          </datalist>
+          <p className={styles.hint}>
+            The Guide uses these. Left blank, it refers to the character by name or callsign.
+          </p>
+          {note('pronouns')}
 
           <label className={styles.label} htmlFor="callsign">
             Callsign

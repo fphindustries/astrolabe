@@ -82,6 +82,8 @@ export const CreateCharacterRequestBodySchema = z.object({
   grantCommandVehicle: z.boolean().optional(),
   /** D-124: backstory hooks, proposed or written by hand. */
   hooks: z.array(z.string().trim().min(1)).max(3).optional(),
+  /** D-131: free text; blank means not recorded. */
+  pronouns: z.string().trim().max(40).optional(),
   /**
    * D-124: the proposal command this character was accepted from. The
    * server resolves it to the `character.proposed` event and records that as

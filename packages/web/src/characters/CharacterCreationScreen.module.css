@@ -37,6 +37,10 @@
   color: var(--text-secondary);
 }
 
+.optional {
+  color: var(--text-muted);
+}
+
 .input,
 .select {
   background: var(--surface-0);

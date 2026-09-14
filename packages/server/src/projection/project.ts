@@ -110,6 +110,7 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
         assets: payload.assets,
         vowTrackIds: [],
         hooks: payload.hooks ?? [],
+        pronouns: payload.pronouns ?? null,
       });
       return withCharacter(state, character);
     }
