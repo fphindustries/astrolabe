@@ -421,10 +421,12 @@ describe('renderState (task 7.4)', () => {
     const rook = lines.find((line) => line.startsWith('- Rook Ilari'));
 
     expect(vesna).toMatch(/^- Vesna Kade, called Vesna \(she\/her\): /);
-    expect(rook).toMatch(
-      /^- Rook Ilari, called Rook \(pronouns not recorded: refer to this character by name or callsign\): /,
-    );
+    expect(rook).toMatch(/^- Rook Ilari, called Rook \(pronouns not recorded\): /);
     // No pronoun of any kind is offered for a character with none recorded.
     expect(rook).not.toMatch(/\b(she|her|he|him|his|they|them|their)\b/i);
+    // What to do about it is a standing rule, stated once, not state.
+    expect(GUIDE_RULES).toContain(
+      'for a character whose pronouns are not recorded, use no pronoun',
+    );
   });
 });

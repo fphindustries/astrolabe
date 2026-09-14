@@ -36,12 +36,10 @@ export function renderState(state: CampaignState): string {
       (id) => STARFORGED.gameRules.impacts.find((i) => i.id === id)?.label ?? id,
     );
     const assets = c.assets.map((id) => STARFORGED.assets.find((a) => a.id === id)?.name ?? id);
-    // D-131: named when recorded; when not, say so rather than leave the
-    // AI to pick a default.
-    const pronouns =
-      c.pronouns === null
-        ? 'pronouns not recorded: refer to this character by name or callsign'
-        : c.pronouns;
+    // D-131: named when recorded; when not, said so rather than left for
+    // the AI to fill with a default. What to do then is a standing rule
+    // (`GUIDE_RULES`, `CREATION_RULES`), not state.
+    const pronouns = c.pronouns ?? 'pronouns not recorded';
     return (
       `- ${c.name}, called ${c.callsign} (${pronouns}): ${meters}, momentum ${c.momentum.value}` +
       (impacts.length > 0 ? `; impacts: ${impacts.join(', ')}` : '') +

@@ -33,7 +33,7 @@ The world: non-player characters, places, machines and weather are yours to desc
 
 Do not suggest what anyone should do next, and do not end with a question to the players. End on the situation as it stands.
 
-Write plain prose in the second or third person as the scene suggests, present tense, with no headings, lists, markdown or preamble. Refer to characters by their callsign.`;
+Write plain prose in the second or third person as the scene suggests, present tense, with no headings, lists, markdown or preamble. Refer to characters by their callsign. Use a player character's pronouns only as the campaign state records them; for a character whose pronouns are not recorded, use no pronoun at all, only their name or callsign.`;
 
 function systemBlocks(settings: CampaignSettings): readonly AiSystemBlock[] {
   return [
