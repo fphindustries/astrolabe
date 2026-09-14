@@ -8,6 +8,7 @@ import type {
   EntityId,
   FieldProvenance,
   MeterState,
+  TokenUsage,
   TrackState,
 } from '@astrolabe/shared';
 
@@ -108,6 +109,7 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
         markedImpacts: 0,
         assets: payload.assets,
         vowTrackIds: [],
+        hooks: payload.hooks ?? [],
       });
       return withCharacter(state, character);
     }
@@ -165,6 +167,7 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
     case 'move.method_chosen':
     case 'move.chained':
     case 'oracle.rolled':
+    case 'character.proposed':
     case 'amount.proposed':
     case 'amount.committed':
       // None of these change projected state. Rolls, chains, oracle results,
@@ -297,30 +300,28 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
 
     case 'ai.completed':
     case 'ai.failed': {
-      if (state.session === null) {
-        return state;
-      }
       // D-85: counted even inside a voided cascade. `isSuppressed` never
       // skips these types, because the tokens were spent whatever the
       // fiction now says. A failed call counts whatever it spent before it
-      // failed (D-113).
+      // failed (D-113). The campaign total counts every call; the session
+      // counter only the calls made while a session is open (D-125).
       const { payload } = event;
       const cached =
         'cacheReadTokens' in payload || 'cacheWriteTokens' in payload
           ? { read: payload.cacheReadTokens ?? 0, write: payload.cacheWriteTokens ?? 0 }
           : { read: 0, write: 0 };
-      const usage = state.session.tokenUsage;
+      const add = (usage: TokenUsage): TokenUsage => ({
+        input: usage.input + (payload.inputTokens ?? 0),
+        output: usage.output + (payload.outputTokens ?? 0),
+        cacheRead: usage.cacheRead + cached.read,
+        cacheWrite: usage.cacheWrite + cached.write,
+      });
       return {
         ...state,
-        session: {
-          ...state.session,
-          tokenUsage: {
-            input: usage.input + (payload.inputTokens ?? 0),
-            output: usage.output + (payload.outputTokens ?? 0),
-            cacheRead: usage.cacheRead + cached.read,
-            cacheWrite: usage.cacheWrite + cached.write,
-          },
-        },
+        tokenUsage: add(state.tokenUsage),
+        ...(state.session !== null
+          ? { session: { ...state.session, tokenUsage: add(state.session.tokenUsage) } }
+          : {}),
       };
     }
   }

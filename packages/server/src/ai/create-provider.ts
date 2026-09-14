@@ -45,6 +45,9 @@ function devStubResponse(
       value: { amount: -1, reason: 'Stub proposal: a glancing blow.' },
     };
   }
+  if (mode === 'structured' && request.purpose === 'character_proposal') {
+    return { kind: 'structured', value: STUB_CHARACTER_PROPOSAL };
+  }
   if (mode === 'structured') {
     return {
       kind: 'error',
@@ -57,3 +60,43 @@ function devStubResponse(
     text: 'Stub narration: the moment resolves as the dice said, described in a few plain sentences.',
   };
 }
+
+/** A build that passes the creation rules and cites every roll D-123 makes (3.3). */
+const STUB_CHARACTER_PROPOSAL = {
+  name: {
+    value: 'Stub Given Stub Family',
+    reason: 'Stub proposal: the two name rolls, together.',
+    groundedIn: ['given-name', 'family-name'],
+  },
+  callsign: {
+    value: 'Stub',
+    reason: 'Stub proposal: the callsign roll.',
+    groundedIn: ['callsign'],
+  },
+  stats: {
+    value: { edge: 3, heart: 2, iron: 2, shadow: 1, wits: 1 },
+    reason: 'Stub proposal: edge leads.',
+  },
+  assets: [
+    { assetId: 'asset:path/ace', reason: 'Stub proposal: a pilot.' },
+    { assetId: 'asset:path/navigator', reason: 'Stub proposal: a navigator.' },
+    { assetId: 'asset:module/sensor-array', reason: 'Stub proposal: sharper sensors.' },
+  ],
+  backgroundVow: {
+    title: 'Stub proposal: find what was lost',
+    rank: 'dangerous',
+    reason: 'Stub proposal: a vow to start with.',
+  },
+  hooks: [
+    {
+      text: 'Stub hook from the first prompt.',
+      reason: 'Stub proposal.',
+      groundedIn: ['backstory-1'],
+    },
+    {
+      text: 'Stub hook from the second prompt.',
+      reason: 'Stub proposal.',
+      groundedIn: ['backstory-2'],
+    },
+  ],
+};

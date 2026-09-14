@@ -115,3 +115,109 @@
   color: var(--text-muted);
   cursor: not-allowed;
 }
+
+/* Concept-first creation (3.3, D-124). */
+.hint {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.textarea {
+  background: var(--surface-0);
+  color: var(--text-primary);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+  font: inherit;
+  resize: vertical;
+}
+
+.proposeRow,
+.confirm,
+.hookRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.hookRow .input {
+  flex: 1;
+}
+
+.tokens {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.secondary {
+  align-self: flex-start;
+  background: var(--surface-2);
+  color: var(--text-primary);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.secondary:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* The marker under a field that still holds, or once held, the Guide's value. */
+.guideNote {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--provenance-ai);
+}
+
+.guideNote[data-edited='true'] {
+  color: var(--provenance-player);
+}
+
+.badge {
+  flex: none;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.guideLines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  padding: 0 var(--space-2);
+  font-family: var(--font-mono);
+}
+
+.linkButton {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  text-decoration: underline;
+}

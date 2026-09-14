@@ -33,10 +33,17 @@ export {
 export {
   createCharacter,
   CharacterRejectedError,
+  UnknownProposalError,
   type CreateCharacterRequest,
   type CreatedCharacter,
 } from './character-commands.js';
 export { listCampaigns } from './campaign-queries.js';
+export {
+  proposeCharacter,
+  type ProposalRequest,
+  type ProposalRollSpec,
+  type ProposeCharacterRequest,
+} from './proposal-commands.js';
 export {
   createCampaign,
   setTruth,

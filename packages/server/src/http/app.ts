@@ -43,6 +43,7 @@ import {
   applyMoveChoice,
   burnMomentum,
   CharacterRejectedError,
+  UnknownProposalError,
   createCampaign,
   createCharacter,
   IncitingVowRejectedError,
@@ -190,7 +191,11 @@ export function buildApp({ sql, ai }: BuildAppOptions): FastifyInstance {
     async (
       request,
       reply,
-    ): Promise<CreateCharacterResponse | { problems: readonly CharacterProblem[] } | undefined> => {
+    ): Promise<
+      | CreateCharacterResponse
+      | { problems: readonly CharacterProblem[]; problem?: string }
+      | undefined
+    > => {
       const id = parseCampaignId(request.params.id, reply);
       if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
         return undefined;
@@ -201,7 +206,8 @@ export function buildApp({ sql, ai }: BuildAppOptions): FastifyInstance {
         reply.code(400);
         return undefined;
       }
-      const { commandId, draft, backgroundVow, grantCommandVehicle } = parsedBody.data;
+      const { commandId, draft, backgroundVow, grantCommandVehicle, hooks, proposalCommandId } =
+        parsedBody.data;
 
       try {
         const created = await createCharacter(sql, {
@@ -211,6 +217,8 @@ export function buildApp({ sql, ai }: BuildAppOptions): FastifyInstance {
           draft,
           ...(backgroundVow !== undefined ? { backgroundVow } : {}),
           ...(grantCommandVehicle !== undefined ? { grantCommandVehicle } : {}),
+          ...(hooks !== undefined ? { hooks } : {}),
+          ...(proposalCommandId !== undefined ? { proposalCommandId } : {}),
         });
         reply.code(201);
         return {
@@ -221,6 +229,10 @@ export function buildApp({ sql, ai }: BuildAppOptions): FastifyInstance {
         if (error instanceof CharacterRejectedError) {
           reply.code(422);
           return { problems: error.problems };
+        }
+        if (error instanceof UnknownProposalError) {
+          reply.code(422);
+          return { problems: [], problem: error.message };
         }
         throw error;
       }

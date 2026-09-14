@@ -27,6 +27,7 @@ function character(overrides: Partial<CharacterState> = {}): CharacterState {
     markedImpacts: 0,
     assets: [],
     vowTrackIds: [],
+    hooks: [],
     ...overrides,
   };
 }
@@ -90,6 +91,15 @@ describe('toCharacterSheet', () => {
       {},
     );
     expect(sheet.meters[0]?.overridden).toBe(false);
+  });
+
+  it('carries the backstory hooks accepted at creation (D-124)', () => {
+    const sheet = toCharacterSheet(
+      character({ hooks: ['She still hears the channel.'] }),
+      RULES,
+      {},
+    );
+    expect(sheet.hooks).toEqual(['She still hears the channel.']);
   });
 
   it('resolves asset names and impact labels from the rules, not the character', () => {

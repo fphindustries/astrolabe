@@ -4,6 +4,7 @@
  * the same fence `projection/` sits behind.
  */
 export * from './beat-scope.js';
+export * from './creation.js';
 export * from './describe-beat.js';
 export * from './latitude.js';
 export * from './length.js';

@@ -84,6 +84,17 @@ export const EVENT_TYPE_META: MetaTable = {
     introduces: (p) => [character(p.characterId)],
     references: none,
   },
+  'character.proposed': {
+    // D-124: a suggestion the player has not accepted. It happens before any
+    // session (D-77), so it belongs to no beat, and it changes nothing until
+    // `character.created` names it as its cause.
+    narrative: false,
+    significant: false,
+    mutatesState: false,
+    voidable: true,
+    introduces: none,
+    references: none,
+  },
   'session.began': {
     narrative: false,
     significant: true,

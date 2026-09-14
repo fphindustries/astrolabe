@@ -9,12 +9,18 @@ import {
   type CharacterProblem,
   type TrackId,
 } from '@astrolabe/rules';
-import type { Actor, CampaignId, CommandId, SessionId } from '@astrolabe/shared';
+import type { Actor, CampaignId, CommandId, EventId, SessionId } from '@astrolabe/shared';
 import type { Sql } from 'postgres';
 
 import { project } from '../projection/project.js';
 
-import { appendCommand, readEvents, type AppendResult, type NewEvent } from './event-store.js';
+import {
+  appendCommand,
+  readEvents,
+  readEventsByCommand,
+  type AppendResult,
+  type NewEvent,
+} from './event-store.js';
 import { uuidv7 } from './uuid.js';
 
 /**
@@ -31,6 +37,14 @@ export class CharacterRejectedError extends Error {
   constructor(readonly problems: readonly CharacterProblem[]) {
     super(problems.map((p) => p.message).join(' '));
     this.name = 'CharacterRejectedError';
+  }
+}
+
+/** D-124: a `proposalCommandId` that names no character proposal in the campaign. */
+export class UnknownProposalError extends Error {
+  constructor() {
+    super('That proposal does not exist in this campaign.');
+    this.name = 'UnknownProposalError';
   }
 }
 
@@ -52,6 +66,14 @@ export interface CreateCharacterRequest {
    * whether the asset appears on their sheet.
    */
   readonly grantCommandVehicle?: boolean;
+  /** D-124: backstory hooks, proposed or written by hand. Blank ones are dropped. */
+  readonly hooks?: readonly string[];
+  /**
+   * D-124: the proposal command this character was accepted from. Resolved
+   * here to its `character.proposed` event, which becomes the cause; a
+   * command that holds no proposal is refused rather than ignored.
+   */
+  readonly proposalCommandId?: CommandId;
 }
 
 export interface CreatedCharacter {
@@ -78,6 +100,18 @@ export async function createCharacter(
 
   const granted = request.grantCommandVehicle === false ? [] : grantedAssets(STARFORGED);
 
+  let causedBy: EventId | undefined;
+  if (request.proposalCommandId !== undefined) {
+    const proposal = (
+      await readEventsByCommand(sql, request.campaignId, request.proposalCommandId)
+    ).find((event) => event.type === 'character.proposed');
+    if (proposal === undefined) {
+      throw new UnknownProposalError();
+    }
+    causedBy = proposal.id;
+  }
+  const hooks = (request.hooks ?? []).map((hook) => hook.trim()).filter((hook) => hook !== '');
+
   const state = project(await readEvents(sql, request.campaignId));
   const sessionId: SessionId | null = state.session?.id ?? null;
   const characterId = uuidv7() as CharacterId;
@@ -99,6 +133,7 @@ export async function createCharacter(
         // assets are deduplicated against the draft, so a client that sends
         // the starship back with the rest of the sheet is not penalised.
         assets: [...new Set([...request.draft.assets, ...granted])],
+        ...(hooks.length > 0 ? { hooks } : {}),
       },
       sessionId,
       subjectCharacterId: characterId,
@@ -127,6 +162,7 @@ export async function createCharacter(
     commandId: request.commandId,
     kind: 'character.create',
     actor: request.actor,
+    ...(causedBy !== undefined ? { causedBy } : {}),
     events,
     response: { characterId, ...(vowTrackId !== undefined ? { vowTrackId } : {}) },
   });

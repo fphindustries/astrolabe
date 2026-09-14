@@ -23,8 +23,9 @@ describe('the catalogue', () => {
     // move.choice_made, move.method_chosen, move.chained, oracle.rolled and
     // amount.committed (§6, the move flow) are the next five, landing with
     // the features that write them, as events/index.ts's own comment plans.
-    // amount.proposed and ai.failed (§7, the AI provider) make two more.
-    expect(EVENT_TYPES).toHaveLength(27);
+    // amount.proposed and ai.failed (§7, the AI provider) make two more, and
+    // character.proposed (3.3, D-124) one more.
+    expect(EVENT_TYPES).toHaveLength(28);
   });
 
   it('exposes every type through isEventType, and rejects anything else', () => {

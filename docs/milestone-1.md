@@ -101,7 +101,7 @@ narrative log is a second read model with its own paged query.
 
 - [x] 3.1 Character data model: stats, meters, momentum, impacts, assets, vows
 - [x] 3.2 Manual creation UI with rule validation on every field
-- [ ] 3.3 Concept-first flow: prompt, AI proposal, review, accept or edit per field. Unblocked: the provider core landed with group 7 (D-57 as amended)
+- [x] 3.3 Concept-first flow: prompt, AI proposal, review, accept or edit per field (D-123–D-126). Built and verified on the stub provider; not yet run against live Claude (see "Implementation notes (task 3.3)")
 - [x] 3.4 Asset selection with rule constraints
 - [x] 3.5 Creation writes character-created events
 
@@ -450,8 +450,8 @@ the seed of D-72's committed session fixture.
 
 ## Implementation notes (section 3, character creation)
 
-3.1, 3.2, 3.4 and 3.5 are done. 3.3 (concept-first) waited on the AI
-provider, which has since landed (D-57 as amended). It reuses this session’s form rather than replacing it.
+3.1–3.5 are done. 3.3 (concept-first) waited on the AI
+provider and landed after group 7; see "Implementation notes (task 3.3)" below. It reuses this session’s form rather than replacing it.
 Decisions: D-89 to D-93, D-105.
 
 - **The background vow is written atomically with the character** (D-105):
@@ -1275,3 +1275,49 @@ same thing: a campaign in a known state that can be thrown away and rebuilt.
   through the HTTP routes. Narration should come from a scripted stub queue
   and dice from loaded dice, so the provider path is exercised rather than
   bypassed.
+
+---
+
+## Implementation notes (task 3.3, concept-first creation)
+
+3.3 is done. Decisions: D-123 to D-126. It came after group 7 because it needs the provider (D-57 as amended). 4.6, the AI-proposed inciting incidents, comes next on the same machinery.
+
+### Shape
+
+- **`server/src/db/proposal-commands.ts`** holds the shared proposal machinery, and 4.6 is its second caller. `runProposal`:
+  - rolls the requested oracle tables, minting each roll's event id up front with `NewEvent.id`, so the proposal can cite them;
+  - builds the request and calls `generateValidated` with a rules check;
+  - writes one command: the rolls, the accounting, then the proposal on success or `ai.failed` on failure.
+
+  Rolls are written even when the call fails, because dice that were rolled stay rolled. A replay rebuilds the answer from the stored events. `proposeCharacter` is the 3.3 caller.
+- **`server/src/ai/context/creation.ts`** is pure and sits inside the context lint fence. It holds:
+  - `CHARACTER_PROPOSAL_ROLLS`: given name, family name, callsign, and two backstory prompts;
+  - the system prompt, `CREATION_RULES`, plus a cached asset catalogue of 79 lines of `id | name | category | first ability, cut to 160 chars`, instead of about 115KB of full ability text;
+  - `characterProposalSchema`: asset ids limited to the selectable set, and roll citations as an enum of roll keys;
+  - `checkCharacterProposal`: runs `validateCharacterDraft`, and requires the name, callsign and every hook to cite a roll. A name or callsign that already appears in the concept is exempt.
+- **`generateValidated`** gained an optional `check`. The re-ask now carries the problem ("Your previous answer was rejected: …") rather than repeating the identical request. Beat narration and the harm proposal are unaffected.
+- **Accepting** goes through the ordinary `createCharacter` path, which gained `hooks` and `proposalCommandId`. The server resolves the proposal and sets it as the character's `causedBy`. An unknown proposal id throws `UnknownProposalError`, which the route returns as 422.
+- **Log and tokens.** A proposal command belongs to no session or scene. `readNarrativeEvents` skips its events by command kind (`PROPOSAL_COMMAND_KINDS`), so the rolls never show up as unexplained oracle beats. `CampaignState.tokenUsage` counts every AI call, and the session counter still counts calls made while a session is open (D-125).
+- **Routes.**
+  - `POST /api/campaigns/:id/character-proposals {commandId, concept}` returns 201 with the proposal and rolls, or with `{ok:false, errorKind, message, rolls}`.
+  - `POST /characters` accepts `hooks` and `proposalCommandId`.
+- **Web.**
+  - `characters/proposal.ts` has the pure helpers: `slotsFromAssets`, `applyProposal`, `guideNotes`, `rollChip` and `hooksToSend`.
+  - The creation screen now keeps one `CreationForm` object instead of separate state per field. It adds a concept box and a "Guide" marker with its reason and roll chips under each proposed field. Editing a field switches the marker to "Edited" with a restore link, and re-proposing over edits asks for confirmation inline. It also adds a hooks section, which manual creation can use too.
+  - The character drawer shows backstory hooks, and the top bar's tooltip carries the campaign total.
+- **Stub.** `ASTROLABE_AI_PROVIDER=stub` answers `character_proposal` with a valid build that cites every roll.
+
+### Verification
+
+`npm run typecheck`, `npm run lint` and `npm test` pass against Postgres, and `npm run build --workspace @astrolabe/web` succeeds. A browser pass on the stub provider, against a scratch database seeded with `session-2-open` and dropped afterwards, covered:
+
+- proposing from a concept: the form filled, markers and roll chips showed, and the campaign counter rose from 480 to 600;
+- editing the callsign, which switched the marker to "Edited" with a restore link;
+- creating the character: `character.created` carried the proposal as its `causedBy` and stored the hooks, and the drawer's Backstory section listed them;
+- the proposal's rolls staying out of the narrative log.
+
+That pass caught three bugs, now fixed: a duplicate React key when two reasons had the same text, the "Edited" marker using the AI provenance colour, and proposal rolls appearing in the session log.
+
+**Not verified:**
+- **A live Claude call.** Structured output with a 79-value enum and `$ref`-reused sub-schemas has only run through the faked SDK and the stub. The SDK moves unsupported constraints, such as `minItems` above 1 or numeric bounds, into field descriptions rather than rejecting them. Run one proposal with a key set before relying on it.
+- **Latency.** Effort is `medium` and the output is a full build, so expect a proposal to take tens of seconds. The form stays usable while it runs, and A18 doesn't apply here.

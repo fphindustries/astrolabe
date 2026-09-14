@@ -93,6 +93,8 @@ export interface CharacterState {
   readonly bonusNextMove?: BonusNextMove;
   /** The vows this character swore, in the order they were sworn. */
   readonly vowTrackIds: readonly TrackId[];
+  /** D-124: backstory hooks the player accepted or wrote. Empty when none were. */
+  readonly hooks: readonly string[];
 }
 
 export type TrackKind = 'vow' | 'expedition' | 'clock';
@@ -196,4 +198,10 @@ export interface CampaignState {
   readonly canon: CanonState;
   readonly truths: Readonly<Record<OracleId, TruthAnswer>>;
   readonly sector: SectorState;
+  /**
+   * D-125: every AI call the campaign has paid for, in a session or not.
+   * Characters are created before any session (D-77), and the session
+   * counter skips those calls.
+   */
+  readonly tokenUsage: TokenUsage;
 }

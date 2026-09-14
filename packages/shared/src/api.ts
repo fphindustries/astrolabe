@@ -1,6 +1,13 @@
 import * as z from 'zod';
 
-import type { BurnOffer, CharacterId, MoveId, OutcomeTier, TrackId } from '@astrolabe/rules';
+import type {
+  BurnOffer,
+  CharacterId,
+  MoveId,
+  OracleId,
+  OutcomeTier,
+  TrackId,
+} from '@astrolabe/rules';
 
 import type { AiErrorKind } from './events/ai.js';
 import { CampaignSettingsSchema } from './events/campaign.js';
@@ -21,6 +28,7 @@ import {
   type EntityId,
   type EventId,
 } from './ids.js';
+import type { PayloadFor } from './events/index.js';
 import type { EntityRef } from './meta.js';
 import type { CampaignState, NarrativeLog } from './read-models/index.js';
 
@@ -72,6 +80,14 @@ export const CreateCharacterRequestBodySchema = z.object({
   }),
   backgroundVow: z.object({ title: z.string().min(1), rank: ChallengeRankSchema }).optional(),
   grantCommandVehicle: z.boolean().optional(),
+  /** D-124: backstory hooks, proposed or written by hand. */
+  hooks: z.array(z.string().trim().min(1)).max(3).optional(),
+  /**
+   * D-124: the proposal command this character was accepted from. The
+   * server resolves it to the `character.proposed` event and records that as
+   * the cause; the client never names an event id.
+   */
+  proposalCommandId: CommandIdSchema.optional(),
 });
 
 export type CreateCharacterRequestBody = z.infer<typeof CreateCharacterRequestBodySchema>;
@@ -462,3 +478,35 @@ export interface AiStatusResponse {
   readonly available: boolean;
   readonly lastFailure?: { readonly errorKind: AiErrorKind; readonly message: string };
 }
+
+/** Task 3.3 / D-124: ask the Guide to propose a character from a concept. */
+export const ProposeCharacterRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  concept: z.string().trim().min(1).max(2000),
+});
+
+export type ProposeCharacterRequestBody = z.infer<typeof ProposeCharacterRequestBodySchema>;
+
+/** One server-rolled oracle result a proposal was grounded in (D-123). */
+export interface ProposalRoll {
+  readonly eventId: EventId;
+  readonly oracleId: OracleId;
+  /** What the roll was for, e.g. Callsign. */
+  readonly label: string;
+  readonly roll: number;
+  readonly rowText: string;
+}
+
+export type ProposeCharacterResponse =
+  | {
+      readonly ok: true;
+      readonly proposalEventId: EventId;
+      readonly proposal: PayloadFor<'character.proposed'>;
+      readonly rolls: readonly ProposalRoll[];
+    }
+  | {
+      readonly ok: false;
+      readonly errorKind: AiErrorKind;
+      readonly message: string;
+      readonly rolls: readonly ProposalRoll[];
+    };

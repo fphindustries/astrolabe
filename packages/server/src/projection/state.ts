@@ -27,6 +27,7 @@ export function emptyState(): CampaignState {
     canon: { sessionSummaries: [] },
     truths: {},
     sector: { routes: [] },
+    tokenUsage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
   };
 }
 

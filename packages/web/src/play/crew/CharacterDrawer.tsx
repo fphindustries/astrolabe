@@ -139,6 +139,17 @@ export function CharacterDrawer({
               </ul>
             )}
           </section>
+
+          {sheet.hooks.length > 0 && (
+            <section className={styles.section}>
+              <h3 className={styles.sectionTitle}>Backstory</h3>
+              <ul className={styles.list}>
+                {sheet.hooks.map((hook, index) => (
+                  <li key={index}>{hook}</li>
+                ))}
+              </ul>
+            </section>
+          )}
         </>
       )}
     </Drawer>

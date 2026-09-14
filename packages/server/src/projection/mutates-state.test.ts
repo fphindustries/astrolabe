@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { EVENT_TYPE_META, EVENT_TYPES, type EventType } from '@astrolabe/shared';
+import { SAMPLE_PAYLOADS } from '@astrolabe/shared/test-fixtures';
 
 import { project } from './project.js';
 import {
@@ -49,6 +50,12 @@ const PROBES: { readonly [T in EventType]: Probe } = {
   },
   'character.created': {
     probe: (b) => b.add('character.created', character(OTHER_CHARACTER as never, 'Someone', 2)),
+  },
+  'character.proposed': {
+    probe: (b) =>
+      b.add('character.proposed', SAMPLE_PAYLOADS['character.proposed'] as never, {
+        actor: AI_ACTOR,
+      }),
   },
   'session.began': {
     probe: (b) => b.add('session.began', { sessionId: SESSION_ID, number: 3 }),

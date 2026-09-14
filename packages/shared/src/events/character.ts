@@ -1,6 +1,8 @@
 import * as z from 'zod';
 
-import { AssetIdSchema, CharacterIdSchema } from '../ids.js';
+import { AssetIdSchema, CharacterIdSchema, EventIdSchema } from '../ids.js';
+
+import { ChallengeRankSchema } from './track.js';
 
 /**
  * A meter's value **and its bounds**, snapshotted onto the character.
@@ -45,4 +47,43 @@ export const CharacterCreatedSchema = z.object({
    */
   momentum: z.int(),
   assets: z.array(AssetIdSchema),
+  /** D-124: backstory hooks, from a concept-first proposal or written by hand. Optional, so no version bump. */
+  hooks: z.array(z.string().min(1)).max(3).optional(),
+});
+
+/**
+ * D-124: a concept-first proposal (task 3.3). Nothing here is canon — the
+ * player reviews it, edits any field, and accepts through the ordinary
+ * `character.created` path, which names this event as its cause.
+ *
+ * Every field carries a one-line reason (design record §6). The fields the
+ * AI would otherwise invent — name, callsign, hooks — cite the
+ * server-rolled `oracle.rolled` events in the same command that ground them
+ * (D-123); the proposal command checks that each citation is one of its own
+ * rolls.
+ */
+const ReasonSchema = z.string().min(1);
+const GroundedInSchema = z.array(EventIdSchema);
+
+export const CharacterProposedSchema = z.object({
+  concept: z.string().min(1),
+  name: z.object({ value: z.string().min(1), reason: ReasonSchema, groundedIn: GroundedInSchema }),
+  callsign: z.object({
+    value: z.string().min(1),
+    reason: ReasonSchema,
+    groundedIn: GroundedInSchema,
+  }),
+  stats: z.object({ value: CharacterStatsSchema, reason: ReasonSchema }),
+  assets: z.array(z.object({ assetId: AssetIdSchema, reason: ReasonSchema })),
+  backgroundVow: z.object({
+    title: z.string().min(1),
+    rank: ChallengeRankSchema,
+    reason: ReasonSchema,
+  }),
+  hooks: z
+    .array(
+      z.object({ text: z.string().min(1), reason: ReasonSchema, groundedIn: GroundedInSchema }),
+    )
+    .min(1)
+    .max(3),
 });

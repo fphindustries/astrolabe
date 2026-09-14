@@ -71,13 +71,13 @@ export type AiCommandResult =
 export type Prepared<T> =
   { readonly kind: 'replay'; readonly result: AiCommandResult } | ({ readonly kind: 'run' } & T);
 
-interface Envelope {
+export interface Envelope {
   readonly campaignId: CampaignId;
   readonly sessionId: SessionId | null;
   readonly sceneId: SceneId | null;
 }
 
-function envelopeOf(campaignId: CampaignId, state: CampaignState): Envelope {
+export function envelopeOf(campaignId: CampaignId, state: CampaignState): Envelope {
   return {
     campaignId,
     sessionId: state.session?.id ?? null,
@@ -92,7 +92,7 @@ function settingsOf(state: CampaignState) {
   return state.campaign.settings;
 }
 
-function withEnvelope<T extends NewEvent>(event: T, envelope: Envelope): T {
+export function withEnvelope<T extends NewEvent>(event: T, envelope: Envelope): T {
   return {
     ...event,
     actor: AI,
@@ -101,7 +101,7 @@ function withEnvelope<T extends NewEvent>(event: T, envelope: Envelope): T {
   };
 }
 
-function accounting(
+export function accounting(
   ai: AiProvider,
   purpose: string,
   outcome: Outcome<unknown>,
@@ -115,7 +115,7 @@ function accounting(
   );
 }
 
-function recordStatus(status: AiStatus | undefined, outcome: Outcome<unknown>): void {
+export function recordStatus(status: AiStatus | undefined, outcome: Outcome<unknown>): void {
   if (outcome.ok) {
     status?.recordSuccess();
   } else {

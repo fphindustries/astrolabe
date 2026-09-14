@@ -235,6 +235,77 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
     });
   });
 
+  it('proposes a character from a concept, and accepting it keeps the hooks (3.3, D-124)', async () => {
+    const { campaignId } = await moveMade();
+    ai.enqueue({
+      kind: 'structured',
+      value: {
+        name: { value: 'Mara Oduya', reason: 'The rolls.', groundedIn: ['given-name'] },
+        callsign: { value: 'Lantern', reason: 'The roll.', groundedIn: ['callsign'] },
+        stats: { value: { edge: 3, heart: 2, iron: 1, shadow: 1, wits: 2 }, reason: 'A pilot.' },
+        assets: [
+          { assetId: 'asset:path/ace', reason: 'She flies.' },
+          { assetId: 'asset:path/navigator', reason: 'She navigates.' },
+          { assetId: 'asset:module/sensor-array', reason: 'She listens.' },
+        ],
+        backgroundVow: { title: 'Answer every call', rank: 'dangerous', reason: 'The concept.' },
+        hooks: [
+          {
+            text: 'A lost settlement still broadcasts.',
+            reason: 'Prompt.',
+            groundedIn: ['backstory-1'],
+          },
+          { text: 'She owes a rival.', reason: 'Prompt.', groundedIn: ['backstory-2'] },
+        ],
+      },
+    });
+    const proposalCommandId = newId<CommandId>();
+
+    const proposed = await app.inject({
+      method: 'POST',
+      url: `/api/campaigns/${campaignId}/character-proposals`,
+      payload: { commandId: proposalCommandId, concept: 'A pilot who answers every call.' },
+    });
+    expect(proposed.statusCode).toBe(201);
+    const body = proposed.json();
+    expect(body).toMatchObject({ ok: true, proposal: { callsign: { value: 'Lantern' } } });
+    expect(body.rolls).toHaveLength(5);
+    // A session is open here, but a proposal is not a beat of it.
+    const proposalEvents = (await readEvents(db.sql, campaignId)).filter(
+      (e) => e.commandId === proposalCommandId,
+    );
+    expect(proposalEvents.map((e) => e.sessionId)).toEqual(proposalEvents.map(() => null));
+    const log = await app.inject({ method: 'GET', url: `/api/campaigns/${campaignId}/log` });
+    expect(log.body).not.toContain(body.rolls[0].eventId);
+
+    const created = await app.inject({
+      method: 'POST',
+      url: `/api/campaigns/${campaignId}/characters`,
+      payload: {
+        commandId: newId(),
+        draft: {
+          name: 'Mara Oduya',
+          callsign: 'Lantern',
+          stats: body.proposal.stats.value,
+          assets: ['asset:path/ace', 'asset:path/navigator', 'asset:module/sensor-array'],
+        },
+        hooks: ['A lost settlement still broadcasts.'],
+        proposalCommandId,
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const state = project(await readEvents(db.sql, campaignId));
+    const mara = Object.values(state.characters).find((c) => c.callsign === 'Lantern');
+    expect(mara?.hooks).toEqual(['A lost settlement still broadcasts.']);
+
+    const empty = await app.inject({
+      method: 'POST',
+      url: `/api/campaigns/${campaignId}/character-proposals`,
+      payload: { commandId: newId(), concept: '' },
+    });
+    expect(empty.statusCode).toBe(400);
+  });
+
   it('overrides momentum by hand, and refuses an out-of-range value (A16, D-117)', async () => {
     const { campaignId, characterId } = await moveMade();
 

@@ -1,6 +1,6 @@
 import type { TokenUsage } from '@astrolabe/shared';
 
-import { formatTokens } from './tokens.js';
+import { tokenCounter } from './tokens.js';
 import styles from './TopBar.module.css';
 
 /**
@@ -25,6 +25,7 @@ export function TopBar({
   connected,
   guideAvailable,
   tokens,
+  campaignTokens,
   onOpenMoves,
 }: {
   readonly campaignName: string;
@@ -33,8 +34,11 @@ export function TopBar({
   /** `undefined` while the status is still loading. */
   readonly guideAvailable: boolean | undefined;
   readonly tokens: TokenUsage | undefined;
+  /** D-125: every call the campaign paid for, sessions or not. */
+  readonly campaignTokens: TokenUsage | undefined;
   readonly onOpenMoves: () => void;
 }) {
+  const counter = tokenCounter(tokens, campaignTokens);
   return (
     <div className={styles.bar}>
       <span className={styles.campaign}>{campaignName}</span>
@@ -45,12 +49,9 @@ export function TopBar({
         Moves
       </button>
       <span className={styles.spacer} />
-      {tokens !== undefined && (
-        <span
-          className={styles.tokens}
-          title={`Uncached input ${tokens.input.toLocaleString()}, output ${tokens.output.toLocaleString()}, cache read ${tokens.cacheRead.toLocaleString()}, cache write ${tokens.cacheWrite.toLocaleString()}`}
-        >
-          {formatTokens(tokens)} tokens this session
+      {counter !== undefined && (
+        <span className={styles.tokens} title={counter.title}>
+          {counter.label}
         </span>
       )}
       <span className={styles.status}>

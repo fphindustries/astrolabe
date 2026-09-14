@@ -31,6 +31,12 @@ import { uuidv7 } from './uuid.js';
 
 /** One event to write. The envelope's assigned fields are the store's job, not the caller's. */
 export interface NewEvent<T extends EventType = EventType> {
+  /**
+   * Minted by the command, only when another event in the same command must
+   * cite this one — a proposal citing the rolls that ground it (D-124).
+   * Still server-minted; never taken from a client. Defaults to a fresh v7.
+   */
+  readonly id?: EventId;
   readonly type: T;
   readonly payload: PayloadFor<T>;
   /** Defaults to the command's actor — most events are authored by whoever issued the command. */
@@ -204,7 +210,7 @@ function buildEvent(
   return parseEvent({
     campaignId: request.campaignId,
     seq,
-    id: uuidv7(),
+    id: event.id ?? uuidv7(),
     commandId: request.commandId,
     causedBy: request.causedBy ?? null,
     sessionId: event.sessionId ?? null,
@@ -323,6 +329,10 @@ export async function readNarrativeEvents(
     select ${sql.unsafe(EVENT_COLUMNS)} from events
      where campaign_id = ${campaignId}
        and type = any(${[...NARRATIVE_EVENT_TYPES]})
+       and command_id not in (
+         select id from commands
+          where campaign_id = ${campaignId} and kind = any(${[...PROPOSAL_COMMAND_KINDS]})
+       )
        ${options.sessionId === undefined ? sql`` : sql`and session_id = ${options.sessionId}`}
        ${options.before === undefined ? sql`` : sql`and seq < ${options.before}`}
      order by seq desc
@@ -351,6 +361,14 @@ export async function readNarrativeEvents(
  * down to nothing.
  */
 const EVENTS_PER_BEAT_ALLOWANCE = 4;
+
+/**
+ * D-124: commands that write a proposal the player has not accepted. Their
+ * oracle rolls are real and stay in the log, but they are not beats of the
+ * story, so the narrative log leaves them out. Accepting writes an ordinary
+ * command that the log does show.
+ */
+export const PROPOSAL_COMMAND_KINDS = ['character.propose'] as const;
 
 const AMENDMENT_TYPES = [
   'event.voided',

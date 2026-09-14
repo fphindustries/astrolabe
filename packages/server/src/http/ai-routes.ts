@@ -6,11 +6,13 @@ import {
   NarrateBeatRequestBodySchema,
   OverrideRequestBodySchema,
   ProposeAmountRequestBodySchema,
+  ProposeCharacterRequestBodySchema,
   type AiStatusResponse,
   type NarrationFrame,
   type NarrationRefusalResponse,
   type OverrideResponse,
   type ProposeAmountResponse,
+  type ProposeCharacterResponse,
 } from '@astrolabe/shared';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { Sql } from 'postgres';
@@ -25,6 +27,7 @@ import {
   prepareBeatNarration,
   prepareCorrection,
   proposeAmount,
+  proposeCharacter,
   runBeatNarration,
   runCorrection,
   type AiCommandResult,
@@ -158,6 +161,43 @@ export function registerAiRoutes(
         );
         // A provider failure is a recorded outcome, not a bad request: 201
         // either way, and the body says which (D-116).
+        reply.code(201);
+        return result;
+      } catch (error) {
+        return refusal(error, reply);
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/character-proposals',
+    async (
+      request,
+      reply,
+    ): Promise<ProposeCharacterResponse | NarrationRefusalResponse | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
+        return undefined;
+      }
+      const parsedBody = ProposeCharacterRequestBodySchema.safeParse(request.body);
+      if (!parsedBody.success) {
+        reply.code(400);
+        return undefined;
+      }
+
+      try {
+        const result = await proposeCharacter(
+          sql,
+          ai,
+          {
+            campaignId: id,
+            commandId: parsedBody.data.commandId,
+            actor: PLAYER,
+            concept: parsedBody.data.concept,
+          },
+          status,
+        );
+        // As with amount proposals: an outage is a recorded outcome (D-116).
         reply.code(201);
         return result;
       } catch (error) {

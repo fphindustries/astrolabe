@@ -85,6 +85,8 @@ export interface CharacterSheetView {
   readonly assets: readonly AssetView[];
   readonly bonusNextMove?: { readonly amount: number; readonly excludes?: 'progress_moves' };
   readonly vows: readonly VowView[];
+  /** D-124: backstory hooks from creation. */
+  readonly hooks: readonly string[];
 }
 
 /**
@@ -145,5 +147,6 @@ export function toCharacterSheet(
         maxTicks: track?.maxTicks ?? 0,
       };
     }),
+    hooks: character.hooks,
   };
 }

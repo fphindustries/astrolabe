@@ -53,6 +53,7 @@ function PlayScreenContent({ campaignId }: { readonly campaignId: string }) {
     name: state.campaign?.name,
     sessionNumber: state.session?.number,
     tokens: state.session?.tokenUsage,
+    campaignTokens: state.tokenUsage,
   }));
   const guide = useAiStatus();
   const crew = useCampaignState(campaignId, (state) =>
@@ -89,6 +90,7 @@ function PlayScreenContent({ campaignId }: { readonly campaignId: string }) {
             connected={connected}
             guideAvailable={guide.data?.available}
             tokens={header.data?.tokens}
+            campaignTokens={header.data?.campaignTokens}
             onOpenMoves={openMovesDrawer}
           />
         }

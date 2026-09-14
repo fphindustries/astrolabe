@@ -111,23 +111,44 @@ export async function streamValidatedText(
   return { ok: false, errorKind: 'invalid_output', message: lastProblem, attempts };
 }
 
+/**
+ * A structured answer, validated against its schema and, when given,
+ * against `check` — a rule the schema cannot express, such as a character's
+ * asset slots (D-124). `check` returns the problem in words, or undefined.
+ *
+ * The re-ask carries the previous attempt's problem, so the provider is not
+ * handed the identical request that just failed.
+ */
 export async function generateValidated<T>(
   provider: AiProvider,
   request: AiRequest,
   schema: z.ZodType<T>,
+  check?: (value: T) => string | undefined,
 ): Promise<Outcome<T>> {
   const attempts: AttemptRecord[] = [];
   let lastProblem = '';
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const asked: AiRequest =
+      lastProblem === ''
+        ? request
+        : {
+            ...request,
+            user: `${request.user}\n\nYour previous answer was rejected: ${lastProblem}\nAnswer again, fixing that.`,
+          };
     try {
-      const result = await provider.generateStructured(request, schema);
+      const result = await provider.generateStructured(asked, schema);
       attempts.push({ kind: 'completed', usage: result.usage, latencyMs: result.latencyMs });
       if (result.stopReason === 'refusal') {
         return refused(attempts, false);
       }
       if (result.ok) {
-        return { ok: true, value: result.value, attempts };
+        const problem = check?.(result.value);
+        if (problem === undefined) {
+          return { ok: true, value: result.value, attempts };
+        }
+        lastProblem = problem;
+        continue;
       }
       lastProblem = result.problem;
     } catch (error) {

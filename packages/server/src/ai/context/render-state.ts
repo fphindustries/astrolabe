@@ -39,7 +39,8 @@ export function renderState(state: CampaignState): string {
     return (
       `- ${c.name}, called ${c.callsign}: ${meters}, momentum ${c.momentum.value}` +
       (impacts.length > 0 ? `; impacts: ${impacts.join(', ')}` : '') +
-      (assets.length > 0 ? `; assets: ${assets.join(', ')}` : '')
+      (assets.length > 0 ? `; assets: ${assets.join(', ')}` : '') +
+      (c.hooks.length > 0 ? `; backstory: ${c.hooks.join(' / ')}` : '')
     );
   });
   if (crew.length > 0) {

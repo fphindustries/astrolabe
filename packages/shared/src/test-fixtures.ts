@@ -138,6 +138,32 @@ export const SAMPLE_PAYLOADS: { [T in EventType]: PayloadFor<T> } = {
     momentum: 7,
     assets: ['asset:path/pilot'],
   },
+  'character.proposed': {
+    concept: 'A pilot who flew evacuation runs and never stopped running.',
+    name: {
+      value: 'Vesna Kade',
+      reason: 'Adapted from the rolled given name.',
+      groundedIn: [testEventId(90)],
+    },
+    callsign: { value: 'Vesna', reason: 'Her crew shortened it.', groundedIn: [testEventId(91)] },
+    stats: {
+      value: { edge: 3, heart: 2, iron: 1, shadow: 2, wits: 1 },
+      reason: 'A pilot lives on edge.',
+    },
+    assets: [{ assetId: 'asset:path/ace', reason: 'She flies.' }],
+    backgroundVow: {
+      title: 'Find the ship that left us behind',
+      rank: 'dangerous',
+      reason: 'From the concept.',
+    },
+    hooks: [
+      {
+        text: 'She still hears the evacuation channel.',
+        reason: 'From the backstory prompt.',
+        groundedIn: [testEventId(92)],
+      },
+    ],
+  },
   'session.began': { sessionId: SESSION_ID, number: 2 },
   'session.ended': {
     summary: 'The crew boarded the relay station and found it was not empty.',
