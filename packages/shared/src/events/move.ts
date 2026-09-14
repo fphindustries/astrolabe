@@ -93,6 +93,25 @@ export const MoveSuggestedSchema = z.object({
 });
 
 /**
+ * The Guide's note that a move's trigger may not fit the action the player
+ * described (task 7.13, D-37, D-121, D-136). Written after the roll, in a
+ * command caused by the `move.invoked` it remarks on, so voiding the move
+ * takes the note with it. It changes nothing; the player may ignore it or
+ * void and redo the move.
+ *
+ * `triggerText` is a verbatim quote of the move's trigger text, checked with
+ * `isVerbatimClause`. A roll option's condition text never counts: the
+ * stat is the player's call (D-136).
+ */
+export const MoveTriggerNotedSchema = z.object({
+  moveId: MoveIdSchema,
+  actionText: z.string().min(1),
+  triggerText: z.string().min(1),
+  reason: z.string().min(1),
+  confidence: SuggestionConfidenceSchema,
+});
+
+/**
  * A8 / Beat 5: what the app offered, at the moment it offered it.
  *
  * `resetsTo` is `momentumResetValue(markedImpacts)` — projected state — so

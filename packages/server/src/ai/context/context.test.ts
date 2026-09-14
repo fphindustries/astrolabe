@@ -191,6 +191,32 @@ describe('resolveBeatScope (D-110)', () => {
     expect(scope.causedBy).toBe(events.at(-1)?.id);
   });
 
+  it('leaves a trigger-mismatch note out of what is narrated and of the passage’s cause (D-136)', () => {
+    const { b, faceDanger, endureHarm } = beatSeven();
+    const lastOfChain = b.last().id;
+    const invoked = b.build().find((e) => e.commandId === faceDanger && e.type === 'move.invoked');
+    command(b, '9', invoked!.id, (o) => {
+      b.add(
+        'move.trigger_noted',
+        {
+          moveId: FACE_DANGER,
+          actionText: 'Rook forces the sealed bulkhead.',
+          triggerText: 'attempt something risky',
+          reason: 'Stub.',
+          confidence: 'low',
+        },
+        { ...o, actor: AI_ACTOR },
+      );
+    });
+
+    const scope = resolveBeatScope(b.build(), endureHarm as never);
+
+    expect(scope.ok).toBe(true);
+    if (!scope.ok) return;
+    expect(scope.events.map((e) => e.type)).not.toContain('move.trigger_noted');
+    expect(scope.causedBy).toBe(lastOfChain);
+  });
+
   it('gives the same scope whichever link of the chain is named', () => {
     const { b, faceDanger, payThePrice } = beatSeven();
     const events = b.build();

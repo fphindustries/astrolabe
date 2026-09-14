@@ -290,6 +290,28 @@ describe('toEntryView', () => {
     });
   });
 
+  it('renders move.trigger_noted as the Guide’s note on its move (D-136)', () => {
+    const view = toEntryView(
+      entry({
+        ...envelope(),
+        type: 'move.trigger_noted',
+        payload: {
+          moveId: 'move:adventure/face-danger' as never,
+          actionText: 'Rook reads the station logs.',
+          triggerText: 'When you attempt something risky',
+          reason: 'Reading logs carries no risk.',
+          confidence: 'medium',
+        },
+      }),
+    );
+    expect(view.body).toEqual({
+      kind: 'trigger_note',
+      triggerText: 'When you attempt something risky',
+      reason: 'Reading logs carries no risk.',
+      confidence: 'medium',
+    });
+  });
+
   it('renders state.overridden', () => {
     const view = toEntryView(
       entry({

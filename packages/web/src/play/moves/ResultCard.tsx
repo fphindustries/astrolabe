@@ -1,7 +1,9 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { STARFORGED, type CharacterId, type MoveId, type OutcomeTier } from '@astrolabe/rules';
-import type { CommandId, InvokeMoveResponse } from '@astrolabe/shared';
+import type { CheckTriggerResponse, CommandId, InvokeMoveResponse } from '@astrolabe/shared';
+
+import { useCheckTrigger } from '../../api/moves.js';
 
 import { Popover } from '../../ui/Popover.js';
 import type { CrewCardView } from '../crew/crew.js';
@@ -9,6 +11,7 @@ import type { CrewCardView } from '../crew/crew.js';
 import { BurnOfferPopover } from './BurnOfferPopover.js';
 import { ChoicePrompt } from './ChoicePrompt.js';
 import { DiceAnimation } from './DiceAnimation.js';
+import { TriggerNote } from './TriggerNote.js';
 import styles from './ResultCard.module.css';
 
 const TIER_LABEL: Record<OutcomeTier, string> = {
@@ -31,6 +34,7 @@ export function ResultCard({
   aidingAllyId,
   invoked,
   commandId,
+  checkTrigger = false,
   onOpenPayThePrice,
   onDone,
 }: {
@@ -40,6 +44,8 @@ export function ResultCard({
   readonly aidingAllyId?: CharacterId;
   readonly invoked: InvokeMoveResponse;
   readonly commandId: CommandId;
+  /** D-136: ask, in the background, whether the move's trigger fits the typed action. */
+  readonly checkTrigger?: boolean;
   readonly onOpenPayThePrice: (chainedFromCommandId: CommandId) => void;
   readonly onDone: () => void;
 }) {
@@ -47,6 +53,18 @@ export function ResultCard({
   const [mathOpen, setMathOpen] = useState(false);
   const [choiceApplied, setChoiceApplied] = useState(false);
   const [burnedTo, setBurnedTo] = useState<OutcomeTier | null>(null);
+  const [triggerCheck, setTriggerCheck] = useState<CheckTriggerResponse | undefined>(undefined);
+  const check = useCheckTrigger(campaignId);
+  const checkAsked = useRef(false);
+
+  useEffect(() => {
+    // Once, after the roll is already on screen: nothing here waits on it (A18).
+    if (!checkTrigger || checkAsked.current) {
+      return;
+    }
+    checkAsked.current = true;
+    check.mutate(commandId, { onSuccess: setTriggerCheck });
+  }, [checkTrigger, check, commandId]);
 
   const move = STARFORGED.moves.find((m) => m.id === moveId);
   const tier = burnedTo ?? invoked.roll.tier;
@@ -86,6 +104,10 @@ export function ResultCard({
             <dd>{invoked.roll.challengeDice.join(', ')}</dd>
           </dl>
         </Popover>
+
+        {triggerCheck?.ok === true && !triggerCheck.fits && (
+          <TriggerNote note={triggerCheck.note} />
+        )}
 
         {aidedAlly !== undefined && isHit && (
           <p className={styles.aidNote}>Aid Your Ally: the benefits go to {aidedAlly.callsign}.</p>

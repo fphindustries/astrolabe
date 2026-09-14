@@ -359,6 +359,13 @@ export const SAMPLE_PAYLOADS: { [T in EventType]: PayloadFor<T> } = {
     reason: 'Pulling the logs is an investigation.',
     confidence: 'high',
   },
+  'move.trigger_noted': {
+    moveId: 'move:adventure/secure-an-advantage',
+    actionText: 'Rook kicks the drone off the ledge.',
+    triggerText: 'When you assess a situation, make preparations',
+    reason: 'Kicking the drone away is acting against a threat, not preparing.',
+    confidence: 'medium',
+  },
 };
 
 /** Every sample as a complete, valid event, in catalogue order. */

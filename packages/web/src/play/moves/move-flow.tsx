@@ -35,6 +35,8 @@ export type MoveFlowState =
       readonly invoked: InvokeMoveResponse;
       /** This call's own commandId — what a chain offer's follow-up call names as `chainedFromCommandId`. */
       readonly commandId: CommandId;
+      /** D-136: the player typed an action the Guide didn't already judge, so its trigger is checked. */
+      readonly checkTrigger?: boolean;
     }
   | {
       readonly step: 'pay-the-price';
@@ -64,6 +66,7 @@ type MoveFlowAction =
       readonly aidingAllyId?: CharacterId;
       readonly invoked: InvokeMoveResponse;
       readonly commandId: CommandId;
+      readonly checkTrigger?: boolean;
     }
   | {
       readonly type: 'open-pay-the-price';
@@ -98,6 +101,7 @@ function moveFlowReducer(_state: MoveFlowState, action: MoveFlowAction): MoveFlo
         ...(action.aidingAllyId !== undefined ? { aidingAllyId: action.aidingAllyId } : {}),
         invoked: action.invoked,
         commandId: action.commandId,
+        ...(action.checkTrigger === true ? { checkTrigger: true } : {}),
       };
     case 'open-pay-the-price':
       return {
@@ -154,6 +158,7 @@ export function useMoveFlowActions(): {
     invoked: InvokeMoveResponse,
     commandId: CommandId,
     aidingAllyId?: CharacterId,
+    checkTrigger?: boolean,
   ) => void;
   openPayThePrice: (actorCharacterId: CharacterId, chainedFromCommandId?: CommandId) => void;
   payThePriceResolved: (
@@ -176,7 +181,7 @@ export function useMoveFlowActions(): {
         ...(chainedFromCommandId !== undefined ? { chainedFromCommandId } : {}),
         ...(prefill !== undefined ? { prefill } : {}),
       }),
-    moveResolved: (moveId, actorCharacterId, invoked, commandId, aidingAllyId) =>
+    moveResolved: (moveId, actorCharacterId, invoked, commandId, aidingAllyId, checkTrigger) =>
       dispatch({
         type: 'move-resolved',
         moveId,
@@ -184,6 +189,7 @@ export function useMoveFlowActions(): {
         invoked,
         commandId,
         ...(aidingAllyId !== undefined ? { aidingAllyId } : {}),
+        ...(checkTrigger === true ? { checkTrigger: true } : {}),
       }),
     openPayThePrice: (actorCharacterId, chainedFromCommandId) =>
       dispatch({

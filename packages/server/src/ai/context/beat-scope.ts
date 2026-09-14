@@ -116,7 +116,9 @@ export function resolveBeatScope(
       event.type !== 'ai.failed' &&
       event.type !== 'narration.written' &&
       event.type !== 'narration.correction_requested' &&
-      event.type !== 'narration.revised',
+      event.type !== 'narration.revised' &&
+      // D-136: a remark on the beat, not part of what happened in it.
+      event.type !== 'move.trigger_noted',
   );
   const latest = chain.at(-1);
   if (latest === undefined) {

@@ -9,6 +9,7 @@ import {
   ProposeCharacterRequestBodySchema,
   ProposeIncidentsRequestBodySchema,
   SuggestMoveRequestBodySchema,
+  CheckTriggerRequestBodySchema,
   type AiStatusResponse,
   type NarrationFrame,
   type NarrationRefusalResponse,
@@ -17,6 +18,7 @@ import {
   type ProposeCharacterResponse,
   type ProposeIncidentsResponse,
   type SuggestMoveResponse,
+  type CheckTriggerResponse,
 } from '@astrolabe/shared';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { Sql } from 'postgres';
@@ -34,6 +36,7 @@ import {
   proposeCharacter,
   proposeIncidents,
   suggestMove,
+  checkTrigger,
   runBeatNarration,
   runCorrection,
   type AiCommandResult,
@@ -283,6 +286,43 @@ export function registerAiRoutes(
           status,
         );
         // D-135: an outage is a recorded outcome, as for every proposal (D-116).
+        reply.code(201);
+        return result;
+      } catch (error) {
+        return refusal(error, reply);
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/trigger-checks',
+    async (
+      request,
+      reply,
+    ): Promise<CheckTriggerResponse | NarrationRefusalResponse | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
+        return undefined;
+      }
+      const parsedBody = CheckTriggerRequestBodySchema.safeParse(request.body);
+      if (!parsedBody.success) {
+        reply.code(400);
+        return undefined;
+      }
+
+      try {
+        const result = await checkTrigger(
+          sql,
+          ai,
+          {
+            campaignId: id,
+            commandId: parsedBody.data.commandId,
+            actor: PLAYER,
+            moveCommandId: parsedBody.data.moveCommandId,
+          },
+          status,
+        );
+        // D-136: a fit, a note or an outage, each a recorded outcome (D-116).
         reply.code(201);
         return result;
       } catch (error) {

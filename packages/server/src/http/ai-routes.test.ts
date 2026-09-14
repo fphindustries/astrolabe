@@ -459,6 +459,51 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
     expect(empty.statusCode).toBe(400);
   });
 
+  it('notes a trigger that does not fit, on the beat in the log (7.13, D-136)', async () => {
+    const { campaignId, characterId } = await moveMade();
+    const moveCommandId = newId<CommandId>();
+    const invoked = await app.inject({
+      method: 'POST',
+      url: `/api/campaigns/${campaignId}/moves`,
+      payload: {
+        commandId: moveCommandId,
+        moveId: 'move:adventure/face-danger',
+        actorCharacterId: characterId,
+        using: { using: 'stat', stat: 'wits' },
+        adds: [],
+        actionText: 'Rook reads the station logs.',
+      },
+    });
+    expect(invoked.statusCode).toBe(201);
+    ai.enqueue({
+      kind: 'structured',
+      value: {
+        fits: false,
+        triggerText: 'When you attempt something risky',
+        reason: 'Reading logs carries no risk.',
+        confidence: 'medium',
+      },
+    });
+
+    const checked = await app.inject({
+      method: 'POST',
+      url: `/api/campaigns/${campaignId}/trigger-checks`,
+      payload: { commandId: newId(), moveCommandId },
+    });
+    expect(checked.statusCode).toBe(201);
+    const body = checked.json();
+    expect(body).toMatchObject({ ok: true, fits: false, note: { confidence: 'medium' } });
+    const log = await app.inject({ method: 'GET', url: `/api/campaigns/${campaignId}/log` });
+    expect(log.body).toContain(body.eventId);
+
+    const again = await app.inject({
+      method: 'POST',
+      url: `/api/campaigns/${campaignId}/trigger-checks`,
+      payload: { commandId: newId(), moveCommandId },
+    });
+    expect(again.statusCode).toBe(422);
+  });
+
   it('overrides momentum by hand, and refuses an out-of-range value (A16, D-117)', async () => {
     const { campaignId, characterId } = await moveMade();
 

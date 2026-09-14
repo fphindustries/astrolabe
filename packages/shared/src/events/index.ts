@@ -17,6 +17,7 @@ import {
   MoveInvokedSchema,
   MoveMethodChosenSchema,
   MoveSuggestedSchema,
+  MoveTriggerNotedSchema,
 } from './move.js';
 import {
   NarrationCorrectionRequestedSchema,
@@ -46,7 +47,8 @@ import { EventVoidedSchema } from './void.js';
  * creation (3.3, D-124), and `narration.withdrawn` with the authority check
  * (7.15, D-128), and `incident.proposed` with AI-proposed inciting incidents
  * (4.6, D-132), and `move.suggested` with the AI move suggestion (7.12,
- * D-135). The remaining types (complications, the
+ * D-135), and `move.trigger_noted` with the trigger-mismatch note (7.13,
+ * D-136). The remaining types (complications, the
  * scene header) are designed in `docs/design-event-log.md` and land the
  * same way, so their payloads are shaped by a real caller rather than
  * guessed at a month early.
@@ -87,6 +89,7 @@ export const PAYLOAD_SCHEMAS = {
   'sector.route_added': SectorRouteAddedSchema,
   'incident.proposed': IncidentProposedSchema,
   'move.suggested': MoveSuggestedSchema,
+  'move.trigger_noted': MoveTriggerNotedSchema,
 } as const;
 
 export type EventType = keyof typeof PAYLOAD_SCHEMAS;
@@ -151,6 +154,7 @@ export const EventSchema = z.discriminatedUnion('type', [
   eventMember('sector.route_added'),
   eventMember('incident.proposed'),
   eventMember('move.suggested'),
+  eventMember('move.trigger_noted'),
 ]);
 
 /**

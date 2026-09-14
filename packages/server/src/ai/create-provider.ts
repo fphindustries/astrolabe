@@ -102,6 +102,18 @@ function devStubResponse(
       },
     };
   }
+  if (mode === 'structured' && request.purpose === 'trigger_check') {
+    // Most chosen moves fit, and a stubbed session should play without notes.
+    return {
+      kind: 'structured',
+      value: {
+        fits: true,
+        triggerText: null,
+        reason: 'Stub check: the move fits.',
+        confidence: 'low',
+      },
+    };
+  }
   if (mode === 'structured' && request.purpose === 'incident_proposal') {
     return { kind: 'structured', value: stubIncidentProposal(request.user) };
   }

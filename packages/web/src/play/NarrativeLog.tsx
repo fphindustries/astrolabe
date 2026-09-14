@@ -7,6 +7,7 @@ import { useCampaignLog } from '../api/campaigns.js';
 import { CorrectionControl } from './log/CorrectionControl.js';
 import { orderedBeats, toBeatView, type BeatView, type EntryView } from './log/entries.js';
 import { VoidControl } from './log/VoidControl.js';
+import { TriggerNote } from './moves/TriggerNote.js';
 import { useNarrationStream } from './narration/narration-stream.js';
 import type { PendingPassage } from './narration/frames.js';
 import styles from './NarrativeLog.module.css';
@@ -181,6 +182,14 @@ function Withdrawn({
 
 function Entry({ campaignId, entry }: { readonly campaignId: string; readonly entry: EntryView }) {
   const body = entry.body;
+  if (body.kind === 'trigger_note') {
+    // D-136: a remark on its move, with no controls of its own: voiding the move takes it along.
+    return (
+      <div className={styles.entry} data-voided={entry.voided}>
+        <TriggerNote note={body} />
+      </div>
+    );
+  }
   if (body.kind === 'withdrawal') {
     // A record of what was refused, not a thing to correct or void on its
     // own: voiding its beat takes it with the rest (D-128).
@@ -253,6 +262,8 @@ function describeEntry(entry: EntryView): string {
       return body.text;
     case 'withdrawal':
       return body.reason;
+    case 'trigger_note':
+      return `The Guide notes the trigger may not fit: ${body.reason}`;
     case 'override':
       return `Override: ${body.from} → ${body.to}${body.reason === undefined ? '' : ` (${body.reason})`}`;
     case 'void':

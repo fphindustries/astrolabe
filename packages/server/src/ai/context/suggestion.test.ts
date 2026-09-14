@@ -6,12 +6,17 @@ import { createProviderFromEnv } from '../create-provider.js';
 import {
   SUGGESTABLE_MOVES,
   SUGGESTION_RULES,
+  TRIGGER_CHECK_RULES,
   buildMoveSuggestionRequest,
+  buildTriggerCheckRequest,
   checkMoveSuggestion,
+  checkTriggerCheck,
   moveSuggestionSchema,
   renderCandidates,
   rollUsing,
+  triggerCheckSchema,
   type MoveSuggestionOutput,
+  type TriggerCheckOutput,
 } from './suggestion.js';
 
 /**
@@ -171,5 +176,62 @@ describe('the move suggestion answer (7.12, D-120, D-135)', () => {
     );
     expect(result.ok).toBe(true);
     if (result.ok) expect(checkMoveSuggestion(result.value)).toBeUndefined();
+  });
+});
+
+describe('the trigger-mismatch check (7.13, D-136)', () => {
+  const faceDanger = SUGGESTABLE_MOVES.find((move) => move.id === 'move:adventure/face-danger')!;
+  const check = (overrides: Partial<TriggerCheckOutput> = {}): TriggerCheckOutput => ({
+    fits: false,
+    triggerText: 'When you attempt something risky',
+    reason: 'Reading the logs carries no risk.',
+    confidence: 'medium',
+    ...overrides,
+  });
+
+  it('asks about the move and the action, and says nothing of the stat', () => {
+    const request = buildTriggerCheckRequest(
+      project([]),
+      { name: 'Rook Ilari', callsign: 'Rook' },
+      faceDanger,
+      'Rook forces the sealed bulkhead.',
+    );
+    expect(request.purpose).toBe('trigger_check');
+    expect(request.user).toContain(
+      'Trigger: When you attempt something risky or react to an imminent threat...',
+    );
+    expect(request.user).not.toMatch(/edge|iron|With speed/);
+    expect(TRIGGER_CHECK_RULES).toContain('you do not judge it');
+    expect(TRIGGER_CHECK_RULES).toContain('use no pronoun at all');
+  });
+
+  it('accepts a fit without a quote, and a mismatch quoting the trigger verbatim', () => {
+    expect(checkTriggerCheck(check({ fits: true, triggerText: null }), faceDanger)).toBeUndefined();
+    expect(checkTriggerCheck(check(), faceDanger)).toBeUndefined();
+  });
+
+  it('refuses a mismatch quoting condition text, a paraphrase, or too little', () => {
+    expect(
+      checkTriggerCheck(check({ triggerText: 'With speed, mobility, or agility' }), faceDanger),
+    ).toMatch(/not in Face Danger's trigger/);
+    expect(
+      checkTriggerCheck(check({ triggerText: 'When you try something risky' }), faceDanger),
+    ).toMatch(/not in Face Danger's trigger/);
+    expect(checkTriggerCheck(check({ triggerText: null }), faceDanger)).toMatch(/at least 12/);
+  });
+
+  it('gets a fit from the dev stub', async () => {
+    const result = await createProviderFromEnv({
+      ASTROLABE_AI_PROVIDER: 'stub',
+    }).generateStructured(
+      buildTriggerCheckRequest(
+        project([]),
+        { name: 'Rook Ilari', callsign: 'Rook' },
+        faceDanger,
+        'Rook forces the sealed bulkhead.',
+      ),
+      triggerCheckSchema(),
+    );
+    expect(result).toMatchObject({ ok: true, value: { fits: true } });
   });
 });

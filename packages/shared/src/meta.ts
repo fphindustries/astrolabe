@@ -352,6 +352,16 @@ export const EVENT_TYPE_META: MetaTable = {
     introduces: none,
     references: (p) => [character(p.actorCharacterId)],
   },
+  'move.trigger_noted': {
+    // D-136: a remark on the beat, shown with its move. It changes nothing,
+    // and voiding the move takes it along through `causedBy`.
+    narrative: true,
+    significant: false,
+    mutatesState: false,
+    voidable: true,
+    introduces: none,
+    references: none,
+  },
 };
 
 /** The event types the narrative log renders (task 5.4's query). */

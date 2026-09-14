@@ -175,7 +175,16 @@ export function MoveComposer({
       ...(suggestion !== undefined ? { suggestionEventId: suggestion.eventId } : {}),
       ...(chainedFromCommandId !== undefined ? { chainedFromCommandId } : {}),
     });
-    moveResolved(moveId, actorCharacterId, invoked.response, invoked.commandId, aidingAllyId);
+    // D-136: a typed action is checked against the trigger, unless the Guide already suggested this move.
+    const checkTrigger = actionText.trim().length > 0 && suggestion === undefined;
+    moveResolved(
+      moveId,
+      actorCharacterId,
+      invoked.response,
+      invoked.commandId,
+      aidingAllyId,
+      checkTrigger,
+    );
     onResolved();
   }
 

@@ -159,7 +159,7 @@ narrative log is a second read model with its own paged query.
 - [x] 7.10 Token counter in the UI
 - [x] 7.11 Graceful stop when the provider is unavailable, with state intact
 - [x] 7.12 AI move suggestion when an action is described without a move: move and roll option, verbatim trigger text, reason and confidence, inspectable, never blocking a direct pick (D-14, D-120, D-135, A19)
-- [ ] 7.13 Trigger-mismatch note on a beat whose move doesn't fit the described action, with the same traceability, never blocking or delaying the roll (D-37, D-121, D-136, A20). No golden-session beat exercises it
+- [x] 7.13 Trigger-mismatch note on a beat whose move doesn't fit the described action, with the same traceability, never blocking or delaying the roll (D-37, D-121, D-136, A20). No golden-session beat exercises it
 - [x] 7.14 Segmented narration: fact keys and kinds, segments tagged and cited as they stream, checks that need no AI, D-115's routine cap for beats with no declared action (D-127, A21). Verified live at all three latitudes (see "Implementation notes (task 7.14)")
 - [x] 7.15 Authority check: shared rubric in the narrator prompt and a second-model checker; provisional streaming, unmistakable logged withdrawal, one re-ask, pause on a second failure; recorded-violation regression tests, keyed eval, live matrix across all three latitudes. Sign-off also checks that no passage gives a pronoun to a character whose pronouns aren't recorded (D-128, D-129, D-131, A21). Verified live: 54 checked narrations across all three latitudes; eval at 95% precision, 86% recall (see "Implementation notes (task 7.15)")
 - [x] 7.16 Established injury: the harm proposal's injury carried into narration at the committed severity, with the committed amount linked to its proposal (D-130, A13). Verified live in two passes (see "Implementation notes (task 7.16)")
@@ -1706,3 +1706,59 @@ A browser pass on the stub, on `session-2-open`, covered:
   A suggestion asked in one session can be named by a move in a later one, where D-84 puts it beyond void. Nothing mechanical reads these fields, so it is recorded here rather than guarded.
 - **A suggestion lives only in the prompt's state.** After a reload or a change of acting character, the player asks again, which writes a second `move.suggested`.
 - **The Guide justifies itself with details the player didn't state.** Seen three times with three different prompts: 7.15's aided scan, 4.6's crew hooks, and these reasons. Each time the player reviewed the output before it counted. Groups 8 and 9 will generate without that review.
+
+## Implementation notes (task 7.13, trigger-mismatch note)
+
+7.13 is done (D-37, D-121, D-136, A20). No golden-session beat exercises it, as D-121 recorded. What the golden session does constrain is Beat 7: the +edge roll carries no note, because D-136 judges the move's trigger and never the stat.
+
+### Shape
+
+- **Prompt and check** (`ai/context/suggestion.ts`, alongside 7.12's quote logic).
+  - `buildTriggerCheckRequest` gives the Guide projected state, the actor, the move's name and `trigger.text`, and the typed action. It gives nothing about the stat.
+  - `TRIGGER_CHECK_RULES` says most chosen moves fit, a generous reading counts as a fit, the stat is not the Guide's to judge, and D-131's pronoun rule applies.
+  - The answer is `{ fits, triggerText | null, reason, confidence }`. `checkTriggerCheck` requires a mismatch to quote at least 12 characters verbatim from the move's own trigger text. Condition text is rejected.
+- **Command** (`checkTrigger`, `db/suggestion-commands.ts`).
+  - Its `causedBy` is the `move.invoked`.
+  - It refuses a command that didn't invoke a move, a voided move, a move with no typed action, one filled from a 7.12 suggestion, and a move already checked. "Already checked" means an `ai.completed`, `ai.failed` or note of purpose `trigger_check` is caused by that invocation.
+  - A fit writes only the accounting; a mismatch adds `move.trigger_noted`. It replays by command id.
+- **Beat narration.** `resolveBeatScope` leaves `move.trigger_noted` out of the chain. The note is never among the facts narrated, and never becomes the passage's `causedBy`, so voiding a note can't void a passage. Voiding the move still takes the note along.
+- **Route.** `POST /api/campaigns/:id/trigger-checks {commandId, moveCommandId}` returns 201 with `{fits: true}`, the note, or the failure. Refusals are 422.
+- **Web.**
+  - The move flow's result step carries `checkTrigger`. `MoveComposer` sets it when the player typed an action and the move didn't come from a suggestion.
+  - `ResultCard` fires the check once, after the roll is already on screen, and shows `TriggerNote` if one comes back: "This move's trigger may not fit what you described", the reason, and "Why?" with the quoted trigger, the confidence and "the roll stands; void and redo it if you agree".
+  - The log renders the note with its move and gives it no void or correction control of its own.
+- **Dev stub.** It answers "fits", so a stubbed session plays without notes.
+
+### Live pass
+
+This was 2026-09-14 with claude-opus-5 on the `session-2-open` fixture. Each move was rolled with the stat shown, then checked. Every run is in `ai/eval/live-trigger-checks-7.13.json`.
+
+- **8 of 8 as expected, all on the first attempt**, in 2.1–3.6 s each.
+- **Fits, no note:**
+  - Beat 7's "Rook forces the sealed bulkhead" as Face Danger **+edge**, the case D-136 turns on;
+  - Beat 3's log pull as Gather Information;
+  - Beat 4's airlock as Secure an Advantage;
+  - Beat 4's sensor trace as Gather Information.
+- **Mismatches, noted at high confidence, each quoting the trigger verbatim:**
+  - reading logs in a quiet cockpit as Face Danger;
+  - shouldering through a bulkhead as Gather Information;
+  - swearing on a blade as Secure an Advantage;
+  - kicking a drone as Swear an Iron Vow.
+- **Wording.** No reason used a pronoun, and none added to the action. Each described what the action was instead, in the player's own terms.
+
+### Verification
+
+`npm run typecheck`, `npm run lint`, `npm test` (916 tests) and the web build pass. The new tests cover:
+
+- the request carrying no stat;
+- a fit needing no quote, and a mismatch quoting condition text, paraphrasing or quoting too little being refused;
+- the stub's answer;
+- the note's cause, and a void of the move taking the note;
+- a fit writing only accounting, and replaying;
+- the re-ask and the failure;
+- each refusal;
+- the note left out of beat scope;
+- the route and the log;
+- the log view model.
+
+A browser pass ran against live Claude, because the stub never notes anything. Juno typed "reads the station logs in the quiet of the cockpit" and rolled Face Danger. The card showed the miss straight away, and the note arrived a few seconds later. The log showed the note under the move with no controls. **Done** narrated the beat, and the passage's `causedBy` was the chain's last `move.chained`, not the note written just before it.

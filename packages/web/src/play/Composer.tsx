@@ -131,6 +131,7 @@ export function Composer({
           {...(flow.aidingAllyId !== undefined ? { aidingAllyId: flow.aidingAllyId } : {})}
           invoked={flow.invoked}
           commandId={flow.commandId}
+          checkTrigger={flow.checkTrigger === true}
           onOpenPayThePrice={(chainedFromCommandId: CommandId) =>
             openPayThePrice(flow.actorCharacterId, chainedFromCommandId)
           }

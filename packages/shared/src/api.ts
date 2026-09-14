@@ -534,6 +534,25 @@ export type SuggestMoveResponse =
     }
   | { readonly ok: false; readonly errorKind: AiErrorKind; readonly message: string };
 
+/** Task 7.13 / D-136: after the roll, ask whether the move's trigger fits the described action. */
+export const CheckTriggerRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  /** The command that invoked the move. */
+  moveCommandId: CommandIdSchema,
+});
+
+export type CheckTriggerRequestBody = z.infer<typeof CheckTriggerRequestBodySchema>;
+
+export type CheckTriggerResponse =
+  | { readonly ok: true; readonly fits: true }
+  | {
+      readonly ok: true;
+      readonly fits: false;
+      readonly eventId: EventId;
+      readonly note: PayloadFor<'move.trigger_noted'>;
+    }
+  | { readonly ok: false; readonly errorKind: AiErrorKind; readonly message: string };
+
 /** Task 4.6 / D-132: ask the Guide to propose inciting incidents. */
 export const ProposeIncidentsRequestBodySchema = z.object({
   commandId: CommandIdSchema,

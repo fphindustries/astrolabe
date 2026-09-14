@@ -5,6 +5,7 @@ import type {
   CommandId,
   EventId,
   InvokeMoveResponse,
+  CheckTriggerResponse,
   ResolvePayThePriceResponse,
   SuggestMoveResponse,
   VoidEventResponse,
@@ -38,6 +39,26 @@ export interface InvokeMoveInput {
   /** D-135: the Guide's suggestion this move was filled from. */
   readonly suggestionEventId?: EventId;
   readonly chainedFromCommandId?: CommandId;
+}
+
+/**
+ * Task 7.13 / D-136: after the roll, ask whether the move's trigger fits
+ * the typed action. Fired in the background; nothing waits on it.
+ */
+export function useCheckTrigger(campaignId: string) {
+  const invalidate = useInvalidateCampaign(campaignId);
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (moveCommandId: CommandId) =>
+      apiPost<CheckTriggerResponse>(`/campaigns/${campaignId}/trigger-checks`, {
+        commandId: crypto.randomUUID(),
+        moveCommandId,
+      }),
+    onSettled: () => {
+      invalidate();
+      void queryClient.invalidateQueries({ queryKey: aiKeys.status });
+    },
+  });
 }
 
 export interface SuggestMoveInput {

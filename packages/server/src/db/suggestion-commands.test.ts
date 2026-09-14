@@ -15,7 +15,7 @@ import { project } from '../projection/project.js';
 import { readEvents } from './event-store.js';
 import { MoveRejectedError, invokeMove } from './move-commands.js';
 import { AiRequestRefusedError } from './narration-commands.js';
-import { suggestMove } from './suggestion-commands.js';
+import { checkTrigger, suggestMove } from './suggestion-commands.js';
 import { createTestDatabase, hasTestDatabase, type TestDatabase } from './testing.js';
 import { uuidv7 } from './uuid.js';
 import { voidEvent } from './void-command.js';
@@ -228,6 +228,143 @@ describe.skipIf(!hasTestDatabase)('move suggestions (task 7.12, D-120, D-135)', 
         reason: 'Asked about the wrong character.',
       });
       await expect(invoke(suggestionEventId)).rejects.toThrow(/has been voided/);
+    });
+  });
+
+  describe('the trigger-mismatch note (7.13, D-136)', () => {
+    const mismatch = {
+      fits: false,
+      triggerText: 'When you attempt something risky',
+      reason: 'Reading the logs carries no risk or threat.',
+      confidence: 'medium',
+    };
+
+    /** Juno rolls Face Danger for reading logs, as the player typed it. */
+    async function rolled(overrides: Record<string, unknown> = {}): Promise<CommandId> {
+      const commandId = newId<CommandId>();
+      await invokeMove(db.sql, {
+        campaignId,
+        commandId,
+        actor: PLAYER,
+        moveId: 'move:adventure/face-danger',
+        actorCharacterId: juno,
+        using: { using: 'stat', stat: 'wits' },
+        adds: [],
+        actionText: 'Juno reads the station logs.',
+        rng: actionRoll(4, [2, 9]),
+        ...overrides,
+      });
+      return commandId;
+    }
+
+    const check = (ai: StubProvider, moveCommandId: CommandId, commandId = newId<CommandId>()) =>
+      checkTrigger(db.sql, ai, { campaignId, commandId, actor: PLAYER, moveCommandId });
+
+    it('writes a note caused by the move, which a void of the move takes with it', async () => {
+      const moveCommandId = await rolled();
+      const ai = new StubProvider({ responses: [{ kind: 'structured', value: mismatch }] });
+      const commandId = newId<CommandId>();
+
+      const result = await check(ai, moveCommandId, commandId);
+
+      expect(result).toMatchObject({
+        ok: true,
+        fits: false,
+        note: {
+          moveId: 'move:adventure/face-danger',
+          actionText: 'Juno reads the station logs.',
+          triggerText: 'When you attempt something risky',
+          confidence: 'medium',
+        },
+      });
+      expect(ai.requests[0]?.purpose).toBe('trigger_check');
+      const events = await readEvents(db.sql, campaignId);
+      const invoked = events.find(
+        (e) => e.commandId === moveCommandId && e.type === 'move.invoked',
+      );
+      const written = events.filter((e) => e.commandId === commandId);
+      expect(written.map((e) => e.type)).toEqual(['ai.completed', 'move.trigger_noted']);
+      expect(written.every((e) => e.causedBy === invoked?.id)).toBe(true);
+
+      const voided = await voidEvent(db.sql, {
+        campaignId,
+        commandId: newId(),
+        actor: PLAYER,
+        targetEventId: invoked!.id,
+        reason: 'Wrong move for reading logs.',
+      });
+      const voidedIds = voided.events.flatMap((e) =>
+        e.type === 'event.voided' ? [e.payload.targetEventId, ...e.payload.cascaded] : [],
+      );
+      expect(voidedIds).toContain(written[1]?.id);
+    });
+
+    it('writes only the accounting when the move fits, and replays the answer', async () => {
+      const moveCommandId = await rolled({ actionText: 'Juno leaps the gap as the deck buckles.' });
+      const ai = new StubProvider({
+        responses: [
+          {
+            kind: 'structured',
+            value: { fits: true, triggerText: null, reason: 'A risky leap.', confidence: 'high' },
+          },
+        ],
+      });
+      const commandId = newId<CommandId>();
+
+      const first = await check(ai, moveCommandId, commandId);
+      const again = await check(ai, moveCommandId, commandId);
+
+      expect(first).toEqual({ ok: true, fits: true });
+      expect(again).toEqual(first);
+      expect(ai.requests).toHaveLength(1);
+      const types = (await readEvents(db.sql, campaignId))
+        .filter((e) => e.commandId === commandId)
+        .map((e) => e.type);
+      expect(types).toEqual(['ai.completed']);
+    });
+
+    it('re-asks a mismatch that quotes condition text, then records the failure', async () => {
+      const moveCommandId = await rolled();
+      const condition = {
+        kind: 'structured' as const,
+        value: { ...mismatch, triggerText: 'With expertise, focus, or observation' },
+      };
+      const ai = new StubProvider({ responses: [condition, condition] });
+
+      const result = await check(ai, moveCommandId);
+
+      expect(result).toMatchObject({ ok: false, errorKind: 'invalid_output' });
+      expect(ai.requests[1]?.user).toMatch(/is not in Face Danger's trigger/);
+    });
+
+    it('refuses a second check, a move with no action, one filled from a suggestion, and a command that is not a move', async () => {
+      const once = await rolled();
+      await check(new StubProvider({ responses: [{ kind: 'structured', value: mismatch }] }), once);
+      await expect(check(new StubProvider(), once)).rejects.toMatchObject({
+        reason: 'already_checked',
+      });
+
+      const unexplained = await rolled({ actionText: undefined });
+      await expect(check(new StubProvider(), unexplained)).rejects.toMatchObject({
+        reason: 'no_action',
+      });
+
+      const suggestion = await ask(
+        new StubProvider({ responses: [{ kind: 'structured', value: gatherInformation }] }),
+      );
+      if (!suggestion.ok) throw new Error('expected a suggestion');
+      const fromSuggestion = await rolled({
+        moveId: 'move:adventure/gather-information',
+        actionText: ACTION,
+        suggestionEventId: suggestion.eventId,
+      });
+      await expect(check(new StubProvider(), fromSuggestion)).rejects.toMatchObject({
+        reason: 'suggested',
+      });
+
+      await expect(check(new StubProvider(), newId<CommandId>())).rejects.toBeInstanceOf(
+        AiRequestRefusedError,
+      );
     });
   });
 });

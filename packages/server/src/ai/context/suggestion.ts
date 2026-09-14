@@ -16,7 +16,8 @@ import { renderState } from './render-state.js';
 /**
  * The AI move suggestion's prompt and check (task 7.12, D-14, D-120,
  * D-135). Pure, like the rest of this directory: state, the actor and the
- * player's words in; an `AiRequest`, its schema and its check out.
+ * player's words in; an `AiRequest`, its schema and its check out. The
+ * trigger-mismatch note (7.13) shares the quote check and lives here too.
  */
 
 const NOT_SUGGESTED: ReadonlySet<MoveId> = new Set(['move:fate/pay-the-price' as MoveId]);
@@ -204,4 +205,77 @@ export function checkMoveSuggestion(value: MoveSuggestionOutput): string | undef
   }
 
   return problems.length === 0 ? undefined : problems.join(' ');
+}
+
+// ---------------------------------------------------------------------------
+// Trigger-mismatch note (task 7.13, D-37, D-121, D-136)
+// ---------------------------------------------------------------------------
+
+export const TRIGGER_CHECK_RULES = `You check one thing for a player of Ironsworn: Starforged: whether the move they chose fits the action they described. The move has already been rolled; nothing you say changes it. The player decides whether to act on your answer.
+
+Judge only the move's trigger against the action as the player wrote it. Whichever stat they rolled with is theirs to choose, and you do not judge it.
+
+Answer with:
+- fits: true when the action reasonably meets the trigger, including a loose or generous reading. False only when the trigger plainly does not describe what the player wrote.
+- triggerText: when it does not fit, the words of the trigger the action fails to meet, copied exactly, at least a few words, character for character, without quotation marks. Null when it fits.
+- reason: one short sentence. When it does not fit, what the action is instead, in the player's own terms.
+- confidence: high when the mismatch (or the fit) is plain, medium when it is a reasonable reading, low when it is a close call.
+
+Most chosen moves fit. Do not add to the action: no intent, feeling or further step the player did not state. Use a player character's pronouns only as the campaign state records them; for a character whose pronouns are not recorded, use no pronoun at all, only their name or callsign.`;
+
+/** Task 7.13's request: the move's trigger, the action, and nothing about the stat (D-136). */
+export function buildTriggerCheckRequest(
+  state: CampaignState,
+  actor: { readonly name: string; readonly callsign: string },
+  move: Pick<Move, 'id' | 'name' | 'trigger'>,
+  actionText: string,
+): AiRequest {
+  const context = renderState(state);
+  const user = [
+    context.length > 0 ? `<campaign>\n${context}\n</campaign>` : '',
+    `<acting>${actor.name}, called ${actor.callsign}</acting>`,
+    `<move>${move.name} (${move.id})\nTrigger: ${move.trigger.text}</move>`,
+    `<action>\n${actionText}\n</action>`,
+    'Does the move fit the action?',
+  ]
+    .filter((part) => part.length > 0)
+    .join('\n\n');
+
+  return {
+    purpose: 'trigger_check',
+    system: [{ text: TRIGGER_CHECK_RULES, cache: true }],
+    user,
+    effort: 'low',
+  };
+}
+
+export function triggerCheckSchema() {
+  return z.object({
+    fits: z.boolean(),
+    triggerText: z.string().max(300).nullable(),
+    reason: z.string().min(1).max(300),
+    confidence: SuggestionConfidenceSchema,
+  });
+}
+
+export type TriggerCheckOutput = z.infer<ReturnType<typeof triggerCheckSchema>>;
+
+/**
+ * A mismatch must quote the move's own trigger text verbatim — never a
+ * roll option's condition text (D-136). A fit needs no quote.
+ */
+export function checkTriggerCheck(
+  value: TriggerCheckOutput,
+  move: Pick<Move, 'name' | 'trigger'>,
+): string | undefined {
+  if (value.fits) {
+    return undefined;
+  }
+  const quote = value.triggerText?.trim() ?? '';
+  if (quote.length < MIN_QUOTE) {
+    return `Quote at least ${MIN_QUOTE} characters of ${move.name}'s trigger text as triggerText.`;
+  }
+  return isVerbatimClause(quote, move.trigger.text)
+    ? undefined
+    : `The triggerText "${quote}" is not in ${move.name}'s trigger; copy the words of the trigger exactly.`;
 }

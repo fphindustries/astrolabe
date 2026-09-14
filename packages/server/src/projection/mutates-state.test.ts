@@ -67,6 +67,12 @@ const PROBES: { readonly [T in EventType]: Probe } = {
     probe: (b) =>
       b.add('move.suggested', SAMPLE_PAYLOADS['move.suggested'] as never, { actor: AI_ACTOR }),
   },
+  'move.trigger_noted': {
+    probe: (b) =>
+      b.add('move.trigger_noted', SAMPLE_PAYLOADS['move.trigger_noted'] as never, {
+        actor: AI_ACTOR,
+      }),
+  },
   'session.began': {
     probe: (b) => b.add('session.began', { sessionId: SESSION_ID, number: 3 }),
   },
