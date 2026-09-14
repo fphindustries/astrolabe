@@ -14,6 +14,11 @@ import { checkerFor, grade, loadCorpus, loadRecordedVerdicts, subjectOf } from '
  * quote verification against real text, and the withdraw-or-pass decision
  * made from it — and that the recorded agreement with the corpus hasn't
  * silently changed.
+ *
+ * The verdicts belong to one checker model on one rubric. When either
+ * changes (`authority-rubric.ts`, `authority-check.ts`,
+ * `ASTROLABE_CHECK_MODEL`), re-grade with `npm run eval:authority` and
+ * re-record with `-- --record`.
  */
 
 const corpus = loadCorpus();
@@ -59,7 +64,10 @@ describe('the authority corpus (D-128)', () => {
       // Every quote the live checker gave is really in the text.
       expect(result.verdict.kind).not.toBe('unchecked');
       expect(replay.requests).toHaveLength(1);
-      expect(grade(entry, result.verdict).agrees).toBe(verdict.agrees);
+      expect(
+        grade(entry, result.verdict).agrees,
+        `${entry.id}: the replayed verdict no longer grades as recorded. If the rubric, the corpus entry or the checker model changed, re-grade and re-record: npm run eval:authority -- --record.`,
+      ).toBe(verdict.agrees);
     });
   });
 });

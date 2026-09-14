@@ -1534,9 +1534,9 @@ The matrix ran 5 beats × 3 latitudes × 3 runs through the real pipeline: claud
 - "something in the shape of the gap sits sharp and usable", which is borderline;
 - a momentum burn narrated as Vesna's feeling ("The edge she had been carrying goes out of her").
 
-**The aided scan paused play in 5 of its 9 runs.** In each, both attempts narrated Rook helping ("Rook leans in over the secondary board and trims the filter"), an action Rook takes nowhere in the beat. D-127's checks refused it both times, so play paused as designed. The cause was the test beat: I had labelled the roll's add "aid from Rook", which the app never writes; `move-commands.ts` writes "bonus from an earlier move". Rerun with the real label, all 9 of 9 kept, with two withdrawals recovered: a momentum burn as interior, and an undeclared action for Vesna. The finding stands: naming another player character in a beat's facts invites narrating them acting, and the checks catch it, at the cost of a pause.
+**Finding for group 8: a beat whose facts name a second player character reliably gets that character narrated acting, and the only recovery is a pause.** The aided scan paused play in 5 of its 9 runs. In each, both attempts narrated Rook helping ("Rook leans in over the secondary board and trims the filter"), an action Rook takes nowhere in the beat. D-127's checks refused it both times, so play paused as designed. The test beat had labelled the roll's add "aid from Rook". The app writes "bonus from an earlier move" (`move-commands.ts`), which names no one. Rerun with the real label, all 9 of 9 kept, with two withdrawals recovered: a momentum burn as interior, and an undeclared action for Vesna. The real label is why the golden session's Beat 5 is safe today. 8.x and 9.x will put crew and NPC names into beat facts as a matter of course, and each named character is an invitation.
 
-**Sign-off.** I read all 49 kept passages.
+**Sign-off.** I read all 49 kept passages. Every run, with its timings, withdrawals and kept segments, is in `packages/server/src/ai/eval/live-matrix-7.15.json`.
 
 - **Pronouns:** no passage gives Rook or Juno a pronoun. Both regex flags were false alarms ("the burns they leave", "a line of them"). Vesna's "her" follows her recorded she/her.
 - **Authority:** no kept passage clearly breaks D-129. Borderline, and kept:

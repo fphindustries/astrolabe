@@ -1,0 +1,1112 @@
+{
+  "about": "Task 7.15 live matrix, 2026-09-14: claude-opus-5 narrating, claude-sonnet-5 checking (D-128). Every run with its timings, withdrawals and kept segments: the evidence behind the A21 sign-off in milestone-1.md. The first pass labelled the aided scan's roll add \"aid from Rook\", which the app never writes; the rerun uses the real label, \"bonus from an earlier move\".",
+  "runs": [
+    {
+      "pass": "first",
+      "latitude": "minimal",
+      "beat": "beat7-chain",
+      "run": 1,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1944,
+      "checkMs": [2440],
+      "totalMs": 9799,
+      "withdrawals": [],
+      "segments": [
+        "[character_does:Rook] Rook forces the sealed bulkhead, driving weight against the seam where the plates have fused.",
+        "[world] The bulkhead gives a hand's width and stops. Behind the plating, something under pressure lets go.",
+        "[character_undergoes:Rook] A ruptured conduit sprays sparks across Rook's arm, scoring the sleeve and the skin beneath in a short line of burns. The damage is shallow: one point of health, no more.",
+        "[world] The conduit spits twice more and drains to a thin smoke that hangs in the corridor's still air.",
+        "[character_undergoes:Rook] The burn stays local. The arm keeps its strength, the hand keeps its grip, and nothing in Rook's body fails from it.",
+        "[world] The bulkhead sits where it stopped, jammed open a hand's width, the gap dark beyond it. The relay station's ambient hum continues unchanged."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "minimal",
+      "beat": "beat7-chain",
+      "run": 2,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1495,
+      "checkMs": [2487],
+      "totalMs": 10060,
+      "withdrawals": [],
+      "segments": [
+        "[character_does:Rook] Rook forces the sealed bulkhead, driving against the seam where the plates meet. The door gives a handspan and jams.",
+        "[world] The strain travels back through the frame to a conduit running above the bulkhead. Its casing splits and the line ruptures.",
+        "[character_undergoes:Rook] Sparks spray across Rook's arm, scattering over sleeve and gauntlet. The burns they leave are shallow, a scatter of small marks rather than a single deep wound.",
+        "[character_undergoes:Rook] Rook's health drops by one.",
+        "[character_undergoes:Rook] The pain stays local and does not spread; the arm still answers, and the sleeve holds together over the marks.",
+        "[world] The severed conduit finishes discharging and goes dark. The bulkhead stands where it stopped, open a handspan, the gap unlit.",
+        "[world] Somewhere deeper in the relay station, a fan spins down to silence."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "minimal",
+      "beat": "beat7-chain",
+      "run": 3,
+      "ok": true,
+      "attempts": 2,
+      "firstTextMs": 1759,
+      "checkMs": [3382, 2236],
+      "totalMs": 20424,
+      "withdrawals": [
+        {
+          "attempt": 1,
+          "checker": "authority_check",
+          "reason": "Withdrawn: it said what Rook thinks, feels or characteristically does, which is the player’s to decide.",
+          "quotes": ["player_interior: the pain settles into something Rook can work through"],
+          "rejectedText": "Rook sets against the sealed bulkhead and forces it, driving weight into the seam where the plating has fused. The door gives a hand's width and stops, and behind the panel something under pressure lets go. A ruptured conduit sprays sparks across Rook's arm, scoring the sleeve and the skin beneath it in a shallow line of burns. The conduit keeps spitting for a few seconds, then dims to a dull orange glow inside the wall cavity. The burns are narrow and the arm still answers; the pain settles into something Rook can work through, and nothing further fails. The bulkhead remains where it stopped, jammed open a hand's width, the relay station dark and quiet beyond the gap."
+        }
+      ],
+      "segments": [
+        "[character_does:Rook] Rook forces the sealed bulkhead, driving against the seam with everything iron can give. The door does not move.",
+        "[world] The frame holds, and the strain travels back into the wall, where a conduit behind the panel splits along its length.",
+        "[character_undergoes:Rook] A spray of sparks bursts from the rupture and washes across Rook's arm, scorching a line through the sleeve to the skin beneath. The burn is shallow, a narrow stripe of heat rather than a wound.",
+        "[character_undergoes:Rook] The heat of it registers as a bright, immediate sting along the forearm, and Rook's health drops by one.",
+        "[character_undergoes:Rook] The sting stays at the surface; the arm moves as it did before, and the burn takes nothing further from Rook.",
+        "[world] The severed conduit gutters, throws a last few sparks, and goes dark. The bulkhead remains sealed, the seam unmarked."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "minimal",
+      "beat": "standalone-harm",
+      "run": 1,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1730,
+      "checkMs": [2242],
+      "totalMs": 8173,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station's floor track has sheared partway along its run, leaving a spur of metal standing up out of the housing at chest height.",
+        "[character_undergoes:Rook] The spur catches Rook under the arm, where the plating thins, and opens the suit and the skin beneath it. The wound costs Rook two health.",
+        "[character_undergoes:Rook] The harm registers, and it does not put Rook down: the injury stays shallow and the arm keeps working.",
+        "[character_undergoes:Rook] Rook shakes it off and recovers one point of health, leaving the cut as a minor thing under the torn plating.",
+        "[world] The sheared track remains as it is, the spur still standing in the walkway, the station otherwise quiet."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "minimal",
+      "beat": "standalone-harm",
+      "run": 2,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1962,
+      "checkMs": [3945],
+      "totalMs": 9681,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station's floor plating has buckled along the old track line, leaving a length of sheared rail standing up out of the deck.",
+        "[character_undergoes:Rook] The spur catches Rook under the arm, where the plating of the suit thins, and opens the gap beneath it. Rook takes two harm.",
+        "[character_undergoes:Rook] The wound is not enough to put Rook down; the shock passes through and settles.",
+        "[character_undergoes:Rook] Rook shakes it off and recovers one health, ending at health 4.",
+        "[world] The rail stays where it is, angled out of the deck, and the station is quiet around it."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "minimal",
+      "beat": "standalone-harm",
+      "run": 3,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1841,
+      "checkMs": [2478],
+      "totalMs": 7858,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station's floor plating has peeled back along an old track seam, leaving a spur of sheared metal standing up at chest height.",
+        "[character_undergoes:Rook] The spur catches Rook under the arm, where the plating of the suit thins, and opens a wound there. Rook loses 2 health.",
+        "[character_undergoes:Rook] The damage stays shallow, and Rook endures it.",
+        "[character_undergoes:Rook] The injury proves less than it first seemed; Rook recovers 1 health.",
+        "[world] The station's lights hold steady, and nothing else in the corridor moves."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "minimal",
+      "beat": "juno-logs",
+      "run": 1,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 2168,
+      "checkMs": [2386],
+      "totalMs": 8326,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station's docking port sits open beneath a panel that has not been closed properly in some time. Its indicator runs amber, then steady.",
+        "[character_does:Juno] Juno jacks into the docking port and pulls the station logs.",
+        "[world] The logs come across in fragments. Arrival and departure entries resolve cleanly for a stretch of eleven days, then break into gaps where whole blocks have been overwritten or never written at all. What remains names a berth, a time, and a cargo designation, and nothing about who authorized any of it.",
+        "[character_undergoes:Juno] The partial record leaves Juno with momentum increased by one."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "minimal",
+      "beat": "juno-logs",
+      "run": 2,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1775,
+      "checkMs": [2791],
+      "totalMs": 7908,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station's docking port sits unpowered but intact, its data coupling exposed under a hinged cover.",
+        "[character_does:Juno] Juno jacks into the docking port and pulls the station logs.",
+        "[world] The logs come up partial. Arrival and departure timestamps are there, along with a berth assignment consistent with Meridian's Hope, but the manifest records and the last three cycles of traffic are missing, overwritten or never written.",
+        "[character_undergoes:Juno] The connection holds steady through the transfer, and the partial return still gives Juno something to work from: momentum rises by one."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "minimal",
+      "beat": "juno-logs",
+      "run": 3,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1627,
+      "checkMs": [2576],
+      "totalMs": 7843,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station's docking port sits open in the bulkhead, its contacts still live under a thin film of dust. The station has been running unattended long enough that its housekeeping routines have overwritten most of their own records.",
+        "[character_does:Juno] Juno jacks into the docking port and pulls the station logs.",
+        "[world] The logs come through partial. There is a timestamped arrival and departure for a vessel matching Meridian's Hope, and a heading out from the station, but the manifest fields and the last three days of traffic are blank or corrupted.",
+        "[character_undergoes:Juno] The heading holds, and Juno's momentum rises to 5."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "minimal",
+      "beat": "vesna-burn",
+      "run": 1,
+      "ok": false,
+      "failure": "narrator: invalid_output: A segment about what happens to Rook cites no fact about Rook.",
+      "attempts": 2,
+      "firstTextMs": 2315,
+      "checkMs": [],
+      "totalMs": 13946,
+      "withdrawals": [
+        {
+          "attempt": 1,
+          "checker": "segment_checks",
+          "reason": "Withdrawn: a world segment named Rook; what happens to a player character must be labelled as theirs.",
+          "quotes": ["segment_check: "],
+          "rejectedText": "Vesna runs the Lantern Wake's sensors across the relay station and traces the power draw, following it inward from the outer arrays. The first pass returns a partial picture: a draw that climbs and falls without pattern, sourced somewhere below the station's docking ring. Rook's work on the secondary feed narrows the noise, and the trace holds long enough to be read. The display resolves for Vesna: the draw terminates in a sealed compartment three decks down, still drawing, still warm, with a maintenance conduit running to it from the ring. The reserve Vesna spent on the trace is gone, and what comes back is the clarity of a confirmed reading. The station gives up nothing else. The compartment sits at the end of the conduit, sealed, consuming power the relay has no reason to spend."
+        },
+        {
+          "attempt": 2,
+          "checker": "segment_checks",
+          "reason": "Withdrawn: a segment about what happens to Rook cites no fact about Rook.",
+          "quotes": ["segment_check: "],
+          "rejectedText": "Vesna traces the power draw with the Lantern Wake's sensors, sweeping the relay station's structure for the source of the load. The first returns come back muddled, the station's own shielding scattering the signal into noise. Rook's aid tightens the filter, and the noise thins. Vesna's momentum is spent into the reading and resets, then climbs back by two as the trace resolves. The draw narrows to a single line: power running from the station's core down into a sealed maintenance level beneath the docking ring, far more of it than an idle relay should need. Something down there is still running, and has been for a long time."
+        }
+      ],
+      "segments": []
+    },
+    {
+      "pass": "first",
+      "latitude": "minimal",
+      "beat": "vesna-burn",
+      "run": 2,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 2119,
+      "checkMs": [2644],
+      "totalMs": 10947,
+      "withdrawals": [],
+      "segments": [
+        "[character_does:Vesna] Vesna traces the power draw with the Lantern Wake's sensors, working the readings back from the relay station's outer panels toward their source.",
+        "[world] The first sweep returns a partial picture: the draw is real and steady, but the station's own interference smears the lines into something ambiguous.",
+        "[character_undergoes:Vesna] Rook's hands are already at the secondary console, filtering the feed, and the display in front of Vesna resolves a step further.",
+        "[character_undergoes:Vesna] The drive's reserve dumps into the sensor array, and the ambiguity burns off: the trace holds clean and complete, the draw running to a single sealed compartment deep in the station's core.",
+        "[character_undergoes:Vesna] The Lantern Wake's momentum reserve falls back to its baseline, then climbs by two on the strength of the confirmed reading.",
+        "[world] The station continues to draw power from that compartment, unchanged and unhurried, while the relay's outer lights stay dark."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "minimal",
+      "beat": "vesna-burn",
+      "run": 3,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 2249,
+      "checkMs": [2548],
+      "totalMs": 10691,
+      "withdrawals": [],
+      "segments": [
+        "[character_does:Vesna] Vesna runs the Lantern Wake's sensors along the relay station's power draw, tracing the load back through the conduit network with Rook feeding her a cleaner signal filter.",
+        "[world] The first returns come back muddled: the station's draw reads as ordinary standby, three separate trunk lines all showing the same flat, plausible number.",
+        "[character_undergoes:Vesna] The momentum Vesna has been carrying spends itself out of the reading all at once, and the resolution collapses into something exact; the reserve empties and begins to build again.",
+        "[world] The composite shows the standby figure for what it is. One of the trunk lines is carrying far more than it declares, and the surplus terminates deep in the station's lower housing, in a compartment the relay's own schematic lists as sealed and unpowered.",
+        "[world] The draw there is steady, deliberate, and has been running a long time."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "minimal",
+      "beat": "rook-airlock",
+      "run": 1,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1646,
+      "checkMs": [2081],
+      "totalMs": 6605,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station is venting. Air pulls hard through the gap where the airlock door sits jammed in its track, and the frame hums with the pressure differential.",
+        "[character_does:Rook] Rook hauls the jammed airlock door shut against the venting pressure. The door grinds along its track and seats in the frame.",
+        "[world] The seal engages. The noise of escaping air drops away, and the corridor pressure holds steady on the panel beside the lock.",
+        "[character_undergoes:Rook] The work leaves Rook with the advantage of it: momentum rises by one."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "minimal",
+      "beat": "rook-airlock",
+      "run": 2,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1659,
+      "checkMs": [2294],
+      "totalMs": 7188,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station is losing air through the open lock, and the door sits jammed in its track, held there by the pressure moving past it.",
+        "[character_does:Rook] Rook hauls the jammed airlock door shut against the venting pressure, and it moves, grinding along the track until the seal meets its frame.",
+        "[world] The rush of escaping air cuts off. The lock's indicator settles as the chamber holds pressure again.",
+        "[character_undergoes:Rook] The work has gone cleanly for Rook, and momentum rises by one."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "minimal",
+      "beat": "rook-airlock",
+      "run": 3,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1599,
+      "checkMs": [3480],
+      "totalMs": 8341,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station is venting through the open lock, and the door sits jammed halfway in its track, the escaping air dragging hard against it.",
+        "[character_does:Rook] Rook hauls the jammed airlock door shut against the venting pressure, and it travels the rest of the way in its track.",
+        "[world] The seal closes and the outflow stops. Pressure in the corridor steadies, and the noise drops to the hum of the station's remaining systems.",
+        "[character_undergoes:Rook] The work has gone cleanly, and Rook's momentum rises by one."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "color",
+      "beat": "beat7-chain",
+      "run": 1,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1641,
+      "checkMs": [2251],
+      "totalMs": 10823,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station's air is stale and cold, and the sealed bulkhead sits in its frame like a tooth grown into bone, seam crusted with decades of vacuum-frost.",
+        "[character_does:Rook] Rook forces the sealed bulkhead, driving into the seam until the metal groans a low complaint down the length of the corridor.",
+        "[world] The door gives a finger's width, no more, and something behind the wall panel lets go with a sound like a snapped wire. A conduit splits along its length and spits.",
+        "[character_undergoes:Rook] Sparks rake across Rook's arm in a bright arc, stitching a line of white heat through sleeve and skin, the smell of scorched fabric blooming instantly. The burn is shallow, an ugly stripe already blistering at its edges.",
+        "[character_undergoes:Rook] The pain flares and then recedes to a hot, manageable throb, the arm still answering, fingers still closing.",
+        "[world] The conduit sputters out into a thin orange glow. The bulkhead holds where it is, that finger's width of dark showing through and nothing more."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "color",
+      "beat": "beat7-chain",
+      "run": 2,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1669,
+      "checkMs": [2871],
+      "totalMs": 12858,
+      "withdrawals": [],
+      "segments": [
+        "[world] The bulkhead sits half-seated in its frame, seam crusted with the slow orange bloom of oxidation, and behind it the relay station breathes cold through a finger-width gap.",
+        "[character_does:Rook] Rook forces the sealed bulkhead, shoulder set against scarred plating, hands hooked in the seam until the metal groans and gives a grudging centimeter.",
+        "[world] The door stops. Something deeper in the wall answers instead: a wet electrical crack, a conduit letting go behind the panel with a sound like a snapped bone.",
+        "[character_undergoes:Rook] Sparks come out sideways in a bright arc and rake across Rook's arm, a hot white line of them scattering off the sleeve. The fabric blackens in a narrow stripe, the skin beneath it stinging raw where the worst of it landed.",
+        "[world] The severed line whips once and dies, its light guttering out against the deck, and the station goes quiet except for the tick of cooling metal.",
+        "[character_undergoes:Rook] The pain arrives and then thins out, leaving the arm working, fingers still answering, the burn already no worse than it was a breath ago."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "color",
+      "beat": "beat7-chain",
+      "run": 3,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1592,
+      "checkMs": [2140],
+      "totalMs": 11833,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station's corridor holds its breath in the amber of failure lighting, and the sealed bulkhead sits in its frame like a tooth grown into bone. Frost creeps in hairlines across the seam where the pressure seals have gone cold.",
+        "[character_does:Rook] Rook forces the sealed bulkhead, shoulder and both hands set against the pry bar until the metal groans and gives a hand's width.",
+        "[world] Something behind the wall panel lets go with a crack, and a conduit whips loose in a white arc of sparks, spitting molten flecks the length of the corridor.",
+        "[character_undergoes:Rook] The spray crosses Rook's arm, a scatter of bright stings burning pinprick holes through sleeve fabric and leaving a red stipple across the skin beneath. The smell of scorched cloth rises, sharp and immediate.",
+        "[world] The conduit gutters, coughs, and dies to a slow orange drip. The bulkhead stands where it stood, open a hand's width and no further, the dark beyond it silent.",
+        "[character_undergoes:Rook] The burn settles to a dull heat that does not spread, and the arm still answers, fingers closing on the bar without slipping."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "color",
+      "beat": "standalone-harm",
+      "run": 1,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1521,
+      "checkMs": [3679],
+      "totalMs": 10286,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station's service crawl runs narrow and half-collapsed, and one length of track has sheared where the mounts gave, leaving a bright curl of metal standing up out of the dark like a thorn.",
+        "[character_undergoes:Rook] The spur catches Rook under the arm, where the plating thins to seam and fabric, and it goes in with a small dry sound; warmth spreads down the ribs inside the undersuit.",
+        "[world] Somewhere above, the station's cooling loop knocks twice and settles, indifferent, and dust drifts down through the worklight in slow grey threads.",
+        "[character_undergoes:Rook] The pain crests and then thins out to something narrow and manageable, a hot line rather than a fire, and the arm still answers when the weight comes off it."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "color",
+      "beat": "standalone-harm",
+      "run": 2,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1499,
+      "checkMs": [2441],
+      "totalMs": 9001,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station's service crawlway is a throat of torn rail and cold-burnt insulation, one length of track sheared off and standing out of the wall like a broken tooth. Somewhere behind the bulkhead a pump cycles, patient and unbothered.",
+        "[character_undergoes:Rook] The spur finds Rook under the arm, where the plating thins to seam and webbing, and goes in with a small dry sound. Warmth spreads down the undersuit, quick and startling.",
+        "[world] The pump keeps its rhythm. Dust drifts through the worklight in slow spirals, settling again as if nothing has happened.",
+        "[character_undergoes:Rook] The pain narrows to a hot line and stays there, no deeper, and the arm still answers. Whatever came loose inside the suit knits itself back toward workable."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "color",
+      "beat": "standalone-harm",
+      "run": 3,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1673,
+      "checkMs": [2082],
+      "totalMs": 9105,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station's maintenance trench runs black and narrow, its rail track sheared somewhere in the long dark and left with a bright spur of metal standing up out of the housing like a thorn. Cold air moves through the gap in a thin, constant whistle.",
+        "[character_undergoes:Rook] The spur finds Rook under the arm, where the plating thins to a seam of webbing, and goes in far enough to matter; warmth spreads down the undersuit in a slow line, and the light through the visor narrows for a moment.",
+        "[character_undergoes:Rook] Then the edge of it dulls. The wound sits there, ugly and shallower than it felt, and the trench comes back into focus with nothing worse waiting in it.",
+        "[world] Somewhere above, the station's old relay cycles twice in the same flat tone, twice again, as though counting."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "color",
+      "beat": "juno-logs",
+      "run": 1,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1621,
+      "checkMs": [3799],
+      "totalMs": 9956,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station hums at a frequency just below comfortable, its docking ring lit by strips of old amber emergency lamps that never got switched off.",
+        "[character_does:Juno] Juno jacks into the docking port, the connector seating with a dull magnetic clack, and pulls the station logs.",
+        "[world] The logs come up in fragments: timestamps intact, cargo manifests half-corrupted, a long gap where something scrubbed itself clean. What survives points somewhere, but it points thinly, and the console's cooling fan grinds as it works.",
+        "[character_undergoes:Juno] The cable feeds a faint warmth back through Juno's glove, steady, the scroll of recovered text still climbing."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "color",
+      "beat": "juno-logs",
+      "run": 2,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 2737,
+      "checkMs": [2063],
+      "totalMs": 9319,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station's docking ring hums at a frequency just below comfort, its status lamps cycling amber in the dust-furred dark.",
+        "[character_does:Juno] Juno jacks into the docking port, the connector seating with a dull magnetic clack, and pulls the station logs.",
+        "[world] Text scrolls up in stuttering columns: arrival stamps, fuel draws, a berth assignment that matches Meridian's Hope. Then the record thins to corrupted blocks, whole weeks rendered as grey hash, the last clean entry trailing off mid-line.",
+        "[character_undergoes:Juno] The cable carries a faint warmth up into Juno's glove, steady, the feed still live and still giving."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "color",
+      "beat": "juno-logs",
+      "run": 3,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 2311,
+      "checkMs": [2268],
+      "totalMs": 9458,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station's docking ring hums at a frequency just below comfort, its status lamps cycling amber in the dust-furred dark. A maintenance port sits open at waist height, contacts tarnished but live.",
+        "[character_does:Juno] Juno jacks into the docking port and pulls the station logs, the connector seating with a dull magnetic clack.",
+        "[world] Text scrolls up in pale green, timestamps and berth assignments, half of it corrupted into blocks of nothing. Meridian's Hope appears once, an arrival with no matching departure, and then the feed stalls on a checksum error it cannot clear.",
+        "[character_undergoes:Juno] The cable goes warm against Juno's glove, current steady, the partial haul already worth something."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "color",
+      "beat": "vesna-burn",
+      "run": 1,
+      "ok": false,
+      "failure": "narrator: invalid_output: A segment about what happens to Rook cites no fact about Rook.",
+      "attempts": 2,
+      "firstTextMs": 1771,
+      "checkMs": [],
+      "totalMs": 16625,
+      "withdrawals": [
+        {
+          "attempt": 1,
+          "checker": "segment_checks",
+          "reason": "Withdrawn: a world segment named Rook; what happens to a player character must be labelled as theirs.",
+          "quotes": ["segment_check: "],
+          "rejectedText": "The relay station hangs dark against the starfield, its ring of antennae canted at angles no maintenance crew ever intended. Somewhere inside that hulk, something is still drinking power. Vesna traces the power draw with the Lantern Wake's sensors, walking the gain up notch by notch until the console throws a wash of pale amber across the cockpit. The first returns come back muddled, a smear of noise where the station's shielding chews the signal into gravel. Rook leans in over the secondary board and trims the filter, and the gravel thins. The display resolves under Vesna's hands: a single bright thread of draw running from the station's dead reactor spine up into the crew ring, pulsing at intervals too regular to be accident. Every ghost and echo on the plot falls away, and what remains is clean enough to fly by. The station turns slowly on its axis, and the lit thread turns with it, patient, still burning."
+        },
+        {
+          "attempt": 2,
+          "checker": "segment_checks",
+          "reason": "Withdrawn: a segment about what happens to Rook cites no fact about Rook.",
+          "quotes": ["segment_check: "],
+          "rejectedText": "The relay station hangs in the dark ahead, a spindle of grey metal wearing a corona of ice, its antenna array bent where something struck it long ago. Nothing answers hail. Vesna traces the power draw with the Lantern Wake's sensors, sweeping the station's spine for the thread of current that should not be there. The first pass returns mud: bleed from the reactor scar, ghost harmonics off the ice, a signature smeared across four decks at once. The filter Rook keyed in earlier catches and holds, and a second channel opens on the console under Rook's hand. The board sharpens for Vesna, noise falling away, and the draw resolves to a single bright thread running down toward the station's lower hold — steady, deliberate, drawing more than any dead relay should. Whatever is down there has been running a long time, and it is running still."
+        }
+      ],
+      "segments": []
+    },
+    {
+      "pass": "first",
+      "latitude": "color",
+      "beat": "vesna-burn",
+      "run": 2,
+      "ok": false,
+      "failure": "narrator: invalid_output: A segment about what happens to Rook cites no fact about Rook.",
+      "attempts": 2,
+      "firstTextMs": 1987,
+      "checkMs": [],
+      "totalMs": 18762,
+      "withdrawals": [
+        {
+          "attempt": 1,
+          "checker": "segment_checks",
+          "reason": "Withdrawn: a world segment named Rook; what happens to a player character must be labelled as theirs.",
+          "quotes": ["segment_check: "],
+          "rejectedText": "The relay station hangs off the Lantern Wake's bow like a dead insect, its solar vanes canted and frost-scabbed, and somewhere inside it a current is still moving. The station should be cold all the way through. It is not. Vesna traces the power draw with the Lantern Wake's sensors, sweeping the narrow beam across the hull plating until the return comes back layered and strange. The first pass gives almost nothing: a smear of heat, a ghost of conduction, numbers that could mean three different things. Then Rook leans in at the secondary console and pulls the gain down, and the smear resolves into a line. The display blooms under Vesna's hands, clean and certain, the draw traced from a sealed compartment in the station's lower ring out along a spliced cable to a mooring clamp that has no business being powered. The Lantern Wake's fans spin up to answer the load, and the station's frost-lit ribs slide past the viewport with the whole shape of the thing suddenly legible: someone kept that compartment warm on purpose."
+        },
+        {
+          "attempt": 2,
+          "checker": "segment_checks",
+          "reason": "Withdrawn: a segment about what happens to Rook cites no fact about Rook.",
+          "quotes": ["segment_check: "],
+          "rejectedText": "The relay station hangs dead against the dust, its antenna array folded like a broken hand, and yet somewhere inside it a current is still moving. On the Lantern Wake's bridge the sensor suite wakes with a low bell tone, throwing pale grid-light across the consoles. Vesna traces the power draw with the Lantern Wake's sensors, walking the beam across the station's hull plate by plate until the return graph shivers and holds. Under Rook's hands the secondary panel steadies the feed, noise dropping out of the signal in a long clean exhale of filtered static. The first read comes back ambiguous, two conflicting sources smeared across the same deck, the display stuttering between them like something unwilling to be named. Then the picture snaps whole for Vesna: one draw, precise, running from a sealed compartment low in the station's spine, and the certainty of it lands hard and clear, momentum resetting and gathering again beneath her like a tide turning to push. The station keeps its silence, but the light in that one compartment is steady, and steady means someone or something has kept it burning."
+        }
+      ],
+      "segments": []
+    },
+    {
+      "pass": "first",
+      "latitude": "color",
+      "beat": "vesna-burn",
+      "run": 3,
+      "ok": false,
+      "failure": "narrator: invalid_output: A segment about what happens to Rook cites no fact about Rook.",
+      "attempts": 2,
+      "firstTextMs": 2032,
+      "checkMs": [],
+      "totalMs": 17234,
+      "withdrawals": [
+        {
+          "attempt": 1,
+          "checker": "segment_checks",
+          "reason": "Withdrawn: a world segment named Rook; what happens to a player character must be labelled as theirs.",
+          "quotes": ["segment_check: "],
+          "rejectedText": "The relay station hangs dark against the starfield, its antenna array furred with ice, and somewhere inside it a current is still moving. The Lantern Wake's hull ticks as it cools in the station's shadow. Vesna works the sensor suite, walking the pickups across the station's skin to trace the power draw back to its source. The first returns come back muddled — reflections off the ice, a ghost signature doubling itself, the kind of read that answers half a question and invents two more. Then the console resolves, filters biting down hard, and the smear collapses into a single clean line of draw threading down through three decks to a sealed compartment. The board goes steady under her hands, every ambiguity burned out of it. At Rook's station the mirrored feed holds the same trace, cross-checked and unarguing. The station keeps its silence, but the draw is constant now, patient, drawing from something that has not stopped running since the day the lights went out."
+        },
+        {
+          "attempt": 2,
+          "checker": "segment_checks",
+          "reason": "Withdrawn: a segment about what happens to Rook cites no fact about Rook.",
+          "quotes": ["segment_check: "],
+          "rejectedText": "The relay station hangs dark against the drift, its spine of antennae furred with ice, and only one thread of power still moves inside it — a draw too steady to be an accident. Vesna traces that draw with the Lantern Wake's sensors, running the ship's return across the station's skin until the scatter resolves into a single hot line. The first pass comes back muddled, the station's old shielding chewing the signal into noise, and the console throws two conflicting solutions across the glass. Under Rook's hands the auxiliary array narrows its aperture, and one of the two solutions dims out of contention. The noise falls away from Vesna's display all at once and the answer stands clean and unambiguous, momentum bleeding out of the moment and gathering again behind it. The trace runs deep, past the dead comm decks to a sealed compartment three levels down, where something is drawing power and has been drawing it for a long time."
+        }
+      ],
+      "segments": []
+    },
+    {
+      "pass": "first",
+      "latitude": "color",
+      "beat": "rook-airlock",
+      "run": 1,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 2974,
+      "checkMs": [2412],
+      "totalMs": 10740,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station is bleeding air through the open lock, a thin white shriek pulling loose paper and dust down the corridor in a long steady stream. The door sits half-seated in its track, one runner fouled with a ridge of buckled alloy.",
+        "[character_does:Rook] Rook hauls the jammed door shut against the venting pressure, and it comes — grinding, shedding flakes of paint, the fouled runner chewing itself flat until the seal kisses home.",
+        "[world] The shriek drops to a whisper, then nothing. Somewhere aft, a pressure alarm changes its tone from urgent to merely disappointed.",
+        "[character_undergoes:Rook] The dust settles out of the still air and comes down slow across Rook's shoulders, and the corridor feels suddenly, usefully quiet."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "color",
+      "beat": "rook-airlock",
+      "run": 2,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1720,
+      "checkMs": [2436],
+      "totalMs": 9175,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station bleeds air through the half-open lock, a thin white shriek where the seal never quite met. Dust and loose solder beads stream toward the gap in a steady glittering line.",
+        "[character_does:Rook] Rook hauls the jammed door shut against the venting pressure, the track grinding, the panel coming across in short bitten increments until the last hand's width closes all at once.",
+        "[world] The shriek cuts to nothing. Somewhere behind the bulkhead a compressor thumps back on and begins refilling the compartment, and the loose solder beads drop and roll across the deck plating.",
+        "[character_undergoes:Rook] The returning air presses warm and thick against Rook's suit, and the deck feels solid underfoot again."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "color",
+      "beat": "rook-airlock",
+      "run": 3,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 2095,
+      "checkMs": [4197],
+      "totalMs": 11116,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station's corridor is a throat of moving air, atmosphere shrieking out through the half-open lock in a white ribbon of freezing vapor. The door sits jammed on its track, runner grit-packed, the warning strip along its edge pulsing a patient amber.",
+        "[character_does:Rook] Rook hauls the jammed airlock door shut against the venting pressure, the runner grinding, then giving, the slab walking inward a handspan at a time until the seal bites and the shriek drops to nothing.",
+        "[character_undergoes:Rook] The silence comes down hard, and the pull of the escaping air goes out of Rook's sleeves all at once.",
+        "[world] The amber strip fades to a steady green. Somewhere deeper in the station, a pump cycles up to refill what was lost."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "full_voice",
+      "beat": "beat7-chain",
+      "run": 1,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1495,
+      "checkMs": [2672],
+      "totalMs": 11656,
+      "withdrawals": [],
+      "segments": [
+        "[world] The sealed bulkhead sits in its frame like a tooth in a dead jaw, warped where the hull took its wound, seams welded shut by heat and years.",
+        "[character_does:Rook] Rook forces the bulkhead, shoulder and pry-bar against the buckled seam, and the metal gives a grudging inch before something behind the wall lets go.",
+        "[world] A conduit ruptures above the frame with a sound like a struck bell, and the corridor fills with white light and the stink of burnt insulation.",
+        "[character_undergoes:Rook] Sparks rake across Rook's arm in a bright hot line, pocking the sleeve with small black craters and finding skin beneath in a scatter of stinging points.",
+        "[character_undergoes:Rook] The pain crests and then drains off fast, leaving the arm hot and usable, the fingers still answering.",
+        "[character_says:Rook] A short breath hisses out through Rook's teeth, and the set of Rook's jaw goes hard and level again.",
+        "[world] The bulkhead holds where it is, jammed an inch open on darkness, while the severed conduit gutters and drips light overhead."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "full_voice",
+      "beat": "beat7-chain",
+      "run": 2,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1522,
+      "checkMs": [4020],
+      "totalMs": 12774,
+      "withdrawals": [],
+      "segments": [
+        "[world] The sealed bulkhead sits in its frame like a tooth in a dead jaw, frost-rimed, the relay station humming a single flat note behind it.",
+        "[character_does:Rook] Rook sets both hands against the cold plate and forces it, shoulder into the seam, dragging at the manual release until the metal groans and gives a grudging finger's width.",
+        "[world] The width is enough. Behind the plate a conduit that has been holding pressure for years splits along its length with a crack like a snapped bone, and the dark fills with a white arc-light spray.",
+        "[character_undergoes:Rook] Sparks rake across Rook's forearm in a hot bright line, stitching the sleeve, the burn shallow but immediate, a bloom of pain that comes faster than sound.",
+        "[character_says:Rook] A short hiss through the teeth, then nothing more — Rook's jaw sets, and the arm stays where it is, steady against the plate.",
+        "[world] The conduit gutters out, spitting twice, and the gap in the bulkhead stands open on stale black air."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "full_voice",
+      "beat": "beat7-chain",
+      "run": 3,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1699,
+      "checkMs": [4071],
+      "totalMs": 13346,
+      "withdrawals": [],
+      "segments": [
+        "[world] The bulkhead sits half-seated in its frame, seals fused where the fire went through, and the station's dead air carries the smell of scorched polymer.",
+        "[character_does:Rook] Rook sets both hands to the edge of the sealed bulkhead and forces it, hauling against a hinge that has not moved since the accident. The metal gives a finger's width, then stops with a sound like a tooth cracking.",
+        "[world] Behind the frame something lets go. A conduit that should have been cold splits along its length and vomits a white fan of sparks into the corridor.",
+        "[character_undergoes:Rook] The spray crosses Rook's arm, stitching bright pinpricks through the sleeve, and the fabric blackens in a line from wrist to elbow. Heat arrives a half-second after the light, a thin searing under the weave.",
+        "[character_undergoes:Rook] The burn stays shallow — surface, stinging, already fading to a dull throb as the sparks gutter out. The arm still answers, fingers still close.",
+        "[world] The conduit hisses itself empty and the corridor goes dark again, the bulkhead standing exactly as unmoved as before."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "full_voice",
+      "beat": "standalone-harm",
+      "run": 1,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 2026,
+      "checkMs": [3035],
+      "totalMs": 10828,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station's floor is a lattice of old maglev track, half of it sheared where something heavy came through years ago. The station hum runs steady under everything, a low patient note in the dark.",
+        "[character_undergoes:Rook] A spur of that sheared track catches Rook under the arm, where the plating thins to seam and webbing, and it goes in far enough to matter. The undersuit wicks dark, a warm line spreading down the ribs.",
+        "[character_undergoes:Rook] The pain crests and then, unexpectedly, ebbs; the wound is shallower than it felt, the spur having slid along the plate instead of under it. Breath comes back. Rook is still standing, and steadier than a moment ago.",
+        "[world] Somewhere deeper in the station, two relays cycle in the same instant, and the hum drops a half-step and holds there."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "full_voice",
+      "beat": "standalone-harm",
+      "run": 2,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 2601,
+      "checkMs": [2497],
+      "totalMs": 10425,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station's floor is a ruin of torn track, rails peeled up where something heavy came off its rollers a long time ago. The air tastes of cold iron and old coolant.",
+        "[character_undergoes:Rook] A spur of sheared track catches Rook under the arm, where the plating thins to a seam, and it opens that seam like a can. Heat blooms under the suit and runs downward, slow and insistent.",
+        "[character_undergoes:Rook] The wound is shallower than the blood suggests; the burn of it dulls to a manageable ache within a few heartbeats, and the arm still answers.",
+        "[character_says:Rook] A short breath hisses out through Rook's teeth, and the grimace flattens into something steadier.",
+        "[world] Somewhere above, a relay contact clicks twice and falls silent, as it has been doing since the crew arrived."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "full_voice",
+      "beat": "standalone-harm",
+      "run": 3,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1343,
+      "checkMs": [3497],
+      "totalMs": 9904,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station's floor is a ruin of torn track, one rail peeled up and standing out of the deck like a splinter of bone. Somewhere above, a cooling fan cycles, stops, cycles again.",
+        "[character_undergoes:Rook] The spur catches Rook under the arm, where the plating thins to seam and fabric, and drags a bright hot line through the undersuit. Warmth spreads down the ribs, unhurried, soaking outward.",
+        "[character_undergoes:Rook] The pain crests, then flattens into something dull and carryable; the arm still lifts, the seal still holds, and the bleeding slows under its own pressure.",
+        "[world] The fan cycles once more and the station goes on humming, indifferent, the torn rail still standing where it stands."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "full_voice",
+      "beat": "juno-logs",
+      "run": 1,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 2627,
+      "checkMs": [3193],
+      "totalMs": 10127,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station hums at half power, its docking port collar crusted with frost that sublimates in slow threads under the corridor lights.",
+        "[character_does:Juno] Juno jacks into the docking port, thumbing the connector until it seats with a dull click, and pulls the station logs.",
+        "[world] The feed comes up grudgingly: a manifest of arrivals and departures, timestamps scattered where the clock drifted, and a long gap where something scrubbed itself out. There is a heading and a date for Meridian's Hope, and nothing after it.",
+        "[character_undergoes:Juno] The cable tugs faintly at Juno's wrist as the port draws deeper, and the data keeps coming."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "full_voice",
+      "beat": "juno-logs",
+      "run": 2,
+      "ok": true,
+      "attempts": 2,
+      "firstTextMs": 2672,
+      "checkMs": [3696, 2230],
+      "totalMs": 20696,
+      "withdrawals": [
+        {
+          "attempt": 1,
+          "checker": "authority_check",
+          "reason": "Withdrawn: it said what Juno thinks, feels or characteristically does, which is the player’s to decide.",
+          "quotes": ["player_interior: something in the shape of the gap sits sharp and usable"],
+          "rejectedText": "The relay station hums on standby power, its docking collar ringed with dead indicator lamps and one that still blinks amber, patient as a metronome. Juno jacks into the docking port and pulls the station logs, the cable seating with a dull magnetic clack. Text scrolls up in pale green columns: arrival stamps, fuel transfers, a maintenance cycle logged twice. Then a long gap where entries should be, the record simply thinning out into blank timestamps, and the last usable line names a departure vector without naming what departed. The console's glow lays a steady wash of light across Juno's hands, and something in the shape of the gap sits sharp and usable."
+        }
+      ],
+      "segments": [
+        "[world] The relay station hums at one note, low and patient, its docking collar ringed with dust that has not been disturbed in a long while. A single amber telltale blinks beside the port, steady as a metronome.",
+        "[character_does:Juno] Juno jacks into the docking port and pulls the station logs, the connector seating with a dull click.",
+        "[world] The logs come up in fragments: arrival stamps, fuel draws, a maintenance cycle logged twice. There is a gap of eleven days where the record simply stops, and after it a course heading that was never filed with anyone.",
+        "[character_undergoes:Juno] The readout glow lies pale across Juno's hands, scrolling faster than it can be read.",
+        "[character_undergoes:Juno] The hum through the cable settles into a rhythm that carries."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "full_voice",
+      "beat": "juno-logs",
+      "run": 3,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1763,
+      "checkMs": [2910],
+      "totalMs": 9230,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station's docking ring hums at a frequency just under hearing, its status panels cycling amber in no particular hurry. A port cover hangs open where the seals have long since given up.",
+        "[character_does:Juno] Juno jacks into the docking port and pulls the station logs, the connector seating with a dull click. The pull comes slow, line by line, out of a memory core that has been talking to nobody for a long while.",
+        "[world] What comes up is partial: arrival timestamps, a truncated manifest, a berth assignment repeated three times and then nothing. Whole stretches of the record read as null blocks, neither corrupted nor written.",
+        "[character_undergoes:Juno] The cable warms faintly against Juno's glove as the transfer settles, and the readout holds steady with what little it has."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "full_voice",
+      "beat": "vesna-burn",
+      "run": 1,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 2437,
+      "checkMs": [2634],
+      "totalMs": 11299,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station hangs dark against the star field, one arm of it bent where something struck it long ago. Only a thin thread of power still moves inside, too faint for the station's own beacons to notice.",
+        "[character_does:Vesna] Vesna traces the power draw with the Lantern Wake's sensors, walking the return sweep down through the station's cold spine until the signal narrows to a single live line.",
+        "[world] The return comes back muddled, ghosted by the bent arm, two readings overlapping where there should be one.",
+        "[character_undergoes:Vesna] The console clears under Vesna's hands as the drive spends what it has been holding, and the resolved trace prints clean: the draw runs to a sealed compartment three decks down, still warm, still drawing.",
+        "[character_says:Vesna] \"There,\" Vesna says, voice flat and certain. \"That's not a leak. Something's feeding.\"",
+        "[world] On the screen the station's map fills in around the warm point, corridor by corridor, as though the place has decided to stop hiding."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "full_voice",
+      "beat": "vesna-burn",
+      "run": 2,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1925,
+      "checkMs": [4535],
+      "totalMs": 14235,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station hangs dark against the star field, only one artery of it still warm — a slow, stubborn pulse of current running somewhere behind its ribs.",
+        "[character_does:Vesna] Vesna traces the power draw with the Lantern Wake's sensors, walking the scan down the station's spine conduit by conduit until the return waveform stops smearing and stands up clean.",
+        "[world] The first pass gives her almost nothing: a mess of harmonics, three ghost sources, the draw sliding between decks like something that does not want to be counted.",
+        "[character_undergoes:Vesna] Then the console takes everything she has been holding in reserve and spends it at once — the display flushes, resolves, and the reading locks.",
+        "[world] The draw is real and it is singular: one live circuit, deep in the station's lower ring, drinking steadily from a grid that should have gone cold years ago.",
+        "[character_says:Vesna] \"Got it,\" Vesna says, her voice flat and certain over the channel, the screen-light hard along her jaw.",
+        "[character_undergoes:Vesna] The Lantern Wake's systems settle around her, steady again, running with a little more in hand than before."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "full_voice",
+      "beat": "vesna-burn",
+      "run": 3,
+      "ok": false,
+      "failure": "narrator: invalid_output: A world segment named Rook; what happens to a player character must be labelled as theirs.",
+      "attempts": 2,
+      "firstTextMs": 2829,
+      "checkMs": [4989],
+      "totalMs": 25761,
+      "withdrawals": [
+        {
+          "attempt": 1,
+          "checker": "authority_check",
+          "reason": "Withdrawn: it said what Vesna thinks, feels or characteristically does, which is the player’s to decide.",
+          "quotes": [
+            "player_interior: The edge she had been carrying goes out of her all at once, spent into that one clean answer, and what comes back in its place is smaller, harder, and rising."
+          ],
+          "rejectedText": "The relay station hangs against the dark like a dead thing, its docking spines furred with frost, and somewhere inside it a current is still moving that should not be. Vesna traces the power draw with the Lantern Wake's sensors, walking the beam along the station's hull seam by seam until the return signal stops lying to her. The first pass gives back mush — reflections, ghost echoes, a number that could mean three different things. Then the filter stack settles, and the display resolves hard and clean, every ambiguity burned out of it. The draw runs from a shielded cell deep in the station's spine, up a single live conduit, into the old telemetry vault — steady, deliberate, maintained. Something in there has been kept warm on purpose. \"There,\" Vesna says, and her voice comes out flatter and steadier than the reading deserves. The edge she had been carrying goes out of her all at once, spent into that one clean answer, and what comes back in its place is smaller, harder, and rising."
+        },
+        {
+          "attempt": 2,
+          "checker": "segment_checks",
+          "reason": "Withdrawn: a world segment named Rook; what happens to a player character must be labelled as theirs.",
+          "quotes": ["segment_check: "],
+          "rejectedText": "The relay station hangs dark against the star field, one spar bent where something struck it long ago, and only a faint bleed of heat on the hull says anything inside is still drawing power. Vesna lays the Lantern Wake's sensor sweep across the station's flank and traces the power draw, walking the readout back conduit by conduit toward its source. Rook feeds the gain higher from the second console, and the ghost signal steadies out of the noise: a single thin line of current running down through the station's spine, past every dead deck, into the lower ring. The screen in front of Vesna resolves all at once, clutter falling away, the draw marked in hard clean amber where a moment before there had been only guesswork. \"There,\" Vesna says, voice flat and certain, one knuckle set against the glass. \"Lower ring. Something down there is still being fed.\" The long-held tension in her shoulders is spent into that one reading, and what gathers behind it is new, quick and forward-leaning. On the hull, far below the marked deck, a docking clamp turns a slow quarter-rotation and stops, as though something has noticed the light."
+        }
+      ],
+      "segments": []
+    },
+    {
+      "pass": "first",
+      "latitude": "full_voice",
+      "beat": "rook-airlock",
+      "run": 1,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1806,
+      "checkMs": [2886],
+      "totalMs": 9180,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station is losing its air through a seam somewhere aft, and the corridor hums with the flat, patient roar of pressure going where it wants. The airlock door sits half-open in its track, jammed on grit.",
+        "[character_does:Rook] Rook takes the edge of the door in both gloves and hauls, dragging it across the fouled track against the pull of the venting station until the seal bites and seats.",
+        "[world] The roar drops to a thin whistle, then to nothing but the tick of cooling metal and the station's own tired murmur.",
+        "[character_undergoes:Rook] The strain bleeds out of Rook's arms slower than the noise does, and the closed door under one palm is steady, holding."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "full_voice",
+      "beat": "rook-airlock",
+      "run": 2,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1612,
+      "checkMs": [2512],
+      "totalMs": 9219,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station breathes out through the jammed airlock, a thin shriek of atmosphere dragging grit and loose cable ties toward the gap. The door sits half-seated in its track, one runner fouled with debris.",
+        "[character_does:Rook] Rook takes the edge of the door in both hands and hauls it shut against the venting pressure, slow and steady, walking the panel inch by inch along its ruined track until the seal bites and the shriek dies.",
+        "[character_undergoes:Rook] The last of the pull travels up through Rook's arms as a dull hot ache, and the returning silence presses close as the deck stops trembling underfoot.",
+        "[world] A status lamp above the frame settles from amber to a patient green, and somewhere deeper in the station a pump resumes its ordinary work."
+      ]
+    },
+    {
+      "pass": "first",
+      "latitude": "full_voice",
+      "beat": "rook-airlock",
+      "run": 3,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 1709,
+      "checkMs": [2711],
+      "totalMs": 9150,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station is losing its air through a crack somewhere aft, and the corridor breathes out with a long flat whistle. The airlock door sits half-tracked in its rail, shuddering.",
+        "[character_does:Rook] Rook gets both hands into the door's edge and hauls it across the rail, one grinding hand-span at a time, against the pull of the venting station. The last of it goes home with a dull clack and the whistle cuts to nothing.",
+        "[character_undergoes:Rook] The silence that follows settles into Rook's gloves as a fading tremor in the metal.",
+        "[world] Dust that had been streaming down the corridor drifts, loses its direction, and begins to fall."
+      ]
+    },
+    {
+      "pass": "aided-scan rerun",
+      "latitude": "minimal",
+      "beat": "vesna-burn",
+      "run": 1,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 2137,
+      "checkMs": [3302],
+      "totalMs": 9375,
+      "withdrawals": [],
+      "segments": [
+        "[character_does:Vesna] Vesna traces the power draw with the Lantern Wake's sensors, working the scan across the relay station's structure.",
+        "[world] The first returns come back muddled, the draw splitting across three separate conduits and losing itself in the station's shielding.",
+        "[character_undergoes:Vesna] The console resolves the ambiguity a moment later: the scan locks, and the draw reads clean.",
+        "[world] The power is running to a single sealed compartment in the station's lower ring, drawing steadily and on a schedule, which means something down there is still being maintained.",
+        "[world] The relay's exterior lights remain dark, and nothing on the open channels answers the Lantern Wake's presence."
+      ]
+    },
+    {
+      "pass": "aided-scan rerun",
+      "latitude": "minimal",
+      "beat": "vesna-burn",
+      "run": 2,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 2465,
+      "checkMs": [2427],
+      "totalMs": 10753,
+      "withdrawals": [],
+      "segments": [
+        "[character_does:Vesna] Vesna works the Lantern Wake's sensor suite, tracing the relay station's power draw back along its distribution lines.",
+        "[world] The station answers in fragments: a current signature that thins across the outer ring and thickens toward one sealed section, drawing far more than a dormant relay should.",
+        "[character_undergoes:Vesna] The first pass returns a partial picture, the return signal degraded where the station's own shielding cuts across it.",
+        "[character_undergoes:Vesna] The margin Vesna has been carrying is spent into the scan, and the picture resolves: the draw terminates at a single powered compartment deep in the station's spine.",
+        "[character_undergoes:Vesna] That reserve is gone, reset to nothing, and the clean result immediately returns two points of momentum to Vesna.",
+        "[world] On the display the relay station holds steady, dark across most of its length, one compartment lit and consuming."
+      ]
+    },
+    {
+      "pass": "aided-scan rerun",
+      "latitude": "minimal",
+      "beat": "vesna-burn",
+      "run": 3,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 2180,
+      "checkMs": [2188],
+      "totalMs": 7927,
+      "withdrawals": [],
+      "segments": [
+        "[character_does:Vesna] Vesna traces the power draw with the Lantern Wake's sensors, working the return through the relay station's structure.",
+        "[world] The first pass comes back muddled, the draw smeared across three separate junctions with no clean source.",
+        "[character_undergoes:Vesna] The sensor board resolves a second time, and the reading sharpens: one conduit, running down from the station's upper ring into a sealed compartment that the schematics do not account for.",
+        "[world] The draw is steady and deliberate. Something down there is still being powered, and has been for some time.",
+        "[world] The rest of the relay station reads cold on the display, its other systems drawing nothing at all."
+      ]
+    },
+    {
+      "pass": "aided-scan rerun",
+      "latitude": "color",
+      "beat": "vesna-burn",
+      "run": 1,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 2029,
+      "checkMs": [2171],
+      "totalMs": 9781,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station hangs against the dark, a spindle of dead antennae and frost-furred plating, and somewhere inside it a thread of current is still running where nothing should be drawing power.",
+        "[character_does:Vesna] Vesna traces the power draw with the Lantern Wake's sensors, walking the scan across the hull in slow overlapping passes.",
+        "[world] The return comes back muddled at first, the signature smeared across three decks, ghost-echoes folding over each other in the display until the station seems to be leaking current from everywhere at once.",
+        "[character_undergoes:Vesna] Then the console's murmur drops to a single clean tone, and the smear collapses into one bright filament of draw running aft, deck by deck, to a sealed compartment that the station's own schematic insists is empty.",
+        "[world] The line holds steady on the display, patient and unhidden now, pulsing at the slow rate of something kept deliberately alive."
+      ]
+    },
+    {
+      "pass": "aided-scan rerun",
+      "latitude": "color",
+      "beat": "vesna-burn",
+      "run": 2,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 2106,
+      "checkMs": [3571],
+      "totalMs": 12478,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station hangs off the bow in a slow, dead drift, its antenna array furred with ice, one solar wing folded back like a broken finger. Nothing answers hail, yet somewhere inside that hull a current is still moving.",
+        "[character_does:Vesna] Vesna traces the power draw with the Lantern Wake's sensors, walking the scan aperture slowly across the station's flank until the returns stop being noise and start being a shape.",
+        "[character_undergoes:Vesna] The first pass comes back thin, a smear of interference where the reactor housing should read clean, the console under her hands ticking out a number that means almost nothing.",
+        "[character_undergoes:Vesna] Then the array bites down harder, the deck humming as the Lantern Wake pours reserve into the sweep, and the smear resolves into a clean bright line of draw threading three decks down to a sealed compartment.",
+        "[world] The trace paints it plainly: emergency power, rationed and steady, feeding something that has been kept alive down there for a long time. The compartment's hatch reads locked from the inside."
+      ]
+    },
+    {
+      "pass": "aided-scan rerun",
+      "latitude": "color",
+      "beat": "vesna-burn",
+      "run": 3,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 2072,
+      "checkMs": [2215],
+      "totalMs": 10415,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station hangs dead against the starfield, its dish frozen mid-sweep, ice crusting the seams where atmosphere bled out long ago. Somewhere inside that dark hull, something is still drinking power.",
+        "[character_does:Vesna] Vesna traces the power draw with the Lantern Wake's sensors, walking the scan across the station's spine in slow overlapping bands.",
+        "[character_undergoes:Vesna] The console answers grudgingly: a smear of returns, noise stacked on noise, the draw ghosting between three decks at once and refusing to settle.",
+        "[character_undergoes:Vesna] Then the filters bite. The smear collapses into a single bright thread, and the display paints it clean — a line of live current running aft, down through the service trunk to a sealed compartment that should have gone cold with everything else.",
+        "[world] The Lantern Wake's speakers carry it too: a low, regular pulse under the hull noise, patient as a heartbeat, coming from behind that door."
+      ]
+    },
+    {
+      "pass": "aided-scan rerun",
+      "latitude": "full_voice",
+      "beat": "vesna-burn",
+      "run": 1,
+      "ok": true,
+      "attempts": 2,
+      "firstTextMs": 1794,
+      "checkMs": [5678, 3782],
+      "totalMs": 27892,
+      "withdrawals": [
+        {
+          "attempt": 1,
+          "checker": "authority_check",
+          "reason": "Withdrawn: it said what Vesna thinks, feels or characteristically does, which is the player’s to decide.",
+          "quotes": ["player_interior: the hard-won edge she has been carrying since the approach"],
+          "rejectedText": "The relay station hangs half-dark against the star field, its antenna array furred with ice, one service light stuttering on a cycle nothing alive would keep. Something down in its spine is still drinking power. Vesna walks the Lantern Wake's sensors across the hull, narrowing the sweep until the draw resolves out of the noise, a thin bright thread of current running somewhere it should not. The return comes back muddy, two signatures overlapping where there should be one. Then the hard-won edge she has been carrying since the approach spends itself into the console, and the plot snaps clean. The line runs aft of the docking collar, down past the dead comms deck to a sealed maintenance ring, and it does not flicker. Whatever is drawing there is drawing steadily, and it has been for a long time. The readout settles under her hands, clean and unambiguous, and with it comes a fresh, narrow footing where the old one was spent. \"There,\" Vesna says, voice flat and certain. \"Maintenance ring. It's still on.\""
+        }
+      ],
+      "segments": [
+        "[world] The relay station hangs against the dark, its spine of antennae furred with frost, and somewhere inside it a current is still running where no current should be.",
+        "[character_does:Vesna] Vesna walks the Lantern Wake's sensors along the station's skin, chasing the power draw, sweeping the array slow across the hull seams until the trace narrows to a single bright thread.",
+        "[world] The return comes back muddled — a spike, then interference, the signal smeared across three decks at once as if the station is reluctant to name the room.",
+        "[character_undergoes:Vesna] Then the readout resolves without warning, edges sharpening, the smear collapsing to one compartment on the station's lower ring: a maintenance bay drawing steady power behind sealed doors.",
+        "[character_says:Vesna] \"There,\" Vesna says, her voice flat and certain, one finger tapping the screen where the light holds.\"",
+        "[world] On the display the bay's outline steadies, and the trace runs clean from it, an open road through the station's dead corridors."
+      ]
+    },
+    {
+      "pass": "aided-scan rerun",
+      "latitude": "full_voice",
+      "beat": "vesna-burn",
+      "run": 2,
+      "ok": true,
+      "attempts": 1,
+      "firstTextMs": 2071,
+      "checkMs": [3330],
+      "totalMs": 11633,
+      "withdrawals": [],
+      "segments": [
+        "[world] The relay station hangs in its slow drift, dark on every band but one, a thin persistent thread of current running somewhere under its skin.",
+        "[character_does:Vesna] Vesna lays the Lantern Wake's sensors across the station's hull and traces the power draw inward, walking the return arrays down the line one narrow sweep at a time.",
+        "[world] The first returns come back muddled, ghost-echoes folding over each other where the station's old shielding scatters the signal into noise.",
+        "[character_undergoes:Vesna] Then the console clarifies under her hands, the muddle resolving all at once into a clean bright branching diagram, and the readout settles with the steadiness of something certain.",
+        "[world] The draw runs from a buried cell up through three decks and terminates in a single sealed compartment near the station's spine, still drawing, still warm.",
+        "[character_says:Vesna] \"There,\" Vesna says, level, the word landing flat in the cabin air."
+      ]
+    },
+    {
+      "pass": "aided-scan rerun",
+      "latitude": "full_voice",
+      "beat": "vesna-burn",
+      "run": 3,
+      "ok": true,
+      "attempts": 2,
+      "firstTextMs": 2111,
+      "checkMs": [3127],
+      "totalMs": 22830,
+      "withdrawals": [
+        {
+          "attempt": 1,
+          "checker": "segment_checks",
+          "reason": "Withdrawn: it narrated Vesna doing something the player did not declare for Vesna in this beat.",
+          "quotes": ["segment_check: "],
+          "rejectedText": "The relay station hangs in its slow tilt against the dark, ribs of antenna mast furred with frost, most of its windows blind. Somewhere inside it, something is still drinking power. Vesna lays the Lantern Wake's sensor suite across the hull and traces the draw, sweeping slow and low until the return comes back in a thin bright thread of current running under the station's skin. The first read comes back muddy, half the signal chewed by the station's own dead wiring, and the console under her hands throws a wash of amber across her face. She pushes, riding every advantage she has left straight into the sweep, and the thread resolves clean: the draw runs down through the station's spine to a sealed compartment three decks under the dock collar, steady, deliberate, fed by something that never stopped running. On the display the compartment glows a hard, patient white, and around it the schematic fills in corridor by corridor, no ambiguity left in it."
+        }
+      ],
+      "segments": [
+        "[world] The relay station hangs in the dark like a dropped tool, its ring of dishes canted and half-lit, one panel flickering with a pulse too regular to be damage.",
+        "[character_does:Vesna] Vesna traces the power draw with the Lantern Wake's sensors, the return sweeping the station's hull in slow amber bands until the draw resolves into a single bright thread running down into the station's spine.",
+        "[world] The thread does not wander or fork; it terminates in a sealed lower bay whose life support is running, and running warm, on a load far too heavy for an abandoned relay.",
+        "[character_undergoes:Vesna] The console chimes as the trace locks, and the readout stacks itself into something clean and complete — deck, corridor, hatch, the whole path laid out in light across Vesna's hands.",
+        "[character_says:Vesna] \"There,\" Vesna says, the word coming out steady, eyes not leaving the display. \"Something down there is drinking.\"",
+        "[world] On the screen the pulse continues, patient as a heartbeat, and the station turns another degree against the stars."
+      ]
+    }
+  ]
+}
