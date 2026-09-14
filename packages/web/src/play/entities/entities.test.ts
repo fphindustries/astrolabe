@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { EntityId, EntityState } from '@astrolabe/shared';
 
-import { entityCards } from './entities.js';
+import { entityCards, fieldLabel } from './entities.js';
 
 function entity(overrides: Partial<EntityState> = {}): EntityState {
   return {
@@ -31,7 +31,12 @@ describe('entityCards', () => {
 
     expect(cards).toEqual([
       { id: npcId, kind: 'npc', name: 'Sura Vance', establishedBy: 'ai' },
-      { id: locationId, kind: 'location', name: 'The derelict relay station', establishedBy: 'player' },
+      {
+        id: locationId,
+        kind: 'location',
+        name: 'The derelict relay station',
+        establishedBy: 'player',
+      },
     ]);
   });
 
@@ -42,9 +47,18 @@ describe('entityCards', () => {
         kind: 'faction',
         name: 'The Rime Callers',
       }),
-      ['ent-ship' as EntityId]: entity({ id: 'ent-ship' as EntityId, kind: 'ship', name: 'Lantern Wake' }),
+      ['ent-ship' as EntityId]: entity({
+        id: 'ent-ship' as EntityId,
+        kind: 'ship',
+        name: 'Lantern Wake',
+      }),
     });
 
     expect(cards).toEqual([]);
+  });
+
+  it('labels a recipe slot for the drawer (8.5)', () => {
+    expect(fieldLabel('first_look')).toBe('First look');
+    expect(fieldLabel('disposition')).toBe('Disposition');
   });
 });

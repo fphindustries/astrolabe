@@ -14,7 +14,7 @@ import { narrationBudget } from './length.js';
 import { recentNarration, systemBlocks } from './prompt.js';
 import { renderState } from './render-state.js';
 import { renderFacts, segmentContext, segmentInstructions } from './segments.js';
-import { WORLD_RULES, planName } from './world.js';
+import { QUESTION_RULES, WORLD_RULES, describeAnswer, planName } from './world.js';
 
 /**
  * The two passages that narrate the world rather than a move (task 8.2):
@@ -49,7 +49,18 @@ function humanSlot(slot: string): string {
 /** What a world pass established, as facts: one per entity, grounded in its rolls. */
 export function describeEstablished(events: readonly AstrolabeEvent[]): BeatFacts {
   return factsOf(
-    events.flatMap((event) => {
+    events.flatMap((event): Omit<BeatFact, 'key'>[] => {
+      if (event.type === 'oracle.rolled' && event.payload.question !== undefined) {
+        // D-28 (8.4): an answer the oracle gave about the world.
+        return [
+          {
+            kind: 'roll' as const,
+            eventId: event.id,
+            text: describeAnswer(event.payload),
+            grounds: [event.id],
+          },
+        ];
+      }
       if (event.type !== 'entity.established') {
         return [];
       }
@@ -96,7 +107,9 @@ export function buildWorldPassageRequest(
 
 const SCENE_PLAN_RULES = `A scene is about to be framed: its opening passage is not yet written. Decide whether the place the scene opens on should be grounded by a recipe before it is described.
 
-Request a recipe only when the scene's place is of that kind and its condition and first looks are not already established. Otherwise answer with an empty list. Each request gives a one-line reason.`;
+Request a recipe only when the scene's place is of that kind and its condition and first looks are not already established. Otherwise answer with an empty list. Each request gives a one-line reason.
+
+${QUESTION_RULES}`;
 
 export function buildSceneFramePlanRequest(
   state: CampaignState,
@@ -137,7 +150,10 @@ export function describeScene(
     ...rolls.map((roll) => ({
       kind: 'roll' as const,
       eventId: roll.eventId,
-      text: `Oracle, ${roll.slot === undefined ? 'result' : humanSlot(roll.slot)} (${roll.roll}): ${roll.rowText}`,
+      text:
+        roll.question !== undefined
+          ? describeAnswer(roll)
+          : `Oracle, ${roll.slot === undefined ? 'result' : humanSlot(roll.slot)} (${roll.roll}): ${roll.rowText}`,
       grounds: [roll.eventId],
     })),
   ]);

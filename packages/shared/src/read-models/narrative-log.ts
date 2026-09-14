@@ -50,9 +50,13 @@ export interface OracleChip {
   readonly eventId: EventId;
   readonly oracleId: string;
   readonly slot?: string;
+  /** D-28: the yes/no question the roll answered. */
+  readonly question?: string;
   readonly roll: number;
   readonly rowText: string;
   readonly voided: boolean;
+  /** D-70: why a reroll discarded it, shown with the struck chip. */
+  readonly discardedBecause?: string;
 }
 
 export interface NarrativeEntry {

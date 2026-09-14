@@ -516,7 +516,10 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
       ).body,
     ).at(-1);
     if (narrated?.type !== 'committed') throw new Error('expected a committed passage');
-    ai.enqueue({ kind: 'structured', value: { review: 'Nothing new.', recipes: [] } });
+    ai.enqueue({
+      kind: 'structured',
+      value: { review: 'Nothing new.', recipes: [], questions: [] },
+    });
 
     const response = await app.inject({
       method: 'POST',

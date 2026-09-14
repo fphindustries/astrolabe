@@ -68,25 +68,7 @@ export function buildNarrativeLog(
       (options.before === undefined || event.seq < options.before),
   );
 
-  const rolls = new Map(
-    events.flatMap((event) => (event.type === 'oracle.rolled' ? [[event.id, event]] : [])),
-  );
-  const chipsOf = (ids: readonly EventId[]): readonly OracleChip[] =>
-    ids.flatMap((id) => {
-      const roll = rolls.get(id);
-      return roll === undefined
-        ? []
-        : [
-            {
-              eventId: roll.id,
-              oracleId: roll.payload.oracleId,
-              ...(roll.payload.slot !== undefined ? { slot: roll.payload.slot } : {}),
-              roll: roll.payload.roll,
-              rowText: roll.payload.rowText,
-              voided: (voids.get(roll.id)?.size ?? 0) > 0,
-            },
-          ];
-    });
+  const chipsOf = oracleChips(events, voids, voidMarks);
 
   const beats = groupIntoBeats(renderable, (event) =>
     toEntry(event, voids, voidMarks, revisions, burnedRolls, chipsOf),
@@ -94,6 +76,54 @@ export function buildNarrativeLog(
 
   const limit = options.limit ?? DEFAULT_LIMIT;
   return paginate(beats, limit);
+}
+
+/**
+ * Resolves oracle roll ids to chips (D-17, 8.2): each with its row, its
+ * recipe slot or question, and whether it was voided. D-70: a roll that
+ * replaced others by reroll brings its discarded predecessors with it,
+ * struck, oldest first, each with the reroll's reason. Used for a passage's
+ * chips and for an entity's grounding (8.5).
+ */
+export function oracleChips(
+  events: readonly AstrolabeEvent[],
+  voids: VoidState = computeVoidState(events),
+  voidMarks: ReadonlyMap<EventId, VoidMark> = collectVoidMarks(events),
+): (ids: readonly EventId[]) => readonly OracleChip[] {
+  const rolls = new Map(
+    events.flatMap((event) => (event.type === 'oracle.rolled' ? [[event.id, event]] : [])),
+  );
+  const chip = (roll: Extract<AstrolabeEvent, { type: 'oracle.rolled' }>): OracleChip => {
+    const activeVoids = [...(voids.get(roll.id) ?? [])];
+    const reroll = activeVoids
+      .map((voidId) => voidMarks.get(voidId))
+      .find((mark) => mark?.kind === 'reroll');
+    return {
+      eventId: roll.id,
+      oracleId: roll.payload.oracleId,
+      ...(roll.payload.slot !== undefined ? { slot: roll.payload.slot } : {}),
+      ...(roll.payload.question !== undefined ? { question: roll.payload.question } : {}),
+      roll: roll.payload.roll,
+      rowText: roll.payload.rowText,
+      voided: activeVoids.length > 0,
+      ...(reroll !== undefined ? { discardedBecause: reroll.reason } : {}),
+    };
+  };
+  const chipsOf = (ids: readonly EventId[]): readonly OracleChip[] => {
+    // A reroll that gave two results (an embedded row) shares one predecessor.
+    const emitted = new Set<EventId>();
+    return ids.flatMap((id) => {
+      const chain: Extract<AstrolabeEvent, { type: 'oracle.rolled' }>[] = [];
+      const seen = new Set<EventId>();
+      for (let roll = rolls.get(id); roll !== undefined && !seen.has(roll.id);) {
+        seen.add(roll.id);
+        chain.unshift(roll);
+        roll = roll.payload.rerollOf === undefined ? undefined : rolls.get(roll.payload.rerollOf);
+      }
+      return chain.filter((roll) => !emitted.has(roll.id) && emitted.add(roll.id)).map(chip);
+    });
+  };
+  return chipsOf;
 }
 
 function toEntry(

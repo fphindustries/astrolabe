@@ -352,6 +352,7 @@ describe('toEntryView', () => {
       kind: 'void',
       cascadedCount: 1,
       reason: 'contradicts the evacuation logs',
+      rerolled: 'evt-target',
     });
   });
 
@@ -566,6 +567,33 @@ describe('oracle chips (8.2, D-17)', () => {
     ]);
   });
 
+  it('labels a yes/no chip by its question (8.4)', () => {
+    const view = toEntryView(
+      entry(
+        {
+          ...envelope(),
+          type: 'narration.written',
+          payload: { role: 'world', text: 'x', groundedIn: ['q1' as never] },
+        },
+        {
+          chips: [
+            {
+              eventId: 'q1' as never,
+              oracleId: 'oracle:moves/ask-the-oracle/likely',
+              question: 'Does the compartment hold air?',
+              roll: 42,
+              rowText: 'Yes',
+              voided: false,
+            },
+          ],
+        },
+      ),
+    );
+    expect(view.body.kind === 'narration' && view.body.chips[0]?.label).toBe(
+      'Does the compartment hold air?',
+    );
+  });
+
   it('hides a roll shown as a chip, keeps one no passage cites, and drops an emptied beat', () => {
     const beat = (commandId: string, entries: NarrativeEntry[]) =>
       toBeatView({
@@ -602,5 +630,67 @@ describe('oracle chips (8.2, D-17)', () => {
     ]);
 
     expect(beats.map((b) => b.commandId)).toEqual(['lonely', 'passage']);
+  });
+
+  it('hides the reroll that discarded a chipped roll, and carries its reason on the chip (D-70)', () => {
+    const passageEntry = entry(
+      {
+        ...envelope({ id: 'p2' as never }),
+        type: 'narration.written',
+        payload: { role: 'world', text: 'x', groundedIn: ['r2' as never] },
+      },
+      {
+        chips: [
+          {
+            eventId: 'r1' as never,
+            oracleId: 'oracle:characters/goal',
+            slot: 'goal',
+            roll: 91,
+            rowText: 'Obtain an object',
+            voided: true,
+            discardedBecause: 'Contradicts the logs',
+          },
+          {
+            eventId: 'r2' as never,
+            oracleId: 'oracle:characters/goal',
+            slot: 'goal',
+            roll: 12,
+            rowText: 'Find a person',
+            voided: false,
+          },
+        ],
+      },
+    );
+    const voided = entry({
+      ...envelope({ id: 'v1' as never }),
+      type: 'event.voided',
+      payload: {
+        targetEventId: 'r1' as never,
+        kind: 'reroll',
+        reason: 'Contradicts the logs',
+        cascaded: ['r1' as never],
+      },
+    });
+    const beat = (commandId: string, entries: NarrativeEntry[]) =>
+      toBeatView({
+        commandId: commandId as never,
+        seq: 1,
+        occurredAt: '2026-01-01T00:00:00.000Z' as never,
+        actorKind: 'system',
+        entries,
+        voided: false,
+      });
+
+    const beats = withoutChippedRolls([
+      beat('world', [roll('r1', 'goal'), voided, roll('r2', 'goal')]),
+      beat('passage', [passageEntry]),
+    ]);
+
+    expect(beats.map((b) => b.commandId)).toEqual(['passage']);
+    const body = beats[0]!.entries[0]!.body;
+    expect(body.kind === 'narration' && body.chips[0]).toMatchObject({
+      struck: true,
+      discardedBecause: 'Contradicts the logs',
+    });
   });
 });

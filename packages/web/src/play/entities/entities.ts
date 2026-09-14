@@ -27,6 +27,12 @@ export function entityCards(
     }));
 }
 
+/** A recipe slot as a label: `first_look` → "First look". */
+export function fieldLabel(key: string): string {
+  const words = key.replace(/_/g, ' ').trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 function isCardableEntity(
   entity: EntityState,
 ): entity is EntityState & { readonly kind: 'npc' | 'location' } {

@@ -2,6 +2,9 @@ import {
   DERELICT_RECIPE,
   NPC_RECIPE,
   STARFORGED,
+  ODDS_ORACLES,
+  rerollResult,
+  rollOracle,
   rollRecipe,
   type OracleRecipe,
   type RandomSource,
@@ -28,6 +31,8 @@ import {
   buildWorldPassageRequest,
   buildWorldPlanRequest,
   checkWorldInterpretation,
+  checkWorldPlan,
+  describeAnswer,
   describeBeat,
   describeEstablished,
   describeScene,
@@ -43,6 +48,8 @@ import {
   type BeatFacts,
   type RolledRecipe,
   type WorldBeat,
+  type WorldInterpretation,
+  type WorldPlan,
 } from '../ai/context/index.js';
 import type { AiProvider } from '../ai/provider.js';
 import { generateValidated, type Outcome, type TextSink } from '../ai/respond.js';
@@ -203,8 +210,16 @@ function passedBefore(
   );
 }
 
+/** What a world pass wrote that a follow-up passage narrates: an entity, or an answer (8.4). */
 function establishes(events: readonly AstrolabeEvent[]): boolean {
-  return events.some((event) => event.type === 'entity.established');
+  return events.some(isEstablished);
+}
+
+function isEstablished(event: AstrolabeEvent): boolean {
+  return (
+    event.type === 'entity.established' ||
+    (event.type === 'oracle.rolled' && event.payload.question !== undefined)
+  );
 }
 
 /** Whether a live passage already narrates what a world command established. */
@@ -260,33 +275,68 @@ async function commitWorldPass(
 ): Promise<readonly AstrolabeEvent[]> {
   const { request, state, beat, envelope } = prepared;
 
+  const characters = segmentContext(beat.facts, state, 'color').characters;
   const planRequest = buildWorldPlanRequest(state, beat, BEAT_RECIPES);
-  const plan = await generateValidated(ai, planRequest, worldPlanSchema(BEAT_RECIPES));
+  const plan = await generateValidated(ai, planRequest, worldPlanSchema(BEAT_RECIPES), (value) =>
+    checkWorldPlan(value, characters),
+  );
 
   const events: NewEvent[] = [...accounting(ai, planRequest.purpose, plan, envelope)];
   let final: Outcome<unknown> = plan;
+  const rng = request.rng ?? cryptoRandomSource();
+
+  // D-28 (8.4): the plan's yes/no questions are rolled first, and their
+  // answers reach the interpretation and the follow-up passage.
+  const answers = plan.ok ? questionEvents(plan.value.questions, rng, envelope) : [];
+  events.push(...answers);
+  const answered: WorldBeat = { ...beat, answers: answers.map((e) => describeAnswer(e.payload)) };
 
   if (plan.ok && plan.value.recipes.length > 0) {
-    const rolled = rollPlanned(
-      plan.value.recipes,
-      BEAT_RECIPES,
-      request.rng ?? cryptoRandomSource(),
-    );
+    const rolled = rollPlanned(plan.value.recipes, BEAT_RECIPES, rng);
     events.push(...rollEvents(rolled, envelope));
 
-    const characters = segmentContext(beat.facts, state, 'color').characters;
-    const interpretRequest = buildWorldInterpretRequest(state, beat, rolled);
-    const interpretation = await generateValidated(
-      ai,
-      interpretRequest,
-      worldInterpretSchema(rolled),
-      (value) => checkWorldInterpretation(value, rolled, characters),
-    );
-    events.push(...accounting(ai, interpretRequest.purpose, interpretation, envelope));
+    const cap = settingsOf(state).rerollCap;
+    let current = rolled;
+    let interpretation: Outcome<WorldInterpretation>;
+    // D-18, D-70: a result that contradicts what is established is rerolled
+    // visibly and the Guide asked again. Every reroll spends one of that
+    // result's D-69 cap, so the loop ends; the guard is for a broken cap.
+    for (let round = 0; ; round++) {
+      const asked = current;
+      const interpretRequest = buildWorldInterpretRequest(state, answered, asked, cap);
+      interpretation = await generateValidated(
+        ai,
+        interpretRequest,
+        worldInterpretSchema(asked),
+        (value) => checkWorldInterpretation(value, asked, characters, cap),
+      );
+      events.push(...accounting(ai, interpretRequest.purpose, interpretation, envelope));
+      if (!interpretation.ok || interpretation.value.rerolls.length === 0) {
+        break;
+      }
+      if (round >= MAX_REROLL_ROUNDS) {
+        interpretation = {
+          ok: false,
+          errorKind: 'invalid_output',
+          message: 'The Guide kept asking for rerolls after every result was final.',
+          attempts: [],
+        };
+        events.push(...accounting(ai, interpretRequest.purpose, interpretation, envelope));
+        break;
+      }
+      const { rolled: next, events: rerolled } = applyRerolls(
+        asked,
+        interpretation.value.rerolls,
+        rng,
+        envelope,
+      );
+      events.push(...rerolled);
+      current = next;
+    }
     final = interpretation;
 
     if (interpretation.ok) {
-      for (const instance of rolled) {
+      for (const instance of current) {
         const entity = interpretation.value.entities.find((e) => e.instance === instance.instance)!;
         events.push(
           withEnvelope(
@@ -341,7 +391,7 @@ async function narrateEstablished(
   const state = project(events);
   const settings = settingsOf(state);
   const facts = describeEstablished(worldEvents);
-  const causedBy = [...worldEvents].reverse().find((e) => e.type === 'entity.established')!.id;
+  const causedBy = [...worldEvents].reverse().find(isEstablished)!.id;
 
   return narrateWorldOnly(sql, ai, checker, {
     campaignId: request.campaignId,
@@ -491,14 +541,21 @@ export async function runSceneFrame(
   prepared: PreparedSceneFrame,
   sink: TextSink,
   status?: AiStatus,
+  /** D-141, amended: the plan runs on a faster model than the narrator, to hold A18. */
+  planner: AiProvider = ai,
 ): Promise<AiCommandResult> {
   const { request, state, events } = prepared;
   const settings = settingsOf(state);
   const envelope = envelopeOf(request.campaignId, state);
 
   const planRequest = buildSceneFramePlanRequest(state, SCENE_RECIPES);
-  const plan = await generateValidated(ai, planRequest, worldPlanSchema(SCENE_RECIPES));
-  const planEvents = accounting(ai, planRequest.purpose, plan, envelope);
+  const plan = await generateValidated(
+    planner,
+    planRequest,
+    worldPlanSchema(SCENE_RECIPES),
+    (value) => checkWorldPlan(value, crewOf(state)),
+  );
+  const planEvents = accounting(planner, planRequest.purpose, plan, envelope);
   if (!plan.ok) {
     recordStatus(status, plan);
     const result = await appendCommand(sql, {
@@ -513,12 +570,11 @@ export async function runSceneFrame(
   }
 
   // A derelict grounds the frame's prose only: nothing to interpret into an entity (D-139).
-  const rolled = rollPlanned(
-    plan.value.recipes,
-    SCENE_RECIPES,
-    request.rng ?? cryptoRandomSource(),
-  );
-  const rolls = rollEvents(rolled, envelope);
+  const rng = request.rng ?? cryptoRandomSource();
+  const rolls = [
+    ...questionEvents(plan.value.questions, rng, envelope),
+    ...rollEvents(rollPlanned(plan.value.recipes, SCENE_RECIPES, rng), envelope),
+  ];
   const facts = describeScene(
     state,
     prepared.sceneEventId,
@@ -570,10 +626,81 @@ function rollPlanned(
           roll: result.roll,
           rowText: result.rowText,
           eventId: uuidv7() as EventId,
+          rerolls: 0,
         })),
       ),
     };
   });
+}
+
+/** `E1.goal.2r1.1` → `E1.goal.2`: a reroll's key counts from the original result's. */
+function rerollBase(key: string): string {
+  return key.replace(/r\d+(\.\d+)?$/, '');
+}
+
+/** A generous bound on reroll rounds; the D-69 cap ends the loop well before it. */
+const MAX_REROLL_ROUNDS = 12;
+
+/**
+ * D-18, D-70, D-142: discard each named result with its reason, as
+ * `event.voided { kind: 'reroll' }` on just that roll, and roll its table
+ * again. The new results carry `rerollOf` and one more reroll behind them.
+ */
+function applyRerolls(
+  rolled: readonly RolledRecipe[],
+  rerolls: WorldInterpretation['rerolls'],
+  rng: RandomSource,
+  envelope: Envelope,
+): { readonly rolled: readonly RolledRecipe[]; readonly events: readonly NewEvent[] } {
+  const events: NewEvent[] = [];
+  const next = rolled.map((instance): RolledRecipe => {
+    const discarded = [...(instance.discarded ?? [])];
+    const slots = instance.slots.flatMap((slot) => {
+      const asked = rerolls.find((r) => r.roll === slot.key);
+      if (asked === undefined) {
+        return [slot];
+      }
+      discarded.push({ ...slot, reason: asked.reason.trim() });
+      events.push(
+        withEnvelope(
+          {
+            type: 'event.voided',
+            payload: {
+              targetEventId: slot.eventId,
+              kind: 'reroll',
+              reason: asked.reason.trim(),
+              cascaded: [slot.eventId],
+            },
+          } satisfies NewEvent<'event.voided'>,
+          envelope,
+        ),
+      );
+      const results = rerollResult(
+        rng,
+        slot.oracleId,
+        (oracle) => STARFORGED.oracles.find((t) => t.id === oracle),
+        instance.recipe,
+      );
+      const replacements = results.map((result, n) => ({
+        key:
+          results.length === 1
+            ? `${rerollBase(slot.key)}r${slot.rerolls + 1}`
+            : `${rerollBase(slot.key)}r${slot.rerolls + 1}.${n + 1}`,
+        slot: slot.slot,
+        name: slot.name,
+        oracleId: result.oracleId,
+        roll: result.roll,
+        rowText: result.rowText,
+        eventId: uuidv7() as EventId,
+        rerolls: slot.rerolls + 1,
+        rerollOf: slot.eventId,
+      }));
+      events.push(...replacements.map((replacement) => rollEvent(instance, replacement, envelope)));
+      return replacements;
+    });
+    return { ...instance, slots, discarded };
+  });
+  return { rolled: next, events };
 }
 
 /** Dice that were rolled stay rolled, whatever the interpretation or passage does. */
@@ -582,21 +709,68 @@ function rollEvents(
   envelope: Envelope,
 ): readonly (NewEvent<'oracle.rolled'> & { readonly id: EventId })[] {
   return rolled.flatMap((instance) =>
-    instance.slots.map((slot) => ({
-      id: slot.eventId,
-      type: 'oracle.rolled' as const,
+    instance.slots.map((slot) => rollEvent(instance, slot, envelope)),
+  );
+}
+
+function rollEvent(
+  instance: RolledRecipe,
+  slot: RolledRecipe['slots'][number],
+  envelope: Envelope,
+): NewEvent<'oracle.rolled'> & { readonly id: EventId } {
+  return {
+    id: slot.eventId,
+    type: 'oracle.rolled',
+    payload: {
+      oracleId: slot.oracleId,
+      roll: slot.roll,
+      rowText: slot.rowText,
+      recipeId: instance.recipe.id,
+      slot: slot.slot,
+      ...(slot.rerollOf !== undefined ? { rerollOf: slot.rerollOf } : {}),
+    } satisfies PayloadFor<'oracle.rolled'>,
+    actor: SYSTEM,
+    sessionId: envelope.sessionId,
+    sceneId: envelope.sceneId,
+  };
+}
+
+/** The player characters, as the checks that need no AI name them (D-140). */
+function crewOf(state: CampaignState) {
+  return Object.values(state.characters).map((c) => ({
+    id: c.id,
+    callsign: c.callsign,
+    name: c.name,
+  }));
+}
+
+/** D-28 (8.4): each question rolled on the Ask the Oracle table for its odds. */
+function questionEvents(
+  questions: WorldPlan['questions'],
+  rng: RandomSource,
+  envelope: Envelope,
+): readonly (NewEvent<'oracle.rolled'> & { readonly id: EventId })[] {
+  return questions.map(({ question, odds }) => {
+    const oracleId = ODDS_ORACLES[odds];
+    const table = STARFORGED.oracles.find((t) => t.id === oracleId);
+    if (table === undefined) {
+      throw new Error(`Odds table "${oracleId}" is not in the ruleset.`);
+    }
+    const result = rollOracle(rng, table);
+    return {
+      id: uuidv7() as EventId,
+      type: 'oracle.rolled',
       payload: {
-        oracleId: slot.oracleId,
-        roll: slot.roll,
-        rowText: slot.rowText,
-        recipeId: instance.recipe.id,
-        slot: slot.slot,
-      } satisfies PayloadFor<'oracle.rolled'>,
+        oracleId,
+        roll: result.roll,
+        rowText: result.row.text,
+        question: question.trim(),
+      },
       actor: SYSTEM,
       sessionId: envelope.sessionId,
       sceneId: envelope.sceneId,
-    })),
-  );
+    };
+  });
 }
 
 function failureIn(events: readonly AstrolabeEvent[]): AiCommandResult | undefined {

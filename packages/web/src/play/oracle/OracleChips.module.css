@@ -1,0 +1,46 @@
+/* D-17: oracle chips. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  padding: 0 var(--space-2);
+  border: 1px solid var(--surface-border);
+  border-radius: 999px;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.chip[data-struck='true'] {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.label {
+  color: var(--provenance-ai);
+}
+
+.roll {
+  color: var(--text-muted);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+/* D-70: a discarded chip says why, and the reason itself is not struck. */
+.chip[data-struck='true'] .reason {
+  display: inline-block;
+  text-decoration: none;
+  font-style: italic;
+  color: var(--text-secondary);
+}

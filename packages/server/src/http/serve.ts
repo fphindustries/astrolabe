@@ -1,4 +1,8 @@
-import { createCheckerFromEnv, createProviderFromEnv } from '../ai/create-provider.js';
+import {
+  createCheckerFromEnv,
+  createPlannerFromEnv,
+  createProviderFromEnv,
+} from '../ai/create-provider.js';
 import { createDb, databaseUrlFromEnv, migrate } from '../db/index.js';
 
 import { buildApp } from './app.js';
@@ -16,7 +20,8 @@ async function main(): Promise<void> {
 
   const ai = createProviderFromEnv();
   const checker = createCheckerFromEnv();
-  const app = buildApp({ sql, ai, checker });
+  const planner = createPlannerFromEnv();
+  const app = buildApp({ sql, ai, checker, planner });
   const port = Number(process.env['PORT'] ?? 3000);
   await app.listen({ port, host: '0.0.0.0' });
   console.log(`Astrolabe server listening on :${port}`);
@@ -24,6 +29,7 @@ async function main(): Promise<void> {
     `AI provider: ${ai.name} (${ai.model})${ai.configured ? '' : ' — not configured, play starts paused'}`,
   );
   console.log(`Authority checker: ${checker.name} (${checker.model})`);
+  console.log(`Scene planner: ${planner.name} (${planner.model})`);
 }
 
 main().catch((error: unknown) => {

@@ -18,6 +18,7 @@ import {
   type CreateCampaignResponse,
   type CreateCharacterResponse,
   type InvokeMoveResponse,
+  type EntityGroundingResponse,
   type NarrativeLogResponse,
   type ResolvePayThePriceResponse,
   type SetTruthResponse,
@@ -33,9 +34,9 @@ import type { CharacterProblem } from '@astrolabe/rules';
 
 import type { AiProvider } from '../ai/provider.js';
 import { AiStatus } from '../ai/status.js';
-import { buildNarrativeLog } from '../projection/narrative-log.js';
+import { buildNarrativeLog, oracleChips } from '../projection/narrative-log.js';
 import { registerAiRoutes } from './ai-routes.js';
-import { parseCampaignId, parseEventId, requireCampaignExists } from './params.js';
+import { parseCampaignId, parseEntityId, parseEventId, requireCampaignExists } from './params.js';
 import { project } from '../projection/project.js';
 import {
   addSectorLocation,
@@ -87,6 +88,8 @@ import {
 
 export interface BuildAppOptions {
   readonly sql: Sql;
+  /** The scene frame's planner (D-141, amended). Defaults to `ai`. */
+  readonly planner?: AiProvider;
   /**
    * The AI provider (group 7), injected so every route that calls it runs
    * against the stub in tests (D-60) and against Claude in `serve.ts`.
@@ -118,9 +121,9 @@ const LogQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(200).optional(),
 });
 
-export function buildApp({ sql, ai, checker }: BuildAppOptions): FastifyInstance {
+export function buildApp({ sql, ai, checker, planner = ai }: BuildAppOptions): FastifyInstance {
   const app = Fastify({ logger: false });
-  registerAiRoutes(app, { sql, ai, checker, status: new AiStatus(ai) });
+  registerAiRoutes(app, { sql, ai, checker, planner, status: new AiStatus(ai) });
 
   app.get('/api/campaigns', async (): Promise<CampaignListResponse> => {
     return listCampaigns(sql);
@@ -188,6 +191,28 @@ export function buildApp({ sql, ai, checker }: BuildAppOptions): FastifyInstance
       };
       const events = await readNarrativeEvents(sql, id, options);
       return buildNarrativeLog(events, options);
+    },
+  );
+
+  // 8.5: an entity's grounding, as chips (D-17, D-70). 404 for an entity the
+  // campaign never established.
+  app.get<{ Params: { readonly id: string; readonly entityId: string } }>(
+    '/api/campaigns/:id/entities/:entityId/grounding',
+    async (request, reply): Promise<EntityGroundingResponse | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      const entityId = parseEntityId(request.params.entityId, reply);
+      if (id === undefined || entityId === undefined) {
+        return undefined;
+      }
+      const events = await readEvents(sql, id);
+      const established = events.find(
+        (event) => event.type === 'entity.established' && event.payload.entityId === entityId,
+      );
+      if (established?.type !== 'entity.established') {
+        reply.code(404);
+        return undefined;
+      }
+      return { chips: oracleChips(events)(established.payload.provenance.groundedIn) };
     },
   );
 

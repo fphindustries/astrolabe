@@ -5,6 +5,7 @@ import {
   type NarrativeBeat,
   type NarrativeEntry,
   type NarrativeLog,
+  type OracleChip,
 } from '@astrolabe/shared';
 
 /**
@@ -98,7 +99,13 @@ export type EntryBody =
       readonly to: number;
       readonly reason?: string;
     }
-  | { readonly kind: 'void'; readonly cascadedCount: number; readonly reason: string }
+  | {
+      readonly kind: 'void';
+      readonly cascadedCount: number;
+      readonly reason: string;
+      /** D-70: the roll a reroll discarded, when that is what this void is. */
+      readonly rerolled?: string;
+    }
   | { readonly kind: 'session_ended'; readonly summary: string }
   | { readonly kind: 'unknown'; readonly type: string };
 
@@ -110,6 +117,25 @@ export interface ChipView {
   readonly rowText: string;
   /** Struck through (D-18): discarded by a reroll or voided with its beat. */
   readonly struck: boolean;
+  /** D-70: the Guide's reason for rerolling it. */
+  readonly discardedBecause?: string;
+}
+
+/** A chip as shown: labelled by its question, its recipe slot, or its table (8.2, 8.4). */
+export function toChipView(chip: OracleChip): ChipView {
+  return {
+    eventId: chip.eventId,
+    label:
+      chip.question !== undefined
+        ? chip.question
+        : chip.slot !== undefined
+          ? chip.slot.replace(/_/g, ' ')
+          : (STARFORGED.oracles.find((t) => t.id === chip.oracleId)?.name ?? chip.oracleId),
+    roll: chip.roll,
+    rowText: chip.rowText,
+    struck: chip.voided,
+    ...(chip.discardedBecause !== undefined ? { discardedBecause: chip.discardedBecause } : {}),
+  };
 }
 
 export interface EntryView {
@@ -233,16 +259,7 @@ function toBody(entry: NarrativeEntry): EntryBody {
       return {
         kind: 'narration',
         text: narration?.text ?? event.payload.text,
-        chips: (entry.chips ?? []).map((chip) => ({
-          eventId: chip.eventId,
-          label:
-            chip.slot !== undefined
-              ? chip.slot.replace(/_/g, ' ')
-              : (STARFORGED.oracles.find((t) => t.id === chip.oracleId)?.name ?? chip.oracleId),
-          roll: chip.roll,
-          rowText: chip.rowText,
-          struck: chip.voided,
-        })),
+        chips: (entry.chips ?? []).map(toChipView),
         corrected: narration?.corrected === true,
         ...(narration?.original !== undefined ? { original: narration.original } : {}),
         ...(narration?.note !== undefined ? { note: narration.note } : {}),
@@ -268,6 +285,7 @@ function toBody(entry: NarrativeEntry): EntryBody {
         kind: 'void',
         cascadedCount: event.payload.cascaded.length,
         reason: event.payload.reason,
+        ...(event.payload.kind === 'reroll' ? { rerolled: event.payload.targetEventId } : {}),
       };
     case 'session.ended':
       return { kind: 'session_ended', summary: event.payload.summary };
@@ -278,8 +296,9 @@ function toBody(entry: NarrativeEntry): EntryBody {
 
 /**
  * A roll that a passage shows as a chip isn't shown again as a row of its
- * own (8.2). A roll no loaded passage cites keeps its row: dice that were
- * rolled stay visible.
+ * own (8.2), and neither is the reroll that discarded it, whose reason the
+ * chip carries (D-70). A roll no loaded passage cites keeps its row: dice
+ * that were rolled stay visible.
  */
 export function withoutChippedRolls(beats: readonly BeatView[]): readonly BeatView[] {
   const chipped = new Set(
@@ -293,7 +312,13 @@ export function withoutChippedRolls(beats: readonly BeatView[]): readonly BeatVi
     .map((beat) => ({
       ...beat,
       entries: beat.entries.filter(
-        (entry) => !(entry.body.kind === 'oracle_rolled' && chipped.has(entry.eventId)),
+        (entry) =>
+          !(entry.body.kind === 'oracle_rolled' && chipped.has(entry.eventId)) &&
+          !(
+            entry.body.kind === 'void' &&
+            entry.body.rerolled !== undefined &&
+            chipped.has(entry.body.rerolled)
+          ),
       ),
     }))
     .filter((beat) => beat.entries.length > 0);

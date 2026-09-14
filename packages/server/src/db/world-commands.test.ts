@@ -53,13 +53,14 @@ const PASSAGE: StubResponse = {
 
 const NOTHING: StubResponse = {
   kind: 'structured',
-  value: { review: 'Nothing new.', recipes: [] },
+  value: { review: 'Nothing new.', recipes: [], questions: [] },
 };
 const AN_NPC: StubResponse = {
   kind: 'structured',
   value: {
     review: 'The trace finds someone alive aboard, not yet established.',
     recipes: [{ recipe: 'npc', reason: 'The trace finds someone alive aboard.' }],
+    questions: [],
   },
 };
 
@@ -67,6 +68,7 @@ function interpretation(overrides: { name?: string; role?: string } = {}): StubR
   return {
     kind: 'structured',
     value: {
+      rerolls: [],
       entities: [
         {
           instance: 'E1',
@@ -421,6 +423,7 @@ describe.skipIf(!hasTestDatabase)('the world pass (task 8.1, D-137, D-138)', () 
       value: {
         review: 'Varga Relay is a derelict whose condition is not established.',
         recipes: [{ recipe: 'derelict', reason: 'The relay is a derelict.' }],
+        questions: [],
       },
     };
     const FRAME: StubResponse = {
@@ -447,7 +450,8 @@ describe.skipIf(!hasTestDatabase)('the world pass (task 8.1, D-137, D-138)', () 
       const db2 = await createTestDatabase('scene_frame');
       try {
         await seedFixture(db2.sql, SESSION_TWO_OPEN);
-        const ai = new StubProvider({ responses: [DERELICT, FRAME] });
+        const ai = new StubProvider({ responses: [FRAME] });
+        const planner = new StubProvider({ responses: [DERELICT] });
         const commandId = newId<CommandId>();
         const prepared = await prepareSceneFrame(db2.sql, {
           campaignId,
@@ -457,11 +461,21 @@ describe.skipIf(!hasTestDatabase)('the world pass (task 8.1, D-137, D-138)', () 
         });
         if (prepared.kind !== 'run') throw new Error('expected a run');
 
-        const result = await runSceneFrame(db2.sql, ai, new StubProvider(), prepared, SINK);
+        const result = await runSceneFrame(
+          db2.sql,
+          ai,
+          new StubProvider(),
+          prepared,
+          SINK,
+          undefined,
+          planner,
+        );
 
         expect(result.ok).toBe(true);
-        expect(ai.requests.map((r) => r.purpose)).toEqual(['scene_frame_plan', 'scene_frame']);
-        expect(ai.requests[1]?.user).toMatch(/Write 120 to 200 words/);
+        // D-141, amended: the plan runs on the planner, the passage on the narrator.
+        expect(planner.requests.map((r) => r.purpose)).toEqual(['scene_frame_plan']);
+        expect(ai.requests.map((r) => r.purpose)).toEqual(['scene_frame']);
+        expect(ai.requests[0]?.user).toMatch(/Write 120 to 200 words/);
         const events = await readEvents(db2.sql, campaignId);
         const written = events.filter((e) => e.commandId === commandId);
         const rolls = written.filter((e) => e.type === 'oracle.rolled');
@@ -503,7 +517,10 @@ describe.skipIf(!hasTestDatabase)('the world pass (task 8.1, D-137, D-138)', () 
         };
         const ai = new StubProvider({
           responses: [
-            { kind: 'structured', value: { review: 'Nothing to roll.', recipes: [] } },
+            {
+              kind: 'structured',
+              value: { review: 'Nothing to roll.', recipes: [], questions: [] },
+            },
             aboutVesna,
             FRAME_WITHOUT_ROLLS,
           ],
@@ -537,5 +554,188 @@ describe.skipIf(!hasTestDatabase)('the world pass (task 8.1, D-137, D-138)', () 
         ],
       },
     };
+  });
+
+  describe('visible rerolls (8.3, D-18, D-69, D-70, D-142)', () => {
+    const rerollFirstLook = (key: string): StubResponse => ({
+      kind: 'structured',
+      value: {
+        rerolls: [{ roll: key, reason: 'The logs say the crew left in uniform.' }],
+        entities: [],
+      },
+    });
+    const citing = (firstLookKey: string): StubResponse => {
+      const base = interpretation({ name: 'Sela Brandt' }) as {
+        kind: 'structured';
+        value: { rerolls: unknown[]; entities: { fields: { slot: string; cites: string[] }[] }[] };
+      };
+      return {
+        kind: 'structured',
+        value: {
+          ...base.value,
+          entities: base.value.entities.map((entity) => ({
+            ...entity,
+            fields: entity.fields.map((f) =>
+              f.slot === 'first_look' ? { ...f, cites: [firstLookKey] } : f,
+            ),
+          })),
+        },
+      };
+    };
+
+    it('discards the contradicting result visibly, rolls it again, and grounds the entity in the survivor', async () => {
+      const { passageEventId } = await scanned();
+      const commandId = newId<CommandId>();
+      const ai = new StubProvider({
+        responses: [
+          AN_NPC,
+          rerollFirstLook('E1.first_look'),
+          citing('E1.first_lookr1'),
+          WORLD_PASSAGE,
+        ],
+      });
+
+      const result = await pass(ai, passageEventId, commandId);
+
+      expect(result.ok).toBe(true);
+      const events = await readEvents(db.sql, campaignId);
+      const written = events.filter((e) => e.commandId === commandId);
+      const firstLooks = written.filter(
+        (e) => e.type === 'oracle.rolled' && e.payload.slot === 'first_look',
+      );
+      expect(firstLooks).toHaveLength(2);
+      const [discarded, survivor] = firstLooks;
+      expect(survivor).toMatchObject({ payload: { rerollOf: discarded!.id } });
+      const reroll = written.find((e) => e.type === 'event.voided');
+      expect(reroll).toMatchObject({
+        actor: { kind: 'ai' },
+        payload: {
+          targetEventId: discarded!.id,
+          kind: 'reroll',
+          reason: 'The logs say the crew left in uniform.',
+          cascaded: [discarded!.id],
+        },
+      });
+      const voids = computeVoidState(events);
+      expect(isSuppressed(discarded!, voids)).toBe(true);
+      expect(isSuppressed(survivor!, voids)).toBe(false);
+
+      const entity = written.find((e) => e.type === 'entity.established');
+      if (entity?.type !== 'entity.established') throw new Error('expected an entity');
+      expect(entity.payload.provenance.groundedIn).toContain(survivor!.id);
+      expect(entity.payload.provenance.groundedIn).not.toContain(discarded!.id);
+
+      const asked = ai.requests[2]!.user;
+      expect(asked).toContain('[E1.first_lookr1] first_look:');
+      expect(asked).toContain('discarded first_look:');
+      expect(asked).toContain('because The logs say the crew left in uniform.');
+    });
+
+    it('holds a result to the campaign cap, refusing a reroll past it and re-asking (D-69)', async () => {
+      const { passageEventId } = await scanned();
+      const commandId = newId<CommandId>();
+      const ai = new StubProvider({
+        responses: [
+          AN_NPC,
+          rerollFirstLook('E1.first_look'),
+          rerollFirstLook('E1.first_lookr1'),
+          rerollFirstLook('E1.first_lookr2'),
+          citing('E1.first_lookr2'),
+          WORLD_PASSAGE,
+        ],
+      });
+
+      const result = await pass(ai, passageEventId, commandId);
+
+      expect(result.ok).toBe(true);
+      expect(ai.requests[3]?.user).toContain('(final)');
+      expect(ai.requests[4]?.user).toMatch(/E1.first_lookr2 is final/);
+      const written = (await readEvents(db.sql, campaignId)).filter(
+        (e) => e.commandId === commandId,
+      );
+      expect(written.filter((e) => e.type === 'event.voided')).toHaveLength(2);
+      expect(
+        written.filter((e) => e.type === 'oracle.rolled' && e.payload.slot === 'first_look'),
+      ).toHaveLength(3);
+    });
+  });
+
+  describe('yes/no questions (8.4, D-28)', () => {
+    const ASKS: StubResponse = {
+      kind: 'structured',
+      value: {
+        review: 'Whether the relay still has air is uncertain and matters.',
+        recipes: [],
+        questions: [{ question: 'Does the lit compartment still hold air?', odds: 'likely' }],
+      },
+    };
+
+    it('rolls the question on the table for its odds and narrates the answer, grounded in the roll', async () => {
+      const { passageEventId } = await scanned();
+      const commandId = newId<CommandId>();
+      const ai = new StubProvider({ responses: [ASKS, WORLD_PASSAGE] });
+
+      const result = await pass(ai, passageEventId, commandId);
+
+      expect(result.ok).toBe(true);
+      const events = await readEvents(db.sql, campaignId);
+      const roll = events.find((e) => e.commandId === commandId && e.type === 'oracle.rolled');
+      expect(roll).toMatchObject({
+        actor: { kind: 'system' },
+        payload: {
+          oracleId: 'oracle:moves/ask-the-oracle/likely',
+          question: 'Does the lit compartment still hold air?',
+        },
+      });
+      expect(ai.requests.map((r) => r.purpose)).toEqual(['world_plan', 'world_passage']);
+      expect(ai.requests[1]?.user).toContain(
+        'Asked of the oracle at likely odds: Does the lit compartment still hold air?',
+      );
+      const passage = events.find(
+        (e) =>
+          e.commandId === derivedUuid(commandId, 'world-passage') && e.type === 'narration.written',
+      );
+      expect(passage).toMatchObject({ causedBy: roll!.id, payload: { groundedIn: [roll!.id] } });
+    });
+
+    it('gives the interpretation the answers when the plan also requests a recipe', async () => {
+      const { passageEventId } = await scanned();
+      const ai = new StubProvider({
+        responses: [
+          {
+            kind: 'structured',
+            value: {
+              ...(ASKS as { value: object }).value,
+              recipes: [{ recipe: 'npc', reason: 'Someone keeps the light on.' }],
+            },
+          },
+          interpretation({ name: 'Wren Adair' }),
+          WORLD_PASSAGE,
+        ],
+      });
+
+      await pass(ai, passageEventId);
+
+      expect(ai.requests[1]?.purpose).toBe('world_interpret');
+      expect(ai.requests[1]?.user).toContain('<oracle_answers>');
+    });
+
+    it('re-asks a plan whose question names a player character (D-140)', async () => {
+      const { passageEventId } = await scanned();
+      const naming: StubResponse = {
+        kind: 'structured',
+        value: {
+          review: 'r',
+          recipes: [],
+          questions: [{ question: 'Does Vesna recognise the signal?', odds: 'unlikely' }],
+        },
+      };
+      const ai = new StubProvider({ responses: [naming, NOTHING] });
+
+      const result = await pass(ai, passageEventId);
+
+      expect(result.ok).toBe(true);
+      expect(ai.requests[1]?.user).toMatch(/names Vesna, a player character/);
+    });
   });
 });

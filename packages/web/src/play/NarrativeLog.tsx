@@ -10,11 +10,11 @@ import {
   toBeatView,
   withoutChippedRolls,
   type BeatView,
-  type ChipView,
   type EntryView,
 } from './log/entries.js';
 import { VoidControl } from './log/VoidControl.js';
 import { TriggerNote } from './moves/TriggerNote.js';
+import { OracleChips } from './oracle/OracleChips.js';
 import { useNarrationStream } from './narration/narration-stream.js';
 import type { PendingPassage } from './narration/frames.js';
 import styles from './NarrativeLog.module.css';
@@ -224,7 +224,7 @@ function Entry({ campaignId, entry }: { readonly campaignId: string; readonly en
   return (
     <div className={styles.entry} data-voided={entry.voided}>
       <span className={styles.text}>{describeEntry(entry)}</span>
-      {body.kind === 'narration' && body.chips.length > 0 && <Chips chips={body.chips} />}
+      {body.kind === 'narration' && body.chips.length > 0 && <OracleChips chips={body.chips} />}
       {body.kind === 'narration' && !entry.voided && <CorrectionControl eventId={entry.eventId} />}
       {/* A11/D-27: only a live, voidable event offers this — an already-voided one is history, not undone twice. */}
       {entry.voidable && !entry.voided && (
@@ -243,24 +243,6 @@ function Entry({ campaignId, entry }: { readonly campaignId: string; readonly en
         </span>
       ))}
     </div>
-  );
-}
-
-/**
- * D-17: the oracle rolls a passage was grounded in, under it. A discarded
- * roll stays, struck through (D-18) — in text as well as style.
- */
-function Chips({ chips }: { readonly chips: readonly ChipView[] }) {
-  return (
-    <ul className={styles.chips} aria-label="Oracle rolls">
-      {chips.map((chip) => (
-        <li key={chip.eventId} className={styles.chip} data-struck={chip.struck}>
-          <span className={styles.chipLabel}>{chip.label}</span> {withoutLinks(chip.rowText)}{' '}
-          <span className={styles.chipRoll}>({chip.roll})</span>
-          {chip.struck && <span className={styles.srOnly}> (discarded)</span>}
-        </li>
-      ))}
-    </ul>
   );
 }
 

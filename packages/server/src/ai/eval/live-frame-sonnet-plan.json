@@ -1,0 +1,315 @@
+{
+  "date": "2026-09-14",
+  "runs": [
+    {
+      "run": 0,
+      "ok": true,
+      "firstTextMs": 6450,
+      "totalMs": 16534,
+      "accounting": [
+        ["scene_frame_plan", "claude-sonnet-5", 4221],
+        ["scene_frame", "claude-opus-5", 9938],
+        ["narration_check", "claude-sonnet-5", 2362]
+      ],
+      "rolls": [
+        "condition: Cold and dark",
+        "outer_first_look: Blocked access",
+        "inner_first_look: Archaic equipment"
+      ],
+      "withdrawals": 0,
+      "text": {
+        "role": "scene_frame",
+        "text": "Varga Relay hangs against the starfield like a discarded tool, its hull furred with frost that has had a generation to grow. No running lights, no thermal bloom, no answer on any band but the old beacon looping the Meridian's Hope into empty space. The docking collar is scorched black and crumpled inward, its clamps fused into a single ruined mouth, and a shelf of ice has grown over the seam where the airlock used to breathe. Whatever burned there burned long ago, and the wound has since been sealed by cold. Through the one row of lit windows, the interior shows itself in grey half-glow: banks of switch-and-dial consoles, magnetic tape spools, cathode screens the size of footlockers, all of it two generations behind anything still flying. Frost feathers the inside of the glass. Somewhere behind that archaic machinery, the relay is still faithfully repeating a dead ship's call, which means the origin coordinates someone scrubbed from the anchorage archive may still be written in those tapes. It is the only thread left, and it is sitting inside a station that has been shut tight since before anyone aboard was born.",
+        "groundedIn": [
+          "01a0a1d2-72a0-7652-9f73-1638006cf433",
+          "01a0a1d2-72a0-7bc2-aaed-196bbdbdaf4b",
+          "01a0a1d2-72a0-70d8-9d18-a0c1c88b96d7"
+        ],
+        "segments": [
+          {
+            "about": "world",
+            "characterId": null,
+            "basis": [
+              "01a0a1d2-621b-7861-9836-3b804b91f8f8",
+              "01a0a1d2-72a0-7652-9f73-1638006cf433"
+            ],
+            "text": "Varga Relay hangs against the starfield like a discarded tool, its hull furred with frost that has had a generation to grow. No running lights, no thermal bloom, no answer on any band but the old beacon looping the Meridian's Hope into empty space."
+          },
+          {
+            "about": "world",
+            "characterId": null,
+            "basis": ["01a0a1d2-72a0-7bc2-aaed-196bbdbdaf4b"],
+            "text": "The docking collar is scorched black and crumpled inward, its clamps fused into a single ruined mouth, and a shelf of ice has grown over the seam where the airlock used to breathe. Whatever burned there burned long ago, and the wound has since been sealed by cold."
+          },
+          {
+            "about": "world",
+            "characterId": null,
+            "basis": [
+              "01a0a1d2-72a0-70d8-9d18-a0c1c88b96d7",
+              "01a0a1d2-72a0-7652-9f73-1638006cf433"
+            ],
+            "text": "Through the one row of lit windows, the interior shows itself in grey half-glow: banks of switch-and-dial consoles, magnetic tape spools, cathode screens the size of footlockers, all of it two generations behind anything still flying. Frost feathers the inside of the glass."
+          },
+          {
+            "about": "world",
+            "characterId": null,
+            "basis": [
+              "01a0a1d2-621b-7861-9836-3b804b91f8f8",
+              "01a0a1d2-72a0-70d8-9d18-a0c1c88b96d7"
+            ],
+            "text": "Somewhere behind that archaic machinery, the relay is still faithfully repeating a dead ship's call, which means the origin coordinates someone scrubbed from the anchorage archive may still be written in those tapes. It is the only thread left, and it is sitting inside a station that has been shut tight since before anyone aboard was born."
+          }
+        ]
+      }
+    },
+    {
+      "run": 1,
+      "ok": true,
+      "firstTextMs": 4273,
+      "totalMs": 13272,
+      "accounting": [
+        ["scene_frame_plan", "claude-sonnet-5", 2276],
+        ["scene_frame", "claude-opus-5", 9290],
+        ["narration_check", "claude-sonnet-5", 1695]
+      ],
+      "rolls": [
+        "condition: Damaged or breached",
+        "outer_first_look: Corpses",
+        "inner_first_look: Thick haze or smoke"
+      ],
+      "withdrawals": 0,
+      "text": {
+        "role": "scene_frame",
+        "text": "Varga Relay hangs against the black like something chewed and spat out, its spine bowed where a long-ago impact walked a seam of ruptured plating from the docking collar to the comm mast. Frost blooms out of the breach in a slow permanent exhalation, feathering into the vacuum. Snagged in the torn plating outside, three figures drift at the ends of their own severed tethers, suit fabric bleached grey by forty years of starlight. They turn with the station's tumble, unhurried, facing away and then back. Behind the one lit row of windows, the air is not clear: a thick grey haze presses against the glass and moves, curling and settling, as though something in there is still burning slowly. The light comes through it brown and diffuse, pulsing in time with nothing. Under all of it, the relay keeps transmitting, the Meridian's Hope calling out through a machine that should have died with the people outside. Whatever answers for the flight recorder is in that haze, and the station's tumble is tightening.",
+        "groundedIn": [
+          "01a0a1d2-ac59-7f3d-85f0-75c1b8c694b7",
+          "01a0a1d2-ac59-7422-a26a-3e6e9b849e01",
+          "01a0a1d2-ac59-766c-b215-4954f2d64340"
+        ],
+        "segments": [
+          {
+            "about": "world",
+            "characterId": null,
+            "basis": [
+              "01a0a1d2-a370-7c2a-a653-87c16b489d56",
+              "01a0a1d2-ac59-7f3d-85f0-75c1b8c694b7"
+            ],
+            "text": "Varga Relay hangs against the black like something chewed and spat out, its spine bowed where a long-ago impact walked a seam of ruptured plating from the docking collar to the comm mast. Frost blooms out of the breach in a slow permanent exhalation, feathering into the vacuum."
+          },
+          {
+            "about": "world",
+            "characterId": null,
+            "basis": ["01a0a1d2-ac59-7422-a26a-3e6e9b849e01"],
+            "text": "Snagged in the torn plating outside, three figures drift at the ends of their own severed tethers, suit fabric bleached grey by forty years of starlight. They turn with the station's tumble, unhurried, facing away and then back."
+          },
+          {
+            "about": "world",
+            "characterId": null,
+            "basis": [
+              "01a0a1d2-ac59-766c-b215-4954f2d64340",
+              "01a0a1d2-a370-7c2a-a653-87c16b489d56"
+            ],
+            "text": "Behind the one lit row of windows, the air is not clear: a thick grey haze presses against the glass and moves, curling and settling, as though something in there is still burning slowly. The light comes through it brown and diffuse, pulsing in time with nothing."
+          },
+          {
+            "about": "world",
+            "characterId": null,
+            "basis": ["01a0a1d2-a370-7c2a-a653-87c16b489d56"],
+            "text": "Under all of it, the relay keeps transmitting, the Meridian's Hope calling out through a machine that should have died with the people outside. Whatever answers for the flight recorder is in that haze, and the station's tumble is tightening."
+          }
+        ]
+      }
+    },
+    {
+      "run": 2,
+      "ok": true,
+      "firstTextMs": 3881,
+      "totalMs": 13708,
+      "accounting": [
+        ["scene_frame_plan", "claude-sonnet-5", 2213],
+        ["scene_frame", "claude-opus-5", 9261],
+        ["narration_check", "claude-sonnet-5", 2223]
+      ],
+      "rolls": [
+        "condition: Functional",
+        "outer_first_look: Stripped exterior",
+        "inner_first_look: Biological infestation"
+      ],
+      "withdrawals": 0,
+      "text": {
+        "role": "scene_frame",
+        "text": "Varga Relay hangs against the dark like a carcass picked clean, its outer hull stripped to the frame in long patient bites. Antenna arrays are gone at the stumps, plating peeled and carried off, cable runs cut and coiled away by hands that took their time. What remains still works. Running lights blink along the spine in a slow, stubborn sequence, and the docking collar, scorched black on one side, holds a green seal indicator that has not failed in forty years. Behind that one lit row of windows, the glass is furred over from the inside. Something pale and fibrous has grown across the panes in whorls, thickening at the corners, pressed flat where it meets the cold. Where the growth is thinnest, the interior lamps glow through it in a soft green wash, and the wash moves, slow as breathing, drifting from one compartment toward the next. Under all of it the relay keeps transmitting, throwing the Meridian's Hope out into empty sky on a forty-year loop, and whatever the station knows about where that ship went is in there behind the glass.",
+        "groundedIn": [
+          "01a0a1d2-e0b1-759b-a018-563c27122773",
+          "01a0a1d2-e0b1-75ae-9370-9508f402f8db",
+          "01a0a1d2-e0b1-7906-a79a-ed9b42613243"
+        ],
+        "segments": [
+          {
+            "about": "world",
+            "characterId": null,
+            "basis": [
+              "01a0a1d2-d806-75f1-933d-5a6cc33cdcdc",
+              "01a0a1d2-e0b1-759b-a018-563c27122773"
+            ],
+            "text": "Varga Relay hangs against the dark like a carcass picked clean, its outer hull stripped to the frame in long patient bites. Antenna arrays are gone at the stumps, plating peeled and carried off, cable runs cut and coiled away by hands that took their time."
+          },
+          {
+            "about": "world",
+            "characterId": null,
+            "basis": [
+              "01a0a1d2-e0b1-759b-a018-563c27122773",
+              "01a0a1d2-e0b1-75ae-9370-9508f402f8db"
+            ],
+            "text": "What remains still works. Running lights blink along the spine in a slow, stubborn sequence, and the docking collar, scorched black on one side, holds a green seal indicator that has not failed in forty years."
+          },
+          {
+            "about": "world",
+            "characterId": null,
+            "basis": [
+              "01a0a1d2-e0b1-75ae-9370-9508f402f8db",
+              "01a0a1d2-e0b1-7906-a79a-ed9b42613243"
+            ],
+            "text": "Behind that one lit row of windows, the glass is furred over from the inside. Something pale and fibrous has grown across the panes in whorls, thickening at the corners, pressed flat where it meets the cold."
+          },
+          {
+            "about": "world",
+            "characterId": null,
+            "basis": ["01a0a1d2-e0b1-7906-a79a-ed9b42613243"],
+            "text": "Where the growth is thinnest, the interior lamps glow through it in a soft green wash, and the wash moves, slow as breathing, drifting from one compartment toward the next."
+          },
+          {
+            "about": "world",
+            "characterId": null,
+            "basis": ["01a0a1d2-d806-75f1-933d-5a6cc33cdcdc"],
+            "text": "Under all of it the relay keeps transmitting, throwing the Meridian's Hope out into empty sky on a forty-year loop, and whatever the station knows about where that ship went is in there behind the glass."
+          }
+        ]
+      }
+    },
+    {
+      "run": 3,
+      "ok": true,
+      "firstTextMs": 4968,
+      "totalMs": 15168,
+      "accounting": [
+        ["scene_frame_plan", "claude-sonnet-5", 2281],
+        ["scene_frame", "claude-opus-5", 10603],
+        ["narration_check", "claude-sonnet-5", 2274]
+      ],
+      "rolls": [
+        "condition: Damaged or breached",
+        "outer_first_look: Stripped exterior",
+        "inner_first_look: Heavy steam or moisture"
+      ],
+      "withdrawals": 0,
+      "text": {
+        "role": "scene_frame",
+        "text": "Varga Relay hangs against the dark like a carcass picked clean, its long spine stripped of every panel worth taking. Where the solar arrays should be there are only bare spars and shorn bolt collars, and the hull plating has been peeled back in neat, patient squares by hands that had time. A breach runs the length of the mid-ring, a torn seam thirty meters long, its edges bent outward and frosted white where the atmosphere went out all at once. The docking collar below it is scorched black and warped out of round, and the ring turns a half-degree off true, wobbling in a slow arc it has clearly been making for years. Behind the one row of lit windows, the glass is fogged from the inside; moisture crawls down it in slow beads, and something in there is still hot enough to boil water. Steam bleeds in pale threads from a vent grille near the collar, freezing into glitter as it leaves. The beacon of the Meridian's Hope keeps looping out of that ruin, patient as a pulse, and whatever is keeping the lights and the heat alive in a station dark for a generation is doing it on the other side of that fogged glass.",
+        "groundedIn": [
+          "01a0a1d3-1743-730c-9657-a34597062ec2",
+          "01a0a1d3-1743-7fd1-bad6-973198ff4097",
+          "01a0a1d3-1743-76ff-a52e-beb58854082a"
+        ],
+        "segments": [
+          {
+            "about": "world",
+            "characterId": null,
+            "basis": [
+              "01a0a1d3-0e54-7874-9247-487ea2038989",
+              "01a0a1d3-1743-730c-9657-a34597062ec2"
+            ],
+            "text": "Varga Relay hangs against the dark like a carcass picked clean, its long spine stripped of every panel worth taking. Where the solar arrays should be there are only bare spars and shorn bolt collars, and the hull plating has been peeled back in neat, patient squares by hands that had time."
+          },
+          {
+            "about": "world",
+            "characterId": null,
+            "basis": ["01a0a1d3-1743-7fd1-bad6-973198ff4097"],
+            "text": "A breach runs the length of the mid-ring, a torn seam thirty meters long, its edges bent outward and frosted white where the atmosphere went out all at once. The docking collar below it is scorched black and warped out of round, and the ring turns a half-degree off true, wobbling in a slow arc it has clearly been making for years."
+          },
+          {
+            "about": "world",
+            "characterId": null,
+            "basis": ["01a0a1d3-1743-76ff-a52e-beb58854082a"],
+            "text": "Behind the one row of lit windows, the glass is fogged from the inside; moisture crawls down it in slow beads, and something in there is still hot enough to boil water. Steam bleeds in pale threads from a vent grille near the collar, freezing into glitter as it leaves."
+          },
+          {
+            "about": "world",
+            "characterId": null,
+            "basis": [
+              "01a0a1d3-0e54-7874-9247-487ea2038989",
+              "01a0a1d3-1743-7fd1-bad6-973198ff4097"
+            ],
+            "text": "The beacon of the Meridian's Hope keeps looping out of that ruin, patient as a pulse, and whatever is keeping the lights and the heat alive in a station dark for a generation is doing it on the other side of that fogged glass."
+          }
+        ]
+      }
+    },
+    {
+      "run": 4,
+      "ok": true,
+      "firstTextMs": 3904,
+      "totalMs": 13847,
+      "accounting": [
+        ["scene_frame_plan", "claude-sonnet-5", 2155],
+        ["scene_frame", "claude-opus-5", 9780],
+        ["narration_check", "claude-sonnet-5", 1902]
+      ],
+      "rolls": [
+        "condition: Cold and dark",
+        "outer_first_look: Blocked access",
+        "inner_first_look: Settled",
+        "inner_first_look: Mechanism"
+      ],
+      "withdrawals": 0,
+      "text": {
+        "role": "scene_frame",
+        "text": "Varga Relay hangs against the dark like a thing left out in winter, its hull silvered with frost, its spine strung with antenna masts that have not turned in a generation. No running lights, no heat bloom, nothing on the thermal wash but the faint smear of that one lit row of windows. The scorched docking collar is fused shut, its petals warped inward and welded by whatever burned there, and the secondary airlock further down the ring has been sealed from inside with plated sheet and a lattice of scavenged bracing. Whatever way in there once was, someone closed it. Behind the lit windows the interior is not a ruin. There are partitions that were not in any relay schematic, cabling run neat along the ceilings, cloth strung as a curtain, the look of a place lived in and kept. At the center of that lit compartment something large turns in a slow, patient cycle, a mechanism of drums and arms feeding a cable trunk that climbs toward the antenna spine. It is the thing repeating the Meridian's Hope's beacon, forty years of a dead ship's voice pushed out into the dark by hands that sealed every door behind them.",
+        "groundedIn": [
+          "01a0a1d3-52c3-7784-b10e-41e3acc431f2",
+          "01a0a1d3-52c3-7d22-933d-9d32d535264f",
+          "01a0a1d3-52c3-7904-8aef-b5b051c5d8e9",
+          "01a0a1d3-52c3-71a2-aa92-5a084feaee3c"
+        ],
+        "segments": [
+          {
+            "about": "world",
+            "characterId": null,
+            "basis": [
+              "01a0a1d3-4a55-7276-a518-37c61e3c074d",
+              "01a0a1d3-52c3-7784-b10e-41e3acc431f2"
+            ],
+            "text": "Varga Relay hangs against the dark like a thing left out in winter, its hull silvered with frost, its spine strung with antenna masts that have not turned in a generation. No running lights, no heat bloom, nothing on the thermal wash but the faint smear of that one lit row of windows."
+          },
+          {
+            "about": "world",
+            "characterId": null,
+            "basis": ["01a0a1d3-52c3-7d22-933d-9d32d535264f"],
+            "text": "The scorched docking collar is fused shut, its petals warped inward and welded by whatever burned there, and the secondary airlock further down the ring has been sealed from inside with plated sheet and a lattice of scavenged bracing. Whatever way in there once was, someone closed it."
+          },
+          {
+            "about": "world",
+            "characterId": null,
+            "basis": ["01a0a1d3-52c3-7904-8aef-b5b051c5d8e9"],
+            "text": "Behind the lit windows the interior is not a ruin. There are partitions that were not in any relay schematic, cabling run neat along the ceilings, cloth strung as a curtain, the look of a place lived in and kept."
+          },
+          {
+            "about": "world",
+            "characterId": null,
+            "basis": ["01a0a1d3-52c3-71a2-aa92-5a084feaee3c"],
+            "text": "At the center of that lit compartment something large turns in a slow, patient cycle, a mechanism of drums and arms feeding a cable trunk that climbs toward the antenna spine."
+          },
+          {
+            "about": "world",
+            "characterId": null,
+            "basis": [
+              "01a0a1d3-4a55-7276-a518-37c61e3c074d",
+              "01a0a1d3-52c3-71a2-aa92-5a084feaee3c"
+            ],
+            "text": "It is the thing repeating the Meridian's Hope's beacon, forty years of a dead ship's voice pushed out into the dark by hands that sealed every door behind them."
+          }
+        ]
+      }
+    }
+  ]
+}

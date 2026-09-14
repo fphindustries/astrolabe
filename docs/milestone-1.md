@@ -167,12 +167,12 @@ narrative log is a second read model with its own paged query.
 ### 8. Oracle-grounded generation
 
 - [x] 8.1 Oracle roll API the AI calls instead of inventing results, including declared recipes per entity type (D-65, D-137–D-139). The world pass runs after the passage (D-138, amended by the step-0 spike). Verified live (see "Implementation notes (task 8.1)")
-- [x] 8.2 Oracle chips under narration, linked to the passage they informed; the scene frame is their first passage (D-138, D-141). Also the follow-up passage that narrates what a world pass established. Verified live; the scene frame misses A18 at 4.9–6.3 s (see "Implementation notes (task 8.2)")
-- [ ] 8.3 Visible reroll with the discarded chip struck through, capped per campaign settings (D-142)
-- [ ] 8.4 AI-set odds on yes/no world questions, minimal: a world-pass plan field (D-28, D-138). No golden-session beat exercises it
-- [ ] 8.5 Entity creation from oracle results: NPCs. Locations and factions deferred (D-144)
-- [ ] 8.6 Clock creation and ticks by the AI, with a stated reason (D-138, D-140)
-- [ ] 8.7 Weak-hit complications with no menu: written by the player or picked from AI options on request, required before Done (D-15, D-143)
+- [x] 8.2 Oracle chips under narration, linked to the passage they informed; the scene frame is their first passage (D-138, D-141). Also the follow-up passage that narrates what a world pass established. Verified live; with the frame planned on Sonnet 5, first text arrives at a median of 4.3 s (see "Implementation notes (task 8.2)")
+- [x] 8.3 Visible reroll with the discarded chip struck through, capped per campaign settings (D-142). In the world pass's interpretation; verified live with a planted contradiction (see "Implementation notes (task 8.3)")
+- [x] 8.4 AI-set odds on yes/no world questions, minimal: a world-pass plan field (D-28, D-138). No golden-session beat exercises it. Verified live (see "Implementation notes (task 8.4)")
+- [x] 8.5 Entity creation from oracle results: NPCs. Locations and factions deferred (D-144). The drawer shows the NPC's fields and its grounding as chips (see "Implementation notes (task 8.5)")
+- [ ] 8.6 Clock creation and ticks by the AI, with a stated reason (D-138, D-140, D-145)
+- [ ] 8.7 Weak-hit complications with no menu: written by the player or picked from AI options on request (editable, re-askable), required before Done (D-15, D-143 as amended)
 
 ### 9. Session lifecycle
 
@@ -1915,5 +1915,128 @@ A browser pass on the stub, on a freshly reset `session-2-open`, used **Frame th
 
 ### Open
 
-- **A18 on the scene frame.** The plan call puts first text past 5 s. Two options: run the frame's plan on Sonnet 5 (1.3–1.6 s in the spike), or skip the plan when the scene's location already reads as a derelict. Either is a change to D-141 for the user.
+- **A18 on the scene frame, resolved: the user chose Sonnet 5.** The frame now plans on `createPlannerFromEnv` (`claude-sonnet-5`, overridable by `ASTROLABE_PLAN_MODEL`). `buildApp` takes an optional `planner`, which defaults to `ai`. Over 5 live runs, planning took 2.2–4.2 s and first text arrived at 3.9–6.5 s, a median of 4.3 s. Only the first, cold run missed A18. One run rolled 4 results: the inner first look landed on an embedded "[Descriptor] + [Focus]" row. D-141 is amended.
 - **The dev servers.** Stopping a background `tsx watch` or `vite` shell left its node child holding the port. Stop the process on 3000 or 5173 before restarting.
+
+## Implementation notes (task 8.3, visible rerolls)
+
+8.3 is done (D-18, D-29, D-69, D-70, D-142). It covers Beat 6's reroll: a rolled result that contradicts what is established is rerolled visibly, and the discarded chip stays, struck through with its reason.
+
+### Shape
+
+- **Where rerolls happen.** Only in the world pass's interpret call, the call that turns an npc recipe's rolls into an entity. The scene frame has no review call, and adding one would cost the A18 time D-141's amendment just recovered. Beat 6 is the only golden-session beat with a reroll.
+- **The answer.** `worldInterpretSchema` answers `rerolls: [{ roll, reason }]` before `entities`. `INTERPRET_RULES` says only a result that *contradicts* something established may be rerolled; a surprising or unwelcome result is kept. An answer that asks for rerolls leaves its entities unread.
+- **The check** (`checkWorldInterpretation`, with the campaign's `rerollCap`). Each named result must be a current one, named once, and not yet final. Its reason must not name a player character (D-140). A result that has used its cap is marked `(final)` in the prompt, and asking to reroll it is refused and re-asked.
+- **The loop** (`commitWorldPass`, `applyRerolls`). For each named result, the server writes:
+  - `event.voided { kind: 'reroll', reason, cascaded: [that roll] }`, authored by the AI and appended directly, never through `voidEvent` (D-142);
+  - the result's table rolled again with `rules`' new `rerollResult` (a "Roll twice" rerolled once per D-68, an embedded row expanded);
+  - new `oracle.rolled` results carrying `rerollOf` and one more reroll behind them.
+
+  It then asks again. The prompt lists what was discarded, with the reasons, and the new results under keys counted from the original (`E1.first_lookr1`, then `r2`). D-69's cap ends the loop; a guard of 12 rounds records `ai.failed` if it ever doesn't. The entity is grounded in the surviving results only. Everything stays in the one world command.
+- **Chips.** `buildNarrativeLog` follows each grounded roll's `rerollOf` chain and puts the discarded predecessors before the survivor. Each is struck, with `discardedBecause` taken from the reroll's void mark, and a predecessor shared by two replacements appears once. The web shows "discarded: *reason*" on the struck chip, with the reason itself not struck. `withoutChippedRolls` also hides the reroll's own row once its roll shows as a chip.
+- **Event.** `oracle.rolled` gains the optional `rerollOf`, as D-142 said.
+
+### Scene frame on Sonnet 5
+
+By the user's choice, the frame's plan call runs on `createPlannerFromEnv` (D-141, amended; see the 8.2 notes).
+
+### Live pass
+
+The pass ran 2026-09-14 with claude-opus-5 interpreting and narrating and claude-sonnet-5 checking; runs are in `ai/eval/live-8.3.json`. The plan was forced to request the npc, and the scan's passage was scripted, so each run could plant or omit a contradiction. The passage establishes the sleeper as "a child, small and light-framed", and loaded dice set the npc's first look.
+
+- **Contradiction** (first look "Large"): rerolled in 3 of 3 runs, one reroll each, each with a reason naming what it contradicts ("The passage establishes the sleeper as a child, small and light-framed; 'Large' contradicts that."). The replacements were "Mutated", "Scruffy" and "Plain", and each entity was interpreted from its replacement.
+- **Control** (first look "Scruffy"): no rerolls in 3 of 3.
+- **Time:** the world pass took 17.4–21.2 s with a reroll (two interpret calls) and 13.9–15.2 s without, including the follow-up passage.
+- One control passage said the boy "is bigger than the trace suggested". That is the narrator drifting from established fact, which is outside the checker's scope by design (D-128).
+
+### Verification
+
+`npm run typecheck`, `npm run lint`, `npm test` (960 tests) and the web build pass. The new tests cover:
+
+- `rerollResult`;
+- the reroll check: current, repeated, final at the cap, and a reason naming a player character;
+- the prompt's `(final)` marks and discarded results;
+- the command: a reroll's void, `rerollOf`, and grounding in the survivor, then the cap refusing a third reroll and re-asking;
+- chips carrying a discarded predecessor, with its reason, once;
+- the web hiding a chipped reroll's row while carrying the reason on the chip.
+
+**Found while testing:** a Node heredoc in the shell had stripped the backslashes from a regex (`/r\d+(\.\d+)?$/` became `/rd+(.d+)?$/`), and the cap test caught it. Later edits went through files, not heredocs.
+
+**Not verified in the browser:** the stub never rerolls, so the struck chip with its reason is covered by unit tests and the live pass only.
+
+## Implementation notes (task 8.4, AI-set odds)
+
+8.4 is done, minimal as D-138 records (D-28, D-140, D-142). No golden-session beat exercises it.
+
+### Shape
+
+- **Rules** (`rules/src/recipes/yes-no.ts`). `ORACLE_ODDS` has five odds, each mapped to the Ask the Oracle table its spec already names (`ODDS_ORACLES`). `ORACLE_MATCH_CLAUSE` is the move's own "On a match, envision an extreme result or twist.", pinned verbatim by a test. `isOracleMatch` treats doubles as a match, and reads 100 as 00.
+- **Plan.** `worldPlanSchema` gained `questions: [{ question, odds }]`, at most 2, shared by the beat pass and the scene frame. `QUESTION_RULES` sits in both plans' rules:
+  - ask only what is uncertain, matters, and isn't simply the Guide's to decide;
+  - most plans ask nothing;
+  - never ask about a player character;
+  - never request a recipe that depends on the answer.
+
+  `checkWorldPlan` applies D-140's name check to question text, and a failure is re-asked.
+- **Rolls.** `questionEvents` rolls each question on its odds table as a system-authored `oracle.rolled` with the new optional `question`. Question rolls come before recipe rolls.
+- **Where answers go.** `describeAnswer` gives the odds, the question and the answer, plus the match clause on a match.
+  - In a beat pass, the answers reach the interpret call (`<oracle_answers>`).
+  - They are facts for the follow-up passage, which now also runs when a pass answered a question but established nothing. `isEstablished` covers both, as does resuming only the passage.
+  - In a scene frame they join its facts.
+
+  Each cited answer is its own chip, labelled by its question.
+
+### Live pass
+
+The pass ran 2026-09-14 on `session-2-open`, with Opus 5 narrating and planning beats, Sonnet 5 planning frames, and Sonnet 5 checking. There were 3 runs each of the scene frame, Beat 6's scan and Beat 7's chain, all planned for real. Runs are in `ai/eval/live-8.4.json`.
+
+- **How often:** questions in 2 of 9 plans, both on Beat 6. None on any scene frame or on Beat 7.
+- **What they asked** (both about the world, with plausible odds):
+  - "Is someone still alive aboard the relay, keeping the core warm?" at likely → Yes (20);
+  - "Is the repeated call being actively sent by a living person aboard the station?" at unlikely → No (70).
+- **Passages** followed the answers. The No became "No hand has touched it… The beacon is only a machine". The Yes became a voice on the channel.
+- **Finding: a Yes about a person can't create the person.** `QUESTION_RULES` forbids a recipe that depends on an answer. So in run 1, the "someone is alive" Yes was narrated as an unnamed voice, with no tracked NPC. The next beat's world pass may establish one. Beat 6 made an NPC outright in 1 of 3 runs here. Letting a recipe depend on an answer (roll the question, then the recipe only on a yes) would be a change to D-138, for the user.
+
+### Verification
+
+`npm run typecheck`, `npm run lint`, `npm test` and the web build pass. The new tests cover:
+
+- the odds tables, the verbatim match clause, and match detection;
+- the plan schema's questions and odds;
+- the name check on questions;
+- `describeAnswer`, with and without a match;
+- a question-only pass rolled on its odds table and narrated, grounded in the roll;
+- the answers reaching the interpret call;
+- a question naming a player character, re-asked;
+- a chip labelled by its question.
+
+## Implementation notes (task 8.5, NPC entities)
+
+8.5 is done, for NPCs only (D-65, D-144). Most of it landed earlier:
+- 8.1 writes `entity.established` from the npc recipe, with `establishedBy: 'ai'`, its `recipeId` and every roll in `groundedIn`;
+- 5.6's card already badges it AI-established (A10);
+- 8.2's follow-up passage narrates it;
+- `renderState` carries its fields into every later prompt.
+
+This task makes the entity readable and its grounding visible.
+
+### Shape
+
+- **Grounding read** (`GET /api/campaigns/:id/entities/:entityId/grounding`, returning `EntityGroundingResponse`). It is 404 for an entity never established. The chip resolution from 8.2 and 8.3 moved into an exported `oracleChips(events)` in `projection/narrative-log.ts`, shared by the log and this route, so an entity's chips carry discarded predecessors and reasons exactly as a passage's do. It is a read of its own, not a field of `CampaignState`, which stays bounded.
+- **Web.**
+  - `useEntityGrounding` is keyed under the campaign's state, so any command's invalidation refreshes it.
+  - The drawer's "Grounded in" section, a count until now, shows the chips.
+  - Fields read as labels (`fieldLabel`: `first_look` → "First look").
+  - The chip list moved out of `NarrativeLog.tsx` into `play/oracle/OracleChips.tsx`, with `toChipView` exported from `log/entries.ts`, so the log and the drawer render chips one way.
+
+### Verification
+
+`npm run typecheck`, `npm run lint`, `npm test` and the web build pass. The new tests cover the grounding route (chips including a discarded roll with its reason, and a 404 for an unknown entity) and the field labels.
+
+A browser pass on the stub reset the dev database and appended one AI-established NPC to `session-2-open`: six rolls, one discarded by a reroll. The dev database was reset again afterwards.
+- The card showed "AI-established" in the Present rail.
+- The drawer listed the four fields with labels.
+- It showed seven chips, the discarded "first look Large (53)" struck with "discarded: The sleeper is a child." ahead of its "Scruffy" replacement.
+- The console was clean.
+
+With no passage citing that NPC, its rolls also showed as log rows, the fallback 8.2 chose so rolled dice stay visible.

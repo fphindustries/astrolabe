@@ -25,6 +25,24 @@ export function createProviderFromEnv(env: NodeJS.ProcessEnv = process.env): AiP
 }
 
 export const DEFAULT_CHECK_MODEL = 'claude-sonnet-5';
+export const DEFAULT_PLAN_MODEL = 'claude-sonnet-5';
+
+/**
+ * The scene frame's planner (D-141, amended): the call that decides what to
+ * roll runs before any text, so it runs on a faster model than the narrator
+ * to hold A18. `ASTROLABE_PLAN_MODEL` overrides it. With the stub provider,
+ * the planner is the dev stub.
+ */
+export function createPlannerFromEnv(env: NodeJS.ProcessEnv = process.env): AiProvider {
+  if (env['ASTROLABE_AI_PROVIDER'] === 'stub') {
+    return new StubProvider({ fallback: devStubResponse });
+  }
+  const model = env['ASTROLABE_PLAN_MODEL'];
+  return new ClaudeProvider({
+    configured: hasCredential(env),
+    model: nonEmpty(model) ? model : DEFAULT_PLAN_MODEL,
+  });
+}
 
 /**
  * The authority checker (D-128): a second, faster model that judges what
@@ -76,7 +94,7 @@ function devStubResponse(
   if (mode === 'structured' && request.purpose === 'scene_frame_plan') {
     return {
       kind: 'structured',
-      value: { review: 'Stub plan: the place needs no rolls.', recipes: [] },
+      value: { review: 'Stub plan: the place needs no rolls.', recipes: [], questions: [] },
     };
   }
   if (
@@ -129,7 +147,7 @@ function devStubResponse(
     // Most beats bring nothing new, and a stubbed session plays without generating.
     return {
       kind: 'structured',
-      value: { review: 'Stub plan: nothing new enters the world.', recipes: [] },
+      value: { review: 'Stub plan: nothing new enters the world.', recipes: [], questions: [] },
     };
   }
   if (mode === 'structured' && request.purpose === 'incident_proposal') {

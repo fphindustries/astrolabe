@@ -51,6 +51,22 @@ export function rollRecipe(
   });
 }
 
+/**
+ * D-18, D-70 (8.3): roll one result's table again, for a result the Guide
+ * found contradicts what is established. It resolves like a nested roll in
+ * a recipe: a "Roll twice" is rerolled once (D-68), and a row that embeds
+ * tables gives one result per embedded table. The caller discards the old
+ * result; nothing here knows about caps.
+ */
+export function rerollResult(
+  rng: RandomSource,
+  oracleId: OracleId,
+  tableOf: TableOf,
+  recipe: OracleRecipe,
+): readonly RecipeResult[] {
+  return rollNested(rng, requireTable(tableOf, oracleId, recipe), tableOf, recipe);
+}
+
 /** D-68, as Pay the Price applies it: a nested "Roll twice" is rerolled once, and that result stands. */
 function rollNested(
   rng: RandomSource,

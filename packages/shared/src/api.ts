@@ -30,7 +30,7 @@ import {
 } from './ids.js';
 import type { PayloadFor } from './events/index.js';
 import type { EntityRef } from './meta.js';
-import type { CampaignState, NarrativeLog } from './read-models/index.js';
+import type { CampaignState, NarrativeLog, OracleChip } from './read-models/index.js';
 
 /**
  * HTTP response envelopes for task 5.0's read API.
@@ -61,6 +61,16 @@ export interface CampaignStateResponse {
 }
 
 export type NarrativeLogResponse = NarrativeLog;
+
+/**
+ * `GET /campaigns/:id/entities/:entityId/grounding` (8.5): the oracle rolls
+ * an entity was built from, as chips, with any a reroll discarded (D-70).
+ * A read of its own rather than part of `CampaignState`, which stays
+ * bounded.
+ */
+export interface EntityGroundingResponse {
+  readonly chips: readonly OracleChip[];
+}
 
 /**
  * The body of `POST /campaigns/:id/characters` (task 3.2). `commandId` is

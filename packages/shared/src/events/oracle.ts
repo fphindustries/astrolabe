@@ -1,6 +1,6 @@
 import * as z from 'zod';
 
-import { OracleIdSchema, RecipeIdSchema } from '../ids.js';
+import { EventIdSchema, OracleIdSchema, RecipeIdSchema } from '../ids.js';
 
 /**
  * A server-rolled oracle table result (design-event-log.md §2: "stores the
@@ -26,4 +26,16 @@ export const OracleRolledSchema = z.object({
    */
   recipeId: RecipeIdSchema.optional(),
   slot: z.string().min(1).optional(),
+  /**
+   * D-142: the roll this one replaces, discarded by a visible reroll
+   * (`event.voided { kind: 'reroll' }`). D-69's cap is counted along this
+   * chain, per individual roll.
+   */
+  rerollOf: EventIdSchema.optional(),
+  /**
+   * D-28, D-142 (8.4): the yes/no question about the world the Guide asked,
+   * rolled on the Ask the Oracle table for the odds it set (the table is
+   * \`oracleId\`).
+   */
+  question: z.string().min(1).optional(),
 });

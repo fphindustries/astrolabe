@@ -6,6 +6,7 @@ import type {
   CampaignStateResponse,
   CreateCampaignResponse,
   NarrativeLogResponse,
+  EntityGroundingResponse,
 } from '@astrolabe/shared';
 
 import { apiGet, apiPost } from './http.js';
@@ -79,6 +80,18 @@ export function useInvalidateCampaign(campaignId: string) {
     void queryClient.invalidateQueries({ queryKey: campaignKeys.state(campaignId) });
     void queryClient.invalidateQueries({ queryKey: campaignKeys.log(campaignId) });
   };
+}
+
+/**
+ * 8.5: the rolls an entity was built from. Keyed under the campaign's state,
+ * so invalidating the state after a command refetches it too.
+ */
+export function useEntityGrounding(campaignId: string, entityId: string) {
+  return useQuery({
+    queryKey: [...campaignKeys.state(campaignId), 'entity', entityId, 'grounding'],
+    queryFn: () =>
+      apiGet<EntityGroundingResponse>(`/campaigns/${campaignId}/entities/${entityId}/grounding`),
+  });
 }
 
 const LOG_PAGE_SIZE = 50;

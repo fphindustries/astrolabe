@@ -14,11 +14,16 @@ import type {
   SetTruthResponse,
   SwearIncitingVowResponse,
   VoidPreviewResult,
+  CommandId,
+  EntityId,
+  EventId,
 } from '@astrolabe/shared';
 
 import { playGoldenBeats, type GoldenRun } from '../harness/golden-beats.js';
 import { StubProvider } from '../ai/stub.js';
+import { appendCommand } from '../db/event-store.js';
 import { createTestDatabase, hasTestDatabase, type TestDatabase } from '../db/testing.js';
+import { uuidv7 } from '../db/uuid.js';
 
 import { buildApp } from './app.js';
 
@@ -110,6 +115,99 @@ describe.skipIf(!hasTestDatabase)('the HTTP read API', () => {
     const body = response.json<NarrativeLogResponse>();
     expect(body.beats.length).toBeLessThanOrEqual(2);
     expect(body.beats.length).toBeGreaterThan(0);
+  });
+
+  it('serves an entity’s grounding as chips, discarded rolls included, and 404s an unknown entity (8.5)', async () => {
+    const campaignId = run.campaignId;
+    const entityId = uuidv7() as EntityId;
+    const discarded = uuidv7() as EventId;
+    const survivor = uuidv7() as EventId;
+    await appendCommand(db.sql, {
+      campaignId,
+      commandId: uuidv7() as CommandId,
+      kind: 'world.pass',
+      actor: { kind: 'system' },
+      events: [
+        {
+          id: discarded,
+          type: 'oracle.rolled',
+          payload: {
+            oracleId: 'oracle:characters/first-look',
+            roll: 53,
+            rowText: 'Large',
+            recipeId: 'recipe:npc',
+            slot: 'first_look',
+          },
+        },
+        {
+          type: 'event.voided',
+          payload: {
+            targetEventId: discarded,
+            kind: 'reroll',
+            reason: 'The sleeper is a child.',
+            cascaded: [discarded],
+          },
+          actor: { kind: 'ai' },
+        },
+        {
+          id: survivor,
+          type: 'oracle.rolled',
+          payload: {
+            oracleId: 'oracle:characters/first-look',
+            roll: 66,
+            rowText: 'Scruffy',
+            recipeId: 'recipe:npc',
+            slot: 'first_look',
+            rerollOf: discarded,
+          },
+        },
+        {
+          type: 'entity.established',
+          payload: {
+            entityId,
+            kind: 'npc',
+            name: 'Bruno Valenus',
+            fields: { first_look: 'Scruffy.' },
+            provenance: { establishedBy: 'ai', recipeId: 'recipe:npc', groundedIn: [survivor] },
+          },
+          actor: { kind: 'ai' },
+        },
+      ],
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/campaigns/${campaignId}/entities/${entityId}/grounding`,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      chips: [
+        {
+          eventId: discarded,
+          oracleId: 'oracle:characters/first-look',
+          slot: 'first_look',
+          roll: 53,
+          rowText: 'Large',
+          voided: true,
+          discardedBecause: 'The sleeper is a child.',
+        },
+        {
+          eventId: survivor,
+          oracleId: 'oracle:characters/first-look',
+          slot: 'first_look',
+          roll: 66,
+          rowText: 'Scruffy',
+          voided: false,
+        },
+      ],
+    });
+
+    const unknown = await app.inject({
+      method: 'GET',
+      url: `/api/campaigns/${campaignId}/entities/${uuidv7()}/grounding`,
+    });
+    expect(unknown.statusCode).toBe(404);
   });
 
   it('400s an invalid log query', async () => {

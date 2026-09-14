@@ -1,5 +1,9 @@
 import {
+  ODDS_ORACLES,
+  ORACLE_MATCH_CLAUSE,
+  ORACLE_ODDS,
   STARFORGED,
+  isOracleMatch,
   withoutLinks,
   type OracleId,
   type OracleRecipe,
@@ -29,15 +33,22 @@ export const WORLD_RULES = `You run the world for a solo game of Ironsworn: Star
 
 You never invent what an oracle would decide. When the world needs something new that dice should ground, you name a recipe, the app rolls its oracle tables, and you interpret the results.`;
 
+/** D-28 (8.4): the Guide may ask the oracle about the world, with odds it sets. */
+export const QUESTION_RULES = `Questions: when something about the world is genuinely uncertain, matters to what comes next, and is not yours to simply decide from what is established, ask it as a yes/no question with the odds of a yes you judge from everything established: small_chance, unlikely, fifty_fifty, likely or almost_certain. The app rolls it. Most of the time there is no question: answer with an empty list. Never ask about anything a player character does, thinks, feels or decides, and never name a player character in a question. Do not request a recipe that only makes sense if a question comes out one way.`;
+
 const PLAN_RULES = `A beat of play has just resolved and been narrated. Decide whether it brings anything new into the world that the dice should ground.
 
 Most beats need nothing: answer with an empty list. Request a recipe only when the beat's outcome, or the passage that narrated it, brings a new one into the story and nothing already established is it. A move's outcome text may ask the players to envision what they discover; you decide what the world holds, so if that discovery is a person not yet established, request the recipe rather than leaving it vague.
 
 The passage was written before this decision by a narrator who may not introduce new people, so it leaves what the beat uncovered open. That is not evidence that no one is there: whether the discovery includes a person is yours to decide now, from the outcome and everything established.
 
-Never request a recipe for something already established in the campaign state or the recent narration. Each request gives a one-line reason grounded in the beat.`;
+Never request a recipe for something already established in the campaign state or the recent narration. Each request gives a one-line reason grounded in the beat.
+
+${QUESTION_RULES}`;
 
 const INTERPRET_RULES = `The app has rolled the oracle tables you asked for. Interpret each recipe's rolls as one new entity that fits the beat and everything established.
+
+First, review every result against what is established. A result that is surprising, awkward or unwelcome is kept and interpreted: the dice are meant to surprise. Only a result that contradicts something already established (in the campaign state, the recent narration or the beat) may be rerolled. List it in rerolls with a one-line reason naming what it contradicts, and leave entities empty: the app rerolls it, shows the discarded result struck through with your reason, and asks you again. A result marked (final) has used its rerolls and must be interpreted as it is. When nothing contradicts, rerolls is empty and you answer the entities.
 
 - The name: build it from the name rolls, picking, combining or adapting them. Cite the name rolls you used.
 - Every other slot: one or two sentences interpreting that slot's roll in this situation, citing that roll. A slot with several results (a roll that said to roll twice, or to combine two tables) takes them together, citing each one it uses. Stay with what the roll says; do not add a history, a motive or a named person, place or faction the rolls do not give.
@@ -90,6 +101,8 @@ export interface WorldBeat {
   readonly outcomes: readonly string[];
   /** The committed passage the world pass follows. */
   readonly passage: string;
+  /** D-28 (8.4): what the oracle answered the plan's questions, once rolled. */
+  readonly answers?: readonly string[];
 }
 
 function beatBlock(state: CampaignState, beat: WorldBeat): string {
@@ -100,6 +113,9 @@ function beatBlock(state: CampaignState, beat: WorldBeat): string {
       ? [`<outcome_text>\n${beat.outcomes.join('\n')}\n</outcome_text>`]
       : []),
     `<passage>\n${beat.passage}\n</passage>`,
+    ...(beat.answers !== undefined && beat.answers.length > 0
+      ? [`<oracle_answers>\n${beat.answers.join('\n')}\n</oracle_answers>`]
+      : []),
   ].join('\n\n');
 }
 
@@ -143,10 +159,45 @@ export function worldPlanSchema(offered: readonly OracleRecipe[]) {
       )
       .max(2)
       .describe('Empty unless the beat brings something new into the world.'),
+    questions: z
+      .array(
+        z.object({
+          question: z.string().min(1).describe('A yes/no question about the world.'),
+          odds: z.enum(ORACLE_ODDS),
+        }),
+      )
+      .max(2)
+      .describe('Yes/no questions about the world for the oracle (D-28). Usually empty.'),
   });
 }
 
 export type WorldPlan = z.infer<ReturnType<typeof worldPlanSchema>>;
+
+/** D-140: a question is world text, and names no player character. */
+export function checkWorldPlan(
+  value: WorldPlan,
+  characters: SegmentContext['characters'],
+): string | undefined {
+  for (const { question } of value.questions) {
+    const named = namedCharacter(question, characters);
+    if (named !== undefined) {
+      return `The question "${question}" names ${named.callsign}, a player character. Ask about the world, not about a player character.`;
+    }
+  }
+  return undefined;
+}
+
+/** What a yes/no roll answered, as a line of fact (D-28). A match brings the move's twist (8.4). */
+export function describeAnswer(roll: {
+  readonly oracleId: string;
+  readonly roll: number;
+  readonly rowText: string;
+  readonly question?: string | undefined;
+}): string {
+  const odds = ORACLE_ODDS.find((o) => ODDS_ORACLES[o] === roll.oracleId) ?? 'unknown odds';
+  const match = isOracleMatch(roll.roll) ? ` The roll is a match. ${ORACLE_MATCH_CLAUSE}` : '';
+  return `Asked of the oracle at ${odds.replace(/_/g, ' ')} odds: ${roll.question ?? 'a question'} The answer (${roll.roll}) is ${roll.rowText}.${match}`;
+}
 
 export function buildWorldPlanRequest(
   state: CampaignState,
@@ -174,6 +225,10 @@ export function buildWorldPlanRequest(
  * entry with the same `slot` (`rollRecipe`).
  */
 export interface RolledRecipeSlot {
+  /** How many rerolls lie behind this result (D-69 counts per individual roll). */
+  readonly rerolls: number;
+  /** The result it replaced, when it came from a reroll. */
+  readonly rerollOf?: EventId;
   /** `E1.role`, or `E1.role.1` and `E1.role.2` for a slot with several results. */
   readonly key: string;
   readonly slot: string;
@@ -191,6 +246,8 @@ export interface RolledRecipe {
   readonly recipe: OracleRecipe;
   readonly reason: string;
   readonly slots: readonly RolledRecipeSlot[];
+  /** Results a reroll discarded, with the reason given (D-70). */
+  readonly discarded?: readonly (RolledRecipeSlot & { readonly reason: string })[];
 }
 
 export function worldInterpretSchema(rolled: readonly RolledRecipe[]) {
@@ -200,6 +257,14 @@ export function worldInterpretSchema(rolled: readonly RolledRecipe[]) {
     ...new Set(rolled.flatMap((r) => r.slots.filter((s) => !s.name).map((s) => s.slot))),
   ] as [string, ...string[]];
   return z.object({
+    rerolls: z
+      .array(
+        z.object({
+          roll: z.enum(keys),
+          reason: z.string().min(1).describe('One line: what established fact it contradicts.'),
+        }),
+      )
+      .describe('Results that contradict what is established. Empty when none do.'),
     entities: z.array(
       z.object({
         instance: z.enum(instances),
@@ -223,6 +288,7 @@ export function buildWorldInterpretRequest(
   state: CampaignState,
   beat: WorldBeat,
   rolled: readonly RolledRecipe[],
+  rerollCap: number,
 ): AiRequest {
   const rolls = rolled
     .map(
@@ -231,9 +297,13 @@ export function buildWorldInterpretRequest(
         r.slots
           .map(
             (s) =>
-              `  [${s.key}] ${s.slot}${s.name ? ' (name)' : ''}: ${s.rowText} (rolled ${s.roll})`,
+              `  [${s.key}] ${s.slot}${s.name ? ' (name)' : ''}: ${s.rowText} (rolled ${s.roll})` +
+              (s.rerolls >= rerollCap ? ' (final)' : ''),
           )
-          .join('\n'),
+          .join('\n') +
+        (r.discarded ?? [])
+          .map((d) => `\n  discarded ${d.slot}: ${d.rowText}, because ${d.reason}`)
+          .join(''),
     )
     .join('\n');
   return {
@@ -253,7 +323,11 @@ export function checkWorldInterpretation(
   value: WorldInterpretation,
   rolled: readonly RolledRecipe[],
   characters: SegmentContext['characters'],
+  rerollCap: number,
 ): string | undefined {
+  if (value.rerolls.length > 0) {
+    return checkRerolls(value.rerolls, rolled, characters, rerollCap);
+  }
   for (const instance of rolled) {
     const answers = value.entities.filter((e) => e.instance === instance.instance);
     if (answers.length !== 1) {
@@ -297,6 +371,39 @@ export function checkWorldInterpretation(
   }
   const extra = value.entities.find((e) => !rolled.some((r) => r.instance === e.instance));
   return extra === undefined ? undefined : `${extra.instance} is not a rolled recipe instance.`;
+}
+
+/**
+ * D-18, D-69, D-70: every named result exists, is named once, still has a
+ * reroll left, and has a reason that names no player character (D-140).
+ * The entities of an answer that asks for rerolls are not read.
+ */
+function checkRerolls(
+  rerolls: WorldInterpretation['rerolls'],
+  rolled: readonly RolledRecipe[],
+  characters: SegmentContext['characters'],
+  rerollCap: number,
+): string | undefined {
+  const results = new Map(rolled.flatMap((r) => r.slots.map((s) => [s.key, s] as const)));
+  const seen = new Set<string>();
+  for (const { roll, reason } of rerolls) {
+    const result = results.get(roll);
+    if (result === undefined) {
+      return `${roll} is not a current result.`;
+    }
+    if (seen.has(roll)) {
+      return `${roll} is listed twice in rerolls.`;
+    }
+    seen.add(roll);
+    if (result.rerolls >= rerollCap) {
+      return `${roll} is final: it has used its rerolls and must be interpreted as it is.`;
+    }
+    const named = namedCharacter(reason, characters);
+    if (named !== undefined) {
+      return `The reason for rerolling ${roll} names ${named.callsign}, a player character. Say what established fact it contradicts without naming any player character.`;
+    }
+  }
+  return undefined;
 }
 
 function slotList(recipe: OracleRecipe): string {

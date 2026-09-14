@@ -85,7 +85,63 @@ describe('oracle chips (8.2, D-17)', () => {
         roll: 7,
         rowText: 'Obtain an object',
         voided: true,
+        discardedBecause: 'Contradicts the logs',
       },
+    ]);
+  });
+});
+
+describe('rerolled chips (8.3, D-70)', () => {
+  it('puts a reroll’s discarded predecessors before the survivor, struck, with the reason, once', () => {
+    const builder = goldenSessionPrelude();
+    builder.add('oracle.rolled', {
+      oracleId: 'oracle:characters/goal',
+      roll: 91,
+      rowText: 'Obtain an object',
+      slot: 'goal',
+    });
+    const first = builder.last();
+    builder.add(
+      'event.voided',
+      {
+        targetEventId: first.id,
+        kind: 'reroll',
+        reason: 'The logs say nothing was left',
+        cascaded: [first.id],
+      },
+      { actor: AI_ACTOR },
+    );
+    builder.add('oracle.rolled', {
+      oracleId: 'oracle:core/action',
+      roll: 3,
+      rowText: 'Advance',
+      slot: 'goal',
+      rerollOf: first.id,
+    });
+    const action = builder.last();
+    builder.add('oracle.rolled', {
+      oracleId: 'oracle:core/theme',
+      roll: 4,
+      rowText: 'Supply',
+      slot: 'goal',
+      rerollOf: first.id,
+    });
+    const theme = builder.last();
+    builder.add(
+      'narration.written',
+      { role: 'world', text: 'x', groundedIn: [action.id, theme.id] },
+      { actor: AI_ACTOR },
+    );
+    const passage = builder.last();
+
+    const chips = buildNarrativeLog(builder.build())
+      .beats.flatMap((b) => b.entries)
+      .find((e) => e.event.id === passage.id)?.chips;
+
+    expect(chips?.map((c) => [c.eventId, c.voided, c.discardedBecause])).toEqual([
+      [first.id, true, 'The logs say nothing was left'],
+      [action.id, false, undefined],
+      [theme.id, false, undefined],
     ]);
   });
 });

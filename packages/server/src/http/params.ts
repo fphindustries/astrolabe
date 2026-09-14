@@ -1,4 +1,4 @@
-import { CampaignIdSchema, EventIdSchema } from '@astrolabe/shared';
+import { CampaignIdSchema, EntityIdSchema, EventIdSchema } from '@astrolabe/shared';
 import type { FastifyReply } from 'fastify';
 import type { Sql } from 'postgres';
 
@@ -9,6 +9,16 @@ import { readEvents } from '../db/index.js';
 /** Validates a route param and sets a 400 reply if it isn't a campaign ID, returning `undefined` either way to signal the caller to stop. */
 export function parseCampaignId(raw: string, reply: FastifyReply) {
   const parsed = CampaignIdSchema.safeParse(raw);
+  if (!parsed.success) {
+    reply.code(400);
+    return undefined;
+  }
+  return parsed.data;
+}
+
+/** Same shape as `parseCampaignId`, for an `:entityId` (8.5). */
+export function parseEntityId(raw: string, reply: FastifyReply) {
+  const parsed = EntityIdSchema.safeParse(raw);
   if (!parsed.success) {
     reply.code(400);
     return undefined;

@@ -78,12 +78,15 @@ export function registerAiRoutes(
     sql,
     ai,
     checker,
+    planner,
     status,
   }: {
     readonly sql: Sql;
     readonly ai: AiProvider;
     /** Judges everything `ai` writes before it commits (D-128). */
     readonly checker: AiProvider;
+    /** Plans the scene frame's rolls ahead of any text (D-141, amended). */
+    readonly planner: AiProvider;
     readonly status: AiStatus;
   },
 ): void {
@@ -173,7 +176,7 @@ export function registerAiRoutes(
         return streamFrames(reply, async (sink) =>
           prepared.kind === 'replay'
             ? prepared.result
-            : runSceneFrame(sql, ai, checker, prepared, sink, status),
+            : runSceneFrame(sql, ai, checker, prepared, sink, status, planner),
         );
       } catch (error) {
         return refusal(error, reply);

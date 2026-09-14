@@ -5,7 +5,7 @@ import { STARFORGED } from '../generated/index.js';
 
 import type { RandomSource } from '../schema/dice.js';
 
-import { NPC_RECIPE, ORACLE_RECIPES, rollRecipe } from './index.js';
+import { NPC_RECIPE, ORACLE_RECIPES, rerollResult, rollRecipe } from './index.js';
 
 /** Lands each d100 on the scripted face, in order. */
 function faces(...scripted: number[]): RandomSource & { remaining(): number } {
@@ -85,5 +85,17 @@ describe('oracle recipes (D-65, D-139)', () => {
     expect(() =>
       rollRecipe(createSeededRandomSource(1), ORACLE_RECIPES.get('recipe:npc')!, () => undefined),
     ).toThrow(/not loaded/);
+  });
+
+  it('rerolls one result on its own table, resolving a "Roll twice" or embedded row like a recipe roll', () => {
+    expect(rerollResult(faces(7), 'oracle:characters/role', tableOf, NPC_RECIPE)).toEqual([
+      { oracleId: 'oracle:characters/role', roll: 7, rowText: expect.any(String) },
+    ]);
+    // goal: 95 "Roll twice" is rerolled once → 85 embeds Action + Theme → 3, 4.
+    const rng = faces(95, 85, 3, 4);
+    expect(
+      rerollResult(rng, 'oracle:characters/goal', tableOf, NPC_RECIPE).map((r) => r.oracleId),
+    ).toEqual(['oracle:core/action', 'oracle:core/theme']);
+    expect(rng.remaining()).toBe(0);
   });
 });
