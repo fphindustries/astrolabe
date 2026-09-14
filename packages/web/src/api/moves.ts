@@ -3,6 +3,7 @@ import type { CharacterId, MoveId } from '@astrolabe/rules';
 import type {
   BurnMomentumResponse,
   CommandId,
+  EventId,
   InvokeMoveResponse,
   ResolvePayThePriceResponse,
   VoidEventResponse,
@@ -30,6 +31,8 @@ export interface InvokeMoveInput {
   readonly adds: readonly { readonly amount: number; readonly label: string }[];
   readonly actionText?: string;
   readonly preRollAmount?: number;
+  /** D-130: the Guide's proposal the amount was committed against. */
+  readonly proposalEventId?: EventId;
   readonly chainedFromCommandId?: CommandId;
 }
 

@@ -31,6 +31,7 @@ import type {
 import type { Sql } from 'postgres';
 
 import { project } from '../projection/project.js';
+import { computeVoidState, isSuppressed } from '../projection/void-state.js';
 import { cryptoRandomSource } from '../random-source.js';
 
 import { appendCommand, readEvents, type AppendResult, type NewEvent } from './event-store.js';
@@ -113,7 +114,9 @@ function effectToDelta(effect: Effect, invocation: MoveInvocation, tier: Outcome
       // own callers (resolvePayThePriceMethod, the preRoll branch below),
       // and no spec uses `progress` at all (delta.ts's own comment: track
       // movement goes through `track.advanced` instead).
-      throw new Error(`Effect kind "${effect.kind}" has no direct Delta and must be handled by its own caller.`);
+      throw new Error(
+        `Effect kind "${effect.kind}" has no direct Delta and must be handled by its own caller.`,
+      );
   }
 }
 
@@ -122,7 +125,10 @@ function tracedDeltas(
   invocation: MoveInvocation,
   tier: OutcomeTier,
 ): TracedDelta[] {
-  return effects.map((e) => ({ delta: effectToDelta(e.effect, invocation, tier), clause: e.clause }));
+  return effects.map((e) => ({
+    delta: effectToDelta(e.effect, invocation, tier),
+    clause: e.clause,
+  }));
 }
 
 /** The add the server computes itself from `using` — never trusted from the client (setTruth's trust boundary). */
@@ -185,6 +191,36 @@ function resolveChainedFrom(
   return chained.id;
 }
 
+/**
+ * D-130: a `proposalEventId` must name a live `amount.proposed` for this
+ * very commitment: the same move, character and meter, not voided. Any
+ * other reference is refused rather than ignored, because the proposal's
+ * injury becomes the fiction the passage narrates.
+ */
+function requireLiveProposal(
+  events: readonly AstrolabeEvent[],
+  request: Pick<InvokeMoveRequest, 'proposalEventId' | 'moveId' | 'actorCharacterId'>,
+  meter: 'health' | 'spirit' | 'supply' | undefined,
+): void {
+  if (meter === undefined) {
+    throw new MoveRejectedError(`"${request.moveId}" has no amount for a proposal to belong to.`);
+  }
+  const proposal = events.find((e) => e.id === request.proposalEventId);
+  if (proposal?.type !== 'amount.proposed') {
+    throw new MoveRejectedError('That is not one of the Guide’s proposals in this campaign.');
+  }
+  if (
+    proposal.payload.moveId !== request.moveId ||
+    proposal.payload.characterId !== request.actorCharacterId ||
+    proposal.payload.meter !== meter
+  ) {
+    throw new MoveRejectedError('That proposal was for a different move, character or meter.');
+  }
+  if (isSuppressed(proposal, computeVoidState(events))) {
+    throw new MoveRejectedError('That proposal has been voided.');
+  }
+}
+
 export interface InvokeMoveRequest {
   readonly campaignId: CampaignId;
   readonly commandId: CommandId;
@@ -199,6 +235,8 @@ export interface InvokeMoveRequest {
   readonly adds: readonly RollAdjustment[];
   readonly actionText?: string;
   readonly preRollAmount?: number;
+  /** D-130: the Guide's live proposal this amount was committed against. */
+  readonly proposalEventId?: EventId;
   readonly chainedFromCommandId?: CommandId;
   /** Test-only override of the real RNG; defaults to `cryptoRandomSource()`. */
   readonly rng?: RandomSource;
@@ -211,7 +249,11 @@ export interface PendingChoiceView {
   readonly prompt: string;
   readonly pick: { readonly min: number; readonly max: number };
   readonly optional: boolean;
-  readonly options: readonly { readonly id: string; readonly label: string; readonly available: boolean }[];
+  readonly options: readonly {
+    readonly id: string;
+    readonly label: string;
+    readonly available: boolean;
+  }[];
   readonly rollEventId: EventId;
 }
 
@@ -228,7 +270,11 @@ export interface InvokedMoveRoll {
   readonly challengeDice: readonly [number, number];
   readonly tier: OutcomeTier;
   readonly isMatch: boolean;
-  readonly burnOffer?: { readonly wouldBecome: OutcomeTier; readonly momentum: number; readonly resetsTo: number };
+  readonly burnOffer?: {
+    readonly wouldBecome: OutcomeTier;
+    readonly momentum: number;
+    readonly resetsTo: number;
+  };
 }
 
 export interface InvokedMove {
@@ -246,7 +292,9 @@ export async function invokeMove(sql: Sql, request: InvokeMoveRequest): Promise<
     throw new MoveRejectedError(`"${request.moveId}" has no Milestone 1 automation.`);
   }
   if (automation.method !== undefined) {
-    throw new MoveRejectedError(`"${request.moveId}" is a no_roll move — resolve its method instead.`);
+    throw new MoveRejectedError(
+      `"${request.moveId}" is a no_roll move — resolve its method instead.`,
+    );
   }
   if (Object.keys(automation.outcomes).length === 0) {
     throw new MoveRejectedError(`"${request.moveId}" has no Milestone 1 outcome automation.`);
@@ -284,6 +332,9 @@ export async function invokeMove(sql: Sql, request: InvokeMoveRequest): Promise<
     preRollMeter = proposedEffect.meter;
   } else if (request.preRollAmount !== undefined) {
     throw new MoveRejectedError(`"${request.moveId}" has no preRoll amount to commit.`);
+  }
+  if (request.proposalEventId !== undefined) {
+    requireLiveProposal(events, request, preRollMeter);
   }
 
   const invocation: MoveInvocation = {
@@ -363,6 +414,9 @@ export async function invokeMove(sql: Sql, request: InvokeMoveRequest): Promise<
           characterId: request.actorCharacterId,
           meter: preRollMeter,
           amount: request.preRollAmount,
+          ...(request.proposalEventId !== undefined
+            ? { proposalEventId: request.proposalEventId }
+            : {}),
         },
         sessionId,
       },
@@ -548,7 +602,9 @@ export async function applyMoveChoice(
     (e) => e.commandId === rollEvent.commandId && e.type === 'move.invoked',
   );
   if (invocationEvent === undefined || invocationEvent.type !== 'move.invoked') {
-    throw new Error('A dice.rolled event with no sibling move.invoked — the store is inconsistent.');
+    throw new Error(
+      'A dice.rolled event with no sibling move.invoked — the store is inconsistent.',
+    );
   }
 
   const tier = rollEvent.payload.tier;
@@ -642,10 +698,17 @@ export interface BurnedMomentum {
   readonly result: AppendResult;
 }
 
-export async function burnMomentum(sql: Sql, request: BurnMomentumRequest): Promise<BurnedMomentum> {
+export async function burnMomentum(
+  sql: Sql,
+  request: BurnMomentumRequest,
+): Promise<BurnedMomentum> {
   const events = await readEvents(sql, request.campaignId);
   const rollEvent = events.find((e) => e.id === request.rollEventId);
-  if (rollEvent === undefined || rollEvent.type !== 'dice.rolled' || rollEvent.payload.kind !== 'action') {
+  if (
+    rollEvent === undefined ||
+    rollEvent.type !== 'dice.rolled' ||
+    rollEvent.payload.kind !== 'action'
+  ) {
     throw new MoveRejectedError(`"${request.rollEventId}" is not an action roll.`);
   }
   const burnOffer = rollEvent.payload.burnOffer;
@@ -656,7 +719,9 @@ export async function burnMomentum(sql: Sql, request: BurnMomentumRequest): Prom
     (e) => e.commandId === rollEvent.commandId && e.type === 'move.invoked',
   );
   if (invocationEvent === undefined || invocationEvent.type !== 'move.invoked') {
-    throw new Error('A dice.rolled event with no sibling move.invoked — the store is inconsistent.');
+    throw new Error(
+      'A dice.rolled event with no sibling move.invoked — the store is inconsistent.',
+    );
   }
 
   const characterId = invocationEvent.payload.actorCharacterId;
@@ -767,7 +832,11 @@ export async function resolvePayThePriceMethod(
     // session never lands on it — only the single 75-81 row chains to an
     // Automated move — so only the first step is surfaced here; a second
     // visible chip for the recursive case is group 8's job.
-    const [step] = resolvePayThePriceChain(request.rng ?? cryptoRandomSource(), table, oracleChain.rows);
+    const [step] = resolvePayThePriceChain(
+      request.rng ?? cryptoRandomSource(),
+      table,
+      oracleChain.rows,
+    );
     if (step !== undefined) {
       newEvents.push({
         type: 'oracle.rolled',

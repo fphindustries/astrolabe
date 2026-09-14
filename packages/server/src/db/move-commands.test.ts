@@ -1,7 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createSeededRandomSource, type CharacterDraft, type CharacterId } from '@astrolabe/rules';
-import { LOCAL_PLAYER_ID, type Actor, type CampaignId, type CommandId } from '@astrolabe/shared';
+import {
+  LOCAL_PLAYER_ID,
+  type Actor,
+  type CampaignId,
+  type CommandId,
+  type EventId,
+} from '@astrolabe/shared';
 
 import { project } from '../projection/project.js';
 
@@ -315,7 +321,7 @@ describe.skipIf(!hasTestDatabase)('resolving a move (task 6.x)', () => {
         expect(state.characters[characterId]?.meters.health.value).toBe(4); // 5 - 1
       });
 
-      it("rolls +health against what is left after the harm, not the pre-harm value", async () => {
+      it('rolls +health against what is left after the harm, not the pre-harm value', async () => {
         const campaignId = await newCampaign();
         const characterId = await newCharacter(campaignId);
 
@@ -339,6 +345,125 @@ describe.skipIf(!hasTestDatabase)('resolving a move (task 6.x)', () => {
         } else {
           throw new Error('expected an action roll');
         }
+      });
+
+      async function propose(
+        campaignId: CampaignId,
+        characterId: CharacterId,
+        overrides: { moveId?: string; meter?: 'health' | 'spirit' | 'supply' } = {},
+      ): Promise<EventId> {
+        const result = await appendCommand(db.sql, {
+          campaignId,
+          commandId: newId<CommandId>(),
+          kind: 'amount.propose',
+          actor: PLAYER,
+          events: [
+            {
+              type: 'amount.proposed',
+              payload: {
+                moveId: (overrides.moveId ?? 'move:suffer/endure-harm') as never,
+                characterId,
+                meter: overrides.meter ?? 'health',
+                amount: -2,
+                injury: "A ruptured conduit sprays sparks across Rook's arm.",
+                reason: 'A serious burn.',
+              },
+              actor: { kind: 'ai' },
+              sessionId: project(await readEvents(db.sql, campaignId)).session?.id ?? null,
+            },
+          ],
+        });
+        return result.events[0]!.id;
+      }
+
+      const endureHarm = (
+        campaignId: CampaignId,
+        characterId: CharacterId,
+        proposalEventId: EventId,
+      ) =>
+        invokeMove(db.sql, {
+          campaignId,
+          commandId: newId<CommandId>(),
+          actor: PLAYER,
+          moveId: 'move:suffer/endure-harm',
+          actorCharacterId: characterId,
+          adds: [],
+          preRollAmount: -1,
+          proposalEventId,
+          rng: createSeededRandomSource(1),
+        });
+
+      it('links the committed amount to the proposal it was set against, whatever the number (D-130)', async () => {
+        const campaignId = await newCampaign();
+        const characterId = await newCharacter(campaignId);
+        const proposal = await propose(campaignId, characterId);
+
+        await endureHarm(campaignId, characterId, proposal);
+
+        const committed = (await readEvents(db.sql, campaignId)).find(
+          (e) => e.type === 'amount.committed',
+        );
+        expect(committed?.payload).toMatchObject({ amount: -1, proposalEventId: proposal });
+        expect(committed?.causedBy).toBeNull();
+      });
+
+      it('refuses a proposal for another character, another move, or that is not a proposal (D-130)', async () => {
+        const campaignId = await newCampaign();
+        const characterId = await newCharacter(campaignId);
+        const other = await newCharacter(campaignId, { name: 'Juno Marr', callsign: 'Juno' });
+
+        await expect(
+          endureHarm(campaignId, characterId, await propose(campaignId, other)),
+        ).rejects.toThrow(/different move, character or meter/);
+        await expect(
+          endureHarm(
+            campaignId,
+            characterId,
+            await propose(campaignId, characterId, { meter: 'spirit' }),
+          ),
+        ).rejects.toThrow(/different move, character or meter/);
+        await expect(endureHarm(campaignId, characterId, newId<EventId>())).rejects.toThrow(
+          /not one of the Guide’s proposals/,
+        );
+        expect(
+          (await readEvents(db.sql, campaignId)).some((e) => e.type === 'amount.committed'),
+        ).toBe(false);
+      });
+
+      it('refuses a voided proposal (D-130)', async () => {
+        const campaignId = await newCampaign();
+        const characterId = await newCharacter(campaignId);
+        await beginSession(campaignId); // a void reaches only the current session (D-84)
+        const proposal = await propose(campaignId, characterId);
+        await voidEvent(db.sql, {
+          campaignId,
+          commandId: newId<CommandId>(),
+          actor: PLAYER,
+          targetEventId: proposal,
+          reason: 'Not that wound.',
+        });
+
+        await expect(endureHarm(campaignId, characterId, proposal)).rejects.toThrow(/voided/);
+      });
+
+      it('refuses a proposal on a move with no amount to commit (D-130)', async () => {
+        const campaignId = await newCampaign();
+        const characterId = await newCharacter(campaignId);
+        const proposal = await propose(campaignId, characterId);
+
+        await expect(
+          invokeMove(db.sql, {
+            campaignId,
+            commandId: newId<CommandId>(),
+            actor: PLAYER,
+            moveId: 'move:adventure/face-danger',
+            actorCharacterId: characterId,
+            using: { using: 'stat', stat: 'iron' },
+            adds: [],
+            proposalEventId: proposal,
+            rng: createSeededRandomSource(1),
+          }),
+        ).rejects.toThrow(/no amount for a proposal/);
       });
     });
 

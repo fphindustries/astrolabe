@@ -406,6 +406,7 @@ export function buildApp({ sql, ai }: BuildAppOptions): FastifyInstance {
         adds,
         actionText,
         preRollAmount,
+        proposalEventId,
         chainedFromCommandId,
       } = parsedBody.data;
 
@@ -421,6 +422,7 @@ export function buildApp({ sql, ai }: BuildAppOptions): FastifyInstance {
           ...(using !== undefined ? { using } : {}),
           ...(actionText !== undefined ? { actionText } : {}),
           ...(preRollAmount !== undefined ? { preRollAmount } : {}),
+          ...(proposalEventId !== undefined ? { proposalEventId } : {}),
           ...(chainedFromCommandId !== undefined ? { chainedFromCommandId } : {}),
         });
         reply.code(201);

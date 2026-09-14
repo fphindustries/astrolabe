@@ -17,6 +17,7 @@ import { aiKeys, useProposeAmount } from '../../api/narration.js';
 import type { CrewCardView } from '../crew/crew.js';
 
 import { AidAllyPicker } from './AidAllyPicker.js';
+import { proposalText } from './harm-proposal.js';
 import { useMoveFlowActions } from './move-flow.js';
 import styles from './MoveComposer.module.css';
 
@@ -157,6 +158,10 @@ export function MoveComposer({
       adds: extraAdds,
       ...(actionText.trim().length > 0 ? { actionText: actionText.trim() } : {}),
       ...(preRollRange !== undefined ? { preRollAmount: harmAmount } : {}),
+      // D-130: the proposal's injury carries into narration whatever amount was set.
+      ...(preRollRange !== undefined && proposal?.ok === true
+        ? { proposalEventId: proposal.eventId }
+        : {}),
       ...(chainedFromCommandId !== undefined ? { chainedFromCommandId } : {}),
     });
     moveResolved(moveId, actorCharacterId, invoked.response, invoked.commandId, aidingAllyId);
@@ -234,8 +239,7 @@ export function MoveComposer({
           />
           <span className={styles.proposal}>
             {propose.isPending && 'The Guide is judging how bad this is…'}
-            {proposal?.ok === true &&
-              `The Guide proposes ${proposal.amount}: ${proposal.reason}${harmEdited && harmAmount !== proposal.amount ? ` (you set ${harmAmount})` : ''}`}
+            {proposal?.ok === true && proposalText(proposal, harmAmount, harmEdited)}
             {proposal?.ok === false &&
               `No proposal from the Guide (${proposal.message}). Set the amount yourself.`}
             {propose.isError && 'No proposal from the Guide. Set the amount yourself.'}

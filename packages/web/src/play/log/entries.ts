@@ -1,4 +1,9 @@
-import { EVENT_TYPE_META, type NarrativeBeat, type NarrativeEntry, type NarrativeLog } from '@astrolabe/shared';
+import {
+  EVENT_TYPE_META,
+  type NarrativeBeat,
+  type NarrativeEntry,
+  type NarrativeLog,
+} from '@astrolabe/shared';
 
 /**
  * Pure view-model for the narrative log (task 5.4). The server already
@@ -48,6 +53,8 @@ export type EntryBody =
       readonly kind: 'amount_proposed';
       readonly amount: number;
       readonly meter: 'health' | 'spirit' | 'supply';
+      /** D-130. */
+      readonly injury?: string;
       readonly reason: string;
     }
   | {
@@ -65,7 +72,12 @@ export type EntryBody =
       readonly original?: string;
       readonly note?: string;
     }
-  | { readonly kind: 'override'; readonly from: number; readonly to: number; readonly reason?: string }
+  | {
+      readonly kind: 'override';
+      readonly from: number;
+      readonly to: number;
+      readonly reason?: string;
+    }
   | { readonly kind: 'void'; readonly cascadedCount: number; readonly reason: string }
   | { readonly kind: 'session_ended'; readonly summary: string }
   | { readonly kind: 'unknown'; readonly type: string };
@@ -104,8 +116,9 @@ export function toEntryView(entry: NarrativeEntry): EntryView {
     // Guarded rather than a direct index: this view-model must survive a
     // type the running build doesn't know yet, the same tolerance toBody's
     // own `unknown` fallback gives it.
-    voidable: (EVENT_TYPE_META as Record<string, { readonly voidable: boolean }>)[entry.event.type]
-      ?.voidable ?? false,
+    voidable:
+      (EVENT_TYPE_META as Record<string, { readonly voidable: boolean }>)[entry.event.type]
+        ?.voidable ?? false,
   };
 }
 
@@ -157,6 +170,7 @@ function toBody(entry: NarrativeEntry): EntryBody {
         kind: 'amount_proposed',
         amount: event.payload.amount,
         meter: event.payload.meter,
+        ...(event.payload.injury !== undefined ? { injury: event.payload.injury } : {}),
         reason: event.payload.reason,
       };
     case 'amount.committed':

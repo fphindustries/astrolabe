@@ -221,13 +221,15 @@ export const SAMPLE_PAYLOADS: { [T in EventType]: PayloadFor<T> } = {
     characterId: ROOK,
     meter: 'health',
     amount: -2,
-    reason: "A ruptured conduit sprays sparks across Rook's arm.",
+    injury: "A ruptured conduit sprays sparks across Rook's arm.",
+    reason: 'A serious burn.',
   },
   'amount.committed': {
     moveId: 'move:suffer/endure-harm',
     characterId: ROOK,
     meter: 'health',
     amount: -1,
+    proposalEventId: testEventId(93),
   },
   'state.changed': {
     cause: {

@@ -180,7 +180,7 @@ export async function prepareBeatNarration(
   return {
     kind: 'run',
     request,
-    aiRequest: buildBeatRequest(state, events, describeBeat(scope.events, state), settings),
+    aiRequest: buildBeatRequest(state, events, describeBeat(scope.events, state, events), settings),
     causedBy: scope.causedBy,
     envelope: envelopeOf(request.campaignId, state),
   };
@@ -290,7 +290,7 @@ export async function prepareCorrection(
     parent === undefined
       ? undefined
       : resolveBeatScope(events, parent.commandId, { allowNarrated: true });
-  const facts = scope?.ok === true ? describeBeat(scope.events, state) : undefined;
+  const facts = scope?.ok === true ? describeBeat(scope.events, state, events) : undefined;
 
   return {
     kind: 'run',
@@ -364,6 +364,8 @@ export type ProposedAmountResult =
       readonly ok: true;
       readonly eventId: EventId;
       readonly amount: number;
+      /** D-130: absent only on a proposal written before injuries were split out. */
+      readonly injury?: string;
       readonly reason: string;
     }
   | { readonly ok: false; readonly errorKind: AiErrorKind; readonly message: string };
@@ -409,7 +411,7 @@ export async function proposeAmount(
       throw new AiRequestRefusedError(scope.reason, scope.detail);
     }
     causedBy = scope.causedBy;
-    lines = describeBeat(scope.events, state).lines;
+    lines = describeBeat(scope.events, state, events).lines;
   }
 
   const facts = { lines, miss: false, match: false, burned: false, chainedToSuffer: false };
@@ -442,6 +444,7 @@ export async function proposeAmount(
                     characterId: request.actorCharacterId,
                     meter: intake.meter,
                     amount: outcome.value.amount,
+                    injury: outcome.value.injury,
                     reason: outcome.value.reason,
                   },
                 } as NewEvent<'amount.proposed'>,
@@ -464,6 +467,7 @@ function proposalResultFrom(events: readonly AstrolabeEvent[]): ProposedAmountRe
       ok: true,
       eventId: proposed.id,
       amount: proposed.payload.amount,
+      ...(proposed.payload.injury !== undefined ? { injury: proposed.payload.injury } : {}),
       reason: proposed.payload.reason,
     };
   }

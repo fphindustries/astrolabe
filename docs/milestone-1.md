@@ -162,7 +162,7 @@ narrative log is a second read model with its own paged query.
 - [ ] 7.13 Trigger-mismatch note on a beat whose move doesn't fit the described action, with the same traceability, never blocking or delaying the roll (D-37, D-121, A20). No golden-session beat exercises it
 - [ ] 7.14 Segmented narration: fact keys and kinds, segments tagged and cited as they stream, checks that need no AI, D-115's routine cap for beats with no declared action (D-127, A21)
 - [ ] 7.15 Authority check: shared rubric in the narrator prompt and a second-model checker; provisional streaming, unmistakable logged withdrawal, one re-ask, pause on a second failure; recorded-violation regression tests, keyed eval, live matrix across all three latitudes. Sign-off also checks that no passage gives a pronoun to a character whose pronouns aren't recorded (D-128, D-129, D-131, A21)
-- [ ] 7.16 Established injury: the harm proposal's injury carried into narration at the committed severity, with the committed amount linked to its proposal (D-130, A13)
+- [x] 7.16 Established injury: the harm proposal's injury carried into narration at the committed severity, with the committed amount linked to its proposal (D-130, A13). Verified live in two passes (see "Implementation notes (task 7.16)")
 
 ### 8. Oracle-grounded generation
 
@@ -1328,6 +1328,75 @@ same thing: a campaign in a known state that can be thrown away and rebuilt.
 
 That pass caught three bugs, now fixed: a duplicate React key when two reasons had the same text, the "Edited" marker using the AI provenance colour, and proposal rolls appearing in the session log.
 
-**Not verified:**
-- **A live Claude call.** Structured output with a 79-value enum and `$ref`-reused sub-schemas has only run through the faked SDK and the stub. The SDK moves unsupported constraints, such as `minItems` above 1 or numeric bounds, into field descriptions rather than rejecting them. Run one proposal with a key set before relying on it.
-- **Latency.** Effort is `medium` and the output is a full build, so expect a proposal to take tens of seconds. The form stays usable while it runs, and A18 doesn't apply here.
+**Live pass (round 20).** Claude accepted the schema, including the 79-value enum. Two failure modes turned up and were fixed:
+
+- **Player-written names.** A name the player wrote around a callsign (`Tomas "Rust" Abara`) failed the concept test, which pushed the AI to rename the character. The test now matches word by word.
+- **Stat array.** The AI kept giving a third stat a 2. The prompt now states the counts.
+
+After the fixes, three concepts proposed cleanly on the first try.
+
+**Latency.** Proposals take 13–27 s, and effort `low` was no faster. The form stays usable while one runs, and A18 doesn't apply here.
+
+## Implementation notes (task 7.16, established injury)
+
+7.16 is done (D-130). It comes first of 7.14–7.16 because it changes the beat facts that 7.14's segments will cite.
+
+### Shape
+
+- **Proposal.** `harmProposalSchema` answers `amount`, `injury` and `reason`:
+  - `injury` is one sentence of what physically happens and where, with no severity words;
+  - `reason` is a short phrase for the severity.
+
+  `amount.proposed` stores `injury` as an optional field, so pre-D-130 events still parse. The prompt says the injury happens *to* the character and describes nothing they do.
+- **Commitment.** `invokeMove` accepts `proposalEventId`, and `requireLiveProposal` refuses:
+  - a missing id, or one that isn't an `amount.proposed`;
+  - a proposal for a different move, character or meter;
+  - a voided proposal;
+  - a proposal on a move with no amount.
+
+  `amount.committed` records the id. It is not `causedBy`, for the reason D-130 gives.
+- **Facts.** `describeBeat(scope, state, log)` now takes the whole log, because a standalone suffer move's proposal is outside the beat's causal scope. When the committed amount names a live proposal with an injury, it adds:
+  - "The injury, as the Guide established it: …";
+  - when the amounts differ, "The player judged it milder/more severe than the Guide's proposed N: narrate that injury at the severity the player set."
+
+  The proposal's amount and `reason` still never reach narration.
+- **Web.** The composer sends the proposal's event id with the committed amount, and `play/moves/harm-proposal.ts` formats "The Guide proposes −2: *injury* (*reason*)". The log entry shows the injury too.
+
+### Verification
+
+`npm run typecheck`, `npm run lint`, `npm test` (792 tests) and the web build pass. The new tests cover:
+
+- injury lines on a chained beat and on a standalone one;
+- no adjustment line when the amounts match;
+- a voided proposal establishing nothing;
+- `requireLiveProposal`'s refusals;
+- the stored injury on the proposal and on the route.
+
+**Live pass.** Two harm proposals, one after a Face Danger miss and one standalone, were each committed one milder than proposed, then narrated. Both passages narrated the established wound at the milder severity ("The armor took most of it. What's left is a bad bruise and a shallow cut"), and neither used a pronoun for Rook.
+
+### Recorded violations, for 7.15's corpus
+
+Both live passages still broke D-129, as the round-20 passage did. They are recorded here verbatim (claude-opus-5, Color latitude, 2026-09-13) so 7.15's regression tests and eval use real outputs.
+
+1. **Round 20, standalone Endure Harm with no declared action, strong hit with a match, dramatic budget** (the failure that led to D-127–D-130):
+   > The hatch wins something back before it surrenders. A spur of sheared track catches Rook under the arm where the plating thins, and the servo's own strength drives it home — a bright hot line that goes through the undersuit and keeps going. Rook feels the suit clamp down around the wound, sealant frothing cold into the gap, the readout in the helmet blooming amber at the edge of vision. Rook stands there a moment in the widening bar of sunlight, hand braced on the frame, breathing through it. Counts one breath. Counts a second. The pain does not go away so much as get put somewhere, folded and stowed the way everything has been folded and stowed for thirty years of doing this. The arm still moves. The hand still closes. That is the whole of what matters. Rook pulls it free, flicks the wet from the gauntlet, and steps sideways through the gap into Varga Relay. Inside, the corridor is cold and utterly still — and down at the far end, where the one lit row of windows should be, something has already stopped moving, as though it heard the hatch open a long time ago.
+
+   Its harm proposal, standalone (before D-130 split out the injury): "A pressure-warped bulkhead gives way as Rook forces the relay's inner hatch, and the shearing edge of ancient hull plate bites through armor into the meat of his shoulder." It gives Rook an undeclared action and a guessed pronoun.
+2. **7.16 live pass, Endure Harm after a Face Danger miss, routine budget:**
+   > The bulkhead's stressed edge lets go with a sound like a struck bell, snapping back into Rook's shoulder and driving down the forearm. The armor seam splits. The arm is pinned to the frame, metal biting through the gap in the plating, and cold station air whistles in past the tear.
+   >
+   > Rook does not waste breath on it. Braced boots, a shove with the good shoulder, and the edge peels back enough for the arm to come free. Blood wells along the seam, slow and dark, already tacky in the cold.
+   >
+   > The armor took most of it. What's left is a bad bruise and a shallow cut, and Rook rolls the shoulder once to prove the joint still works, then keeps moving down the corridor toward the lit windows.
+
+   It contains a disposition ("does not waste breath on it"), undeclared actions ("a shove with the good shoulder", "rolls the shoulder once"), and undeclared movement ("keeps moving down the corridor").
+3. **7.16 live pass, standalone Endure Harm, routine budget:**
+   > Ten meters on, the deck lies to Rook. A plate that looks solid gives under the weight, buckling with a groan, and the leg drops through to the knee. The torn edge rakes down the shin, catching armor first, then skin where the greave ends. It is not much. A scrape, a line of heat in the cold.
+   >
+   > Rook plants the other boot, hauls the leg out of the hole, and shakes the grit loose from the plating. The wound seeps a little and stops. Somewhere below, dislodged metal falls a long way and does not land.
+   >
+   > The lit windows are still ahead, unchanged, and Rook walks on with the same steady tread.
+
+   It contains undeclared movement ("Ten meters on", "walks on"), undeclared actions ("plants the other boot, hauls the leg out"), and a characteristic response ("the same steady tread").
+
+The clean counterpart is round 20's Face Danger weak hit with a declared action ("Rook plants both boots on the collar's scorched rim…"). Passages 2 and 3 break the rules even at routine length, so D-115's cap narrows the problem but doesn't fix it.

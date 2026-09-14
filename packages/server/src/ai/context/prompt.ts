@@ -91,7 +91,11 @@ export function buildRevisionRequest(
   return { purpose: 'revision', system: systemBlocks(settings), user, effort: 'low' };
 }
 
-/** D-118's structured output: the proposed amount and its one-line reason. */
+/**
+ * D-118's structured output: the proposed amount, the injury it establishes,
+ * and why it is that severe. D-130 keeps `injury` free of severity so it
+ * stays true whatever amount the player commits.
+ */
 export function harmProposalSchema(range: readonly [number, number]) {
   const [low, high] = range;
   return z.object({
@@ -100,7 +104,14 @@ export function harmProposalSchema(range: readonly [number, number]) {
       .min(low)
       .max(high)
       .describe(`The health change, from ${low} (major harm) to ${high} (minor harm).`),
-    reason: z.string().min(1).max(200).describe('One sentence of fiction explaining the severity.'),
+    injury: z
+      .string()
+      .min(1)
+      .max(200)
+      .describe(
+        'One sentence: what physically happens to the character and where. No words for how severe it is.',
+      ),
+    reason: z.string().min(1).max(120).describe('A short phrase for why it is this severe.'),
   });
 }
 
@@ -120,8 +131,10 @@ export function buildHarmProposalRequest(
     `<campaign_state>\n${renderState(state)}\n</campaign_state>`,
     `<resolved_beat>\n${facts.lines.join('\n')}\n</resolved_beat>`,
     `${target.callsign} is about to suffer a ${target.meter} loss. Judging only from the fiction above, ` +
-      `propose how severe it is: an amount from ${high} (minor) to ${low} (major), and one sentence of ` +
-      'fiction saying why. The player will adjust it before it applies.',
+      `propose an amount from ${high} (minor) to ${low} (major); the injury, meaning what physically ` +
+      'happens to them and where, without words for severity; and a short reason for the severity. ' +
+      'The injury happens to the character: it describes nothing they do. The player may change the ' +
+      'amount before it applies; the injury is narrated at whatever severity they choose.',
   ].join('\n\n');
 
   return { purpose: 'harm_proposal', system: systemBlocks(settings), user, effort: 'low' };

@@ -109,6 +109,7 @@ function beatSeven() {
     chainToHarm = b.last().id;
   });
 
+  let proposal: EventId;
   command(b, '3', chainToHarm!, (o) => {
     b.add(
       'amount.proposed',
@@ -117,10 +118,12 @@ function beatSeven() {
         characterId: ROOK,
         meter: 'health',
         amount: -2,
+        injury: "A ruptured conduit sprays sparks across Rook's arm.",
         reason: 'A serious burn.',
       },
       { ...o, actor: AI_ACTOR },
     );
+    proposal = b.last().id;
   });
 
   const endureHarm = command(b, '4', chainToHarm!, (o) => {
@@ -136,7 +139,13 @@ function beatSeven() {
     );
     b.add(
       'amount.committed',
-      { moveId: ENDURE_HARM, characterId: ROOK, meter: 'health', amount: -1 },
+      {
+        moveId: ENDURE_HARM,
+        characterId: ROOK,
+        meter: 'health',
+        amount: -1,
+        proposalEventId: proposal!,
+      },
       o,
     );
     b.add(
@@ -163,7 +172,7 @@ function beatSeven() {
     );
   });
 
-  return { b, faceDanger, payThePrice, endureHarm };
+  return { b, faceDanger, payThePrice, endureHarm, proposal: proposal! };
 }
 
 describe('resolveBeatScope (D-110)', () => {
@@ -241,7 +250,7 @@ describe('describeBeat (task 7.4)', () => {
     const events = b.build();
     const scope = resolveBeatScope(events, endureHarm as never);
     if (!scope.ok) throw new Error(scope.detail);
-    return describeBeat(scope.events, project(events));
+    return describeBeat(scope.events, project(events), events);
   }
 
   it('states the resolved chain as facts, in order, with the declared action', () => {
@@ -257,13 +266,95 @@ describe('describeBeat (task 7.4)', () => {
       'This leads to Endure Harm.',
       'Rook makes the move Endure Harm with health.',
       'The player set the health loss at 1 for Rook.',
+      "The injury, as the Guide established it: A ruptured conduit sprays sparks across Rook's arm.",
+      "The player judged it milder than the Guide's proposed 2: narrate that injury at the severity the player set.",
       'Rook: health -1.',
       'Roll: action die 5 +4 health = 9, against challenge dice 3 and 6: a strong hit.',
     ]);
   });
 
-  it('follows the committed amount, never the AI proposal', () => {
-    expect(facts().lines.join('\n')).not.toContain('serious burn');
+  it('carries the established injury but never the severity the player overrode (D-130)', () => {
+    const text = facts().lines.join('\n');
+    expect(text).toContain('ruptured conduit');
+    expect(text).not.toContain('serious burn');
+    expect(text).not.toMatch(/loss at 2/);
+  });
+
+  it('adds no adjustment line when the player committed the proposed amount', () => {
+    const { b, endureHarm } = beatSeven();
+    const events = b
+      .build()
+      .map((e) =>
+        e.type === 'amount.committed' ? { ...e, payload: { ...e.payload, amount: -2 } } : e,
+      ) as AstrolabeEvent[];
+    const scope = resolveBeatScope(events, endureHarm as never);
+    if (!scope.ok) throw new Error(scope.detail);
+    const lines = describeBeat(scope.events, project(events), events).lines;
+    expect(lines).toContain(
+      "The injury, as the Guide established it: A ruptured conduit sprays sparks across Rook's arm.",
+    );
+    expect(lines.join('\n')).not.toMatch(/judged it/);
+  });
+
+  it('finds the injury of a standalone suffer move, whose proposal is outside the beat', () => {
+    const b = goldenSessionPrelude();
+    command(b, '10', null, (o) => {
+      b.add(
+        'amount.proposed',
+        {
+          moveId: ENDURE_HARM,
+          characterId: ROOK,
+          meter: 'health',
+          amount: -1,
+          injury: 'A spur of sheared track catches Rook under the arm.',
+          reason: 'A shallow cut.',
+        },
+        { ...o, actor: AI_ACTOR },
+      );
+    });
+    const proposal = b.last().id;
+    const harm = command(b, '11', null, (o) => {
+      b.add(
+        'move.invoked',
+        { moveId: ENDURE_HARM, actorCharacterId: ROOK, adds: [] },
+        { ...o, actor: PLAYER_ACTOR },
+      );
+      b.add(
+        'amount.committed',
+        {
+          moveId: ENDURE_HARM,
+          characterId: ROOK,
+          meter: 'health',
+          amount: -1,
+          proposalEventId: proposal,
+        },
+        o,
+      );
+    });
+    const events = b.build();
+    const scope = resolveBeatScope(events, harm as never);
+    if (!scope.ok) throw new Error(scope.detail);
+
+    expect(scope.events.some((e) => e.id === proposal)).toBe(false);
+    expect(describeBeat(scope.events, project(events), events).lines).toContain(
+      'The injury, as the Guide established it: A spur of sheared track catches Rook under the arm.',
+    );
+  });
+
+  it('establishes nothing from a voided proposal', () => {
+    const { b, endureHarm, proposal } = beatSeven();
+    b.add('event.voided', {
+      targetEventId: proposal,
+      kind: 'player_void',
+      reason: 'wrong wound',
+      cascaded: [proposal],
+    });
+    const events = b.build();
+    const scope = resolveBeatScope(events, endureHarm as never);
+    if (!scope.ok) throw new Error(scope.detail);
+    expect(describeBeat(scope.events, project(events), events).lines.join('\n')).not.toMatch(
+      /injury|judged it/,
+    );
   });
 
   it('flags the chain as dramatic', () => {
@@ -297,7 +388,7 @@ describe('prompt assembly (tasks 7.4, 7.6)', () => {
     const events = b.build();
     const scope = resolveBeatScope(events, endureHarm as never);
     if (!scope.ok) throw new Error(scope.detail);
-    return { events, facts: describeBeat(scope.events, project(events)) };
+    return { events, facts: describeBeat(scope.events, project(events), events) };
   }
 
   it('puts the stable rules and the latitude in cached system blocks, and the beat after them', () => {
@@ -368,7 +459,7 @@ describe('prompt assembly (tasks 7.4, 7.6)', () => {
     const request = buildBeatRequest(
       project(events),
       events,
-      describeBeat(scope.events, project(events)),
+      describeBeat(scope.events, project(events), events),
       COLOR,
     );
 

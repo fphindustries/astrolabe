@@ -214,7 +214,11 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
     const { campaignId, characterId } = await moveMade();
     ai.enqueue({
       kind: 'structured',
-      value: { amount: -1, reason: 'A glancing blow off the armour.' },
+      value: {
+        amount: -1,
+        injury: "A falling panel glances off Rook's shoulder plate.",
+        reason: 'The armour took most of it.',
+      },
     });
 
     const response = await app.inject({
@@ -231,7 +235,8 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
     expect(response.json()).toMatchObject({
       ok: true,
       amount: -1,
-      reason: 'A glancing blow off the armour.',
+      injury: "A falling panel glances off Rook's shoulder plate.",
+      reason: 'The armour took most of it.',
     });
   });
 

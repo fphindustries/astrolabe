@@ -42,7 +42,11 @@ function devStubResponse(
   if (mode === 'structured' && request.purpose === 'harm_proposal') {
     return {
       kind: 'structured',
-      value: { amount: -1, reason: 'Stub proposal: a glancing blow.' },
+      value: {
+        amount: -1,
+        injury: 'Stub proposal: something strikes the character’s arm.',
+        reason: 'Stub proposal: a glancing blow.',
+      },
     };
   }
   if (mode === 'structured' && request.purpose === 'character_proposal') {

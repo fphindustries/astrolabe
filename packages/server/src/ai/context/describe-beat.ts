@@ -1,5 +1,7 @@
 import { MOVE_AUTOMATION_SPECS, STARFORGED, type MoveId, type OutcomeTier } from '@astrolabe/rules';
-import type { AstrolabeEvent, CampaignState, Delta } from '@astrolabe/shared';
+import type { AstrolabeEvent, CampaignState, Delta, EventId, PayloadFor } from '@astrolabe/shared';
+
+import { computeVoidState, isSuppressed } from '../../projection/void-state.js';
 
 /**
  * A beat's resolved mechanics as plain statements the AI narrates from
@@ -13,9 +15,14 @@ import type { AstrolabeEvent, CampaignState, Delta } from '@astrolabe/shared';
  * the declared action) appears here, because none of it is stored.
  *
  * Built from the events of one beat scope (`beat-scope.ts`), in log order.
- * An AI-proposed amount is left out on purpose: the passage follows the
- * amount the player committed (Beat 7), and naming the proposal would
- * invite the prose to follow the wrong number.
+ * An AI-proposed *amount* and its severity reason are left out on purpose:
+ * the passage follows the amount the player committed (Beat 7), and naming
+ * the proposal's number would invite the prose to follow the wrong one. The
+ * proposal's *injury* is carried (D-130). It was established once, and the
+ * passage narrates that wound at the committed severity rather than
+ * inventing another. The injury is found through the committed amount's
+ * `proposalEventId` in the whole `log`, because a standalone suffer move's
+ * proposal sits outside the beat's causal scope.
  */
 
 export interface BeatFacts {
@@ -33,8 +40,13 @@ const TIER_WORDS: Record<OutcomeTier, string> = {
   miss: 'a miss',
 };
 
-export function describeBeat(events: readonly AstrolabeEvent[], state: CampaignState): BeatFacts {
+export function describeBeat(
+  events: readonly AstrolabeEvent[],
+  state: CampaignState,
+  log: readonly AstrolabeEvent[],
+): BeatFacts {
   const lines: string[] = [];
+  const liveProposal = proposalLookup(log);
   const finalTier = new Map<string, OutcomeTier>();
   let match = false;
   let burned = false;
@@ -133,6 +145,19 @@ export function describeBeat(events: readonly AstrolabeEvent[], state: CampaignS
         lines.push(
           `The player set the ${p.meter} loss at ${Math.abs(p.amount)} for ${who(p.characterId)}.`,
         );
+        const proposal =
+          p.proposalEventId === undefined ? undefined : liveProposal(p.proposalEventId);
+        if (proposal?.injury !== undefined) {
+          lines.push(`The injury, as the Guide established it: ${proposal.injury}`);
+          if (Math.abs(proposal.amount) !== Math.abs(p.amount)) {
+            const direction =
+              Math.abs(p.amount) < Math.abs(proposal.amount) ? 'milder' : 'more severe';
+            lines.push(
+              `The player judged it ${direction} than the Guide's proposed ${Math.abs(proposal.amount)}: ` +
+                'narrate that injury at the severity the player set.',
+            );
+          }
+        }
         break;
       }
       case 'state.changed':
@@ -159,6 +184,19 @@ export function describeBeat(events: readonly AstrolabeEvent[], state: CampaignS
     burned,
     chainedToSuffer,
   };
+}
+
+/** A live `amount.proposed` payload by event id; a voided proposal establishes nothing. */
+function proposalLookup(
+  log: readonly AstrolabeEvent[],
+): (id: EventId) => PayloadFor<'amount.proposed'> | undefined {
+  const voids = computeVoidState(log);
+  const proposals = new Map(
+    log
+      .filter((event) => event.type === 'amount.proposed' && !isSuppressed(event, voids))
+      .map((event) => [event.id, event.payload as PayloadFor<'amount.proposed'>]),
+  );
+  return (id) => proposals.get(id);
 }
 
 function describeDelta(delta: Delta, who: (id: string | undefined) => string): string {

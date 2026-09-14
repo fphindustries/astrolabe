@@ -215,11 +215,17 @@ export const InvokeMoveRequestBodySchema = z.object({
   /**
    * Endure Harm's harm intake (A13, D-16): required when the move's
    * automation declares a `preRoll`, committed in the same command as the
-   * roll it precedes. The composer shows a deterministic placeholder (the
-   * effect's declared range's midpoint) for the player to adjust — there is
-   * no AI yet (group 7) to propose a real one.
+   * roll it precedes. The Guide proposes an amount (D-118); the player
+   * commits whatever they choose.
    */
   preRollAmount: z.int().optional(),
+  /**
+   * D-130: the Guide's `amount.proposed` event the amount was committed
+   * against, whatever number the player settled on, so its injury carries
+   * into narration. The server checks it names a live proposal for this
+   * move, character and meter. Omitted when no proposal had arrived.
+   */
+  proposalEventId: EventIdSchema.optional(),
   /**
    * Following an `offer` or `auto` chain from an earlier move (Face
    * Danger's miss offering Pay the Price; Pay the Price's table result
@@ -441,6 +447,8 @@ export type ProposeAmountResponse =
       readonly ok: true;
       readonly eventId: EventId;
       readonly amount: number;
+      /** D-130: absent only on a proposal written before injuries were split out. */
+      readonly injury?: string;
       readonly reason: string;
     }
   | { readonly ok: false; readonly errorKind: AiErrorKind; readonly message: string };

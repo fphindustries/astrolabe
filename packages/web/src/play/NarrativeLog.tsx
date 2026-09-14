@@ -191,7 +191,7 @@ function describeEntry(entry: EntryView): string {
     case 'oracle_rolled':
       return `Oracle: ${body.roll} — ${withoutLinks(body.rowText)}`;
     case 'amount_proposed':
-      return `Guide proposes ${body.amount >= 0 ? '+' : ''}${body.amount} ${body.meter} — ${body.reason}`;
+      return `Guide proposes ${body.amount >= 0 ? '+' : ''}${body.amount} ${body.meter} — ${body.injury === undefined ? body.reason : `${body.injury} (${body.reason})`}`;
     case 'amount_committed':
       return `Committed ${body.amount >= 0 ? '+' : ''}${body.amount} ${body.meter}`;
     case 'track_created':

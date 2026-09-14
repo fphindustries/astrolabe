@@ -444,10 +444,17 @@ describe.skipIf(!hasTestDatabase)('the AI commands (group 7)', () => {
       const chain = await beatSeven();
       const ai = new StubProvider({
         responses: [
-          { kind: 'structured', value: { amount: -5, reason: 'Far too much.' } },
           {
             kind: 'structured',
-            value: { amount: -2, reason: 'A ruptured conduit sprays sparks across his arm.' },
+            value: { amount: -5, injury: 'Everything at once.', reason: 'Far too much.' },
+          },
+          {
+            kind: 'structured',
+            value: {
+              amount: -2,
+              injury: "A ruptured conduit sprays sparks across Rook's arm.",
+              reason: 'A serious burn.',
+            },
           },
         ],
       });
@@ -464,7 +471,8 @@ describe.skipIf(!hasTestDatabase)('the AI commands (group 7)', () => {
       expect(result).toMatchObject({
         ok: true,
         amount: -2,
-        reason: 'A ruptured conduit sprays sparks across his arm.',
+        injury: "A ruptured conduit sprays sparks across Rook's arm.",
+        reason: 'A serious burn.',
       });
       expect(ai.requests[0]?.user).toContain('Oracle result');
       const events = await readEvents(db.sql, chain.campaignId);
@@ -472,6 +480,7 @@ describe.skipIf(!hasTestDatabase)('the AI commands (group 7)', () => {
       expect(proposal).toMatchObject({
         actor: { kind: 'ai' },
         subjectCharacterId: chain.characterId,
+        payload: { injury: "A ruptured conduit sprays sparks across Rook's arm." },
       });
       expect(proposal?.causedBy).not.toBeNull();
       expect(events.filter((e) => e.commandId === proposal?.commandId).map((e) => e.type)).toEqual([
