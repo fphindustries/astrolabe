@@ -119,7 +119,7 @@ narrative log is a second read model with its own paged query.
 - [x] 4.3 Sector as a location list with routes
 - [x] 4.4 Inciting incident: AI proposals or player-written; becomes the first vow — player-written path only (D-101)
 - [x] 4.5 Campaign settings: narration latitude, narration length, reroll cap
-- [ ] 4.6 AI-proposed inciting incidents, grounded in the incident oracle and the characters' backgrounds, on 3.3's proposal plumbing; the player picks, edits or writes their own (D-34, D-101, D-126)
+- [ ] 4.6 AI-proposed inciting incidents, grounded in the incident oracle and the characters' backgrounds, on 3.3's proposal plumbing; the player picks, edits or writes their own (D-34, D-101, D-126, D-132–D-134)
 
 ### 5. Play screen shell
 
