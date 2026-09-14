@@ -170,7 +170,16 @@ export function checkCharacterProposal(
   ).map((problem) => problem.message);
 
   const known = new Set(rollKeys);
-  const inConcept = (text: string) => concept.toLowerCase().includes(text.trim().toLowerCase());
+  // Whole words only, so "Ace" is not found inside "spacer" and a
+  // one-letter value cannot slip its grounding.
+  const inConcept = (text: string) => {
+    const value = text.trim();
+    if (value.length < 2) {
+      return false;
+    }
+    const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`(^|[^\\p{L}\\p{N}])${escaped}($|[^\\p{L}\\p{N}])`, 'iu').test(concept);
+  };
   const grounded = [
     ['name', value.name.groundedIn, inConcept(value.name.value)],
     ['callsign', value.callsign.groundedIn, inConcept(value.callsign.value)],

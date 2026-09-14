@@ -252,6 +252,33 @@ describe.skipIf(!hasTestDatabase)('character proposals (task 3.3, D-123, D-124)'
     });
   });
 
+  it('recovers when only a citation was wrong, and never exempts a name found inside another word', async () => {
+    const campaignId = await campaign();
+    const ai = new StubProvider({
+      responses: [
+        {
+          kind: 'structured',
+          // "Ace" appears in the concept only inside "spacer": still ungrounded.
+          value: goodProposal({
+            callsign: { value: 'Ace', reason: 'Close enough.', groundedIn: [] },
+          }),
+        },
+        { kind: 'structured', value: goodProposal() },
+      ],
+    });
+
+    const result = await proposeCharacter(db.sql, ai, {
+      campaignId,
+      commandId: newId(),
+      actor: PLAYER,
+      concept: `A spacer. ${CONCEPT}`,
+      rng: rolls(),
+    });
+
+    expect(result).toMatchObject({ ok: true, proposal: { callsign: { value: 'Lantern' } } });
+    expect(ai.requests[1]?.user).toMatch(/callsign cites no oracle roll/);
+  });
+
   it('records an outage with its rolls and no proposal', async () => {
     const campaignId = await campaign();
     const ai = new StubProvider({ responses: [{ kind: 'error', errorKind: 'unavailable' }] });
