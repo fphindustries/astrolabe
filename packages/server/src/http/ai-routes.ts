@@ -8,6 +8,7 @@ import {
   ProposeAmountRequestBodySchema,
   ProposeCharacterRequestBodySchema,
   ProposeIncidentsRequestBodySchema,
+  SuggestMoveRequestBodySchema,
   type AiStatusResponse,
   type NarrationFrame,
   type NarrationRefusalResponse,
@@ -15,6 +16,7 @@ import {
   type ProposeAmountResponse,
   type ProposeCharacterResponse,
   type ProposeIncidentsResponse,
+  type SuggestMoveResponse,
 } from '@astrolabe/shared';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { Sql } from 'postgres';
@@ -31,6 +33,7 @@ import {
   proposeAmount,
   proposeCharacter,
   proposeIncidents,
+  suggestMove,
   runBeatNarration,
   runCorrection,
   type AiCommandResult,
@@ -245,6 +248,41 @@ export function registerAiRoutes(
           status,
         );
         // D-132: the same contract as a character proposal (D-116).
+        reply.code(201);
+        return result;
+      } catch (error) {
+        return refusal(error, reply);
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/move-suggestions',
+    async (request, reply): Promise<SuggestMoveResponse | NarrationRefusalResponse | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
+        return undefined;
+      }
+      const parsedBody = SuggestMoveRequestBodySchema.safeParse(request.body);
+      if (!parsedBody.success) {
+        reply.code(400);
+        return undefined;
+      }
+
+      try {
+        const result = await suggestMove(
+          sql,
+          ai,
+          {
+            campaignId: id,
+            commandId: parsedBody.data.commandId,
+            actor: PLAYER,
+            actorCharacterId: parsedBody.data.actorCharacterId,
+            actionText: parsedBody.data.actionText,
+          },
+          status,
+        );
+        // D-135: an outage is a recorded outcome, as for every proposal (D-116).
         reply.code(201);
         return result;
       } catch (error) {

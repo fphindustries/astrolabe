@@ -413,6 +413,7 @@ export function buildApp({ sql, ai, checker }: BuildAppOptions): FastifyInstance
         actionText,
         preRollAmount,
         proposalEventId,
+        suggestionEventId,
         chainedFromCommandId,
       } = parsedBody.data;
 
@@ -429,6 +430,7 @@ export function buildApp({ sql, ai, checker }: BuildAppOptions): FastifyInstance
           ...(actionText !== undefined ? { actionText } : {}),
           ...(preRollAmount !== undefined ? { preRollAmount } : {}),
           ...(proposalEventId !== undefined ? { proposalEventId } : {}),
+          ...(suggestionEventId !== undefined ? { suggestionEventId } : {}),
           ...(chainedFromCommandId !== undefined ? { chainedFromCommandId } : {}),
         });
         reply.code(201);

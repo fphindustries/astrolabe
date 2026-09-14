@@ -63,6 +63,10 @@ const PROBES: { readonly [T in EventType]: Probe } = {
         actor: AI_ACTOR,
       }),
   },
+  'move.suggested': {
+    probe: (b) =>
+      b.add('move.suggested', SAMPLE_PAYLOADS['move.suggested'] as never, { actor: AI_ACTOR }),
+  },
   'session.began': {
     probe: (b) => b.add('session.began', { sessionId: SESSION_ID, number: 3 }),
   },

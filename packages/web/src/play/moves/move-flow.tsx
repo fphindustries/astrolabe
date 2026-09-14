@@ -3,6 +3,8 @@ import { createContext, useContext, useReducer, type Dispatch, type ReactNode } 
 import type { CharacterId, MoveId } from '@astrolabe/rules';
 import type { CommandId, InvokeMoveResponse, ResolvePayThePriceResponse } from '@astrolabe/shared';
 
+import type { ComposerPrefill } from './suggestion.js';
+
 /**
  * The move-resolution flow (group 6): a sibling to `play-ui.tsx`'s
  * `DrawerState`, not folded into it — a roll is a multi-step decision, not
@@ -22,6 +24,8 @@ export type MoveFlowState =
       readonly actorCharacterId: CharacterId;
       /** Set only when this invocation follows an offered/auto chain. */
       readonly chainedFromCommandId?: CommandId;
+      /** D-135: typed words, and a Guide suggestion, carried into the composer. */
+      readonly prefill?: ComposerPrefill;
     }
   | {
       readonly step: 'result';
@@ -51,6 +55,7 @@ type MoveFlowAction =
       readonly moveId: MoveId;
       readonly actorCharacterId: CharacterId;
       readonly chainedFromCommandId?: CommandId;
+      readonly prefill?: ComposerPrefill;
     }
   | {
       readonly type: 'move-resolved';
@@ -83,6 +88,7 @@ function moveFlowReducer(_state: MoveFlowState, action: MoveFlowAction): MoveFlo
         ...(action.chainedFromCommandId !== undefined
           ? { chainedFromCommandId: action.chainedFromCommandId }
           : {}),
+        ...(action.prefill !== undefined ? { prefill: action.prefill } : {}),
       };
     case 'move-resolved':
       return {
@@ -120,7 +126,9 @@ export function MoveFlowProvider({ children }: { readonly children: ReactNode })
   const [state, dispatch] = useReducer(moveFlowReducer, { step: 'idle' });
   return (
     <MoveFlowStateContext.Provider value={state}>
-      <MoveFlowDispatchContext.Provider value={dispatch}>{children}</MoveFlowDispatchContext.Provider>
+      <MoveFlowDispatchContext.Provider value={dispatch}>
+        {children}
+      </MoveFlowDispatchContext.Provider>
     </MoveFlowStateContext.Provider>
   );
 }
@@ -138,6 +146,7 @@ export function useMoveFlowActions(): {
     moveId: MoveId,
     actorCharacterId: CharacterId,
     chainedFromCommandId?: CommandId,
+    prefill?: ComposerPrefill,
   ) => void;
   moveResolved: (
     moveId: MoveId,
@@ -159,12 +168,13 @@ export function useMoveFlowActions(): {
     throw new Error('useMoveFlowActions must be used within a MoveFlowProvider');
   }
   return {
-    selectMove: (moveId, actorCharacterId, chainedFromCommandId) =>
+    selectMove: (moveId, actorCharacterId, chainedFromCommandId, prefill) =>
       dispatch({
         type: 'select-move',
         moveId,
         actorCharacterId,
         ...(chainedFromCommandId !== undefined ? { chainedFromCommandId } : {}),
+        ...(prefill !== undefined ? { prefill } : {}),
       }),
     moveResolved: (moveId, actorCharacterId, invoked, commandId, aidingAllyId) =>
       dispatch({

@@ -350,6 +350,15 @@ export const SAMPLE_PAYLOADS: { [T in EventType]: PayloadFor<T> } = {
       },
     ],
   },
+  'move.suggested': {
+    actorCharacterId: VESNA,
+    actionText: 'Juno jacks into the docking port and pulls the station logs.',
+    moveId: 'move:adventure/gather-information',
+    rollOption: { using: 'stat', stat: 'wits' },
+    triggerText: 'When you search for clues, conduct an investigation',
+    reason: 'Pulling the logs is an investigation.',
+    confidence: 'high',
+  },
 };
 
 /** Every sample as a complete, valid event, in catalogue order. */

@@ -49,6 +49,47 @@ export const MoveInvokedSchema = z.object({
   adds: z.array(RollAdjustmentSchema),
   /** "Juno jacks into the docking port and pulls the station logs." */
   actionText: z.string().optional(),
+  /**
+   * D-135: the Guide's `move.suggested` this invocation was filled from.
+   * A field, not `causedBy`: beat narration walks `causedBy` up to the
+   * root move (D-110). The server checks it names a live suggestion for
+   * this move and actor.
+   */
+  suggestionEventId: EventIdSchema.optional(),
+});
+
+/** D-135's bounded confidence: shown to the player, never read by anything mechanical. */
+export const SuggestionConfidenceSchema = z.enum(['low', 'medium', 'high']);
+
+/**
+ * The Guide's answer to an action described without a move (task 7.12,
+ * D-14, D-120, D-135). A suggestion, not a decision: it changes nothing,
+ * and accepting it only fills the composer.
+ *
+ * `triggerText` is a verbatim quote of the move's trigger text or the
+ * chosen roll option's condition text, checked with `isVerbatimClause`
+ * before it is written. When no candidate move fits, `moveId` is null and
+ * `reason` says why; there is then no trigger to quote.
+ */
+export const MoveSuggestedSchema = z.object({
+  actorCharacterId: CharacterIdSchema,
+  actionText: z.string().min(1),
+  moveId: MoveIdSchema.nullable(),
+  rollOption: z
+    .discriminatedUnion('using', [
+      z.object({
+        using: z.literal('stat'),
+        stat: z.enum(['edge', 'heart', 'iron', 'shadow', 'wits']),
+      }),
+      z.object({
+        using: z.literal('condition_meter'),
+        meter: z.enum(['health', 'spirit', 'supply']),
+      }),
+    ])
+    .optional(),
+  triggerText: z.string().min(1).optional(),
+  reason: z.string().min(1),
+  confidence: SuggestionConfidenceSchema,
 });
 
 /**

@@ -89,6 +89,19 @@ function devStubResponse(
       },
     };
   }
+  if (mode === 'structured' && request.purpose === 'move_suggestion') {
+    // Gather Information fits any described action well enough to prove the plumbing.
+    return {
+      kind: 'structured',
+      value: {
+        moveId: 'move:adventure/gather-information',
+        rollOption: 'wits',
+        triggerText: 'When you search for clues',
+        reason: 'Stub suggestion: the action reads as looking for something.',
+        confidence: 'low',
+      },
+    };
+  }
   if (mode === 'structured' && request.purpose === 'incident_proposal') {
     return { kind: 'structured', value: stubIncidentProposal(request.user) };
   }

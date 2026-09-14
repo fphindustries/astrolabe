@@ -158,7 +158,7 @@ narrative log is a second read model with its own paged query.
 - [x] 7.9 Narration correction: flag, rewrite, log
 - [x] 7.10 Token counter in the UI
 - [x] 7.11 Graceful stop when the provider is unavailable, with state intact
-- [ ] 7.12 AI move suggestion when an action is described without a move: move and roll option, verbatim trigger text, reason and confidence, inspectable, never blocking a direct pick (D-14, D-120, D-135, A19)
+- [x] 7.12 AI move suggestion when an action is described without a move: move and roll option, verbatim trigger text, reason and confidence, inspectable, never blocking a direct pick (D-14, D-120, D-135, A19)
 - [ ] 7.13 Trigger-mismatch note on a beat whose move doesn't fit the described action, with the same traceability, never blocking or delaying the roll (D-37, D-121, A20). No golden-session beat exercises it
 - [x] 7.14 Segmented narration: fact keys and kinds, segments tagged and cited as they stream, checks that need no AI, D-115's routine cap for beats with no declared action (D-127, A21). Verified live at all three latitudes (see "Implementation notes (task 7.14)")
 - [x] 7.15 Authority check: shared rubric in the narrator prompt and a second-model checker; provisional streaming, unmistakable logged withdrawal, one re-ask, pause on a second failure; recorded-violation regression tests, keyed eval, live matrix across all three latitudes. Sign-off also checks that no passage gives a pronoun to a character whose pronouns aren't recorded (D-128, D-129, D-131, A21). Verified live: 54 checked narrations across all three latitudes; eval at 95% precision, 86% recall (see "Implementation notes (task 7.15)")
@@ -1625,3 +1625,73 @@ A browser pass on the stub provider walked a new campaign through the wizard. It
 - swearing the edited vow, whose command's `causedBy` is the `incident.proposed` event.
 
 The console was clean.
+
+## Implementation notes (task 7.12, AI move suggestion)
+
+7.12 is done (D-14, D-120, D-135, A19). This is Beat 3's fallback: "a player who typed the action without picking a move would get a suggestion instead".
+
+### Shape
+
+- **Candidates and prompt** (`ai/context/suggestion.ts`, pure).
+  - `SUGGESTABLE_MOVES` is D-135's filter: moves that are automated and in the relevant-moves panel, minus session moves and Pay the Price. It yields Face Danger, Secure an Advantage, Gather Information, Swear an Iron Vow, Reach a Milestone, Endure Harm and Ask the Oracle.
+  - The candidates are rendered once, each with its trigger text and each roll option's condition text, and sent as a cached system block. The user turn carries projected state, the actor and the action.
+  - `SUGGESTION_RULES` forbids adding to what the player described, and carries D-131's pronoun rule (see the live pass).
+- **Answer and check.** `moveSuggestionSchema` gives `{ moveId | null, rollOption | null, triggerText | null, reason, confidence }`, with moves and options as enums. `checkMoveSuggestion` requires:
+  - no roll option or quote when no move fits;
+  - a roll option that belongs to the move, and one at all where the player has a choice (Face Danger's five stats; not Endure Harm's highest-of);
+  - a quote of at least 12 characters that is verbatim, per `isVerbatimClause`, in the move's `trigger.text` or the chosen option's condition text.
+
+  A failing answer is re-asked once with the problem stated.
+- **Command** (`db/suggestion-commands.ts`). `suggestMove` writes the accounting and `move.suggested` in the open session and scene, or `ai.failed`. It replays by command id, and refuses an empty action or unknown character before asking.
+- **Invocation.** `invokeMove` accepts `suggestionEventId` and writes it on `move.invoked`. `requireLiveSuggestion` refuses:
+  - an id that isn't a `move.suggested`;
+  - a suggestion for another move or character;
+  - a voided suggestion.
+
+  What the player rolls with and writes stays theirs.
+- **Link markup.** A rules test in `text/plain.test.ts` pins that no trigger or condition text has link or emphasis markup, so the stored quote is also what the player reads (D-135).
+- **Route.** `POST /api/campaigns/:id/move-suggestions {commandId, actorCharacterId, actionText}` returns 201 with the suggestion or the failure. The invoke route passes `suggestionEventId` through.
+- **Web.** The idle composer is now `ActionPrompt`, with the relevant-moves panel first.
+  - **Panel first:** the first browser pass put the new text box above the panel, and in a short window that pushed the panel below the fold. D-14 keeps the direct pick in view.
+  - **Asking:** below the panel sit "What do you do?" and **Suggest a move**. The card shows the move and roll option, the confidence in words, "Why?" (the quoted trigger and the reason), and **Use this**. When nothing fits, it says so with the reason.
+  - **Stale answers:** a suggestion disappears once the typed words change, and the prompt is keyed by the acting character.
+  - **Picking by hand** carries the typed words into the composer. **Use this** also carries the roll option and the suggestion, which the composer marks "Guide" with the same "Why?". The composer then sends `suggestionEventId`.
+  - Pure helpers are in `play/moves/suggestion.ts`.
+- **Dev stub.** It answers Gather Information +wits at low confidence.
+
+### Live pass
+
+This was 2026-09-14 with claude-opus-5 on the `session-2-open` fixture. Every run is in `ai/eval/live-suggestions-7.12.json`.
+
+- **10 of 10 answered on the first attempt**, in 2.1–3.7 s each.
+- **Matches:**
+  - Beat 3's "Juno jacks into the docking port and pulls the station logs" gave Gather Information +wits at high confidence.
+  - Beat 4's two actions gave Gather Information and Secure an Advantage.
+  - Face Danger came back +iron for shouldering through a bulkhead and +shadow for slipping past drones.
+  - A vow sworn on a blade gave Swear an Iron Vow; asking the oracle gave Ask the Oracle.
+  - Closing a hatch and eating a ration bar each gave "no move fits", with a reason.
+- **Outside the candidates:** punching a drone, which is combat, came back Face Danger +iron at medium confidence, a fair reading within them.
+- **Pronouns.** One reason called Rook "them", but Rook's pronouns aren't recorded. The suggestion prompt lacked the narrator's D-131 rule. With the rule added, the four Rook actions twice more gave no pronoun in 8 of 8.
+- **Adding to the action.** Reasons stayed on the rules. Two mild additions: a stat rationale Rook never stated ("applying expertise and focus" for securing the airlock), and "her iron blade" for "her blade". Neither goes further than justifying the roll option.
+
+### Verification
+
+`npm run typecheck`, `npm run lint`, `npm test` (904 tests) and the web build pass. The new tests cover:
+
+- the candidate set and its rendering;
+- the quote, option and no-fit checks;
+- the stub answer passing the check;
+- the command writing, replaying, re-asking, failing and refusing;
+- an invocation naming its suggestion without a `causedBy`, and wrong, unknown or voided suggestions refused;
+- the route, and the suggestion staying out of the log;
+- the card, prefill and staleness helpers;
+- the markup pin.
+
+A browser pass on the stub, on `session-2-open`, covered:
+
+- asking and seeing the card;
+- opening "Why?";
+- **Use this** opening Gather Information prefilled with the Guide marker;
+- rolling, which wrote `move.invoked.suggestionEventId` pointing at the `move.suggested`;
+- the suggestion staying out of the log;
+- switching to Rook and picking Face Danger by hand with the typed words carried over.

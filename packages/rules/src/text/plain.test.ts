@@ -32,4 +32,15 @@ describe('withoutLinks', () => {
     expect(texts.some((text) => text.includes('](id:'))).toBe(true);
     expect(texts.map(withoutLinks).filter((text) => text.includes('](id:'))).toEqual([]);
   });
+
+  it('finds no markup at all in move trigger and condition text, so a verbatim quote of it reads as written (D-135)', () => {
+    const triggers = STARFORGED.moves.flatMap((move) => [
+      move.trigger.text,
+      ...move.trigger.conditions.flatMap((condition) =>
+        condition.text === undefined ? [] : [condition.text],
+      ),
+    ]);
+    expect(triggers.length).toBeGreaterThan(STARFORGED.moves.length);
+    expect(triggers.filter((text) => /\]\(|__|\*\*/.test(text))).toEqual([]);
+  });
 });

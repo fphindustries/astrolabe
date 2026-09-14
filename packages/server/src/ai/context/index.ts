@@ -14,3 +14,4 @@ export * from './length.js';
 export * from './prompt.js';
 export * from './render-state.js';
 export * from './segments.js';
+export * from './suggestion.js';

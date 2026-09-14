@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { CharacterId, MoveId } from '@astrolabe/rules';
 import type {
   BurnMomentumResponse,
@@ -6,12 +6,14 @@ import type {
   EventId,
   InvokeMoveResponse,
   ResolvePayThePriceResponse,
+  SuggestMoveResponse,
   VoidEventResponse,
   VoidPreviewResult,
 } from '@astrolabe/shared';
 
 import { useInvalidateCampaign } from './campaigns.js';
 import { apiGet, apiPost } from './http.js';
+import { aiKeys } from './narration.js';
 
 /**
  * The move flow (task 6.x). Every mutation follows `useCreateCharacter`'s
@@ -33,7 +35,34 @@ export interface InvokeMoveInput {
   readonly preRollAmount?: number;
   /** D-130: the Guide's proposal the amount was committed against. */
   readonly proposalEventId?: EventId;
+  /** D-135: the Guide's suggestion this move was filled from. */
+  readonly suggestionEventId?: EventId;
   readonly chainedFromCommandId?: CommandId;
+}
+
+export interface SuggestMoveInput {
+  readonly actorCharacterId: CharacterId;
+  readonly actionText: string;
+}
+
+/**
+ * Task 7.12 / D-135: ask the Guide which move fits a described action. An
+ * outage is an answer, not a thrown error; nothing waits on it.
+ */
+export function useSuggestMove(campaignId: string) {
+  const invalidate = useInvalidateCampaign(campaignId);
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: SuggestMoveInput) =>
+      apiPost<SuggestMoveResponse>(`/campaigns/${campaignId}/move-suggestions`, {
+        commandId: crypto.randomUUID(),
+        ...input,
+      }),
+    onSettled: () => {
+      invalidate();
+      void queryClient.invalidateQueries({ queryKey: aiKeys.status });
+    },
+  });
 }
 
 export interface InvokedMove {

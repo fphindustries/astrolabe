@@ -5,8 +5,8 @@ import type { CrewCardView } from './crew/crew.js';
 import { MoveComposer } from './moves/MoveComposer.js';
 import { useMoveFlow, useMoveFlowActions } from './moves/move-flow.js';
 import { useNarrationStream } from './narration/narration-stream.js';
+import { ActionPrompt } from './moves/ActionPrompt.js';
 import { PayThePricePicker, PayThePriceResult } from './moves/PayThePriceFlow.js';
-import { RelevantMovesPanel } from './moves/RelevantMovesPanel.js';
 import { ResultCard } from './moves/ResultCard.js';
 import styles from './Composer.module.css';
 
@@ -96,8 +96,12 @@ export function Composer({
       </div>
 
       {flow.step === 'idle' && actor !== undefined && (
-        <RelevantMovesPanel
-          onSelect={(moveId: MoveId) => selectMove(moveId, actor)}
+        // Keyed by the actor: a suggestion answers for one character (D-135).
+        <ActionPrompt
+          key={actor}
+          campaignId={campaignId}
+          actorCharacterId={actor}
+          onSelect={(moveId: MoveId, prefill) => selectMove(moveId, actor, undefined, prefill)}
           onOpenFullList={onOpenMovesDrawer}
         />
       )}
@@ -111,6 +115,7 @@ export function Composer({
           {...(flow.chainedFromCommandId !== undefined
             ? { chainedFromCommandId: flow.chainedFromCommandId }
             : {})}
+          {...(flow.prefill !== undefined ? { prefill: flow.prefill } : {})}
           onResolved={() => {
             /* move-flow already transitions to 'result' via moveResolved */
           }}

@@ -38,6 +38,7 @@ export {
   type CreatedCharacter,
 } from './character-commands.js';
 export { listCampaigns } from './campaign-queries.js';
+export { suggestMove, type SuggestMoveRequest } from './suggestion-commands.js';
 export {
   proposeCharacter,
   proposeIncidents,

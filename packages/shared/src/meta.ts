@@ -340,6 +340,18 @@ export const EVENT_TYPE_META: MetaTable = {
     introduces: none,
     references: none,
   },
+  'move.suggested': {
+    // D-135: a rules judgement the player may take or leave. It changes
+    // nothing and is not a beat; a move filled from it names it in
+    // `suggestionEventId`. It points at the acting character, who exists
+    // before the suggestion and outside any void of it.
+    narrative: false,
+    significant: false,
+    mutatesState: false,
+    voidable: true,
+    introduces: none,
+    references: (p) => [character(p.actorCharacterId)],
+  },
 };
 
 /** The event types the narrative log renders (task 5.4's query). */

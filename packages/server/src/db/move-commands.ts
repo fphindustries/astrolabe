@@ -221,6 +221,32 @@ function requireLiveProposal(
   }
 }
 
+/**
+ * D-135: a `suggestionEventId` must name a live `move.suggested` for this
+ * same move and actor. What the player then rolled with and wrote is
+ * theirs; only the move and who acts must match what was suggested.
+ */
+function requireLiveSuggestion(
+  events: readonly AstrolabeEvent[],
+  request: Pick<InvokeMoveRequest, 'suggestionEventId' | 'moveId' | 'actorCharacterId'>,
+): void {
+  const suggestion = events.find((e) => e.id === request.suggestionEventId);
+  if (suggestion?.type !== 'move.suggested') {
+    throw new MoveRejectedError(
+      'That is not one of the Guide’s move suggestions in this campaign.',
+    );
+  }
+  if (
+    suggestion.payload.moveId !== request.moveId ||
+    suggestion.payload.actorCharacterId !== request.actorCharacterId
+  ) {
+    throw new MoveRejectedError('That suggestion was for a different move or character.');
+  }
+  if (isSuppressed(suggestion, computeVoidState(events))) {
+    throw new MoveRejectedError('That suggestion has been voided.');
+  }
+}
+
 export interface InvokeMoveRequest {
   readonly campaignId: CampaignId;
   readonly commandId: CommandId;
@@ -237,6 +263,8 @@ export interface InvokeMoveRequest {
   readonly preRollAmount?: number;
   /** D-130: the Guide's live proposal this amount was committed against. */
   readonly proposalEventId?: EventId;
+  /** D-135: the Guide's live suggestion this invocation was filled from. */
+  readonly suggestionEventId?: EventId;
   readonly chainedFromCommandId?: CommandId;
   /** Test-only override of the real RNG; defaults to `cryptoRandomSource()`. */
   readonly rng?: RandomSource;
@@ -336,6 +364,9 @@ export async function invokeMove(sql: Sql, request: InvokeMoveRequest): Promise<
   if (request.proposalEventId !== undefined) {
     requireLiveProposal(events, request, preRollMeter);
   }
+  if (request.suggestionEventId !== undefined) {
+    requireLiveSuggestion(events, request);
+  }
 
   const invocation: MoveInvocation = {
     moveId: request.moveId,
@@ -396,6 +427,9 @@ export async function invokeMove(sql: Sql, request: InvokeMoveRequest): Promise<
         ...(request.using !== undefined ? { using: request.using } : {}),
         adds,
         ...(request.actionText !== undefined ? { actionText: request.actionText } : {}),
+        ...(request.suggestionEventId !== undefined
+          ? { suggestionEventId: request.suggestionEventId }
+          : {}),
       },
       sessionId,
       subjectCharacterId: request.actorCharacterId,

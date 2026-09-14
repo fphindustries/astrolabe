@@ -228,6 +228,8 @@ export const InvokeMoveRequestBodySchema = z.object({
    * move, character and meter. Omitted when no proposal had arrived.
    */
   proposalEventId: EventIdSchema.optional(),
+  /** D-135: the Guide's suggestion this invocation was filled from, if any. */
+  suggestionEventId: EventIdSchema.optional(),
   /**
    * Following an `offer` or `auto` chain from an earlier move (Face
    * Danger's miss offering Pay the Price; Pay the Price's table result
@@ -514,6 +516,23 @@ export interface ProposalRoll {
   readonly roll: number;
   readonly rowText: string;
 }
+
+/** Task 7.12 / D-135: ask the Guide which move fits an action the player described. */
+export const SuggestMoveRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  actorCharacterId: CharacterIdSchema,
+  actionText: z.string().trim().min(1).max(2000),
+});
+
+export type SuggestMoveRequestBody = z.infer<typeof SuggestMoveRequestBodySchema>;
+
+export type SuggestMoveResponse =
+  | {
+      readonly ok: true;
+      readonly eventId: EventId;
+      readonly suggestion: PayloadFor<'move.suggested'>;
+    }
+  | { readonly ok: false; readonly errorKind: AiErrorKind; readonly message: string };
 
 /** Task 4.6 / D-132: ask the Guide to propose inciting incidents. */
 export const ProposeIncidentsRequestBodySchema = z.object({

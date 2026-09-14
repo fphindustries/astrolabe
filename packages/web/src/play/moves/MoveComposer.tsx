@@ -16,9 +16,11 @@ import { useCampaignState } from '../../api/campaigns.js';
 import { aiKeys, useProposeAmount } from '../../api/narration.js';
 import type { CrewCardView } from '../crew/crew.js';
 
+import { SuggestionWhy } from './ActionPrompt.js';
 import { AidAllyPicker } from './AidAllyPicker.js';
 import { proposalText } from './harm-proposal.js';
 import { useMoveFlowActions } from './move-flow.js';
+import { rollOptionKey, type ComposerPrefill } from './suggestion.js';
 import styles from './MoveComposer.module.css';
 
 type StatOrMeterOption = Extract<RollOption, { using: 'stat' | 'condition_meter' }>;
@@ -60,6 +62,7 @@ export function MoveComposer({
   moveId,
   actorCharacterId,
   chainedFromCommandId,
+  prefill,
   crew,
   onResolved,
   onCancel,
@@ -68,6 +71,8 @@ export function MoveComposer({
   readonly moveId: MoveId;
   readonly actorCharacterId: CharacterId;
   readonly chainedFromCommandId?: CommandId;
+  /** D-135: the words typed before a move was picked, and the Guide's suggestion if it came from one. */
+  readonly prefill?: ComposerPrefill;
   readonly crew: readonly CrewCardView[];
   readonly onResolved: () => void;
   readonly onCancel: () => void;
@@ -87,10 +92,15 @@ export function MoveComposer({
   const { moveResolved } = useMoveFlowActions();
   const invoke = useInvokeMove(campaignId);
 
+  const suggestedKey =
+    prefill?.rollOption === undefined ? undefined : rollOptionKey(prefill.rollOption);
+  const suggestedOption = rollOptions.find((option) => optionKey(option) === suggestedKey);
+  const firstOption = suggestedOption ?? rollOptions[0];
   const [selectedOption, setSelectedOption] = useState<string | undefined>(
-    rollOptions[0] !== undefined ? optionKey(rollOptions[0]) : undefined,
+    firstOption !== undefined ? optionKey(firstOption) : undefined,
   );
-  const [actionText, setActionText] = useState('');
+  const [actionText, setActionText] = useState(prefill?.actionText ?? '');
+  const suggestion = prefill?.suggestion;
   const [aidingAllyId, setAidingAllyId] = useState<CharacterId | undefined>(undefined);
   const [addLabel, setAddLabel] = useState('');
   const [addAmount, setAddAmount] = useState('');
@@ -162,6 +172,7 @@ export function MoveComposer({
       ...(preRollRange !== undefined && proposal?.ok === true
         ? { proposalEventId: proposal.eventId }
         : {}),
+      ...(suggestion !== undefined ? { suggestionEventId: suggestion.eventId } : {}),
       ...(chainedFromCommandId !== undefined ? { chainedFromCommandId } : {}),
     });
     moveResolved(moveId, actorCharacterId, invoked.response, invoked.commandId, aidingAllyId);
@@ -177,6 +188,13 @@ export function MoveComposer({
         </button>
       </div>
       <p className={styles.trigger}>{withoutLinks(move.trigger.text)}</p>
+      {suggestion !== undefined && (
+        <div className={styles.suggested}>
+          <span className={styles.badge}>Guide</span>
+          <span>Suggested for what you described. The move and the roll are still yours.</span>
+          <SuggestionWhy suggestion={suggestion.payload} />
+        </div>
+      )}
 
       {rollOptions.length > 1 && (
         <fieldset className={styles.rollOptions}>

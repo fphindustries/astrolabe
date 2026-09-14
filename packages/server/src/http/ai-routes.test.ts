@@ -403,6 +403,62 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
     expect(malformed.statusCode).toBe(400);
   });
 
+  it('suggests a move for a described action, and a move filled from it names it (7.12, D-135)', async () => {
+    const { campaignId, characterId } = await moveMade();
+    ai.enqueue({
+      kind: 'structured',
+      value: {
+        moveId: 'move:adventure/gather-information',
+        rollOption: 'wits',
+        triggerText: 'When you search for clues',
+        reason: 'Pulling the logs is looking for clues.',
+        confidence: 'high',
+      },
+    });
+
+    const suggested = await app.inject({
+      method: 'POST',
+      url: `/api/campaigns/${campaignId}/move-suggestions`,
+      payload: {
+        commandId: newId(),
+        actorCharacterId: characterId,
+        actionText: 'Rook pulls the station logs.',
+      },
+    });
+    expect(suggested.statusCode).toBe(201);
+    const body = suggested.json();
+    expect(body).toMatchObject({
+      ok: true,
+      suggestion: { moveId: 'move:adventure/gather-information', confidence: 'high' },
+    });
+    const log = await app.inject({ method: 'GET', url: `/api/campaigns/${campaignId}/log` });
+    expect(log.body).not.toContain(body.eventId);
+
+    const invoked = await app.inject({
+      method: 'POST',
+      url: `/api/campaigns/${campaignId}/moves`,
+      payload: {
+        commandId: newId(),
+        moveId: 'move:adventure/gather-information',
+        actorCharacterId: characterId,
+        using: { using: 'stat', stat: 'wits' },
+        adds: [],
+        actionText: 'Rook pulls the station logs.',
+        suggestionEventId: body.eventId,
+      },
+    });
+    expect(invoked.statusCode).toBe(201);
+    const move = (await readEvents(db.sql, campaignId)).findLast((e) => e.type === 'move.invoked');
+    expect(move?.type === 'move.invoked' && move.payload.suggestionEventId).toBe(body.eventId);
+
+    const empty = await app.inject({
+      method: 'POST',
+      url: `/api/campaigns/${campaignId}/move-suggestions`,
+      payload: { commandId: newId(), actorCharacterId: characterId, actionText: ' ' },
+    });
+    expect(empty.statusCode).toBe(400);
+  });
+
   it('overrides momentum by hand, and refuses an out-of-range value (A16, D-117)', async () => {
     const { campaignId, characterId } = await moveMade();
 
