@@ -82,12 +82,12 @@ export function renderAssetCatalogue(): string {
 export const CREATION_RULES = `You help a player create a character for Ironsworn: Starforged. The player describes the character they want; you propose a complete starting build that they will review, edit and accept. You propose; the player decides. Nothing you write is final.
 
 The build:
-- Stats: edge, heart, iron, shadow and wits take the values ${STARTING_STAT_ARRAY.join(', ')}, one value each, in whatever order fits the concept.
+- Stats: edge, heart, iron, shadow and wits take the values ${STARTING_STAT_ARRAY.join(', ')}, one value each, in whatever order fits the concept. That is exactly ${describeStatArray()}; check the count before answering.
 - Assets: exactly three. Two must be paths. The third may be a module, support vehicle, companion or another path. Never a deed. The crew's starship is granted separately and does not count. Use only asset ids from the catalogue.
 - A background vow: one sentence the character has sworn, with a challenge rank (troublesome, dangerous, formidable, extreme or epic).
 - A name, a callsign, and two or three backstory hooks.
 
-Grounding: the server has rolled oracle results for the name, callsign and backstory. Build the name, callsign and hooks from those results. You may choose between them, combine them or adapt them to the concept, and the player's own words take precedence where they already give a name. List, for each of those fields, the keys of the rolls you drew on; a name or callsign taken from the player's concept cites none. Do not invent other named people, places or factions.
+Grounding: the server has rolled oracle results for the name, callsign and backstory. Build the name, callsign and hooks from those results. You may choose between them, combine them or adapt them to the concept, and the player's own words take precedence where they already give a name. List, for each of those fields, the keys of the rolls you drew on. Every hook cites at least one roll. A name or callsign the player already wrote in the concept is kept exactly as written and cites none. Do not invent other named people, places or factions.
 
 Every field has a reason: one short sentence tying it to the concept or the roll. Keep the player's concept at the centre; do not decide the character's feelings or inner life beyond what the player described.`;
 
@@ -170,15 +170,13 @@ export function checkCharacterProposal(
   ).map((problem) => problem.message);
 
   const known = new Set(rollKeys);
-  // Whole words only, so "Ace" is not found inside "spacer" and a
-  // one-letter value cannot slip its grounding.
+  // Every word of the value is a whole word of the concept: "Tomas Abara"
+  // is the player's own from `Tomas "Rust" Abara`, but "Ace" is not found
+  // inside "spacer", and a one-letter value cannot slip its grounding.
+  const conceptWords = new Set(wordsOf(concept));
   const inConcept = (text: string) => {
-    const value = text.trim();
-    if (value.length < 2) {
-      return false;
-    }
-    const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return new RegExp(`(^|[^\\p{L}\\p{N}])${escaped}($|[^\\p{L}\\p{N}])`, 'iu').test(concept);
+    const words = wordsOf(text);
+    return words.join('').length >= 2 && words.every((word) => conceptWords.has(word));
   };
   const grounded = [
     ['name', value.name.groundedIn, inConcept(value.name.value)],
@@ -197,4 +195,22 @@ export function checkCharacterProposal(
   }
 
   return problems.length === 0 ? undefined : problems.join(' ');
+}
+
+/**
+ * "1 stat at 3, 2 stats at 2, 2 stats at 1", from the rules data. Found
+ * live: stated only as a list, the AI often gave a third stat a 2.
+ */
+function describeStatArray(): string {
+  const counts = new Map<number, number>();
+  for (const value of STARTING_STAT_ARRAY) {
+    counts.set(value, (counts.get(value) ?? 0) + 1);
+  }
+  return [...counts]
+    .map(([value, count]) => `${count} ${count === 1 ? 'stat' : 'stats'} at ${value}`)
+    .join(', ');
+}
+
+function wordsOf(text: string): string[] {
+  return text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
 }

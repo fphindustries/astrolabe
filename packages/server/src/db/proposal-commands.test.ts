@@ -233,6 +233,9 @@ describe.skipIf(!hasTestDatabase)('character proposals (task 3.3, D-123, D-124)'
           kind: 'structured',
           value: goodProposal({
             name: { value: 'Isolde Varga', reason: 'The player named her.', groundedIn: [] },
+            // Found live: the callsign sat between the names, and the check
+            // pushed the AI to rename her to earn a citation.
+            callsign: { value: 'Wick', reason: 'The player named her.', groundedIn: [] },
           }),
         },
       ],
@@ -242,14 +245,18 @@ describe.skipIf(!hasTestDatabase)('character proposals (task 3.3, D-123, D-124)'
       campaignId,
       commandId: newId(),
       actor: PLAYER,
-      concept: `Isolde Varga, ${CONCEPT}`,
+      concept: `Isolde "Wick" Varga, ${CONCEPT}`,
       rng: rolls(),
     });
 
     expect(result).toMatchObject({
       ok: true,
-      proposal: { name: { value: 'Isolde Varga', groundedIn: [] } },
+      proposal: {
+        name: { value: 'Isolde Varga', groundedIn: [] },
+        callsign: { value: 'Wick', groundedIn: [] },
+      },
     });
+    expect(ai.requests).toHaveLength(1);
   });
 
   it('recovers when only a citation was wrong, and never exempts a name found inside another word', async () => {

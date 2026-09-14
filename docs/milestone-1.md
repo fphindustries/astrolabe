@@ -101,7 +101,7 @@ narrative log is a second read model with its own paged query.
 
 - [x] 3.1 Character data model: stats, meters, momentum, impacts, assets, vows
 - [x] 3.2 Manual creation UI with rule validation on every field
-- [x] 3.3 Concept-first flow: prompt, AI proposal, review, accept or edit per field (D-123–D-126). Built and verified on the stub provider; not yet run against live Claude (see "Implementation notes (task 3.3)")
+- [x] 3.3 Concept-first flow: prompt, AI proposal, review, accept or edit per field (D-123–D-126). Built on the stub provider, then run against live Claude: concept names split by a callsign and wrong stat arrays were found and fixed (see "Implementation notes (task 3.3)")
 - [x] 3.4 Asset selection with rule constraints
 - [x] 3.5 Creation writes character-created events
 
