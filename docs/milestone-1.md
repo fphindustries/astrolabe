@@ -1582,7 +1582,7 @@ The withdrawal UI was checked by unit tests only, not in a browser: the stub che
   - `toPayload` now also receives the state `build` was given, so the answer's keys resolve to ids.
   - `campaign.propose_incidents` joins `PROPOSAL_COMMAND_KINDS`, so its rolls stay out of the log.
 - **Swearing.** `swearIncitingVow` accepts `proposalCommandId`. The server looks for an `incident.proposed` in that command and records it as the vow command's `causedBy`. A command holding anything else, a character proposal included, throws `UnknownProposalError` (422). The words sworn are always the ones the player sent.
-- **Event.** `incident.proposed { options: [{ title, rank, situation, reason, groundedIn, drawsOn { truths, locations, characters } }] }` is not narrative, changes no state, and references what it draws on.
+- **Event.** `incident.proposed { options: [{ title, rank, situation, reason, groundedIn, drawsOn { truths, locations, characters } }] }` is not narrative and changes no state. Like `character.proposed`, it references nothing: `drawsOn` is provenance, and a suggestion nobody took must not block voiding what it mentioned (D-83). A proposal belongs to no session, so D-84 already puts it out of void's reach, and `swearIncitingVow` doesn't check that the proposal is live, the same as `createCharacter`.
 - **Route.** `POST /api/campaigns/:id/incident-proposals {commandId}` returns 201 with the proposal and rolls, or with `{ok:false, errorKind, message, rolls}`, as character proposals do.
 - **Web.** The incident step gains an "Ask the Guide" section above the vow form.
   - It says when there is no crew to draw on.
@@ -1599,8 +1599,8 @@ This was 2026-09-14 with claude-opus-5, on a campaign with three truths, two loc
 - Runs 1–3 had a two-character crew with hooks and background vows. Runs 4–5 had no crew.
 - **5 of 5 proposals** passed on the first attempt, in 14–17 s each, the same order as 3.3's character proposals.
 - **Grounding.** Every option built on its own roll, and every option drew on at least one truth. In the crew runs, every option named a crew member. When one roll's row appeared twice (run 4), the two options took it in different directions.
-- **Authority.** No situation gave a crew member an action, feeling, intent or line of speech. Situations describe what has happened. Where one mentions a crew member, it is through their record: "the salvage guild that holds Vesna's ship debt" (run 3, and run 2 in nearly the same words).
-- **Borderline.** One reason added to Vesna's record. It said the Anchorage is "where Vesna's salvage debt is held", where her record says only that she owes a salvage guild. D-134 leaves this to the player's review.
+- **Authority.** No situation gave a crew member an action, feeling, intent or line of speech. Situations describe what has happened. Where one mentions a crew member, it is through an extension of their record (below).
+- **Pattern: a crew member's hook extended into a present-tense fact about the world, in 3 of the 9 crew-run options.** Vesna's record says only that she owes a salvage guild. Run 1's reason places the debt at the Anchorage ("where Vesna's salvage debt is held"). In runs 2 and 3, a situation has that guild acting in the sector ("The salvage guild that holds Vesna's debt has been seizing collateral from stranded ships"). D-134 holds for 4.6, because the player reads every word before swearing. **For groups 8 and 9:** the same hooks will reach the narrator with no review in between, and each hook is an invitation to extend it, the same class of finding as 7.15's aided scan.
 - **Names.** No new named people, places or factions. "Founder Clans" and "the Exodus" come from the picked truths' own text.
 
 ### Verification

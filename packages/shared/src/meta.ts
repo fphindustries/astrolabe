@@ -330,17 +330,15 @@ export const EVENT_TYPE_META: MetaTable = {
   },
   'incident.proposed': {
     // D-132: a suggestion, like `character.proposed`. It changes nothing
-    // until a vow names it as its cause, and it belongs to no beat.
+    // until a vow names it as its cause, and it belongs to no beat. What it
+    // draws on is not a reference: a suggestion nobody took must never
+    // block voiding the location or character it mentioned (D-83).
     narrative: false,
     significant: false,
     mutatesState: false,
     voidable: true,
     introduces: none,
-    references: (p) =>
-      p.options.flatMap((option) => [
-        ...option.drawsOn.locations.map(entity),
-        ...option.drawsOn.characters.map(character),
-      ]),
+    references: none,
   },
 };
 
