@@ -156,6 +156,44 @@ describe.skipIf(!hasTestDatabase)('character proposals (task 3.3, D-123, D-124)'
     expect(ai.requests).toHaveLength(1);
   });
 
+  it('labels each roll by its own table, in roll order, on a replay as on the first answer', async () => {
+    // `outcomeFrom` labels the i-th `oracle.rolled` with the i-th roll spec,
+    // so a read that returned the rolls out of order would mislabel them.
+    const campaignId = await campaign();
+    const ai = new StubProvider({ responses: [{ kind: 'structured', value: goodProposal() }] });
+    const request = {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      concept: CONCEPT,
+      rng: rolls(),
+    };
+
+    const first = await proposeCharacter(db.sql, ai, request);
+    const again = await proposeCharacter(db.sql, ai, request);
+    if (!first.ok || !again.ok) throw new Error('Expected both answers to succeed.');
+
+    const expected = CHARACTER_PROPOSAL_ROLLS.map((spec) => [spec.label, spec.oracleId]);
+    expect(first.rolls.map((r) => [r.label, r.oracleId])).toEqual(expected);
+    expect(again.rolls.map((r) => [r.label, r.oracleId])).toEqual(expected);
+    expect(again.rolls.map((r) => r.eventId)).toEqual(first.rolls.map((r) => r.eventId));
+
+    // The log order the labels rely on is the order the rolls were written in.
+    const written = (await readEvents(db.sql, campaignId))
+      .filter((e) => e.commandId === request.commandId && e.type === 'oracle.rolled')
+      .map((e) => e.id);
+    expect(again.rolls.map((r) => r.eventId)).toEqual(written);
+
+    // And the citations still point at the rolls their labels name.
+    const byLabel = (label: string) =>
+      again.rolls.filter((r) => r.label === label).map((r) => r.eventId);
+    expect(again.proposal.name.groundedIn).toEqual([
+      ...byLabel('Given name'),
+      ...byLabel('Family name'),
+    ]);
+    expect(again.proposal.callsign.groundedIn).toEqual(byLabel('Callsign'));
+  });
+
   it('re-asks with the rules problem stated, and counts both attempts', async () => {
     const campaignId = await campaign();
     const ai = new StubProvider({
