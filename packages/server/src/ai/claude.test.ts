@@ -109,6 +109,28 @@ describe('ClaudeProvider (task 7.2)', () => {
     expect((params[0] as { system: unknown[] }).system[1]).not.toHaveProperty('cache_control');
   });
 
+  it('streams structured output as JSON deltas and validates the whole (D-127)', async () => {
+    const { client, params } = fakeClient({ deltas: ['{"segments":["a",', '"b"]}'] });
+    const provider = new ClaudeProvider({ configured: true, client });
+    const deltas: string[] = [];
+    const schema = z.object({ segments: z.array(z.string()) });
+
+    const result = await provider.streamStructured(REQUEST, schema, (json) => deltas.push(json));
+
+    expect(deltas).toEqual(['{"segments":["a",', '"b"]}']);
+    expect(result).toMatchObject({ ok: true, value: { segments: ['a', 'b'] } });
+    expect(params[0]).toMatchObject({
+      betas: ['server-side-fallback-2026-07-01', 'structured-outputs-2025-12-15'],
+      output_config: { effort: 'low', format: { type: 'json_schema' } },
+    });
+
+    const bad = new ClaudeProvider({
+      configured: true,
+      client: fakeClient({ deltas: ['{"segments":1}'] }).client,
+    });
+    expect(await bad.streamStructured(REQUEST, schema, () => {})).toMatchObject({ ok: false });
+  });
+
   it('parses structured output against the schema, keeping usage when it fails', async () => {
     const Schema = z.object({ amount: z.int() });
     const good = new ClaudeProvider({

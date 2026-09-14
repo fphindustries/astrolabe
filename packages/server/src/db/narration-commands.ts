@@ -17,13 +17,19 @@ import {
   buildHarmProposalRequest,
   buildRevisionRequest,
   describeBeat,
+  beatNarrationSchema,
   harmProposalSchema,
   resolveBeatScope,
+  resolveSegments,
+  segmentContext,
+  type BeatFacts,
+  type SegmentContext,
 } from '../ai/context/index.js';
 import type { AiProvider, AiRequest } from '../ai/provider.js';
 import {
   accountingEvents,
   generateValidated,
+  streamValidatedSegments,
   streamValidatedText,
   type Outcome,
   type TextSink,
@@ -155,6 +161,8 @@ export interface NarrateBeatRequest {
 export interface PreparedBeat {
   readonly request: NarrateBeatRequest;
   readonly aiRequest: AiRequest;
+  /** The beat's keyed facts and characters the segments are checked against (D-127). */
+  readonly segments: SegmentContext;
   readonly causedBy: EventId;
   readonly envelope: Envelope;
 }
@@ -177,10 +185,12 @@ export async function prepareBeatNarration(
     throw new AiRequestRefusedError(scope.reason, scope.detail);
   }
 
+  const facts = describeBeat(scope.events, state, events);
   return {
     kind: 'run',
     request,
-    aiRequest: buildBeatRequest(state, events, describeBeat(scope.events, state, events), settings),
+    aiRequest: buildBeatRequest(state, events, facts, settings),
+    segments: segmentContext(facts, state, settings.narrationLatitude),
     causedBy: scope.causedBy,
     envelope: envelopeOf(request.campaignId, state),
   };
@@ -193,7 +203,13 @@ export async function runBeatNarration(
   sink: TextSink,
   status?: AiStatus,
 ): Promise<AiCommandResult> {
-  const outcome = await streamValidatedText(ai, prepared.aiRequest, sink);
+  const outcome = await streamValidatedSegments(
+    ai,
+    prepared.aiRequest,
+    beatNarrationSchema(prepared.segments),
+    prepared.segments,
+    sink,
+  );
   recordStatus(status, outcome);
 
   const result = await appendCommand(sql, {
@@ -209,7 +225,12 @@ export async function runBeatNarration(
             withEnvelope(
               {
                 type: 'narration.written',
-                payload: { role: 'beat', text: outcome.value, groundedIn: [] },
+                payload: {
+                  role: 'beat',
+                  text: outcome.value.text,
+                  groundedIn: [],
+                  segments: resolveSegments(outcome.value.segments, prepared.segments),
+                },
               } as NewEvent<'narration.written'>,
               prepared.envelope,
             ),
@@ -404,17 +425,24 @@ export async function proposeAmount(
   }
 
   let causedBy: EventId | null = null;
-  let lines: readonly string[] = [];
+  let facts: BeatFacts = {
+    facts: [],
+    lines: [],
+    declaredAction: false,
+    miss: false,
+    match: false,
+    burned: false,
+    chainedToSuffer: false,
+  };
   if (request.chainedFromCommandId !== undefined) {
     const scope = resolveBeatScope(events, request.chainedFromCommandId, { allowNarrated: true });
     if (!scope.ok) {
       throw new AiRequestRefusedError(scope.reason, scope.detail);
     }
     causedBy = scope.causedBy;
-    lines = describeBeat(scope.events, state, events).lines;
+    facts = describeBeat(scope.events, state, events);
   }
 
-  const facts = { lines, miss: false, match: false, burned: false, chainedToSuffer: false };
   const aiRequest = buildHarmProposalRequest(
     state,
     facts,

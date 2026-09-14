@@ -1,6 +1,18 @@
 import * as z from 'zod';
 
-import { EventIdSchema } from '../ids.js';
+import { CharacterIdSchema, EventIdSchema } from '../ids.js';
+
+/**
+ * D-127: one segment of a beat passage, as it was checked. `about` is what
+ * the segment said it narrates, `characterId` the player character it
+ * concerns, and `basis` the events behind the facts it cited.
+ */
+export const NarrationSegmentSchema = z.object({
+  about: z.enum(['world', 'character_undergoes', 'character_does', 'character_says']),
+  characterId: CharacterIdSchema.nullable(),
+  basis: z.array(EventIdSchema),
+  text: z.string().min(1),
+});
 
 /**
  * One narration type, not five. The recap (Beat 1), the scene frame
@@ -15,8 +27,11 @@ import { EventIdSchema } from '../ids.js';
  */
 export const NarrationWrittenSchema = z.object({
   role: z.enum(['recap', 'scene_frame', 'beat', 'summary']),
+  /** For a segmented passage, the segments' text joined. */
   text: z.string().min(1),
   groundedIn: z.array(EventIdSchema),
+  /** D-127: present on beat narration written as segments. */
+  segments: z.array(NarrationSegmentSchema).optional(),
 });
 
 /**

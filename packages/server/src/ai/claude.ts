@@ -137,20 +137,62 @@ export class ClaudeProvider implements AiProvider {
       // response that fails the schema, which would lose the usage the
       // call still spent. The format constrains the output; the schema is
       // checked here.
-      const params = this.#params(request);
-      message = await client.beta.messages.create({
-        ...params,
-        // The header the SDK's own `parse` helper sends with a format.
-        betas: [...params.betas, STRUCTURED_OUTPUTS_BETA],
-        output_config: {
-          ...params.output_config,
-          format: betaZodOutputFormat(schema as never),
-        },
-      } as CreateParams & { stream?: false });
+      message = await client.beta.messages.create(
+        this.#structuredParams(request, schema) as CreateParams & { stream?: false },
+      );
     } catch (error) {
       throw toProviderError(error);
     }
+    return this.#structuredResult(message, schema, started);
+  }
 
+  async streamStructured<T>(
+    request: AiRequest,
+    schema: z.ZodType<T>,
+    onDelta: (json: string) => void,
+  ): Promise<AiStructuredResult<T>> {
+    const client = this.#requireClient();
+    const started = this.#now();
+
+    let message: ClaudeMessage;
+    try {
+      const stream = client.beta.messages.stream(
+        this.#structuredParams(request, schema) as StreamParams,
+      );
+      for await (const event of stream) {
+        if (event.type !== 'content_block_delta' || !('delta' in event)) {
+          continue;
+        }
+        const { delta } = event;
+        if (delta.type === 'text_delta' && delta.text !== undefined && delta.text.length > 0) {
+          onDelta(delta.text);
+        }
+      }
+      message = await stream.finalMessage();
+    } catch (error) {
+      throw toProviderError(error);
+    }
+    return this.#structuredResult(message, schema, started);
+  }
+
+  #structuredParams(request: AiRequest, schema: z.ZodType<unknown>) {
+    const params = this.#params(request);
+    return {
+      ...params,
+      // The header the SDK's own `parse` helper sends with a format.
+      betas: [...params.betas, STRUCTURED_OUTPUTS_BETA],
+      output_config: {
+        ...params.output_config,
+        format: betaZodOutputFormat(schema as never),
+      },
+    };
+  }
+
+  #structuredResult<T>(
+    message: ClaudeMessage,
+    schema: z.ZodType<T>,
+    started: number,
+  ): AiStructuredResult<T> {
     const common = {
       stopReason: stopReasonOf(message.stop_reason),
       usage: usageOf(message),

@@ -49,6 +49,22 @@ function devStubResponse(
       },
     };
   }
+  if (mode === 'structured' && request.purpose === 'beat') {
+    // One world segment citing nothing: it passes D-127's checks for any beat.
+    return {
+      kind: 'structured',
+      value: {
+        segments: [
+          {
+            about: 'world',
+            character: null,
+            basis: [],
+            text: 'Stub narration: the moment resolves as the dice said, described in a few plain sentences.',
+          },
+        ],
+      },
+    };
+  }
   if (mode === 'structured' && request.purpose === 'character_proposal') {
     return { kind: 'structured', value: STUB_CHARACTER_PROPOSAL };
   }

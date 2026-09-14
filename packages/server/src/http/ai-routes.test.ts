@@ -114,7 +114,19 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
 
   it('streams a passage as NDJSON frames ending in committed (D-111)', async () => {
     const { campaignId, moveCommandId } = await moveMade();
-    ai.enqueue({ kind: 'text', text: 'The logs spill across Juno’s screen in broken fragments.' });
+    ai.enqueue({
+      kind: 'structured',
+      value: {
+        segments: [
+          {
+            about: 'character_undergoes',
+            character: 'Juno',
+            basis: ['F1'],
+            text: 'The logs spill across Juno’s screen in broken fragments.',
+          },
+        ],
+      },
+    });
 
     const response = await app.inject({
       method: 'POST',
@@ -186,7 +198,19 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
 
   it('corrects a passage in one request (A15)', async () => {
     const { campaignId, moveCommandId } = await moveMade();
-    ai.enqueue({ kind: 'text', text: 'Juno frowns, shaken.' });
+    ai.enqueue({
+      kind: 'structured',
+      value: {
+        segments: [
+          {
+            about: 'character_undergoes',
+            character: 'Juno',
+            basis: ['F1'],
+            text: 'Juno frowns, shaken.',
+          },
+        ],
+      },
+    });
     const narrated = frames(
       (
         await app.inject({

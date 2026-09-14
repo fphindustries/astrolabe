@@ -8,6 +8,7 @@ import type { BeatFacts } from './describe-beat.js';
 import { LATITUDE_INSTRUCTIONS } from './latitude.js';
 import { beatWeight, narrationBudget } from './length.js';
 import { renderState } from './render-state.js';
+import { renderFacts, segmentContext, segmentInstructions } from './segments.js';
 
 /**
  * Prompt assembly (tasks 7.4, 7.6, 7.7). Pure: state and events in, an
@@ -49,7 +50,11 @@ function recentNarration(events: readonly AstrolabeEvent[]): string {
     : passages.map((p) => p.text).join('\n\n');
 }
 
-/** Task 7.8's request: narrate one resolved beat. */
+/**
+ * Task 7.8's request: narrate one resolved beat, as segments citing its
+ * keyed facts (D-127). The answer's schema is `beatNarrationSchema` for the
+ * same context.
+ */
 export function buildBeatRequest(
   state: CampaignState,
   events: readonly AstrolabeEvent[],
@@ -58,11 +63,13 @@ export function buildBeatRequest(
 ): AiRequest {
   const weight = beatWeight(facts);
   const budget = narrationBudget(weight, settings.narrationLength);
+  const ctx = segmentContext(facts, state, settings.narrationLatitude);
 
   const user = [
     `<campaign_state>\n${renderState(state)}\n</campaign_state>`,
     `<recent_narration>\n${recentNarration(events)}\n</recent_narration>`,
-    `<resolved_beat>\n${facts.lines.join('\n')}\n</resolved_beat>`,
+    `<resolved_beat>\n${renderFacts(ctx)}\n</resolved_beat>`,
+    segmentInstructions(ctx, facts.declaredAction),
     `Narrate this beat as a ${weight} moment, in ${budget.min} to ${budget.max} words.`,
   ].join('\n\n');
 

@@ -359,8 +359,38 @@ describe('describeBeat (task 7.4)', () => {
 
   it('flags the chain as dramatic', () => {
     const f = facts();
-    expect(f).toMatchObject({ miss: true, chainedToSuffer: true });
+    expect(f).toMatchObject({ declaredAction: true, miss: true, chainedToSuffer: true });
     expect(beatWeight(f)).toBe('dramatic');
+  });
+
+  it('keys every fact with its kind, character and source event (D-127)', () => {
+    const { b, endureHarm, proposal } = beatSeven();
+    const events = b.build();
+    const scope = resolveBeatScope(events, endureHarm as never);
+    if (!scope.ok) throw new Error(scope.detail);
+    const beat = describeBeat(scope.events, project(events), events);
+
+    expect(beat.facts.map((f) => [f.key, f.kind, f.characterId === ROOK])).toEqual([
+      ['F1', 'move', true],
+      ['F2', 'declared_action', true],
+      ['F3', 'roll', true],
+      ['F4', 'move', false],
+      ['F5', 'move', true],
+      ['F6', 'choice', true],
+      ['F7', 'roll', false],
+      ['F8', 'move', false],
+      ['F9', 'move', true],
+      ['F10', 'effect', true],
+      ['F11', 'injury', true],
+      ['F12', 'injury', true],
+      ['F13', 'effect', true],
+      ['F14', 'roll', true],
+    ]);
+    expect(beat.lines).toEqual(beat.facts.map((f) => f.text));
+    const committed = events.find((e) => e.type === 'amount.committed');
+    // The injury is cited through the committed amount, never the proposal itself.
+    expect(beat.facts.find((f) => f.key === 'F11')?.eventId).toBe(committed?.id);
+    expect(beat.facts.some((f) => f.eventId === proposal)).toBe(false);
   });
 });
 
@@ -372,13 +402,31 @@ describe('narration length (task 7.7, D-115)', () => {
     expect(narrationBudget('dramatic', 'longer')).toEqual({ min: 180, max: 300 });
   });
 
+  const signals = {
+    declaredAction: true,
+    miss: false,
+    match: false,
+    burned: false,
+    chainedToSuffer: false,
+  };
+
   it('treats a plain weak hit as routine', () => {
-    expect(beatWeight({ miss: false, match: false, burned: false, chainedToSuffer: false })).toBe(
-      'routine',
-    );
-    expect(beatWeight({ miss: false, match: true, burned: false, chainedToSuffer: false })).toBe(
-      'dramatic',
-    );
+    expect(beatWeight(signals)).toBe('routine');
+    expect(beatWeight({ ...signals, match: true })).toBe('dramatic');
+  });
+
+  it('keeps a beat with no declared action routine, however dramatic (D-115, amended)', () => {
+    // Round 20: a standalone Endure Harm, strong hit with a match, nothing declared.
+    expect(beatWeight({ ...signals, declaredAction: false, match: true })).toBe('routine');
+    expect(
+      beatWeight({
+        declaredAction: false,
+        miss: true,
+        match: true,
+        burned: true,
+        chainedToSuffer: true,
+      }),
+    ).toBe('routine');
   });
 });
 
@@ -400,8 +448,26 @@ describe('prompt assembly (tasks 7.4, 7.6)', () => {
       { text: LATITUDE_INSTRUCTIONS.color, cache: true },
     ]);
     expect(request.user).toContain('<resolved_beat>');
+    expect(request.user).toContain(
+      '[F2] (declared action, Rook) The player declared: "Rook forces the sealed bulkhead."',
+    );
+    expect(request.user).toContain('[F7] (roll) Oracle result (32): You are harmed.');
+    expect(request.user).toContain('Write the passage as segments');
+    expect(request.user).not.toContain('No action was declared');
     expect(request.user).toContain('Narrate this beat as a dramatic moment, in 120 to 200 words.');
     expect(request).toMatchObject({ purpose: 'beat', effort: 'low' });
+  });
+
+  it('says so when nothing was declared, and asks for the routine length (D-115, D-127)', () => {
+    const { events, facts } = inputs();
+    const request = buildBeatRequest(
+      project(events),
+      events,
+      { ...facts, declaredAction: false },
+      COLOR,
+    );
+    expect(request.user).toContain('No action was declared: there is no declared-action fact.');
+    expect(request.user).toContain('Narrate this beat as a routine moment, in 60 to 120 words.');
   });
 
   it('keeps the system prompt byte-stable across beats, so it caches', () => {

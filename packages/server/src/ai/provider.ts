@@ -4,10 +4,11 @@ import type * as z from 'zod';
 /**
  * The AI provider abstraction (task 7.1, D-50, D-60, D-112).
  *
- * Two operations and nothing else: `streamText` for prose the player
- * watches arrive, and `generateStructured` for a value the server has to
- * read — a proposed harm amount, later suggestions and complication
- * options. No tool use yet; task 8.1 decides how the AI asks for oracle
+ * Three operations and nothing else: `streamText` for prose the player
+ * watches arrive, `generateStructured` for a value the server has to read —
+ * a proposed harm amount, later suggestions and complication options — and
+ * `streamStructured` for a value the player watches arrive, which is how
+ * segmented narration streams (D-127). No tool use yet; task 8.1 decides how the AI asks for oracle
  * rolls, and either answer extends this interface rather than reshaping it.
  *
  * Prompt assembly lives above this interface (`ai/context/`), so switching
@@ -108,6 +109,18 @@ export interface AiProvider {
    * the caller still re-asks.
    */
   generateStructured<T>(request: AiRequest, schema: z.ZodType<T>): Promise<AiStructuredResult<T>>;
+
+  /**
+   * `generateStructured`, streamed: `onDelta` receives the JSON text as it
+   * arrives, in the schema's property order, for the caller to read
+   * incrementally (`json-stream.ts`). The resolved result is parsed and
+   * validated from the complete text.
+   */
+  streamStructured<T>(
+    request: AiRequest,
+    schema: z.ZodType<T>,
+    onDelta: (json: string) => void,
+  ): Promise<AiStructuredResult<T>>;
 }
 
 /**

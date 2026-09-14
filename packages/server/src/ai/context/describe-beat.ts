@@ -1,4 +1,10 @@
-import { MOVE_AUTOMATION_SPECS, STARFORGED, type MoveId, type OutcomeTier } from '@astrolabe/rules';
+import {
+  MOVE_AUTOMATION_SPECS,
+  STARFORGED,
+  type CharacterId,
+  type MoveId,
+  type OutcomeTier,
+} from '@astrolabe/rules';
 import type { AstrolabeEvent, CampaignState, Delta, EventId, PayloadFor } from '@astrolabe/shared';
 
 import { computeVoidState, isSuppressed } from '../../projection/void-state.js';
@@ -23,10 +29,35 @@ import { computeVoidState, isSuppressed } from '../../projection/void-state.js';
  * inventing another. The injury is found through the committed amount's
  * `proposalEventId` in the whole `log`, because a standalone suffer move's
  * proposal sits outside the beat's causal scope.
+ *
+ * Every fact has a key, a kind, the character it is about and the event it
+ * came from (D-127). Segments cite facts by key, and the checks that need no
+ * AI read the kind and character: a `character_does` segment has to cite a
+ * declared action by that character.
  */
 
+/**
+ * D-127's kinds, plus `move` for which move was made and what it chained
+ * into. An oracle result is a `roll`; a momentum burn is an `effect`.
+ */
+export type FactKind = 'move' | 'declared_action' | 'roll' | 'choice' | 'effect' | 'injury';
+
+export interface BeatFact {
+  /** `F1`, `F2`, … in log order: what a segment's `basis` cites. */
+  readonly key: string;
+  readonly kind: FactKind;
+  /** The player character the fact is about, if any. */
+  readonly characterId?: CharacterId;
+  readonly eventId: EventId;
+  readonly text: string;
+}
+
 export interface BeatFacts {
+  readonly facts: readonly BeatFact[];
+  /** The facts' text alone, for prompts that don't cite them. */
   readonly lines: readonly string[];
+  /** Whether the player declared an action anywhere in the beat (D-115's routine cap). */
+  readonly declaredAction: boolean;
   /** D-115's dramatic-weight signals. */
   readonly miss: boolean;
   readonly match: boolean;
@@ -45,20 +76,36 @@ export function describeBeat(
   state: CampaignState,
   log: readonly AstrolabeEvent[],
 ): BeatFacts {
-  const lines: string[] = [];
+  const facts: BeatFact[] = [];
   const liveProposal = proposalLookup(log);
   const finalTier = new Map<string, OutcomeTier>();
   let match = false;
   let burned = false;
   let chainedToSuffer = false;
+  let declaredAction = false;
+  // Rolls and choices carry no character of their own: they belong to the
+  // move being resolved, which is the latest one invoked.
+  let mover: CharacterId | undefined;
 
   const who = (id: string | undefined): string =>
     id === undefined ? 'The crew' : (state.characters[id as never]?.callsign ?? 'A crew member');
 
-  for (const event of events) {
+  let event: AstrolabeEvent;
+  const push = (kind: FactKind, characterId: CharacterId | undefined, text: string): void => {
+    facts.push({
+      key: `F${facts.length + 1}`,
+      kind,
+      ...(characterId !== undefined ? { characterId } : {}),
+      eventId: event.id,
+      text,
+    });
+  };
+
+  for (event of events) {
     switch (event.type) {
       case 'move.invoked': {
         const p = event.payload;
+        mover = p.actorCharacterId;
         const using =
           p.using === undefined
             ? ''
@@ -69,11 +116,18 @@ export function describeBeat(
                 : '';
         const aiding =
           p.aidingAllyId === undefined ? '' : `, in direct support of ${who(p.aidingAllyId)}`;
-        lines.push(
+        push(
+          'move',
+          p.actorCharacterId,
           `${who(p.actorCharacterId)} makes the move ${moveName(p.moveId)}${using}${aiding}.`,
         );
         if (p.actionText !== undefined && p.actionText.trim().length > 0) {
-          lines.push(`The player declared: "${p.actionText.trim()}"`);
+          declaredAction = true;
+          push(
+            'declared_action',
+            p.actorCharacterId,
+            `The player declared: "${p.actionText.trim()}"`,
+          );
         }
         break;
       }
@@ -84,13 +138,17 @@ export function describeBeat(
         const matchNote = p.isMatch ? ', and the challenge dice match' : '';
         if (p.kind === 'action') {
           const adds = p.adds.map((a) => `${signed(a.amount)} ${a.label}`).join(' ');
-          lines.push(
+          push(
+            'roll',
+            mover,
             `Roll: action die ${p.actionDie}${adds.length > 0 ? ` ${adds}` : ''} = ${p.actionScore}, ` +
               `against challenge dice ${p.challengeDice[0]} and ${p.challengeDice[1]}: ` +
               `${TIER_WORDS[p.tier]}${matchNote}.`,
           );
         } else {
-          lines.push(
+          push(
+            'roll',
+            mover,
             `Progress roll: ${p.progressScore} against challenge dice ` +
               `${p.challengeDice[0]} and ${p.challengeDice[1]}: ${TIER_WORDS[p.tier]}${matchNote}.`,
           );
@@ -101,7 +159,9 @@ export function describeBeat(
         const p = event.payload;
         burned = true;
         finalTier.set(p.rollEventId, p.tierAfter);
-        lines.push(
+        push(
+          'effect',
+          p.characterId,
           `${who(p.characterId)} burned momentum: the result is now ${TIER_WORDS[p.tierAfter]} ` +
             `(it was ${TIER_WORDS[p.tierBefore]}).`,
         );
@@ -115,7 +175,9 @@ export function describeBeat(
         const labels = p.optionIds.map(
           (id) => choice?.options.find((o) => o.id === id)?.label ?? id,
         );
-        lines.push(
+        push(
+          'choice',
+          mover,
           labels.length === 0
             ? 'The player chose none of the offered options.'
             : `The player chose: ${labels.join('; ')}.`,
@@ -127,32 +189,40 @@ export function describeBeat(
         const label =
           MOVE_AUTOMATION_SPECS.get(p.moveId)?.method?.options.find((o) => o.id === p.optionId)
             ?.label ?? p.optionId;
-        lines.push(`For ${moveName(p.moveId)}, the player chose: ${label}.`);
+        push('choice', mover, `For ${moveName(p.moveId)}, the player chose: ${label}.`);
         break;
       }
       case 'oracle.rolled':
-        lines.push(`Oracle result (${event.payload.roll}): ${event.payload.rowText}`);
+        push('roll', undefined, `Oracle result (${event.payload.roll}): ${event.payload.rowText}`);
         break;
       case 'move.chained': {
         const p = event.payload;
         const to = STARFORGED.moves.find((m) => m.id === p.toMoveId);
         chainedToSuffer ||= to?.category === 'suffer';
-        lines.push(`This leads to ${moveName(p.toMoveId)}.`);
+        push('move', undefined, `This leads to ${moveName(p.toMoveId)}.`);
         break;
       }
       case 'amount.committed': {
         const p = event.payload;
-        lines.push(
+        push(
+          'effect',
+          p.characterId,
           `The player set the ${p.meter} loss at ${Math.abs(p.amount)} for ${who(p.characterId)}.`,
         );
         const proposal =
           p.proposalEventId === undefined ? undefined : liveProposal(p.proposalEventId);
         if (proposal?.injury !== undefined) {
-          lines.push(`The injury, as the Guide established it: ${proposal.injury}`);
+          push(
+            'injury',
+            p.characterId,
+            `The injury, as the Guide established it: ${proposal.injury}`,
+          );
           if (Math.abs(proposal.amount) !== Math.abs(p.amount)) {
             const direction =
               Math.abs(p.amount) < Math.abs(proposal.amount) ? 'milder' : 'more severe';
-            lines.push(
+            push(
+              'injury',
+              p.characterId,
               `The player judged it ${direction} than the Guide's proposed ${Math.abs(proposal.amount)}: ` +
                 'narrate that injury at the severity the player set.',
             );
@@ -162,12 +232,16 @@ export function describeBeat(
       }
       case 'state.changed':
         for (const { delta } of event.payload.changes) {
-          lines.push(describeDelta(delta, who));
+          push('effect', delta.characterId, describeDelta(delta, who));
         }
         break;
       case 'track.advanced': {
         const track = state.tracks[event.payload.trackId];
-        lines.push(`"${track?.title ?? 'A track'}" advances by ${event.payload.ticks}.`);
+        push(
+          'effect',
+          undefined,
+          `"${track?.title ?? 'A track'}" advances by ${event.payload.ticks}.`,
+        );
         break;
       }
       case 'state.overridden':
@@ -178,7 +252,9 @@ export function describeBeat(
   }
 
   return {
-    lines,
+    facts,
+    lines: facts.map((fact) => fact.text),
+    declaredAction,
     miss: [...finalTier.values()].includes('miss'),
     match,
     burned,

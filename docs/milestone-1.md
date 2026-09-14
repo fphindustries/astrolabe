@@ -160,7 +160,7 @@ narrative log is a second read model with its own paged query.
 - [x] 7.11 Graceful stop when the provider is unavailable, with state intact
 - [ ] 7.12 AI move suggestion when an action is described without a move: move and roll option, verbatim trigger text, reason and confidence, inspectable, never blocking a direct pick (D-14, D-120, A19). Open before it starts: rules clauses keep their link markup (`[Lose Momentum](id:…)`), so the verbatim quote `isVerbatimClause` checks and the text a player should read differ, and D-120 doesn't yet say which the suggestion stores
 - [ ] 7.13 Trigger-mismatch note on a beat whose move doesn't fit the described action, with the same traceability, never blocking or delaying the roll (D-37, D-121, A20). No golden-session beat exercises it
-- [ ] 7.14 Segmented narration: fact keys and kinds, segments tagged and cited as they stream, checks that need no AI, D-115's routine cap for beats with no declared action (D-127, A21)
+- [x] 7.14 Segmented narration: fact keys and kinds, segments tagged and cited as they stream, checks that need no AI, D-115's routine cap for beats with no declared action (D-127, A21). Verified live at all three latitudes (see "Implementation notes (task 7.14)")
 - [ ] 7.15 Authority check: shared rubric in the narrator prompt and a second-model checker; provisional streaming, unmistakable logged withdrawal, one re-ask, pause on a second failure; recorded-violation regression tests, keyed eval, live matrix across all three latitudes. Sign-off also checks that no passage gives a pronoun to a character whose pronouns aren't recorded (D-128, D-129, D-131, A21)
 - [x] 7.16 Established injury: the harm proposal's injury carried into narration at the committed severity, with the committed amount linked to its proposal (D-130, A13). Verified live in two passes (see "Implementation notes (task 7.16)")
 
@@ -1364,7 +1364,7 @@ After the fixes, three concepts proposed cleanly on the first try.
 
 ### Verification
 
-`npm run typecheck`, `npm run lint`, `npm test` (792 tests) and the web build pass. The new tests cover:
+`npm run typecheck`, `npm run lint`, `npm test` (793 tests) and the web build pass. The new tests cover:
 
 - injury lines on a chained beat and on a standalone one;
 - no adjustment line when the amounts match;
@@ -1400,3 +1400,59 @@ Both live passages still broke D-129, as the round-20 passage did. They are reco
    It contains undeclared movement ("Ten meters on", "walks on"), undeclared actions ("plants the other boot, hauls the leg out"), and a characteristic response ("the same steady tread").
 
 The clean counterpart is round 20's Face Danger weak hit with a declared action ("Rook plants both boots on the collar's scorched rim…"). Passages 2 and 3 break the rules even at routine length, so D-115's cap narrows the problem but doesn't fix it.
+
+## Implementation notes (task 7.14, segmented narration)
+
+7.14 is done (D-127, D-115 amended). Beat narration is now a list of checked segments. D-129's rubric and D-128's checker are 7.15.
+
+### The streaming spike, before any code
+
+Three runs of claude-opus-5 on the Beat 7 facts, 2026-09-13 (low effort, adaptive thinking):
+
+- **Format.** Structured output over `messages.stream` put the keys in schema order (`about`, `character`, `basis`, `text`) in all 3 runs. Tags therefore arrive before text, as D-127 needs. First segment *text* came at 1.7–2.9 s, with 6.1–8.3 s in total. The first JSON delta arrives at about 1.3 s, but it is scaffolding, not prose, so A18 is measured at the first checked text. Tagged text over `streamText` was faster to first text (1.0–1.4 s) but was never needed: the structured path holds A18, so D-127's fallback is moot.
+- **Labels are not honest by default.** With plain segment definitions, all 5 runs (3 structured, 2 tagged) put undeclared actions inside `character_undergoes`: "Rook braces against the housing, breathes through it", "Rook shakes the arm out, rolls the shoulder once to test it". Some also added claims that reach beyond the beat ("no worse than a hundred other bad mornings", "Rook has been carved on before, and the body knows the drill"). No run used `character_does`.
+- **Tightened definitions.** Two changes together gave 4 clean runs out of 4: a `character_undergoes` definition that names the verbs it excludes ("no verb where the character moves, braces, breathes deliberately, tests, shakes, holds, decides or reacts"), and D-129's rules in the prompt (tagged format). They were clean of undeclared action, disposition and history. None of those runs used `character_does` either, because nothing was declared, so honest labelling was still untested.
+- **Declared action.** On a beat with a declared action, `character_does` appeared in 4 runs out of 4, each time citing the declared-action fact. So when the label is allowed, the model uses it honestly. Whether it labels an *undeclared* action honestly is still unshown: no run wrote one. D-128's checker remains the guarantee for mislabelled segments.
+
+### Shape
+
+- **Facts.** `describeBeat` gives every fact a key (`F1`…), a kind, the player character it concerns and its source event. The kinds are D-127's five (declared action, effect, roll, choice, injury) plus `move`, for which move was made and what it chained into. An oracle result is a `roll`, and a momentum burn is an `effect`. Rolls and choices belong to the move being resolved, so they carry that move's actor. The injury lines cite the `amount.committed` event, never the proposal. `declaredAction` drives D-115's routine cap in `beatWeight`.
+- **Schema** (`ai/context/segments.ts`). `basis` is an enum of this beat's fact keys and `character` an enum of the campaign's callsigns. Constrained decoding therefore enforces "every cited key exists"; the check still runs, because the stub isn't constrained. `character_does` and `character_says` are offered at every latitude. That is D-127's argument for keeping `character_does` in the schema, applied to speech as well: removing the label would relabel the violation rather than reject it.
+- **Prompt.** Facts are rendered as `[F2] (declared action, Rook) …`. The segment definitions are the tested wording, and the `world` definition excludes a player character's body, gear and blood. The prompt says "No action was declared" when that is the case. These instructions sit in the user turn, as tested, so the system blocks stay byte-stable.
+- **Checks** (`checkSegmentTags`, `checkSegmentText`). The tag checks are:
+  - `character_does` must cite a declared action by that same character;
+  - `character_undergoes` must cite a fact about that character;
+  - `character_says` is refused below Full voice;
+  - every cited key must exist;
+  - a `world` segment must carry no character, and a character segment must name one.
+
+  The text checks are:
+  - a `world` segment must not name a player character (callsign or name word, case-sensitive, whole word);
+  - below Full voice, a character segment must not contain quotation marks.
+
+  The problems are written in words for the re-ask, and 7.15's withdrawal will reuse them.
+- **Streaming.** A new provider operation, `streamStructured`, forwards the JSON text as it arrives. `json-stream.ts` reads it character by character. `SegmentGate` holds each segment's text until its tags have passed, then releases text up to the last word boundary once the text checks pass on everything so far. A name or a quotation mark is caught before any of it is shown. The first failure stops all further text. The attempt is rejected with a `reset` frame and re-asked once with the problem, and a second failure is `ai.failed` (`invalid_output`), as before. The finished value is validated again in full.
+- **Stored.** `narration.written.text` is the segments joined into one paragraph. An optional `segments` field holds `{ about, characterId, basis: eventId[], text }`.
+- **Not segmented.** The 7.9 rewrite still streams as plain prose; D-128's checker covers rewrites in 7.15. The frames are unchanged: the client still receives `delta` text.
+- **Dev fixtures (D-122).** The session-1 passages are now scripted as segments. Rewriting them showed that the old text broke D-129: it gave Juno a disposition ("a salvager's patience") and voiced Rook's and Juno's opinions at Color. Those parts were removed.
+
+### Verification
+
+`npm run typecheck`, `npm run lint` and `npm test` (817 tests) pass. The new tests cover:
+
+- fact keys, kinds and characters;
+- the routine cap;
+- each tag and text check, plus the documented blind spot (an undeclared action mislabelled as undergoing passes);
+- the schema's enums;
+- the JSON reader;
+- the gate at chunk sizes from 1 to 200 (no letter of a named character is ever released);
+- a streamed undeclared action that never reaches the sink and is re-asked with its problem;
+- a second failure ending in `ai.failed`;
+- `streamStructured` on the Claude provider.
+
+**Live pass** (claude-opus-5, 2026-09-14, without 7.15's rubric). Beat 7 with its declared action, and a standalone Endure Harm with none, were each run once at each latitude. The API accepted the per-beat enum schema. All 6 passages committed on the first attempt. First checked text reached the player at 1.3–3.0 s, and the full passage took 4.9–9.8 s. Every declared action was labelled `character_does` and cited its fact. No passage used a pronoun for Rook.
+
+### Recorded violations the checks that need no AI passed, for 7.15's corpus
+
+4. **Standalone Endure Harm, Color, labelled `character_undergoes`:** "The pain crests and fades fast, leaving Rook steady on the deck, unshaken by it." "Unshaken" is a player-owned interior.
+5. **Beat 7, Full voice, labelled `character_says`:** "A hiss escapes through Rook's teeth, then flattens into something steadier, almost dismissive, as the arm comes back up to the plate." The outward expression is allowed at Full voice. "The arm comes back up to the plate" is an undeclared action.

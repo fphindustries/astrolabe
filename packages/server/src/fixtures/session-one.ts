@@ -237,8 +237,29 @@ export async function playSessionOne(
     return invoked;
   };
 
-  const narrate = async (label: string, text: string) => {
-    ai.enqueue({ kind: 'text', text });
+  // Passages are scripted as D-127 segments and pass its checks like any
+  // other: a character acts only in a segment citing their declared action
+  // (F2, after the move itself at F1), and world segments name no one.
+  const narrate = async (
+    label: string,
+    segments: readonly (readonly [
+      about: string,
+      character: string | null,
+      basis: readonly string[],
+      text: string,
+    ])[],
+  ) => {
+    ai.enqueue({
+      kind: 'structured',
+      value: {
+        segments: segments.map(([about, character, basis, text]) => ({
+          about,
+          character,
+          basis,
+          text,
+        })),
+      },
+    });
     const prepared = await prepareBeatNarration(sql, {
       ...base,
       commandId: key(`${label}:narration`),
@@ -265,13 +286,17 @@ export async function playSessionOne(
     [2, [3, 8]],
     'weak_hit',
   );
-  await narrate(
-    'juno-archive',
-    "The anchorage's archive is a landfill of half-corrupted captures, and Juno works it with a " +
-      "salvager's patience. The beacon is there, looping under forty years of static: the " +
-      "Meridian's Hope, still calling. But the capture is clipped, and whoever filed it scrubbed " +
-      'the origin coordinates on purpose.',
-  );
+  await narrate('juno-archive', [
+    ['world', null, [], "The anchorage's archive is a landfill of half-corrupted captures."],
+    ['character_does', 'Juno', ['F2'], 'Juno digs through it for the beacon.'],
+    [
+      'world',
+      null,
+      ['F3'],
+      "It is there, looping under forty years of static: the Meridian's Hope, still calling. " +
+        'But the capture is clipped, and whoever filed it scrubbed the origin coordinates on purpose.',
+    ],
+  ]);
 
   await move(
     'vesna-triangulate',
@@ -284,13 +309,22 @@ export async function playSessionOne(
     [5, [4, 2]],
     'strong_hit',
   );
-  await narrate(
-    'vesna-triangulate',
-    "Vesna layers the fragment over the Lantern Wake's charts until the drift in the signal lines " +
-      "up with something real. It isn't coming from the colony ship at all. It is being repeated " +
-      'by Varga Relay, a station on the far side of Kessel Drift that has been dark for a ' +
-      'generation.',
-  );
+  await narrate('vesna-triangulate', [
+    [
+      'character_does',
+      'Vesna',
+      ['F2'],
+      "Vesna layers the fragment over the Lantern Wake's charts until the drift in the signal " +
+        'lines up with something real.',
+    ],
+    [
+      'world',
+      null,
+      ['F3'],
+      "It isn't coming from the colony ship at all. It is being repeated by Varga Relay, a " +
+        'station on the far side of Kessel Drift that has been dark for a generation.',
+    ],
+  ]);
 
   await move(
     'vesna-drift',
@@ -303,12 +337,16 @@ export async function playSessionOne(
     [4, [5, 1]],
     'strong_hit',
   );
-  await narrate(
-    'vesna-drift',
-    'Vesna takes the Lantern Wake into the Drift at a speed Rook calls unreasonable and Juno ' +
-      'calls fine. Ice grinds along the hull plating and slides away. The ship comes out the ' +
-      'other side clean, with Varga Relay a cold smudge on the forward scopes.',
-  );
+  await narrate('vesna-drift', [
+    ['character_does', 'Vesna', ['F2'], 'Vesna threads the Lantern Wake into the Drift.'],
+    [
+      'world',
+      null,
+      ['F3'],
+      'Ice grinds along the hull plating and slides away. The ship comes out the other side ' +
+        'clean, with Varga Relay a cold smudge on the forward scopes.',
+    ],
+  ]);
 
   const advantage = await move(
     'vesna-approach',
@@ -332,12 +370,21 @@ export async function playSessionOne(
     choiceId: advantage.pendingChoice.choiceId,
     optionIds: ['momentum'],
   });
-  await narrate(
-    'vesna-approach',
-    "Vesna tucks the Lantern Wake behind a tumbling slab of ice in the relay's blind side. From " +
-      'there the station is close enough to see the scorched docking collar and the one row of ' +
-      'windows that are not dark.',
-  );
+  await narrate('vesna-approach', [
+    [
+      'character_does',
+      'Vesna',
+      ['F2'],
+      "Vesna tucks the Lantern Wake behind a tumbling slab of ice in the relay's blind side.",
+    ],
+    [
+      'world',
+      null,
+      ['F3'],
+      'From there the station is close enough to see the scorched docking collar and the one ' +
+        'row of windows that are not dark.',
+    ],
+  ]);
 
   // --- Ending session 1 -----------------------------------------------------
   await appendCommand(sql, {

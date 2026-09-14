@@ -31,11 +31,17 @@ const ADJUSTMENT: Readonly<Record<CampaignSettings['narrationLength'], number>> 
   longer: 1.5,
 };
 
-/** A miss, a match, a burn, or a chain into a suffer move is dramatic; anything else is routine. */
+/**
+ * A miss, a match, a burn, or a chain into a suffer move is dramatic;
+ * anything else is routine. A beat with no declared action is routine
+ * whatever happened in it (D-115, amended): the extra room is where the AI
+ * wrote what the player never authored.
+ */
 export function beatWeight(
-  facts: Pick<BeatFacts, 'miss' | 'match' | 'burned' | 'chainedToSuffer'>,
+  facts: Pick<BeatFacts, 'declaredAction' | 'miss' | 'match' | 'burned' | 'chainedToSuffer'>,
 ): NarrationWeight {
-  return facts.miss || facts.match || facts.burned || facts.chainedToSuffer
+  return facts.declaredAction &&
+    (facts.miss || facts.match || facts.burned || facts.chainedToSuffer)
     ? 'dramatic'
     : 'routine';
 }

@@ -35,6 +35,7 @@ export type StubResponse =
       readonly kind: 'structured';
       /** Parsed against the caller's schema, exactly as a real response would be. */
       readonly value: unknown;
+      readonly stopReason?: AiStopReason;
       readonly usage?: Partial<AiUsage>;
     }
   | { readonly kind: 'error'; readonly errorKind: AiErrorKind; readonly message?: string };
@@ -119,17 +120,45 @@ export class StubProvider implements AiProvider {
       throw new Error('StubProvider: a text response was scripted for a structured call.');
     }
 
-    const usage = { ...DEFAULT_USAGE, ...response.usage };
-    const parsed = schema.safeParse(response.value);
-    return parsed.success
-      ? { ok: true, value: parsed.data, stopReason: 'end_turn', usage, latencyMs: 1 }
-      : {
-          ok: false,
-          problem: parsed.error.message,
-          stopReason: 'end_turn',
-          usage,
-          latencyMs: 1,
-        };
+    return structuredResult(response, response.value, schema);
+  }
+
+  /**
+   * A `structured` response streams as its JSON; a `text` response streams
+   * verbatim, which is how a test sends JSON the schema would never allow.
+   */
+  async streamStructured<T>(
+    request: AiRequest,
+    schema: z.ZodType<T>,
+    onDelta: (json: string) => void,
+  ): Promise<AiStructuredResult<T>> {
+    const response = this.#next(request, 'structured');
+    if (response.kind === 'error') {
+      throw new AiProviderError(
+        response.errorKind,
+        response.message ?? `Stub ${response.errorKind}.`,
+      );
+    }
+
+    const json = response.kind === 'text' ? response.text : JSON.stringify(response.value);
+    for (let i = 0; i < json.length; i += this.#chunkSize) {
+      onDelta(json.slice(i, i + this.#chunkSize));
+      await Promise.resolve();
+    }
+
+    let value: unknown;
+    try {
+      value = JSON.parse(json);
+    } catch {
+      return {
+        ok: false,
+        problem: 'The response was not valid JSON.',
+        stopReason: response.stopReason ?? 'end_turn',
+        usage: { ...DEFAULT_USAGE, ...response.usage },
+        latencyMs: 1,
+      };
+    }
+    return structuredResult(response, value, schema);
   }
 
   #next(request: AiRequest, mode: 'text' | 'structured'): StubResponse {
@@ -141,11 +170,31 @@ export class StubProvider implements AiProvider {
   }
 }
 
+function structuredResult<T>(
+  response: { readonly stopReason?: AiStopReason; readonly usage?: Partial<AiUsage> },
+  value: unknown,
+  schema: z.ZodType<T>,
+): AiStructuredResult<T> {
+  const common = {
+    stopReason: response.stopReason ?? 'end_turn',
+    usage: { ...DEFAULT_USAGE, ...response.usage },
+    latencyMs: 1,
+  };
+  const parsed = schema.safeParse(value);
+  return parsed.success
+    ? { ok: true as const, value: parsed.data, ...common }
+    : { ok: false as const, problem: parsed.error.message, ...common };
+}
+
 function defaultFallback(request: AiRequest, mode: 'text' | 'structured'): StubResponse {
+  const text = `The Guide narrates the ${request.purpose} in a few plain sentences.`;
   if (mode === 'text') {
+    return { kind: 'text', text };
+  }
+  if (request.purpose === 'beat') {
     return {
-      kind: 'text',
-      text: `The Guide narrates the ${request.purpose} in a few plain sentences.`,
+      kind: 'structured',
+      value: { segments: [{ about: 'world', character: null, basis: [], text }] },
     };
   }
   return {

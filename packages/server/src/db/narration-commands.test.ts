@@ -10,7 +10,7 @@ import {
 } from '@astrolabe/shared';
 
 import { AiStatus } from '../ai/status.js';
-import { StubProvider } from '../ai/stub.js';
+import { StubProvider, type StubResponse } from '../ai/stub.js';
 import type { TextSink } from '../ai/respond.js';
 import { livePassages } from '../projection/narrative-log.js';
 import { project } from '../projection/project.js';
@@ -35,6 +35,28 @@ import { previewVoid } from './void-command.js';
 const PLAYER: Actor = { kind: 'player', playerId: LOCAL_PLAYER_ID };
 const newId = <T>(): T => uuidv7() as T;
 const ENDURE_HARM = 'move:suffer/endure-harm' as MoveId;
+
+/** A scripted D-127 passage. In beatSeven, F1 is Rook's Face Danger and F2 the declared action. */
+function passage(
+  ...segments: readonly (readonly [
+    about: string,
+    character: string | null,
+    basis: string[],
+    text: string,
+  ])[]
+): Extract<StubResponse, { kind: 'structured' }> {
+  return {
+    kind: 'structured',
+    value: {
+      segments: segments.map(([about, character, basis, text]) => ({
+        about,
+        character,
+        basis,
+        text,
+      })),
+    },
+  };
+}
 
 function recorder(): { sink: TextSink; frames: string[] } {
   const frames: string[] = [];
@@ -170,8 +192,11 @@ describe.skipIf(!hasTestDatabase)('the AI commands (group 7)', () => {
       const ai = new StubProvider({
         responses: [
           {
-            kind: 'text',
-            text: 'Sparks spray across Rook’s arm as the bulkhead groans open.',
+            ...passage(
+              ['character_does', 'Rook', ['F2'], 'Rook forces the bulkhead.'],
+              ['character_undergoes', 'Rook', ['F1'], 'Sparks spray across Rook’s arm.'],
+              ['world', null, [], 'The bulkhead groans open.'],
+            ),
             usage: { inputTokens: 900, outputTokens: 60, cacheReadTokens: 1500 },
           },
         ],
@@ -187,17 +212,31 @@ describe.skipIf(!hasTestDatabase)('the AI commands (group 7)', () => {
       });
 
       expect(result.ok).toBe(true);
-      expect(frames.join('')).toBe('Sparks spray across Rook’s arm as the bulkhead groans open.');
+      const text =
+        'Rook forces the bulkhead. Sparks spray across Rook’s arm. The bulkhead groans open.';
+      expect(frames.join('')).toBe(text);
 
-      // The AI heard the whole chain, starting from the declared action.
+      // The AI heard the whole chain, starting from the declared action, as keyed facts.
       expect(ai.requests[0]?.user).toContain(
-        'The player declared: "Rook forces the sealed bulkhead."',
+        '[F2] (declared action, Rook) The player declared: "Rook forces the sealed bulkhead."',
       );
       expect(ai.requests[0]?.user).toContain('This leads to Endure Harm.');
 
       const events = await readEvents(db.sql, chain.campaignId);
       const written = events.filter((e) => e.commandId === commandId);
       expect(written.map((e) => e.type)).toEqual(['ai.completed', 'narration.written']);
+      // Committed as the segments joined, with each basis resolved to the events behind it.
+      const invoked = events.find(
+        (e) => e.commandId === chain.faceDanger && e.type === 'move.invoked',
+      );
+      expect(written[1]?.payload).toMatchObject({
+        text,
+        segments: [
+          { about: 'character_does', characterId: chain.characterId, basis: [invoked?.id] },
+          { about: 'character_undergoes', characterId: chain.characterId, basis: [invoked?.id] },
+          { about: 'world', characterId: null, basis: [] },
+        ],
+      });
       expect(written.every((e) => e.actor.kind === 'ai')).toBe(true);
       // Hung off the last thing the chain did.
       const chainEvents = events.filter((e) => e.seq < written[0]!.seq);
@@ -215,8 +254,8 @@ describe.skipIf(!hasTestDatabase)('the AI commands (group 7)', () => {
       const chain = await beatSeven();
       const ai = new StubProvider({
         responses: [
-          { kind: 'text', text: 'The bulkhead gi', stopReason: 'max_tokens' },
-          { kind: 'text', text: 'The bulkhead gives.' },
+          { ...passage(['world', null, [], 'The bulkhead gi']), stopReason: 'max_tokens' },
+          passage(['world', null, [], 'The bulkhead gives.']),
         ],
       });
       const commandId = newId<CommandId>();
@@ -238,6 +277,69 @@ describe.skipIf(!hasTestDatabase)('the AI commands (group 7)', () => {
         'ai.completed',
         'narration.written',
       ]);
+    });
+
+    it('never shows an undeclared action, and re-asks with the problem in words (D-127)', async () => {
+      const chain = await beatSeven();
+      const ai = new StubProvider({
+        responses: [
+          passage(
+            ['world', null, [], 'The bulkhead groans open.'],
+            // Round 20's undeclared next step, labelled honestly.
+            ['character_does', 'Rook', ['F9'], 'Rook steps sideways through the gap.'],
+          ),
+          passage(['world', null, [], 'The bulkhead groans open.']),
+        ],
+      });
+      const commandId = newId<CommandId>();
+
+      const { result, frames } = await narrate(ai, {
+        campaignId: chain.campaignId,
+        commandId,
+        actor: PLAYER,
+        afterCommandId: chain.endureHarm,
+      });
+
+      expect(result.ok).toBe(true);
+      expect(frames.join('')).not.toContain('steps sideways');
+      expect(frames).toContain(
+        '<reset: It narrated Rook doing something the player did not declare for Rook in this beat.>',
+      );
+      expect(ai.requests[1]?.user).toContain(
+        'Your previous answer was rejected: It narrated Rook doing something',
+      );
+      const written = (await readEvents(db.sql, chain.campaignId)).filter(
+        (e) => e.commandId === commandId,
+      );
+      expect(written.map((e) => e.type)).toEqual([
+        'ai.completed',
+        'ai.completed',
+        'narration.written',
+      ]);
+    });
+
+    it('fails as invalid output when the re-ask breaks the checks too (D-127, D-116)', async () => {
+      const chain = await beatSeven();
+      const named = passage(['world', null, [], 'Sparks spray across Rook’s arm.']);
+      const ai = new StubProvider({ responses: [named, named] });
+      const commandId = newId<CommandId>();
+
+      const { result, frames } = await narrate(ai, {
+        campaignId: chain.campaignId,
+        commandId,
+        actor: PLAYER,
+        afterCommandId: chain.endureHarm,
+      });
+
+      expect(result).toMatchObject({ ok: false, errorKind: 'invalid_output' });
+      // Whole words before the name may be released; the name never is.
+      const shown = frames.filter((f) => !f.startsWith('<reset')).join('');
+      expect(shown).not.toContain('Rook');
+      expect(frames.filter((f) => f.startsWith('<reset'))).toHaveLength(2);
+      const written = (await readEvents(db.sql, chain.campaignId)).filter(
+        (e) => e.commandId === commandId,
+      );
+      expect(written.map((e) => e.type)).toEqual(['ai.completed', 'ai.completed', 'ai.failed']);
     });
 
     it('records an outage as ai.failed, leaves state intact, and lets a retry succeed (D-116)', async () => {
@@ -354,7 +456,9 @@ describe.skipIf(!hasTestDatabase)('the AI commands (group 7)', () => {
   describe('narration correction (task 7.9, A15)', () => {
     async function narrated(text: string) {
       const chain = await beatSeven();
-      const { result } = await narrate(new StubProvider({ responses: [{ kind: 'text', text }] }), {
+      // What no check without AI can catch (D-127): an emotion labelled as undergoing.
+      const response = passage(['character_undergoes', 'Rook', ['F1'], text]);
+      const { result } = await narrate(new StubProvider({ responses: [response] }), {
         campaignId: chain.campaignId,
         commandId: newId(),
         actor: PLAYER,
