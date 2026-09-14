@@ -1728,7 +1728,7 @@ A browser pass on the stub, on `session-2-open`, covered:
   - `ResultCard` fires the check once, after the roll is already on screen, and shows `TriggerNote` if one comes back: "This move's trigger may not fit what you described", the reason, and "Why?" with the quoted trigger, the confidence and "the roll stands; void and redo it if you agree".
   - The log renders the note with its move and gives it no void or correction control of its own.
 - **Dev stub.** It answers "fits", so a stubbed session plays without notes.
-- **Leaving before it lands.** The log invalidation is on the `useCheckTrigger` hook, not on the `mutate` call, so it still runs when the player clicks **Done** before the note arrives. The narration that follows **Done** invalidates the log again when it commits.
+- **Leaving before it lands.** The log invalidation is on the `useCheckTrigger` hook, not on the `mutate` call, so it should still run when the player clicks **Done** before the note arrives (react-query v5 behaviour; not checked in the browser). The narration that follows **Done** invalidates the log again when it commits.
 - **Checked once.** A failed check is not retried (D-136).
 
 ### Live pass
