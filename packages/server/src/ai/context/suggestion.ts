@@ -151,7 +151,11 @@ export function moveSuggestionSchema() {
 
 export type MoveSuggestionOutput = z.infer<ReturnType<typeof moveSuggestionSchema>>;
 
-/** A quote shorter than this could match almost anything; the rules' shortest condition text is longer. */
+/**
+ * A quote shorter than this could match almost anything. The shortest
+ * condition text in the rules ("Move at speed", "Stay vigilant") is 13
+ * characters, so a whole condition always qualifies, with one to spare.
+ */
 const MIN_QUOTE = 12;
 
 /**

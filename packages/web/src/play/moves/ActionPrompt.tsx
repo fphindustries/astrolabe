@@ -143,7 +143,11 @@ export function ActionPrompt({
   );
 }
 
-/** A19: the suggestion opened up — the rules words it rests on, and why. */
+/**
+ * A19: the suggestion opened up — the rules words it rests on, why, and the
+ * confidence. The card also shows the confidence beside the move; this
+ * repeats it because the composer's Guide marker shows nothing else.
+ */
 export function SuggestionWhy({ suggestion }: { readonly suggestion: MoveSuggestion }) {
   return (
     <details className={styles.why}>

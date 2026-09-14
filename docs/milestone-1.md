@@ -1695,3 +1695,14 @@ A browser pass on the stub, on `session-2-open`, covered:
 - rolling, which wrote `move.invoked.suggestionEventId` pointing at the `move.suggested`;
 - the suggestion staying out of the log;
 - switching to Rook and picking Face Danger by hand with the typed words carried over.
+
+### Open
+
+- **Stale proposals, three commands.** Three commands check only that a proposal exists, is the right kind and isn't voided, not how old it is:
+  - `createCharacter` (`proposalCommandId`);
+  - `swearIncitingVow` (`proposalCommandId`);
+  - `invokeMove` (`suggestionEventId`, and D-130's `proposalEventId`).
+
+  A suggestion asked in one session can be named by a move in a later one, where D-84 puts it beyond void. Nothing mechanical reads these fields, so it is recorded here rather than guarded.
+- **A suggestion lives only in the prompt's state.** After a reload or a change of acting character, the player asks again, which writes a second `move.suggested`.
+- **The Guide justifies itself with details the player didn't state.** Seen three times with three different prompts: 7.15's aided scan, 4.6's crew hooks, and these reasons. Each time the player reviewed the output before it counted. Groups 8 and 9 will generate without that review.
