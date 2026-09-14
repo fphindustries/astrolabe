@@ -1,18 +1,23 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { STARFORGED } from '@astrolabe/rules';
+import { STARFORGED, type OracleId } from '@astrolabe/rules';
 import { LOCAL_PLAYER_ID, type Actor, type CampaignId, type CommandId } from '@astrolabe/shared';
 
-import { CHARACTER_PROPOSAL_ROLLS } from '../ai/context/index.js';
+import { CHARACTER_PROPOSAL_ROLLS, INCIDENT_PROPOSAL_ROLLS } from '../ai/context/index.js';
 import { StubProvider } from '../ai/stub.js';
 import { loadedDice } from '../fixtures/loaded-dice.js';
 import { project } from '../projection/project.js';
 
-import { createCampaign } from './campaign-commands.js';
+import {
+  addSectorLocation,
+  createCampaign,
+  setTruth,
+  swearIncitingVow,
+} from './campaign-commands.js';
 import { createCharacter, UnknownProposalError } from './character-commands.js';
 import { readEvents } from './event-store.js';
 import { AiRequestRefusedError } from './narration-commands.js';
-import { proposeCharacter } from './proposal-commands.js';
+import { proposeCharacter, proposeIncidents } from './proposal-commands.js';
 import { createTestDatabase, hasTestDatabase, type TestDatabase } from './testing.js';
 import { uuidv7 } from './uuid.js';
 
@@ -476,5 +481,262 @@ describe.skipIf(!hasTestDatabase)('character proposals (task 3.3, D-123, D-124)'
         proposalCommandId: newId(),
       }),
     ).rejects.toBeInstanceOf(UnknownProposalError);
+  });
+});
+
+/** Three incidents as the AI would answer them, drawing on whatever it is given. */
+function goodIncidents(drawsOn: Record<string, string[]> = {}) {
+  return {
+    options: [1, 2, 3].map((n) => ({
+      title: `Answer incident ${n}`,
+      rank: 'formidable',
+      situation: `Incident ${n} has come to a head, and a settlement is waiting.`,
+      reason: `Built from roll ${n}.`,
+      groundedIn: [`incident-${n}`],
+      drawsOn,
+    })),
+  };
+}
+
+const incidentRolls = () =>
+  loadedDice(INCIDENT_PROPOSAL_ROLLS.map((_, i) => ({ sides: 100, face: 3 + i * 31 })));
+
+describe.skipIf(!hasTestDatabase)('inciting incident proposals (task 4.6, D-132–D-134)', () => {
+  let db: TestDatabase;
+
+  beforeAll(async () => {
+    db = await createTestDatabase('incident_proposals');
+  }, 30_000);
+
+  afterAll(async () => {
+    await db?.close();
+  });
+
+  async function campaign(): Promise<CampaignId> {
+    const campaignId = newId<CampaignId>();
+    await createCampaign(db.sql, {
+      campaignId,
+      commandId: newId(),
+      actor: PLAYER,
+      name: 'Lantern Wake',
+    });
+    return campaignId;
+  }
+
+  /** A truth, a location and one crew member with a backstory, as a setup evening leaves them. */
+  async function setUp(campaignId: CampaignId) {
+    await setTruth(db.sql, {
+      campaignId,
+      commandId: newId(),
+      actor: PLAYER,
+      oracleId: 'oracle:cataclysm' as OracleId,
+      source: 'written',
+      text: 'The sun plague burned the old worlds.',
+    });
+    await addSectorLocation(db.sql, {
+      campaignId,
+      commandId: newId(),
+      actor: PLAYER,
+      name: 'Varga Relay',
+      description: 'A relay station at the sector edge.',
+    });
+    await createCharacter(db.sql, {
+      campaignId,
+      commandId: newId(),
+      actor: PLAYER,
+      draft: {
+        name: 'Vesna Kade',
+        callsign: 'Vesna',
+        stats: { edge: 3, heart: 2, iron: 1, shadow: 1, wits: 2 },
+        assets: ['asset:path/ace', 'asset:path/navigator', 'asset:module/sensor-array'] as never,
+      },
+      backgroundVow: { title: 'Find the pilots I left behind', rank: 'extreme' },
+      hooks: ['She flew the last evacuation out of a burning colony.'],
+      pronouns: 'she/her',
+    });
+  }
+
+  it('rolls one incident per option and writes the rolls, the accounting and the proposal as one command', async () => {
+    const campaignId = await campaign();
+    await setUp(campaignId);
+    const ai = new StubProvider({
+      responses: [
+        {
+          kind: 'structured',
+          value: goodIncidents({
+            truths: ['oracle:cataclysm'],
+            locations: ['Varga Relay'],
+            crew: ['Vesna'],
+          }),
+        },
+      ],
+    });
+    const commandId = newId<CommandId>();
+
+    const result = await proposeIncidents(db.sql, ai, {
+      campaignId,
+      commandId,
+      actor: PLAYER,
+      rng: incidentRolls(),
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const events = await readEvents(db.sql, campaignId);
+    const state = project(events);
+    const [vesna] = Object.values(state.characters);
+    const relay = Object.values(state.entities).find((e) => e.name === 'Varga Relay');
+    expect(result.proposal.options).toHaveLength(3);
+    result.proposal.options.forEach((option, i) => {
+      expect(option.groundedIn).toEqual([result.rolls[i]?.eventId]);
+      expect(option.drawsOn).toEqual({
+        truths: ['oracle:cataclysm'],
+        locations: [relay?.id],
+        characters: [vesna?.id],
+      });
+    });
+
+    // What the AI was told: the truths, the sector, the crew's record, the rolls.
+    const asked = ai.requests[0];
+    expect(asked?.purpose).toBe('incident_proposal');
+    expect(asked?.user).toContain(
+      '- oracle:cataclysm (Cataclysm): The sun plague burned the old worlds.',
+    );
+    expect(asked?.user).toContain(
+      '- Varga Relay (description: A relay station at the sector edge.)',
+    );
+    expect(asked?.user).toContain(
+      '- Vesna: Vesna Kade (she/her); background vow: "Find the pilots I left behind" (extreme); backstory: She flew the last evacuation out of a burning colony.',
+    );
+    expect(asked?.user).toContain(`incident-1 (Inciting incident): ${result.rolls[0]?.rowText}`);
+
+    const written = events.filter((e) => e.commandId === commandId).map((e) => e.type);
+    expect(written).toEqual([
+      'oracle.rolled',
+      'oracle.rolled',
+      'oracle.rolled',
+      'ai.completed',
+      'incident.proposed',
+    ]);
+    for (const roll of result.rolls) {
+      expect(roll.oracleId).toBe('oracle:campaign-launch/inciting-incident');
+      expect(roll.label).toBe('Inciting incident');
+    }
+    // A proposal changes nothing: no vow until the player swears one.
+    expect(Object.values(state.tracks).map((t) => t.title)).toEqual([
+      'Find the pilots I left behind',
+    ]);
+  });
+
+  it('says there is no crew yet, and asks nothing of one (D-133)', async () => {
+    const campaignId = await campaign();
+    const ai = new StubProvider({ responses: [{ kind: 'structured', value: goodIncidents() }] });
+
+    const result = await proposeIncidents(db.sql, ai, {
+      campaignId,
+      commandId: newId(),
+      actor: PLAYER,
+      rng: incidentRolls(),
+    });
+
+    expect(result).toMatchObject({ ok: true });
+    expect(ai.requests[0]?.user).toContain('The crew: no characters have been created yet');
+    expect(ai.requests[0]?.user).toContain('Setting truths: none answered yet.');
+    expect(ai.requests).toHaveLength(1);
+  });
+
+  it('re-asks when no option draws on the truths or the crew, then records the failure with its rolls', async () => {
+    const campaignId = await campaign();
+    await setUp(campaignId);
+    const ungrounded = {
+      kind: 'structured' as const,
+      value: goodIncidents({ truths: [], locations: ['Varga Relay'], crew: [] }),
+    };
+    const ai = new StubProvider({ responses: [ungrounded, ungrounded] });
+
+    const result = await proposeIncidents(db.sql, ai, {
+      campaignId,
+      commandId: newId(),
+      actor: PLAYER,
+      rng: incidentRolls(),
+    });
+
+    expect(result).toMatchObject({ ok: false, errorKind: 'invalid_output' });
+    expect(ai.requests[1]?.user).toMatch(/No option draws on the setting truths/);
+    expect(ai.requests[1]?.user).toMatch(/No option draws on the crew/);
+    expect(result.rolls).toHaveLength(3);
+    const types = (await readEvents(db.sql, campaignId)).map((e) => e.type);
+    expect(types).toContain('ai.failed');
+    expect(types).not.toContain('incident.proposed');
+  });
+
+  it('replays a proposal command without asking again', async () => {
+    const campaignId = await campaign();
+    const ai = new StubProvider({ responses: [{ kind: 'structured', value: goodIncidents() }] });
+    const request = {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      rng: incidentRolls(),
+    };
+
+    const first = await proposeIncidents(db.sql, ai, request);
+    const again = await proposeIncidents(db.sql, ai, request);
+
+    expect(again).toEqual(first);
+    expect(ai.requests).toHaveLength(1);
+  });
+
+  it('swears the vow the player edited, naming the proposal as its cause (D-132)', async () => {
+    const campaignId = await campaign();
+    const ai = new StubProvider({ responses: [{ kind: 'structured', value: goodIncidents() }] });
+    const proposalCommandId = newId<CommandId>();
+    const proposed = await proposeIncidents(db.sql, ai, {
+      campaignId,
+      commandId: proposalCommandId,
+      actor: PLAYER,
+      rng: incidentRolls(),
+    });
+    if (!proposed.ok) throw new Error('expected a proposal');
+
+    const sworn = await swearIncitingVow(db.sql, {
+      campaignId,
+      commandId: newId(),
+      actor: PLAYER,
+      title: 'Recover the flight recorder of the Meridian',
+      rank: 'formidable',
+      proposalCommandId,
+    });
+
+    const vow = sworn.result.events.find((e) => e.type === 'track.created');
+    expect(vow?.causedBy).toBe(proposed.proposalEventId);
+    const state = project(await readEvents(db.sql, campaignId));
+    expect(state.tracks[sworn.vowTrackId]).toMatchObject({
+      title: 'Recover the flight recorder of the Meridian',
+      rank: 'formidable',
+    });
+  });
+
+  it('refuses a vow naming a command that holds no incident proposal', async () => {
+    const campaignId = await campaign();
+    const characterProposal = newId<CommandId>();
+    await proposeCharacter(
+      db.sql,
+      new StubProvider({ responses: [{ kind: 'structured', value: goodProposal() }] }),
+      { campaignId, commandId: characterProposal, actor: PLAYER, concept: CONCEPT, rng: rolls() },
+    );
+
+    for (const proposalCommandId of [newId<CommandId>(), characterProposal]) {
+      await expect(
+        swearIncitingVow(db.sql, {
+          campaignId,
+          commandId: newId(),
+          actor: PLAYER,
+          title: 'Anything',
+          rank: 'dangerous',
+          proposalCommandId,
+        }),
+      ).rejects.toBeInstanceOf(UnknownProposalError);
+    }
   });
 });

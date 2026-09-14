@@ -1,7 +1,8 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type {
   AddSectorLocationResponse,
   ChallengeRank,
+  ProposeIncidentsResponse,
   SetTruthResponse,
   SwearIncitingVowResponse,
 } from '@astrolabe/shared';
@@ -9,6 +10,7 @@ import type { OracleId } from '@astrolabe/rules';
 
 import { useInvalidateCampaign } from './campaigns.js';
 import { apiPost } from './http.js';
+import { aiKeys } from './narration.js';
 
 /**
  * The rest of campaign setup (tasks 4.2–4.4), each its own command against
@@ -72,6 +74,8 @@ export function useAddSectorRoute(campaignId: string) {
 export interface SwearIncitingVowInput {
   readonly title: string;
   readonly rank: ChallengeRank;
+  /** D-132: the incident proposal the player started from, if any. */
+  readonly proposalCommandId?: string;
 }
 
 export function useSwearIncitingVow(campaignId: string) {
@@ -83,5 +87,32 @@ export function useSwearIncitingVow(campaignId: string) {
         ...input,
       }),
     onSuccess: invalidate,
+  });
+}
+
+/** The answer, plus the command id swearing from it must name. */
+export interface ProposedIncidents {
+  readonly commandId: string;
+  readonly response: ProposeIncidentsResponse;
+}
+
+/** Task 4.6 / D-132: ask the Guide for inciting incidents. An outage is an answer, not a thrown error. */
+export function useProposeIncidents(campaignId: string) {
+  const invalidate = useInvalidateCampaign(campaignId);
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (): Promise<ProposedIncidents> => {
+      const commandId = crypto.randomUUID();
+      const response = await apiPost<ProposeIncidentsResponse>(
+        `/campaigns/${campaignId}/incident-proposals`,
+        { commandId },
+      );
+      return { commandId, response };
+    },
+    onSettled: () => {
+      invalidate();
+      void queryClient.invalidateQueries({ queryKey: aiKeys.status });
+    },
   });
 }

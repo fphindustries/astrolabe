@@ -40,6 +40,7 @@ export {
 export { listCampaigns } from './campaign-queries.js';
 export {
   proposeCharacter,
+  proposeIncidents,
   type ProposalRequest,
   type ProposalRollSpec,
   type ProposeCharacterRequest,

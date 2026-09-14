@@ -367,7 +367,7 @@ export function buildApp({ sql, ai, checker }: BuildAppOptions): FastifyInstance
         reply.code(400);
         return undefined;
       }
-      const { commandId, title, rank } = parsedBody.data;
+      const { commandId, title, rank, proposalCommandId } = parsedBody.data;
 
       try {
         const sworn = await swearIncitingVow(sql, {
@@ -376,11 +376,12 @@ export function buildApp({ sql, ai, checker }: BuildAppOptions): FastifyInstance
           actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
           title,
           rank,
+          ...(proposalCommandId !== undefined ? { proposalCommandId } : {}),
         });
         reply.code(201);
         return { vowTrackId: sworn.vowTrackId };
       } catch (error) {
-        if (error instanceof IncitingVowRejectedError) {
+        if (error instanceof IncitingVowRejectedError || error instanceof UnknownProposalError) {
           reply.code(422);
           return { problem: error.message };
         }

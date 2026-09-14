@@ -328,6 +328,20 @@ export const EVENT_TYPE_META: MetaTable = {
     introduces: none,
     references: (p) => [entity(p.fromLocationId), entity(p.toLocationId)],
   },
+  'incident.proposed': {
+    // D-132: a suggestion, like `character.proposed`. It changes nothing
+    // until a vow names it as its cause, and it belongs to no beat.
+    narrative: false,
+    significant: false,
+    mutatesState: false,
+    voidable: true,
+    introduces: none,
+    references: (p) =>
+      p.options.flatMap((option) => [
+        ...option.drawsOn.locations.map(entity),
+        ...option.drawsOn.characters.map(character),
+      ]),
+  },
 };
 
 /** The event types the narrative log renders (task 5.4's query). */

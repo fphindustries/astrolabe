@@ -60,7 +60,7 @@ function nonEmpty(value: string | undefined): value is string {
  * stubbed session plays through without pausing.
  */
 function devStubResponse(
-  request: { readonly purpose: string },
+  request: { readonly purpose: string; readonly user: string },
   mode: 'text' | 'structured',
 ): StubResponse {
   if (mode === 'structured' && request.purpose === 'harm_proposal') {
@@ -88,6 +88,9 @@ function devStubResponse(
         ],
       },
     };
+  }
+  if (mode === 'structured' && request.purpose === 'incident_proposal') {
+    return { kind: 'structured', value: stubIncidentProposal(request.user) };
   }
   if (mode === 'structured' && request.purpose === 'character_proposal') {
     return { kind: 'structured', value: STUB_CHARACTER_PROPOSAL };
@@ -145,3 +148,28 @@ const STUB_CHARACTER_PROPOSAL = {
   ],
   pronouns: { value: null, reason: 'Stub proposal: the concept states none.' },
 };
+
+/**
+ * Three incidents, one per roll (4.6). They draw on the first truth and the
+ * first crew member the request lists, read back out of `renderSetup`'s
+ * lines, so the proposal passes its check on any campaign.
+ */
+function stubIncidentProposal(user: string) {
+  const truth = /^- (oracle:\S+) \(/m.exec(user)?.[1];
+  const crew = /^The crew:\n- ([^:\n]+):/m.exec(user)?.[1];
+  return {
+    options: [1, 2, 3].map((n) => ({
+      title: `Stub proposal ${n}: see the rolled incident through`,
+      rank: 'formidable',
+      situation: `Stub proposal: the situation incident roll ${n} describes has come to a head.`,
+      reason: 'Stub proposal: the incident roll, as rolled.',
+      groundedIn: [`incident-${n}`],
+      // Every part, even empty: a part the campaign lacks is simply not in the schema.
+      drawsOn: {
+        truths: truth !== undefined ? [truth] : [],
+        locations: [],
+        crew: crew !== undefined ? [crew] : [],
+      },
+    })),
+  };
+}

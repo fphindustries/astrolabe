@@ -336,6 +336,73 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
     expect(empty.statusCode).toBe(400);
   });
 
+  it('proposes inciting incidents, and swearing one names the proposal as its cause (4.6, D-132)', async () => {
+    const { campaignId } = await moveMade();
+    const state = project(await readEvents(db.sql, campaignId));
+    const [rook] = Object.values(state.characters);
+    ai.enqueue({
+      kind: 'structured',
+      value: {
+        options: [1, 2, 3].map((n) => ({
+          title: `Answer incident ${n}`,
+          rank: 'dangerous',
+          situation: `Incident ${n} has reached the relay.`,
+          reason: `Roll ${n}.`,
+          groundedIn: [`incident-${n}`],
+          drawsOn: { crew: [rook?.callsign] },
+        })),
+      },
+    });
+    const proposalCommandId = newId<CommandId>();
+
+    const proposed = await app.inject({
+      method: 'POST',
+      url: `/api/campaigns/${campaignId}/incident-proposals`,
+      payload: { commandId: proposalCommandId },
+    });
+    expect(proposed.statusCode).toBe(201);
+    const body = proposed.json();
+    expect(body).toMatchObject({ ok: true });
+    expect(body.rolls).toHaveLength(3);
+    expect(body.proposal.options[0].drawsOn).toEqual({
+      truths: [],
+      locations: [],
+      characters: [rook?.id],
+    });
+    const log = await app.inject({ method: 'GET', url: `/api/campaigns/${campaignId}/log` });
+    expect(log.body).not.toContain(body.rolls[0].eventId);
+
+    const sworn = await app.inject({
+      method: 'POST',
+      url: `/api/campaigns/${campaignId}/inciting-vow`,
+      payload: {
+        commandId: newId(),
+        title: 'Answer incident 2, at the relay',
+        rank: 'formidable',
+        proposalCommandId,
+      },
+    });
+    expect(sworn.statusCode).toBe(201);
+    const vow = (await readEvents(db.sql, campaignId)).find(
+      (e) => e.type === 'track.created' && e.payload.title === 'Answer incident 2, at the relay',
+    );
+    expect(vow?.causedBy).toBe(body.proposalEventId);
+
+    const unknown = await app.inject({
+      method: 'POST',
+      url: `/api/campaigns/${campaignId}/inciting-vow`,
+      payload: { commandId: newId(), title: 'x', rank: 'dangerous', proposalCommandId: newId() },
+    });
+    expect(unknown.statusCode).toBe(422);
+
+    const malformed = await app.inject({
+      method: 'POST',
+      url: `/api/campaigns/${campaignId}/incident-proposals`,
+      payload: {},
+    });
+    expect(malformed.statusCode).toBe(400);
+  });
+
   it('overrides momentum by hand, and refuses an out-of-range value (A16, D-117)', async () => {
     const { campaignId, characterId } = await moveMade();
 

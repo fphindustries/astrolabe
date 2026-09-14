@@ -7,12 +7,14 @@ import {
   OverrideRequestBodySchema,
   ProposeAmountRequestBodySchema,
   ProposeCharacterRequestBodySchema,
+  ProposeIncidentsRequestBodySchema,
   type AiStatusResponse,
   type NarrationFrame,
   type NarrationRefusalResponse,
   type OverrideResponse,
   type ProposeAmountResponse,
   type ProposeCharacterResponse,
+  type ProposeIncidentsResponse,
 } from '@astrolabe/shared';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { Sql } from 'postgres';
@@ -28,6 +30,7 @@ import {
   prepareCorrection,
   proposeAmount,
   proposeCharacter,
+  proposeIncidents,
   runBeatNarration,
   runCorrection,
   type AiCommandResult,
@@ -210,6 +213,38 @@ export function registerAiRoutes(
           status,
         );
         // As with amount proposals: an outage is a recorded outcome (D-116).
+        reply.code(201);
+        return result;
+      } catch (error) {
+        return refusal(error, reply);
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/incident-proposals',
+    async (
+      request,
+      reply,
+    ): Promise<ProposeIncidentsResponse | NarrationRefusalResponse | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
+        return undefined;
+      }
+      const parsedBody = ProposeIncidentsRequestBodySchema.safeParse(request.body);
+      if (!parsedBody.success) {
+        reply.code(400);
+        return undefined;
+      }
+
+      try {
+        const result = await proposeIncidents(
+          sql,
+          ai,
+          { campaignId: id, commandId: parsedBody.data.commandId, actor: PLAYER },
+          status,
+        );
+        // D-132: the same contract as a character proposal (D-116).
         reply.code(201);
         return result;
       } catch (error) {

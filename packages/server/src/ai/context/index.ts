@@ -8,6 +8,7 @@ export * from './authority-rubric.js';
 export * from './beat-scope.js';
 export * from './creation.js';
 export * from './describe-beat.js';
+export * from './incident.js';
 export * from './latitude.js';
 export * from './length.js';
 export * from './prompt.js';

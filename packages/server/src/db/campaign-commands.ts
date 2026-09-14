@@ -14,13 +14,20 @@ import {
   type ChallengeRank,
   type CommandId,
   type EntityId,
+  type EventId,
 } from '@astrolabe/shared';
 import type { Sql } from 'postgres';
 
 import { project } from '../projection/project.js';
 import { cryptoRandomSource } from '../random-source.js';
 
-import { appendCommand, readEvents, type AppendResult } from './event-store.js';
+import { UnknownProposalError } from './character-commands.js';
+import {
+  appendCommand,
+  readEvents,
+  readEventsByCommand,
+  type AppendResult,
+} from './event-store.js';
 import { uuidv7 } from './uuid.js';
 
 /**
@@ -329,13 +336,11 @@ export class IncitingVowRejectedError extends Error {
  * ("recover the flight recorder of Meridian's Hope") belongs to the crew,
  * not to one character (`harness/golden-beats.ts` writes it the same way).
  *
- * **AI-proposed incidents are deliberately not built here (D-101).** The
- * design record calls for the AI to propose several, grounded in oracles
- * and the characters' backgrounds, with the player picking, editing, or
- * writing their own — but that needs the AI provider (group 7), which the
- * work order runs after group 4. Only the player-written path exists for
- * now; the AI-proposal path adds to this same form once 7.1/7.2 land, the
- * same treatment task 3.3 already gets.
+ * The title and rank are always the player's to send. When they started
+ * from the Guide's proposed incidents (task 4.6, D-132), `proposalCommandId`
+ * names that proposal: the server resolves it and records it as the vow's
+ * cause, never taking causality from the client (D-124). Edited or not, the
+ * words sworn are the ones sent.
  */
 export interface SwearIncitingVowRequest {
   readonly campaignId: CampaignId;
@@ -344,6 +349,7 @@ export interface SwearIncitingVowRequest {
   readonly title: string;
   readonly rank: ChallengeRank;
   readonly characterId?: CharacterId;
+  readonly proposalCommandId?: CommandId;
 }
 
 export interface SwornIncitingVow {
@@ -360,6 +366,17 @@ export async function swearIncitingVow(
     throw new IncitingVowRejectedError('An inciting incident needs its own words.');
   }
 
+  let causedBy: EventId | undefined;
+  if (request.proposalCommandId !== undefined) {
+    const proposal = (
+      await readEventsByCommand(sql, request.campaignId, request.proposalCommandId)
+    ).find((event) => event.type === 'incident.proposed');
+    if (proposal === undefined) {
+      throw new UnknownProposalError();
+    }
+    causedBy = proposal.id;
+  }
+
   const vowTrackId = uuidv7() as TrackId;
 
   const result = await appendCommand(sql, {
@@ -367,6 +384,7 @@ export async function swearIncitingVow(
     commandId: request.commandId,
     kind: 'campaign.swear_inciting_vow',
     actor: request.actor,
+    ...(causedBy !== undefined ? { causedBy } : {}),
     events: [
       {
         type: 'track.created',

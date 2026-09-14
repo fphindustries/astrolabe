@@ -338,6 +338,18 @@ export const SAMPLE_PAYLOADS: { [T in EventType]: PayloadFor<T> } = {
     fromLocationId: STATION,
     toLocationId: SURVIVOR,
   },
+  'incident.proposed': {
+    options: [
+      {
+        title: 'Recover the flight recorder of a lost colony ship',
+        rank: 'formidable',
+        situation: 'A colony ship went silent on a crossing, and its recorder beacon still pings.',
+        reason: 'Adapted from the rolled incident, set on the relay route.',
+        groundedIn: [testEventId(92)],
+        drawsOn: { truths: ['oracle:cataclysm'], locations: [STATION], characters: [VESNA] },
+      },
+    ],
+  },
 };
 
 /** Every sample as a complete, valid event, in catalogue order. */

@@ -57,6 +57,12 @@ const PROBES: { readonly [T in EventType]: Probe } = {
         actor: AI_ACTOR,
       }),
   },
+  'incident.proposed': {
+    probe: (b) =>
+      b.add('incident.proposed', SAMPLE_PAYLOADS['incident.proposed'] as never, {
+        actor: AI_ACTOR,
+      }),
+  },
   'session.began': {
     probe: (b) => b.add('session.began', { sessionId: SESSION_ID, number: 3 }),
   },

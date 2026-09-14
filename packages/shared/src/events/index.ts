@@ -8,6 +8,7 @@ import { AmountCommittedSchema, AmountProposedSchema } from './amount.js';
 import { CampaignCreatedSchema } from './campaign.js';
 import { CharacterCreatedSchema, CharacterProposedSchema } from './character.js';
 import { EntityEstablishedSchema } from './entity.js';
+import { IncidentProposedSchema } from './incident.js';
 import {
   DiceRolledSchema,
   MomentumBurnedSchema,
@@ -42,7 +43,8 @@ import { EventVoidedSchema } from './void.js';
  * amounts with group 6, and `amount.proposed` and `ai.failed` with the AI
  * provider (group 7, D-113, D-118), and `character.proposed` with concept-first
  * creation (3.3, D-124), and `narration.withdrawn` with the authority check
- * (7.15, D-128). The remaining types (complications, the
+ * (7.15, D-128), and `incident.proposed` with AI-proposed inciting incidents
+ * (4.6, D-132). The remaining types (complications, the
  * scene header) are designed in `docs/design-event-log.md` and land the
  * same way, so their payloads are shaped by a real caller rather than
  * guessed at a month early.
@@ -81,6 +83,7 @@ export const PAYLOAD_SCHEMAS = {
   'ai.failed': AiFailedSchema,
   'truth.set': TruthSetSchema,
   'sector.route_added': SectorRouteAddedSchema,
+  'incident.proposed': IncidentProposedSchema,
 } as const;
 
 export type EventType = keyof typeof PAYLOAD_SCHEMAS;
@@ -143,6 +146,7 @@ export const EventSchema = z.discriminatedUnion('type', [
   eventMember('ai.failed'),
   eventMember('truth.set'),
   eventMember('sector.route_added'),
+  eventMember('incident.proposed'),
 ]);
 
 /**
@@ -206,6 +210,7 @@ export * from './amount.js';
 export * from './campaign.js';
 export * from './character.js';
 export * from './entity.js';
+export * from './incident.js';
 export * from './move.js';
 export * from './narration.js';
 export * from './oracle.js';

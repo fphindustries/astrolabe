@@ -180,6 +180,8 @@ export const SwearIncitingVowRequestBodySchema = z.object({
   commandId: CommandIdSchema,
   title: z.string().min(1),
   rank: ChallengeRankSchema,
+  /** D-132: the incident proposal the player started from, edited or not. */
+  proposalCommandId: CommandIdSchema.optional(),
 });
 
 export type SwearIncitingVowRequestBody = z.infer<typeof SwearIncitingVowRequestBodySchema>;
@@ -512,6 +514,27 @@ export interface ProposalRoll {
   readonly roll: number;
   readonly rowText: string;
 }
+
+/** Task 4.6 / D-132: ask the Guide to propose inciting incidents. */
+export const ProposeIncidentsRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+});
+
+export type ProposeIncidentsRequestBody = z.infer<typeof ProposeIncidentsRequestBodySchema>;
+
+export type ProposeIncidentsResponse =
+  | {
+      readonly ok: true;
+      readonly proposalEventId: EventId;
+      readonly proposal: PayloadFor<'incident.proposed'>;
+      readonly rolls: readonly ProposalRoll[];
+    }
+  | {
+      readonly ok: false;
+      readonly errorKind: AiErrorKind;
+      readonly message: string;
+      readonly rolls: readonly ProposalRoll[];
+    };
 
 export type ProposeCharacterResponse =
   | {

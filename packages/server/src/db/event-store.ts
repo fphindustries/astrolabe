@@ -368,7 +368,7 @@ const EVENTS_PER_BEAT_ALLOWANCE = 4;
  * story, so the narrative log leaves them out. Accepting writes an ordinary
  * command that the log does show.
  */
-export const PROPOSAL_COMMAND_KINDS = ['character.propose'] as const;
+export const PROPOSAL_COMMAND_KINDS = ['character.propose', 'campaign.propose_incidents'] as const;
 
 const AMENDMENT_TYPES = [
   'event.voided',

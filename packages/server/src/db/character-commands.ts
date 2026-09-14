@@ -40,7 +40,11 @@ export class CharacterRejectedError extends Error {
   }
 }
 
-/** D-124: a `proposalCommandId` that names no character proposal in the campaign. */
+/**
+ * D-124, D-132: a `proposalCommandId` that names no proposal of the right
+ * kind in the campaign — a character proposal for a character, an incident
+ * proposal for the inciting vow.
+ */
 export class UnknownProposalError extends Error {
   constructor() {
     super('That proposal does not exist in this campaign.');

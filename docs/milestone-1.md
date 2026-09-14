@@ -119,7 +119,7 @@ narrative log is a second read model with its own paged query.
 - [x] 4.3 Sector as a location list with routes
 - [x] 4.4 Inciting incident: AI proposals or player-written; becomes the first vow — player-written path only (D-101)
 - [x] 4.5 Campaign settings: narration latitude, narration length, reroll cap
-- [ ] 4.6 AI-proposed inciting incidents, grounded in the incident oracle and the characters' backgrounds, on 3.3's proposal plumbing; the player picks, edits or writes their own (D-34, D-101, D-126, D-132–D-134)
+- [x] 4.6 AI-proposed inciting incidents, grounded in the incident oracle and the characters' backgrounds, on 3.3's proposal plumbing; the player picks, edits or writes their own (D-34, D-101, D-126, D-132–D-134)
 
 ### 5. Play screen shell
 
@@ -1562,3 +1562,66 @@ The matrix ran 5 beats × 3 latitudes × 3 runs through the real pipeline: claud
 - the corpus replay.
 
 The withdrawal UI was checked by unit tests only, not in a browser: the stub checker never withdraws.
+
+## Implementation notes (task 4.6, AI-proposed inciting incidents)
+
+4.6 is done (D-34, D-101, D-126, D-132–D-134). It came after 7.14–7.16 because it is prose the Guide writes, and it runs on 3.3's proposal plumbing as that plumbing's second caller.
+
+### Shape
+
+- **Prompt** (`ai/context/incident.ts`, pure).
+  - `INCIDENT_PROPOSAL_ROLLS` rolls `oracle:campaign-launch/inciting-incident` three times, one roll per option.
+  - `renderSetup` gives the truths keyed by oracle id, the sector's locations with their routes, and each crew member's name, pronouns, background vow and hooks. It says plainly when any of these is empty, so the AI doesn't read silence as a crew with no past (D-133).
+  - `INCIDENT_RULES` carries D-129's narrator rules (D-134) and D-123's rule against invented names.
+- **Answer.** `incidentProposalSchema` asks for exactly three options.
+  - Every citation is an enum of what exists: rolls, truths, locations by name (a repeated name gets a numbered key), and crew by callsign.
+  - A part the campaign has nothing in is left out of the schema, because an enum needs a value.
+  - `checkIncidentProposal` rejects repeated titles, and requires that some option draws on the truths when there are any, and on the crew when there is one. A failing answer is re-asked once with the problem stated.
+- **Command** (`proposeIncidents`, `db/proposal-commands.ts`).
+  - `runProposal` writes the rolls, the accounting and `incident.proposed`, or the rolls and `ai.failed`.
+  - `toPayload` now also receives the state `build` was given, so the answer's keys resolve to ids.
+  - `campaign.propose_incidents` joins `PROPOSAL_COMMAND_KINDS`, so its rolls stay out of the log.
+- **Swearing.** `swearIncitingVow` accepts `proposalCommandId`. The server looks for an `incident.proposed` in that command and records it as the vow command's `causedBy`. A command holding anything else, a character proposal included, throws `UnknownProposalError` (422). The words sworn are always the ones the player sent.
+- **Event.** `incident.proposed { options: [{ title, rank, situation, reason, groundedIn, drawsOn { truths, locations, characters } }] }` is not narrative, changes no state, and references what it draws on.
+- **Route.** `POST /api/campaigns/:id/incident-proposals {commandId}` returns 201 with the proposal and rolls, or with `{ok:false, errorKind, message, rolls}`, as character proposals do.
+- **Web.** The incident step gains an "Ask the Guide" section above the vow form.
+  - It says when there is no crew to draw on.
+  - Each proposed incident is a card showing its rank, situation, reason, what it draws on, and its roll chip.
+  - "Use this" fills the vow form, asking first if that would replace words the player wrote.
+  - The form shows 3.3's Guide marker, or "Edited" with a restore link.
+  - A new proposal replaces the cards and never touches the form. Pure helpers are in `campaigns/incident-proposal.ts`.
+- **Dev stub.** It answers three incidents that draw on the first truth and crew member listed in the request, so a stubbed setup passes the check.
+
+### Live pass
+
+This was 2026-09-14 with claude-opus-5, on a campaign with three truths, two locations and a route. Every run is in `ai/eval/live-incidents-4.6.json`.
+
+- Runs 1–3 had a two-character crew with hooks and background vows. Runs 4–5 had no crew.
+- **5 of 5 proposals** passed on the first attempt, in 14–17 s each, the same order as 3.3's character proposals.
+- **Grounding.** Every option built on its own roll, and every option drew on at least one truth. In the crew runs, every option named a crew member. When one roll's row appeared twice (run 4), the two options took it in different directions.
+- **Authority.** No situation gave a crew member an action, feeling, intent or line of speech. Situations describe what has happened. Where one mentions a crew member, it is through their record: "the salvage guild that holds Vesna's ship debt" (run 3, and run 2 in nearly the same words).
+- **Borderline.** One reason added to Vesna's record. It said the Anchorage is "where Vesna's salvage debt is held", where her record says only that she owes a salvage guild. D-134 leaves this to the player's review.
+- **Names.** No new named people, places or factions. "Founder Clans" and "the Exodus" come from the picked truths' own text.
+
+### Verification
+
+`npm run typecheck`, `npm run lint`, `npm test` (877 tests) and the web build pass. The new tests cover:
+
+- what the prompt offers, and what it says when a part is empty;
+- the enum constraints, the check, and key resolution;
+- the dev stub's answer passing the schema and the check;
+- the command writing rolls, accounting and proposal, and replaying;
+- a failing check re-asked and then recorded with its rolls;
+- a sworn vow naming its proposal, and an unknown or wrong-kind proposal refused;
+- the route and the log;
+- the card and marker helpers.
+
+A browser pass on the stub provider walked a new campaign through the wizard. It covered:
+
+- the no-crew notice;
+- proposing and viewing the cards;
+- the replace confirmation over typed words;
+- the Guide marker, then "Edited" with its restore link after an edit;
+- swearing the edited vow, whose command's `causedBy` is the `incident.proposed` event.
+
+The console was clean.

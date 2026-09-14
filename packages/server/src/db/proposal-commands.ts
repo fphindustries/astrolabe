@@ -10,16 +10,24 @@ import type {
   PayloadFor,
   ProposalRoll,
   ProposeCharacterResponse,
+  ProposeIncidentsResponse,
 } from '@astrolabe/shared';
 import type { Sql } from 'postgres';
 import type * as z from 'zod';
 
 import {
   CHARACTER_PROPOSAL_ROLLS,
+  INCIDENT_PROPOSAL_ROLLS,
   buildCharacterProposalRequest,
+  buildIncidentProposalRequest,
   characterProposalSchema,
   checkCharacterProposal,
+  checkIncidentProposal,
+  incidentContext,
+  incidentProposalSchema,
+  resolveDrawsOn,
   type CharacterProposalOutput,
+  type IncidentProposalOutput,
   type RolledForProposal,
 } from '../ai/context/index.js';
 import type { AiProvider, AiRequest } from '../ai/provider.js';
@@ -82,8 +90,12 @@ interface ProposalSpec<T, E extends EventType> {
     readonly schema: z.ZodType<T>;
     readonly check?: (value: T) => string | undefined;
   };
-  /** The proposal event, with each roll key already resolved to its event id. */
-  toPayload(value: T, eventIdOf: (key: string) => EventId): PayloadFor<E>;
+  /**
+   * The proposal event, with each roll key already resolved to its event id.
+   * `state` is the state `build` was given, for resolving anything else the
+   * answer names.
+   */
+  toPayload(value: T, eventIdOf: (key: string) => EventId, state: CampaignState): PayloadFor<E>;
 }
 
 type ProposalOutcome<E extends EventType> =
@@ -164,7 +176,7 @@ async function runProposal<T, E extends EventType>(
             withEnvelope(
               {
                 type: spec.contentType,
-                payload: spec.toPayload(outcome.value, eventIdOf),
+                payload: spec.toPayload(outcome.value, eventIdOf, state),
               } as NewEvent,
               envelope,
             ),
@@ -249,6 +261,63 @@ export async function proposeCharacter(
         ...(value.pronouns.value !== null
           ? { pronouns: { value: value.pronouns.value, reason: value.pronouns.reason } }
           : {}),
+      }),
+    },
+    status,
+  );
+
+  return outcome.ok
+    ? {
+        ok: true,
+        proposalEventId: outcome.event.id,
+        proposal: outcome.event.payload,
+        rolls: outcome.rolls,
+      }
+    : outcome;
+}
+
+// ---------------------------------------------------------------------------
+// Inciting incidents (task 4.6)
+// ---------------------------------------------------------------------------
+
+/**
+ * D-132: three incidents, one server roll each, drawn from the campaign as
+ * it stands — truths, sector, and whatever crew exists (D-133). Not sent
+ * through D-128's checker: the player's pick is the gate (D-134).
+ */
+export async function proposeIncidents(
+  sql: Sql,
+  ai: AiProvider,
+  request: ProposalRequest,
+  status?: AiStatus,
+): Promise<ProposeIncidentsResponse> {
+  const keys = INCIDENT_PROPOSAL_ROLLS.map((roll) => roll.key);
+
+  const outcome = await runProposal<IncidentProposalOutput, 'incident.proposed'>(
+    sql,
+    ai,
+    request,
+    {
+      kind: PROPOSAL_COMMAND_KINDS[1],
+      contentType: 'incident.proposed',
+      rolls: INCIDENT_PROPOSAL_ROLLS,
+      build: (state, rolled) => {
+        const offered = incidentContext(state);
+        return {
+          request: buildIncidentProposalRequest(state, rolled),
+          schema: incidentProposalSchema(keys, offered),
+          check: (value) => checkIncidentProposal(value, offered),
+        };
+      },
+      toPayload: (value, eventIdOf, state) => ({
+        options: value.options.map((option) => ({
+          title: option.title,
+          rank: option.rank,
+          situation: option.situation,
+          reason: option.reason,
+          groundedIn: [...new Set(option.groundedIn)].map(eventIdOf),
+          drawsOn: resolveDrawsOn(option.drawsOn, incidentContext(state)),
+        })),
       }),
     },
     status,
