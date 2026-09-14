@@ -265,6 +265,7 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
     case 'narration.written':
     case 'narration.correction_requested':
     case 'narration.revised':
+    case 'narration.withdrawn':
       // Narration and its corrections are the narrative log's business.
       // A15's requirement that a correction change nothing mechanical is
       // this line.

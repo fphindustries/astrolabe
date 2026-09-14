@@ -58,6 +58,34 @@ function passage(
   };
 }
 
+/** The streamed text alone, without the frames around it. */
+const shownText = (frames: readonly string[]) => frames.filter((f) => !f.startsWith('<')).join('');
+
+/** A scripted checker verdict (D-128). */
+function verdict(
+  ...violations: readonly {
+    rule: 'undeclared_action' | 'player_interior' | 'voice' | 'injury';
+    quote: string;
+    segment?: number | null;
+    character?: string | null;
+    why?: string;
+  }[]
+): Extract<StubResponse, { kind: 'structured' }> {
+  return {
+    kind: 'structured',
+    value: {
+      review: 'Recorded verdict.',
+      violations: violations.map((v) => ({
+        rule: v.rule,
+        character: v.character ?? 'Rook',
+        segment: v.segment ?? null,
+        quote: v.quote,
+        why: v.why ?? 'Recorded verdict.',
+      })),
+    },
+  };
+}
+
 function recorder(): { sink: TextSink; frames: string[] } {
   const frames: string[] = [];
   return {
@@ -65,6 +93,8 @@ function recorder(): { sink: TextSink; frames: string[] } {
     sink: {
       delta: (text) => frames.push(text),
       reset: (reason) => frames.push(`<reset: ${reason}>`),
+      checking: () => frames.push('<checking>'),
+      withdrawn: (reason) => frames.push(`<withdrawn: ${reason}>`),
     },
   };
 }
@@ -176,13 +206,14 @@ describe.skipIf(!hasTestDatabase)('the AI commands (group 7)', () => {
     ai: StubProvider,
     request: NarrateBeatRequest,
     status?: AiStatus,
+    checker: StubProvider = new StubProvider(),
   ): Promise<{ result: AiCommandResult; frames: string[] }> {
     const { sink, frames } = recorder();
     const prepared = await prepareBeatNarration(db.sql, request);
     const result =
       prepared.kind === 'replay'
         ? prepared.result
-        : await runBeatNarration(db.sql, ai, prepared, sink, status);
+        : await runBeatNarration(db.sql, ai, checker, prepared, sink, status);
     return { result, frames };
   }
 
@@ -214,7 +245,9 @@ describe.skipIf(!hasTestDatabase)('the AI commands (group 7)', () => {
       expect(result.ok).toBe(true);
       const text =
         'Rook forces the bulkhead. Sparks spray across Rook’s arm. The bulkhead groans open.';
-      expect(frames.join('')).toBe(text);
+      expect(shownText(frames)).toBe(text);
+      // Checked after it arrived, before it was kept (D-128).
+      expect(frames.at(-1)).toBe('<checking>');
 
       // The AI heard the whole chain, starting from the declared action, as keyed facts.
       expect(ai.requests[0]?.user).toContain(
@@ -224,12 +257,17 @@ describe.skipIf(!hasTestDatabase)('the AI commands (group 7)', () => {
 
       const events = await readEvents(db.sql, chain.campaignId);
       const written = events.filter((e) => e.commandId === commandId);
-      expect(written.map((e) => e.type)).toEqual(['ai.completed', 'narration.written']);
+      expect(written.map((e) => e.type)).toEqual([
+        'ai.completed',
+        'ai.completed',
+        'narration.written',
+      ]);
+      expect(written[1]?.payload).toMatchObject({ provider: 'stub', purpose: 'narration_check' });
       // Committed as the segments joined, with each basis resolved to the events behind it.
       const invoked = events.find(
         (e) => e.commandId === chain.faceDanger && e.type === 'move.invoked',
       );
-      expect(written[1]?.payload).toMatchObject({
+      expect(written[2]?.payload).toMatchObject({
         text,
         segments: [
           { about: 'character_does', characterId: chain.characterId, basis: [invoked?.id] },
@@ -242,9 +280,10 @@ describe.skipIf(!hasTestDatabase)('the AI commands (group 7)', () => {
       const chainEvents = events.filter((e) => e.seq < written[0]!.seq);
       expect(written[0]?.causedBy).toBe(chainEvents.at(-1)?.id);
 
+      // The narrator's tokens plus the checker's (the stub's default 100 in, 20 out).
       expect(project(events).session?.tokenUsage).toEqual({
-        input: 900,
-        output: 60,
+        input: 1000,
+        output: 80,
         cacheRead: 1500,
         cacheWrite: 0,
       });
@@ -272,14 +311,17 @@ describe.skipIf(!hasTestDatabase)('the AI commands (group 7)', () => {
       const written = (await readEvents(db.sql, chain.campaignId)).filter(
         (e) => e.commandId === commandId,
       );
+      // A cut-off reply is not an authority finding: reset, not withdrawn (D-128, amended).
+      expect(frames.some((f) => f.startsWith('<withdrawn'))).toBe(false);
       expect(written.map((e) => e.type)).toEqual([
+        'ai.completed',
         'ai.completed',
         'ai.completed',
         'narration.written',
       ]);
     });
 
-    it('never shows an undeclared action, and re-asks with the problem in words (D-127)', async () => {
+    it('never shows an undeclared action, and withdraws the attempt with its reason (D-127, D-128)', async () => {
       const chain = await beatSeven();
       const ai = new StubProvider({
         responses: [
@@ -301,9 +343,9 @@ describe.skipIf(!hasTestDatabase)('the AI commands (group 7)', () => {
       });
 
       expect(result.ok).toBe(true);
-      expect(frames.join('')).not.toContain('steps sideways');
+      expect(shownText(frames)).not.toContain('steps sideways');
       expect(frames).toContain(
-        '<reset: It narrated Rook doing something the player did not declare for Rook in this beat.>',
+        '<withdrawn: Withdrawn: it narrated Rook doing something the player did not declare for Rook in this beat.>',
       );
       expect(ai.requests[1]?.user).toContain(
         'Your previous answer was rejected: It narrated Rook doing something',
@@ -314,7 +356,196 @@ describe.skipIf(!hasTestDatabase)('the AI commands (group 7)', () => {
       expect(written.map((e) => e.type)).toEqual([
         'ai.completed',
         'ai.completed',
+        'ai.completed',
+        'narration.withdrawn',
         'narration.written',
+      ]);
+      expect(written[3]?.payload).toMatchObject({
+        role: 'beat',
+        attempt: 1,
+        checker: 'segment_checks',
+        latitude: 'color',
+        rejectedText: 'The bulkhead groans open. Rook steps sideways through the gap.',
+        violations: [{ rule: 'segment_check' }],
+      });
+    });
+
+    it('withdraws a passage the checker finds, quoted, and re-asks with the quote (D-128)', async () => {
+      const chain = await beatSeven();
+      // Round 20's disposition with a history, written as undergoing — what D-127 can't see.
+      const breaking = passage([
+        'character_undergoes',
+        'Rook',
+        ['F1'],
+        'The pain gets folded and stowed, the way it has been for thirty years.',
+      ]);
+      const ai = new StubProvider({
+        responses: [breaking, passage(['character_undergoes', 'Rook', ['F1'], 'The burn stings.'])],
+      });
+      const checker = new StubProvider({
+        responses: [
+          verdict({
+            rule: 'player_interior',
+            segment: 0,
+            quote: 'the way it has been for thirty years',
+            why: 'A history and a disposition.',
+          }),
+          verdict(),
+        ],
+      });
+      const commandId = newId<CommandId>();
+
+      const { result, frames } = await narrate(
+        ai,
+        {
+          campaignId: chain.campaignId,
+          commandId,
+          actor: PLAYER,
+          afterCommandId: chain.endureHarm,
+        },
+        undefined,
+        checker,
+      );
+
+      expect(result.ok).toBe(true);
+      // The text was shown provisionally, then struck with its reason — never quietly replaced.
+      expect(frames).toContain(
+        '<withdrawn: Withdrawn: it said what Rook thinks, feels or characteristically does, which is the player’s to decide.>',
+      );
+      expect(ai.requests[1]?.user).toContain('"the way it has been for thirty years"');
+      expect(checker.requests[0]?.user).toContain(
+        '[0] (character_undergoes, Rook) The pain gets folded',
+      );
+      expect(checker.requests[0]?.system[0]?.text).toContain('Player-owned interior');
+
+      const written = (await readEvents(db.sql, chain.campaignId)).filter(
+        (e) => e.commandId === commandId,
+      );
+      expect(written.map((e) => e.type)).toEqual([
+        'ai.completed',
+        'ai.completed',
+        'ai.completed',
+        'ai.completed',
+        'narration.withdrawn',
+        'narration.written',
+      ]);
+      expect(written.find((e) => e.type === 'narration.withdrawn')?.payload).toMatchObject({
+        checker: 'authority_check',
+        model: 'stub',
+        rejectedText: 'The pain gets folded and stowed, the way it has been for thirty years.',
+        violations: [{ rule: 'player_interior', character: 'Rook', segment: 0 }],
+      });
+      expect(written.at(-1)?.payload).toMatchObject({ text: 'The burn stings.' });
+    });
+
+    it('pauses play when the re-ask is withdrawn too (D-128)', async () => {
+      const chain = await beatSeven();
+      const breaking = passage(['character_undergoes', 'Rook', ['F1'], 'Rook is unshaken by it.']);
+      const flagged = verdict({ rule: 'player_interior', quote: 'unshaken by it', segment: 0 });
+      const commandId = newId<CommandId>();
+
+      const { result } = await narrate(
+        new StubProvider({ responses: [breaking, breaking] }),
+        {
+          campaignId: chain.campaignId,
+          commandId,
+          actor: PLAYER,
+          afterCommandId: chain.endureHarm,
+        },
+        undefined,
+        new StubProvider({ responses: [flagged, flagged] }),
+      );
+
+      expect(result).toMatchObject({ ok: false, errorKind: 'invalid_output' });
+      const written = (await readEvents(db.sql, chain.campaignId)).filter(
+        (e) => e.commandId === commandId,
+      );
+      expect(written.map((e) => e.type)).toEqual([
+        'ai.completed',
+        'ai.completed',
+        'ai.completed',
+        'ai.completed',
+        'narration.withdrawn',
+        'narration.withdrawn',
+        'ai.failed',
+      ]);
+      expect(written.at(-1)?.payload).toMatchObject({ provider: 'stub', purpose: 'beat' });
+    });
+
+    it('fails closed when the checker is unavailable, withdrawing what was shown (D-128)', async () => {
+      const chain = await beatSeven();
+      const commandId = newId<CommandId>();
+      const status = new AiStatus(new StubProvider());
+
+      const { result, frames } = await narrate(
+        new StubProvider({ responses: [passage(['world', null, [], 'The bulkhead gives.'])] }),
+        {
+          campaignId: chain.campaignId,
+          commandId,
+          actor: PLAYER,
+          afterCommandId: chain.endureHarm,
+        },
+        status,
+        new StubProvider({
+          responses: [{ kind: 'error', errorKind: 'rejected', message: 'bad model' }],
+        }),
+      );
+
+      expect(result).toMatchObject({ ok: false, errorKind: 'rejected' });
+      expect(frames).toContain(
+        '<withdrawn: Withdrawn: it could not be checked, and an unchecked passage is never kept.>',
+      );
+      const written = (await readEvents(db.sql, chain.campaignId)).filter(
+        (e) => e.commandId === commandId,
+      );
+      expect(written.map((e) => e.type)).toEqual([
+        'ai.completed',
+        'narration.withdrawn',
+        'ai.failed',
+      ]);
+      expect(written.at(-1)?.payload).toMatchObject({
+        purpose: 'narration_check',
+        errorKind: 'rejected',
+      });
+      expect(written.some((e) => e.type === 'narration.written')).toBe(false);
+      expect(status.snapshot()).toMatchObject({ available: false });
+    });
+
+    it('re-asks a checker whose quote is not verbatim, then fails closed (D-128)', async () => {
+      const chain = await beatSeven();
+      const invented = verdict({
+        rule: 'undeclared_action',
+        quote: 'Rook sprints away',
+        segment: 0,
+      });
+      const checker = new StubProvider({ responses: [invented, invented] });
+      const commandId = newId<CommandId>();
+
+      const { result } = await narrate(
+        new StubProvider({ responses: [passage(['world', null, [], 'The bulkhead gives.'])] }),
+        {
+          campaignId: chain.campaignId,
+          commandId,
+          actor: PLAYER,
+          afterCommandId: chain.endureHarm,
+        },
+        undefined,
+        checker,
+      );
+
+      expect(result).toMatchObject({ ok: false, errorKind: 'invalid_output' });
+      expect(checker.requests[1]?.user).toContain(
+        'quote "Rook sprints away" does not appear verbatim in segment 0',
+      );
+      const written = (await readEvents(db.sql, chain.campaignId)).filter(
+        (e) => e.commandId === commandId,
+      );
+      expect(written.map((e) => e.type)).toEqual([
+        'ai.completed',
+        'ai.completed',
+        'ai.completed',
+        'narration.withdrawn',
+        'ai.failed',
       ]);
     });
 
@@ -333,13 +564,18 @@ describe.skipIf(!hasTestDatabase)('the AI commands (group 7)', () => {
 
       expect(result).toMatchObject({ ok: false, errorKind: 'invalid_output' });
       // Whole words before the name may be released; the name never is.
-      const shown = frames.filter((f) => !f.startsWith('<reset')).join('');
-      expect(shown).not.toContain('Rook');
-      expect(frames.filter((f) => f.startsWith('<reset'))).toHaveLength(2);
+      expect(shownText(frames)).not.toContain('Rook');
+      expect(frames.filter((f) => f.startsWith('<withdrawn'))).toHaveLength(2);
       const written = (await readEvents(db.sql, chain.campaignId)).filter(
         (e) => e.commandId === commandId,
       );
-      expect(written.map((e) => e.type)).toEqual(['ai.completed', 'ai.completed', 'ai.failed']);
+      expect(written.map((e) => e.type)).toEqual([
+        'ai.completed',
+        'ai.completed',
+        'narration.withdrawn',
+        'narration.withdrawn',
+        'ai.failed',
+      ]);
     });
 
     it('records an outage as ai.failed, leaves state intact, and lets a retry succeed (D-116)', async () => {
@@ -483,10 +719,10 @@ describe.skipIf(!hasTestDatabase)('the AI commands (group 7)', () => {
         note: 'Rook is a veteran — annoyed, not rattled.',
       });
       if (prepared.kind !== 'run') throw new Error('expected a run');
-      const result = await runCorrection(db.sql, ai, prepared, sink);
+      const result = await runCorrection(db.sql, ai, new StubProvider(), prepared, sink);
 
       expect(result.ok).toBe(true);
-      expect(frames.join('')).toBe('Rook looks annoyed as the sparks die.');
+      expect(shownText(frames)).toBe('Rook looks annoyed as the sparks die.');
       expect(ai.requests[0]?.user).toContain('Rook looks shaken as the sparks die.');
       expect(ai.requests[0]?.user).toContain('Rook is a veteran — annoyed, not rattled.');
 
@@ -498,10 +734,50 @@ describe.skipIf(!hasTestDatabase)('the AI commands (group 7)', () => {
       expect(revision?.causedBy).toBe(prepared.requestEventId);
       expect(events.filter((e) => e.commandId === revision?.commandId).map((e) => e.type)).toEqual([
         'ai.completed',
+        'ai.completed',
         'narration.revised',
       ]);
       // Nothing mechanical changed.
       expect(project(events).characters[chain.characterId]?.meters.health.value).toBe(4);
+    });
+
+    it('withdraws a rewrite that breaks the rubric, naming the passage it was rewriting (D-128)', async () => {
+      const { chain, passageId } = await narrated('Rook looks shaken.');
+      const ai = new StubProvider({
+        responses: [
+          { kind: 'text', text: 'Rook looks annoyed, the way Rook always does.' },
+          { kind: 'text', text: 'The sparks die.' },
+        ],
+      });
+      const checker = new StubProvider({
+        responses: [
+          verdict({ rule: 'player_interior', quote: 'the way Rook always does' }),
+          verdict(),
+        ],
+      });
+      const { sink, frames } = recorder();
+
+      const prepared = await prepareCorrection(db.sql, {
+        campaignId: chain.campaignId,
+        commandId: newId(),
+        actor: PLAYER,
+        targetEventId: passageId,
+        note: 'Annoyed, not shaken.',
+      });
+      if (prepared.kind !== 'run') throw new Error('expected a run');
+      const result = await runCorrection(db.sql, ai, checker, prepared, sink);
+
+      expect(result.ok).toBe(true);
+      expect(frames.some((f) => f.startsWith('<withdrawn'))).toBe(true);
+      const events = await readEvents(db.sql, chain.campaignId);
+      expect(events.find((e) => e.type === 'narration.withdrawn')?.payload).toMatchObject({
+        role: 'revision',
+        targetEventId: passageId,
+        rejectedText: 'Rook looks annoyed, the way Rook always does.',
+      });
+      expect(livePassages(events).find((p) => p.eventId === passageId)?.text).toBe(
+        'The sparks die.',
+      );
     });
 
     it('keeps the flag when the rewrite fails, and records why', async () => {
@@ -518,7 +794,7 @@ describe.skipIf(!hasTestDatabase)('the AI commands (group 7)', () => {
         note: 'Annoyed, not shaken.',
       });
       if (prepared.kind !== 'run') throw new Error('expected a run');
-      const result = await runCorrection(db.sql, ai, prepared, recorder().sink);
+      const result = await runCorrection(db.sql, ai, new StubProvider(), prepared, recorder().sink);
 
       expect(result).toMatchObject({ ok: false, errorKind: 'rate_limited' });
       const events = await readEvents(db.sql, chain.campaignId);
@@ -563,7 +839,7 @@ describe.skipIf(!hasTestDatabase)('the AI commands (group 7)', () => {
         ],
       });
 
-      const result = await proposeAmount(db.sql, ai, {
+      const result = await proposeAmount(db.sql, ai, new StubProvider(), {
         campaignId: chain.campaignId,
         commandId: newId(),
         actor: PLAYER,
@@ -590,19 +866,76 @@ describe.skipIf(!hasTestDatabase)('the AI commands (group 7)', () => {
       expect(events.filter((e) => e.commandId === proposal?.commandId).map((e) => e.type)).toEqual([
         'ai.completed',
         'ai.completed',
+        'ai.completed',
         'amount.proposed',
       ]);
     });
 
-    it('fails cleanly without a credential, writing ai.failed', async () => {
+    it('checks the injury before proposing it, and records a withdrawn one (D-128, D-130)', async () => {
       const chain = await beatSeven();
-      const result = await proposeAmount(db.sql, new StubProvider({ configured: false }), {
+      const ai = new StubProvider({
+        responses: [
+          {
+            kind: 'structured',
+            // Round 20's harm reason: an undeclared action inside the injury.
+            value: {
+              amount: -2,
+              injury:
+                "The hatch edge bites Rook's shoulder as Rook forces the relay's inner hatch.",
+              reason: 'Deep.',
+            },
+          },
+          {
+            kind: 'structured',
+            value: { amount: -2, injury: "The hatch edge bites Rook's shoulder.", reason: 'Deep.' },
+          },
+        ],
+      });
+      const checker = new StubProvider({
+        responses: [
+          verdict({ rule: 'undeclared_action', quote: "as Rook forces the relay's inner hatch" }),
+          verdict(),
+        ],
+      });
+
+      const result = await proposeAmount(db.sql, ai, checker, {
         campaignId: chain.campaignId,
         commandId: newId(),
         actor: PLAYER,
         moveId: ENDURE_HARM,
         actorCharacterId: chain.characterId,
       });
+
+      expect(result).toMatchObject({ ok: true, injury: "The hatch edge bites Rook's shoulder." });
+      expect(checker.requests[0]?.user).toContain(
+        'It must describe only what happens to the character',
+      );
+      expect(ai.requests[1]?.user).toContain('"as Rook forces the relay\'s inner hatch"');
+      const events = await readEvents(db.sql, chain.campaignId);
+      const withdrawn = events.find((e) => e.type === 'narration.withdrawn');
+      expect(withdrawn?.payload).toMatchObject({
+        role: 'injury',
+        checker: 'authority_check',
+        rejectedText:
+          "The hatch edge bites Rook's shoulder as Rook forces the relay's inner hatch.",
+        violations: [{ rule: 'undeclared_action', character: 'Rook' }],
+      });
+    });
+
+    it('fails cleanly without a credential, writing ai.failed', async () => {
+      const chain = await beatSeven();
+      const result = await proposeAmount(
+        db.sql,
+        new StubProvider({ configured: false }),
+        new StubProvider(),
+        {
+          campaignId: chain.campaignId,
+          commandId: newId(),
+          actor: PLAYER,
+          moveId: ENDURE_HARM,
+          actorCharacterId: chain.characterId,
+        },
+      );
 
       expect(result).toMatchObject({ ok: false, errorKind: 'not_configured' });
       expect((await readEvents(db.sql, chain.campaignId)).at(-1)?.type).toBe('ai.failed');
@@ -611,7 +944,7 @@ describe.skipIf(!hasTestDatabase)('the AI commands (group 7)', () => {
     it('refuses a move with no amount to propose', async () => {
       const chain = await beatSeven();
       await expect(
-        proposeAmount(db.sql, new StubProvider(), {
+        proposeAmount(db.sql, new StubProvider(), new StubProvider(), {
           campaignId: chain.campaignId,
           commandId: newId(),
           actor: PLAYER,

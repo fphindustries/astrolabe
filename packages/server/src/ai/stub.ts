@@ -191,6 +191,14 @@ function defaultFallback(request: AiRequest, mode: 'text' | 'structured'): StubR
   if (mode === 'text') {
     return { kind: 'text', text };
   }
+  if (request.purpose === 'narration_check') {
+    // An unscripted check passes: tests that are not about the checker
+    // shouldn't have to script one (D-128).
+    return {
+      kind: 'structured',
+      value: { review: 'Stub check: nothing to report.', violations: [] },
+    };
+  }
   if (request.purpose === 'beat') {
     return {
       kind: 'structured',

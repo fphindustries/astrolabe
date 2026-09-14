@@ -131,6 +131,17 @@ describe('ClaudeProvider (task 7.2)', () => {
     expect(await bad.streamStructured(REQUEST, schema, () => {})).toMatchObject({ ok: false });
   });
 
+  it('sends no thinking or effort to a model that rejects them (D-128, amended)', async () => {
+    const { client, params } = fakeClient({ final: message('{"violations":[]}') });
+    const provider = new ClaudeProvider({ configured: true, client, model: 'claude-haiku-4-5' });
+
+    await provider.generateStructured(REQUEST, z.object({ violations: z.array(z.string()) }));
+
+    expect(params[0]).not.toHaveProperty('thinking');
+    expect((params[0] as { output_config: object }).output_config).not.toHaveProperty('effort');
+    expect(params[0]).toMatchObject({ output_config: { format: { type: 'json_schema' } } });
+  });
+
   it('parses structured output against the schema, keeping usage when it fails', async () => {
     const Schema = z.object({ amount: z.int() });
     const good = new ClaudeProvider({

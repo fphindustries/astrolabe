@@ -59,7 +59,18 @@ const PLAYER = { kind: 'player', playerId: LOCAL_PLAYER_ID } as const;
 
 export function registerAiRoutes(
   app: FastifyInstance,
-  { sql, ai, status }: { readonly sql: Sql; readonly ai: AiProvider; readonly status: AiStatus },
+  {
+    sql,
+    ai,
+    checker,
+    status,
+  }: {
+    readonly sql: Sql;
+    readonly ai: AiProvider;
+    /** Judges everything `ai` writes before it commits (D-128). */
+    readonly checker: AiProvider;
+    readonly status: AiStatus;
+  },
 ): void {
   app.get('/api/ai/status', async (): Promise<AiStatusResponse> => status.snapshot());
 
@@ -84,7 +95,7 @@ export function registerAiRoutes(
       return streamFrames(reply, async (sink) =>
         prepared.kind === 'replay'
           ? prepared.result
-          : runBeatNarration(sql, ai, prepared, sink, status),
+          : runBeatNarration(sql, ai, checker, prepared, sink, status),
       );
     } catch (error) {
       return refusal(error, reply);
@@ -120,7 +131,7 @@ export function registerAiRoutes(
         return streamFrames(reply, async (sink) =>
           prepared.kind === 'replay'
             ? prepared.result
-            : runCorrection(sql, ai, prepared, sink, status),
+            : runCorrection(sql, ai, checker, prepared, sink, status),
         );
       } catch (error) {
         return refusal(error, reply);
@@ -149,6 +160,7 @@ export function registerAiRoutes(
         const result = await proposeAmount(
           sql,
           ai,
+          checker,
           {
             campaignId: id,
             commandId,
@@ -260,6 +272,8 @@ function streamFrames(
   void work({
     delta: (text) => send({ type: 'delta', text }),
     reset: (reason) => send({ type: 'reset', reason }),
+    checking: () => send({ type: 'checking' }),
+    withdrawn: (reason, rejectedText) => send({ type: 'withdrawn', reason, rejectedText }),
   })
     .then((result) =>
       send(

@@ -11,11 +11,23 @@ export type NarrationTarget =
   | { readonly kind: 'beat'; readonly afterCommandId: string }
   | { readonly kind: 'revision'; readonly targetEventId: string; readonly note: string };
 
+/** A passage struck while it streamed (D-128): never quietly replaced. */
+export interface WithdrawnPassage {
+  readonly reason: string;
+  readonly text: string;
+}
+
 export interface PendingPassage {
   readonly target: NarrationTarget;
+  /** Provisional until committed: it is shown while written, and checked before it is kept (D-128). */
   readonly text: string;
-  /** `waiting` until the first text arrives; `retrying` after a reset. */
-  readonly status: 'waiting' | 'streaming' | 'retrying';
+  /**
+   * `waiting` until the first text arrives; `checking` once it has all
+   * arrived; `retrying` after a reset or a withdrawal.
+   */
+  readonly status: 'waiting' | 'streaming' | 'checking' | 'retrying';
+  /** Attempts withdrawn so far, in order, each with its reason. */
+  readonly withdrawn: readonly WithdrawnPassage[];
 }
 
 export interface NarrationFailure {
@@ -30,7 +42,7 @@ export type StreamOutcome =
   | { readonly kind: 'failed'; readonly failure: NarrationFailure };
 
 export function startPassage(target: NarrationTarget): StreamOutcome {
-  return { kind: 'pending', passage: { target, text: '', status: 'waiting' } };
+  return { kind: 'pending', passage: { target, text: '', status: 'waiting', withdrawn: [] } };
 }
 
 /** Fold one frame into the in-flight passage. A finished stream ignores anything after its last frame. */
@@ -47,6 +59,18 @@ export function applyFrame(outcome: StreamOutcome, frame: NarrationFrame): Strea
       };
     case 'reset':
       return { kind: 'pending', passage: { ...passage, text: '', status: 'retrying' } };
+    case 'checking':
+      return { kind: 'pending', passage: { ...passage, status: 'checking' } };
+    case 'withdrawn':
+      return {
+        kind: 'pending',
+        passage: {
+          ...passage,
+          text: '',
+          status: 'retrying',
+          withdrawn: [...passage.withdrawn, { reason: frame.reason, text: frame.rejectedText }],
+        },
+      };
     case 'committed':
       return { kind: 'committed', eventId: frame.eventId };
     case 'failed':

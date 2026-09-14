@@ -128,19 +128,68 @@ function Beat({
   );
 }
 
+const PENDING_LABELS: Readonly<Record<PendingPassage['status'], string>> = {
+  waiting: 'The Guide is writing…',
+  streaming: 'The Guide is writing — not yet checked',
+  checking: 'Checking the passage before it is kept…',
+  retrying: 'The Guide is trying again…',
+};
+
+/**
+ * A passage on its way (D-128): shown while written, but provisional until
+ * it is checked and kept. A withdrawn attempt stays on screen, struck, with
+ * its reason — it is never swapped out silently.
+ */
 function PendingText({ passage }: { readonly passage: PendingPassage }) {
   return (
     <div className={styles.entry} aria-live="polite" aria-busy="true">
-      <span className={styles.pendingLabel}>
-        {passage.status === 'retrying' ? 'The Guide is trying again…' : 'The Guide is writing…'}
-      </span>
-      {passage.text.length > 0 && <span className={styles.text}>{passage.text}</span>}
+      {passage.withdrawn.map((withdrawn, index) => (
+        <Withdrawn key={index} reason={withdrawn.reason} rejectedText={withdrawn.text} />
+      ))}
+      <span className={styles.pendingLabel}>{PENDING_LABELS[passage.status]}</span>
+      {passage.text.length > 0 && (
+        <span className={`${styles.text} ${styles.provisional}`}>{passage.text}</span>
+      )}
+    </div>
+  );
+}
+
+function Withdrawn({
+  reason,
+  rejectedText,
+  quotes = [],
+}: {
+  readonly reason: string;
+  readonly rejectedText: string;
+  readonly quotes?: readonly string[];
+}) {
+  return (
+    <div className={styles.withdrawal} role="note">
+      <span className={styles.withdrawalReason}>{reason}</span>
+      {quotes.map((quote, index) => (
+        <q key={index} className={styles.withdrawalQuote}>
+          {quote}
+        </q>
+      ))}
+      <details>
+        <summary>Show what was withdrawn</summary>
+        <p className={styles.struck}>{rejectedText}</p>
+      </details>
     </div>
   );
 }
 
 function Entry({ campaignId, entry }: { readonly campaignId: string; readonly entry: EntryView }) {
   const body = entry.body;
+  if (body.kind === 'withdrawal') {
+    // A record of what was refused, not a thing to correct or void on its
+    // own: voiding its beat takes it with the rest (D-128).
+    return (
+      <div className={styles.entry} data-voided={entry.voided}>
+        <Withdrawn reason={body.reason} rejectedText={body.rejectedText} quotes={body.quotes} />
+      </div>
+    );
+  }
   return (
     <div className={styles.entry} data-voided={entry.voided}>
       <span className={styles.text}>{describeEntry(entry)}</span>
@@ -202,6 +251,8 @@ function describeEntry(entry: EntryView): string {
       return `Entity established: ${body.name}`;
     case 'narration':
       return body.text;
+    case 'withdrawal':
+      return body.reason;
     case 'override':
       return `Override: ${body.from} → ${body.to}${body.reason === undefined ? '' : ` (${body.reason})`}`;
     case 'void':

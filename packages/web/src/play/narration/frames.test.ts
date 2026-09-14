@@ -25,6 +25,38 @@ describe('applyFrame (task 7.8)', () => {
     expect(applyFrame(outcome, { type: 'delta', text: 'late' })).toEqual(outcome);
   });
 
+  it('marks a passage provisional while checked, and keeps a withdrawn attempt on screen (D-128)', () => {
+    let outcome: StreamOutcome = startPassage(BEAT);
+    outcome = applyFrame(outcome, { type: 'delta', text: 'Rook walks on.' });
+    outcome = applyFrame(outcome, { type: 'checking' });
+    expect(outcome).toMatchObject({
+      kind: 'pending',
+      passage: { text: 'Rook walks on.', status: 'checking', withdrawn: [] },
+    });
+
+    outcome = applyFrame(outcome, {
+      type: 'withdrawn',
+      reason: 'Withdrawn: it had Rook do something the player didn’t declare.',
+      rejectedText: 'Rook walks on.',
+    });
+    expect(outcome).toMatchObject({
+      kind: 'pending',
+      passage: {
+        text: '',
+        status: 'retrying',
+        withdrawn: [
+          {
+            reason: 'Withdrawn: it had Rook do something the player didn’t declare.',
+            text: 'Rook walks on.',
+          },
+        ],
+      },
+    });
+
+    outcome = applyFrame(outcome, { type: 'delta', text: 'The corridor is quiet.' });
+    expect(outcome).toMatchObject({ passage: { withdrawn: [{ text: 'Rook walks on.' }] } });
+  });
+
   it('keeps what failed, so Retry can ask again for the same thing', () => {
     const outcome = applyFrame(startPassage(BEAT), {
       type: 'failed',

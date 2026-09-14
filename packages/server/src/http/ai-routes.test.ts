@@ -38,7 +38,7 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
   beforeAll(async () => {
     db = await createTestDatabase('ai_routes');
     ai = new StubProvider();
-    app = buildApp({ sql: db.sql, ai });
+    app = buildApp({ sql: db.sql, ai, checker: new StubProvider() });
     await app.ready();
   }, 30_000);
 

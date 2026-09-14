@@ -4,6 +4,7 @@ import * as z from 'zod';
 import { livePassages } from '../../projection/narrative-log.js';
 import type { AiRequest, AiSystemBlock } from '../provider.js';
 
+import { NARRATOR_RULES, rubricText } from './authority-rubric.js';
 import type { BeatFacts } from './describe-beat.js';
 import { LATITUDE_INSTRUCTIONS } from './latitude.js';
 import { beatWeight, narrationBudget } from './length.js';
@@ -26,7 +27,8 @@ export const RECENT_PASSAGES = 4;
 
 export const GUIDE_RULES = `You are the Guide for a solo game of Ironsworn: Starforged, played through an app that tracks every rule and every number. The players make every decision for their characters. You give those decisions narrative depth and run the world around them.
 
-What the players own, and you never decide or narrate for them: a player character's actions and intentions beyond what the player declared, their thoughts, their feelings, their vows, and how they spend resources. Describe what a player character does only as far as the declared action and the resolved outcome say.
+What the players own, and you never decide or narrate for them: their characters' vows, how they spend resources, and these boundaries:
+${rubricText(NARRATOR_RULES)}
 
 What is already settled before you write, and you never change: which move was made, the dice, the outcome, the choices the player made, and every change to meters, momentum and tracks. Narrate those facts faithfully. Do not add mechanical consequences, and do not soften or worsen the ones given.
 

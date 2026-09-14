@@ -161,7 +161,7 @@ narrative log is a second read model with its own paged query.
 - [ ] 7.12 AI move suggestion when an action is described without a move: move and roll option, verbatim trigger text, reason and confidence, inspectable, never blocking a direct pick (D-14, D-120, A19). Open before it starts: rules clauses keep their link markup (`[Lose Momentum](id:…)`), so the verbatim quote `isVerbatimClause` checks and the text a player should read differ, and D-120 doesn't yet say which the suggestion stores
 - [ ] 7.13 Trigger-mismatch note on a beat whose move doesn't fit the described action, with the same traceability, never blocking or delaying the roll (D-37, D-121, A20). No golden-session beat exercises it
 - [x] 7.14 Segmented narration: fact keys and kinds, segments tagged and cited as they stream, checks that need no AI, D-115's routine cap for beats with no declared action (D-127, A21). Verified live at all three latitudes (see "Implementation notes (task 7.14)")
-- [ ] 7.15 Authority check: shared rubric in the narrator prompt and a second-model checker; provisional streaming, unmistakable logged withdrawal, one re-ask, pause on a second failure; recorded-violation regression tests, keyed eval, live matrix across all three latitudes. Sign-off also checks that no passage gives a pronoun to a character whose pronouns aren't recorded (D-128, D-129, D-131, A21)
+- [x] 7.15 Authority check: shared rubric in the narrator prompt and a second-model checker; provisional streaming, unmistakable logged withdrawal, one re-ask, pause on a second failure; recorded-violation regression tests, keyed eval, live matrix across all three latitudes. Sign-off also checks that no passage gives a pronoun to a character whose pronouns aren't recorded (D-128, D-129, D-131, A21). Verified live: 54 checked narrations across all three latitudes; eval at 95% precision, 86% recall (see "Implementation notes (task 7.15)")
 - [x] 7.16 Established injury: the harm proposal's injury carried into narration at the committed severity, with the committed amount linked to its proposal (D-130, A13). Verified live in two passes (see "Implementation notes (task 7.16)")
 
 ### 8. Oracle-grounded generation
@@ -1456,3 +1456,109 @@ Three runs of claude-opus-5 on the Beat 7 facts, 2026-09-13 (low effort, adaptiv
 
 4. **Standalone Endure Harm, Color, labelled `character_undergoes`:** "The pain crests and fades fast, leaving Rook steady on the deck, unshaken by it." "Unshaken" is a player-owned interior.
 5. **Beat 7, Full voice, labelled `character_says`:** "A hiss escapes through Rook's teeth, then flattens into something steadier, almost dismissive, as the arm comes back up to the plate." The outward expression is allowed at Full voice. "The arm comes back up to the plate" is an undeclared action.
+
+## Implementation notes (task 7.15, authority check)
+
+7.15 is done (D-128, D-129, D-131, A21). Every beat passage, 7.9 rewrite and harm-proposal injury is checked before it commits. D-128 was amended twice in round 21, before building and again after measuring; the amendments record the decisions made here.
+
+### Shape
+
+- **Rubric** (`ai/context/authority-rubric.ts`). D-129's four rules, in one place. The Guide's standing prompt carries three of them, replacing its old "what the players own" paragraph. The checker carries all four, plus the latitude's voice line. The only examples quoted are the ones D-129 records, from round 20's passage. Nothing from the later corpus is quoted, so the eval can't pass by recognition.
+- **Checker** (`ai/context/authority-check.ts`, `ai/checked.ts`).
+  - The checker is a separate provider, `ASTROLABE_CHECK_MODEL`. It defaults to `claude-sonnet-5` (see "Choosing the checker").
+  - It receives the latitude, the crew, the beat's facts, and the text, plus the tagged segments when there are any.
+  - It answers `{ review, violations[] }`. Each violation carries the rule, the character, the segment, a verbatim quote, and why.
+  - The server confirms every quote appears verbatim where the checker says. An unverifiable verdict is re-asked once, then the call fails closed.
+- **Provider.**
+  - `claude.ts` omits thinking and effort for `claude-haiku-4-5`, which rejects both.
+  - `createCheckerFromEnv` builds the checker.
+  - `buildApp` and the routes now take a `checker`.
+  - The stub checker passes anything it isn't scripted to reject.
+- **Flow** (`runChecked`).
+  - Text streams provisionally.
+  - A D-127 segment-check failure, or a checker verdict, is a **withdrawal**. It sends a `withdrawn` frame with the reason in words and the rejected text, records the attempt, and re-asks once with the quoted violations.
+  - A `checking` frame marks when the check starts.
+  - A second failure ends in `ai.failed` (`invalid_output`), and play pauses under D-116.
+  - A checker failure over text already shown is withdrawn with the rule `unchecked`, then `ai.failed` under the checker's own name and error kind.
+  - A cut-off or unreadable reply keeps 7.5's silent reset.
+- **Record.**
+  - `narration.withdrawn { role, targetEventId?, attempt, checker, model?, latitude, rejectedText, violations }` is narrative and voidable.
+  - It is written in the same command as the outcome, after every attempt's `ai.completed` (the narrator's and the checker's, purpose `narration_check`).
+  - `withdrawalReason` in `shared` gives the words ("Withdrawn: it said what Rook thinks, feels or characteristically does, which is the player's to decide."), so the frame and the log agree.
+- **Harm proposals.** The injury is checked before the proposal is written. A failing injury is re-asked and recorded as a withdrawal with `role: 'injury'`. Nothing was on screen to strike.
+- **Web.**
+  - The pending passage is labelled "not yet checked", then "Checking the passage before it is kept…".
+  - Provisional text is italic.
+  - A withdrawn attempt stays on screen with its reason and quotes, and "Show what was withdrawn" reveals the struck text.
+  - The log renders `narration.withdrawn` the same way, with no correction or void control of its own.
+- **Corpus and eval.**
+  - `ai/eval/authority-corpus.json` holds 26 entries: 14 that should be withdrawn and 12 clean. 23 are recorded output from rounds 20 and 21 and the 7.14 spike and live pass; 3 are constructed and marked so.
+  - `npm run eval:authority [-- --runs N] [--record]` grades the live checker, precision first.
+  - `authority-verdicts.json` holds Sonnet 5's recorded run. CI replays each verdict through the stub (`authority-corpus.test.ts`): the schema, quote verification against the real text, and the withdraw-or-pass decision, with the recorded agreement pinned.
+
+### Choosing the checker
+
+Every figure below comes from the 26-entry corpus.
+
+| Checker, prompt | Precision | Recall | Time per check |
+|---|---|---|---|
+| Haiku 4.5, first prompt | 100% | 36% | ~1–7 s |
+| Haiku 4.5, `review` + check procedure | 80% | 86% | 6.0 s avg |
+| Sonnet 5 (low effort), first prompt | 92% | 79% | ~3 s |
+| **Sonnet 5, `review` + check procedure, 3 runs** | **95%** | **86%** | **3.9 s avg, 5.7 s p90** |
+
+- Haiku's first-prompt run passed "Rook grimaces and mutters, "Not today."" at Color, and every spike passage with an undeclared action.
+- Sonnet's two false withdrawals, over 3 runs, were the same borderline line: "It does not slow the hands or dim the eyes".
+- Its two repeated misses (spike structured 3 and tagged 1) narrate Rook shaking the arm out and rolling the shoulder. The player's choice, "Shake it off: take +1 health", can be read as covering that.
+
+### Live matrix
+
+The matrix ran 5 beats × 3 latitudes × 3 runs through the real pipeline: claude-opus-5 narrating, claude-sonnet-5 checking, 2026-09-14. The beats were:
+
+- Beat 7's chain;
+- a standalone Endure Harm with nothing declared;
+- Juno's Gather Information weak hit;
+- Vesna's scan, upgraded by a momentum burn;
+- Rook's Face Danger strong hit.
+
+**Overall.**
+
+- **Kept:** 40 of the first 45 passages.
+- **First text:** median 1.8 s, max 3.0 s, so A18 holds.
+- **Check:** median 2.6 s, p90 4.0 s.
+- **Committed:** median 10.0 s, p90 13.3 s.
+
+**Withdrawals.** Three authority withdrawals were each rewritten and kept:
+
+- "the pain settles into something Rook can work through";
+- "something in the shape of the gap sits sharp and usable", which is borderline;
+- a momentum burn narrated as Vesna's feeling ("The edge she had been carrying goes out of her").
+
+**The aided scan paused play in 5 of its 9 runs.** In each, both attempts narrated Rook helping ("Rook leans in over the secondary board and trims the filter"), an action Rook takes nowhere in the beat. D-127's checks refused it both times, so play paused as designed. The cause was the test beat: I had labelled the roll's add "aid from Rook", which the app never writes; `move-commands.ts` writes "bonus from an earlier move". Rerun with the real label, all 9 of 9 kept, with two withdrawals recovered: a momentum burn as interior, and an undeclared action for Vesna. The finding stands: naming another player character in a beat's facts invites narrating them acting, and the checks catch it, at the cost of a pause.
+
+**Sign-off.** I read all 49 kept passages.
+
+- **Pronouns:** no passage gives Rook or Juno a pronoun. Both regex flags were false alarms ("the burns they leave", "a line of them"). Vesna's "her" follows her recorded she/her.
+- **Authority:** no kept passage clearly breaks D-129. Borderline, and kept:
+  - "the arm stays where it is, steady against the plate" (Beat 7, Full voice);
+  - "the corridor feels suddenly, usefully quiet" (Rook's airlock, Color);
+  - "The margin Vesna has been carrying is spent into the scan" (Minimal).
+- **Facts:** one factual slip that D-128 leaves to others. At Minimal, Juno's weak hit says "Juno's momentum rises to 5"; it went from 3 to 4. Consistency with committed mechanics is out of the checker's scope by design.
+
+### Verification
+
+`npm run typecheck`, `npm run lint`, `npm test` (857 tests) and the web build pass. The new tests cover:
+
+- a checker withdrawal, re-asked with its quote;
+- a second withdrawal pausing play;
+- an unavailable or rejected checker failing closed, with the shown text withdrawn;
+- an unverifiable quote re-asked, then failing closed;
+- a rewrite withdrawn with its target;
+- an injury withdrawn before proposing;
+- segment-check failures as withdrawals, and a cut-off reply still a reset;
+- the model-parameter omission for Haiku;
+- the reason words;
+- the frame reducer and log view model;
+- the corpus replay.
+
+The withdrawal UI was checked by unit tests only, not in a browser: the stub checker never withdraws.

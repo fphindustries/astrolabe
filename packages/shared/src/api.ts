@@ -409,12 +409,18 @@ export type CorrectNarrationRequestBody = z.infer<typeof CorrectNarrationRequest
  * - `delta`: more text for the passage.
  * - `reset`: discard everything streamed so far — a rejected attempt is
  *   being re-asked (task 7.5).
+ * - `checking`: the passage has finished arriving and is being checked
+ *   (D-128); what was shown so far is still provisional.
+ * - `withdrawn`: the passage failed a check and is struck, with its reason
+ *   in words and the rejected text; a re-ask may follow (D-128).
  * - `committed`: the passage is in the log as `eventId`; refetch.
  * - `failed`: the call produced nothing usable and play pauses (D-116).
  */
 export type NarrationFrame =
   | { readonly type: 'delta'; readonly text: string }
   | { readonly type: 'reset'; readonly reason: string }
+  | { readonly type: 'checking' }
+  | { readonly type: 'withdrawn'; readonly reason: string; readonly rejectedText: string }
   | { readonly type: 'committed'; readonly eventId: EventId }
   | {
       readonly type: 'failed';

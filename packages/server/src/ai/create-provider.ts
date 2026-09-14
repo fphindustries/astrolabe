@@ -16,15 +16,39 @@ export function createProviderFromEnv(env: NodeJS.ProcessEnv = process.env): AiP
     return new StubProvider({ fallback: devStubResponse });
   }
 
-  const configured =
-    nonEmpty(env['ANTHROPIC_API_KEY']) ||
-    nonEmpty(env['ANTHROPIC_AUTH_TOKEN']) ||
-    nonEmpty(env['ANTHROPIC_PROFILE']);
+  const configured = hasCredential(env);
   const model = env['ASTROLABE_CLAUDE_MODEL'];
   return new ClaudeProvider({
     configured,
     model: nonEmpty(model) ? model : DEFAULT_CLAUDE_MODEL,
   });
+}
+
+export const DEFAULT_CHECK_MODEL = 'claude-sonnet-5';
+
+/**
+ * The authority checker (D-128): a second, faster model that judges what
+ * the Guide writes. `ASTROLABE_CHECK_MODEL` overrides the model. With the
+ * stub provider, the checker is a stub too, and passes everything it is
+ * not scripted to reject.
+ */
+export function createCheckerFromEnv(env: NodeJS.ProcessEnv = process.env): AiProvider {
+  if (env['ASTROLABE_AI_PROVIDER'] === 'stub') {
+    return new StubProvider();
+  }
+  const model = env['ASTROLABE_CHECK_MODEL'];
+  return new ClaudeProvider({
+    configured: hasCredential(env),
+    model: nonEmpty(model) ? model : DEFAULT_CHECK_MODEL,
+  });
+}
+
+function hasCredential(env: NodeJS.ProcessEnv): boolean {
+  return (
+    nonEmpty(env['ANTHROPIC_API_KEY']) ||
+    nonEmpty(env['ANTHROPIC_AUTH_TOKEN']) ||
+    nonEmpty(env['ANTHROPIC_PROFILE'])
+  );
 }
 
 function nonEmpty(value: string | undefined): value is string {

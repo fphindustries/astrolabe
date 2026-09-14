@@ -61,3 +61,49 @@ export const NarrationRevisedSchema = z.object({
   targetEventId: EventIdSchema,
   text: z.string().min(1),
 });
+
+/** D-129's rules, plus D-127's segment checks and a check that couldn't run (D-128, amended). */
+export const AuthorityRuleSchema = z.enum([
+  'undeclared_action',
+  'player_interior',
+  'voice',
+  'injury',
+  'segment_check',
+  'unchecked',
+]);
+
+export type AuthorityRule = z.infer<typeof AuthorityRuleSchema>;
+
+export const AuthorityViolationSchema = z.object({
+  rule: AuthorityRuleSchema,
+  /** The player character's callsign it concerns, when it concerns one. */
+  character: z.string().min(1).nullable(),
+  /** The segment it was found in, for a segmented passage. */
+  segment: z.int().nonnegative().nullable(),
+  /** Verbatim from the rejected text; empty for a segment check or an unchecked passage. */
+  quote: z.string(),
+  why: z.string().min(1),
+});
+
+/**
+ * D-128: generated text that failed D-127's segment checks or D-129's
+ * authority check, and so never committed. Withdrawn text is not deleted:
+ * the log shows the withdrawal with its reason in words, and the rejected
+ * text is a click away. A shown passage is never quietly rewritten.
+ *
+ * Written in the same command as the outcome — the passage that passed, or
+ * `ai.failed` — so a voided beat takes its withdrawals with it.
+ */
+export const NarrationWithdrawnSchema = z.object({
+  role: z.enum(['beat', 'revision', 'injury']),
+  /** For a revision, the passage it was rewriting. */
+  targetEventId: EventIdSchema.optional(),
+  /** Which attempt this was: 1, or 2 for the re-ask. */
+  attempt: z.int().positive(),
+  checker: z.enum(['segment_checks', 'authority_check']),
+  /** The checking model, for an authority check. */
+  model: z.string().min(1).optional(),
+  latitude: z.enum(['minimal', 'color', 'full_voice']),
+  rejectedText: z.string(),
+  violations: z.array(AuthorityViolationSchema).min(1),
+});

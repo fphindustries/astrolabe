@@ -30,6 +30,7 @@ export * from './meta.js';
 export * from './versioning.js';
 export * from './read-models/index.js';
 export * from './api.js';
+export * from './withdrawal.js';
 
 /** Kept for the workspace smoke test (task 1.1); harmless now that real exports exist. */
 export const SHARED_PACKAGE = '@astrolabe/shared' as const;

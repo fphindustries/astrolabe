@@ -1,0 +1,1160 @@
+{
+  "about": "D-128's regression corpus: real generated text where recorded, labelled with whether the authority checker should withdraw it. Constructed entries say so. Graded live by `npm run eval:authority`; recorded verdicts replay in CI.",
+  "entries": [
+    {
+      "id": "r20-endure-harm",
+      "source": "Recorded: round 20, claude-opus-5, Color (section 7 notes, violation 1; D-127). Facts reconstructed; D-129 quotes this passage.",
+      "role": "beat",
+      "latitude": "color",
+      "characters": [
+        {
+          "callsign": "Vesna",
+          "name": "Vesna Kade"
+        },
+        {
+          "callsign": "Rook",
+          "name": "Rook Ilari"
+        },
+        {
+          "callsign": "Juno",
+          "name": "Juno Marr"
+        }
+      ],
+      "text": "The hatch wins something back before it surrenders. A spur of sheared track catches Rook under the arm where the plating thins, and the servo's own strength drives it home — a bright hot line that goes through the undersuit and keeps going. Rook feels the suit clamp down around the wound, sealant frothing cold into the gap, the readout in the helmet blooming amber at the edge of vision. Rook stands there a moment in the widening bar of sunlight, hand braced on the frame, breathing through it. Counts one breath. Counts a second. The pain does not go away so much as get put somewhere, folded and stowed the way everything has been folded and stowed for thirty years of doing this. The arm still moves. The hand still closes. That is the whole of what matters. Rook pulls it free, flicks the wet from the gauntlet, and steps sideways through the gap into Varga Relay. Inside, the corridor is cold and utterly still — and down at the far end, where the one lit row of windows should be, something has already stopped moving, as though it heard the hatch open a long time ago.",
+      "expected": {
+        "withdraw": true,
+        "rules": ["undeclared_action", "player_interior"]
+      },
+      "facts": "Rook makes the move Endure Harm with iron.\nThe player set the health loss at 1 for Rook.\nRook: health -1.\nRoll: action die 6 +3 iron = 9, against challenge dice 4 and 4: a strong hit, and the challenge dice match."
+    },
+    {
+      "id": "r20-harm-injury",
+      "source": "Recorded: round 20's standalone harm proposal, before D-130 split injury from reason (section 7 notes).",
+      "role": "injury",
+      "latitude": "color",
+      "characters": [
+        {
+          "callsign": "Vesna",
+          "name": "Vesna Kade"
+        },
+        {
+          "callsign": "Rook",
+          "name": "Rook Ilari"
+        },
+        {
+          "callsign": "Juno",
+          "name": "Juno Marr"
+        }
+      ],
+      "text": "A pressure-warped bulkhead gives way as Rook forces the relay's inner hatch, and the shearing edge of ancient hull plate bites through armor into the meat of his shoulder.",
+      "expected": {
+        "withdraw": true,
+        "rules": ["undeclared_action"]
+      }
+    },
+    {
+      "id": "r716-chained",
+      "source": "Recorded: 7.16 live pass, Endure Harm after a Face Danger miss, Color (section 7 notes, violation 2). Injury fact not recorded.",
+      "role": "beat",
+      "latitude": "color",
+      "characters": [
+        {
+          "callsign": "Vesna",
+          "name": "Vesna Kade"
+        },
+        {
+          "callsign": "Rook",
+          "name": "Rook Ilari"
+        },
+        {
+          "callsign": "Juno",
+          "name": "Juno Marr"
+        }
+      ],
+      "text": "The bulkhead's stressed edge lets go with a sound like a struck bell, snapping back into Rook's shoulder and driving down the forearm. The armor seam splits. The arm is pinned to the frame, metal biting through the gap in the plating, and cold station air whistles in past the tear.\n\nRook does not waste breath on it. Braced boots, a shove with the good shoulder, and the edge peels back enough for the arm to come free. Blood wells along the seam, slow and dark, already tacky in the cold.\n\nThe armor took most of it. What's left is a bad bruise and a shallow cut, and Rook rolls the shoulder once to prove the joint still works, then keeps moving down the corridor toward the lit windows.",
+      "expected": {
+        "withdraw": true,
+        "rules": ["undeclared_action", "player_interior"]
+      },
+      "facts": "Rook makes the move Face Danger with iron.\nThe player declared: \"Rook forces the sealed bulkhead.\"\nRoll: action die 2 +3 iron = 5, against challenge dice 7 and 9: a miss.\nThis leads to Pay the Price.\nRook makes the move Pay the Price.\nFor Pay the Price, the player chose: Roll on the table.\nOracle result (32): You are harmed.\nThis leads to Endure Harm.\nRook makes the move Endure Harm with health.\nThe player set the health loss at 1 for Rook.\nRook: health -1.\nRoll: action die 5 +4 health = 9, against challenge dice 3 and 6: a strong hit."
+    },
+    {
+      "id": "r716-standalone",
+      "source": "Recorded: 7.16 live pass, standalone Endure Harm, Color (section 7 notes, violation 3). Facts reconstructed.",
+      "role": "beat",
+      "latitude": "color",
+      "characters": [
+        {
+          "callsign": "Vesna",
+          "name": "Vesna Kade"
+        },
+        {
+          "callsign": "Rook",
+          "name": "Rook Ilari"
+        },
+        {
+          "callsign": "Juno",
+          "name": "Juno Marr"
+        }
+      ],
+      "text": "Ten meters on, the deck lies to Rook. A plate that looks solid gives under the weight, buckling with a groan, and the leg drops through to the knee. The torn edge rakes down the shin, catching armor first, then skin where the greave ends. It is not much. A scrape, a line of heat in the cold.\n\nRook plants the other boot, hauls the leg out of the hole, and shakes the grit loose from the plating. The wound seeps a little and stops. Somewhere below, dislodged metal falls a long way and does not land.\n\nThe lit windows are still ahead, unchanged, and Rook walks on with the same steady tread.",
+      "expected": {
+        "withdraw": true,
+        "rules": ["undeclared_action", "player_interior"]
+      },
+      "facts": "Rook makes the move Endure Harm with iron.\nThe player set the health loss at 1 for Rook.\nRook: health -1.\nRoll: action die 6 +3 iron = 9, against challenge dice 4 and 4: a strong hit, and the challenge dice match."
+    },
+    {
+      "id": "spike-structured-1",
+      "source": "Recorded: 7.14 spike, plain definitions, structured run 1, Color.",
+      "role": "beat",
+      "latitude": "color",
+      "characters": [
+        {
+          "callsign": "Vesna",
+          "name": "Vesna Kade"
+        },
+        {
+          "callsign": "Rook",
+          "name": "Rook Ilari"
+        },
+        {
+          "callsign": "Juno",
+          "name": "Juno Marr"
+        }
+      ],
+      "facts": "[F1] (move, Rook) Rook makes the move Endure Harm with iron.\n[F2] (effect, Rook) The player set the health loss at 2 for Rook.\n[F3] (injury, Rook) The injury, as the Guide established it: A spur of sheared track catches Rook under the arm where the plating thins.\n[F4] (effect, Rook) Rook: health -2.\n[F5] (roll, Rook) Roll: action die 6 +3 iron = 9, against challenge dice 2 and 2: a strong hit, and the challenge dice match.\n[F6] (choice, Rook) The player chose: Shake it off: take +1 health.\n[F7] (effect, Rook) Rook: health +1.",
+      "text": "The hauler's track has shed a plate somewhere back in the dark, and the rail runs on with a torn lip of metal standing up from it like a broken tooth, bright where the shear is fresh. The spur finds Rook under the arm, where the plating thins to a seam, and drags. Cloth parts, then skin; the hurt arrives a beat late and settles in deep and hot. Rook holds, breath going out slow through the teeth, and the pain narrows down into something small and manageable. The bleeding is less than the noise of it suggested; the arm still answers, and the seam is already closing. Behind, the torn rail keeps turning, patient, ready to come around again.",
+      "segments": [
+        {
+          "about": "world",
+          "character": null,
+          "text": "The hauler's track has shed a plate somewhere back in the dark, and the rail runs on with a torn lip of metal standing up from it like a broken tooth, bright where the shear is fresh."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "The spur finds Rook under the arm, where the plating thins to a seam, and drags. Cloth parts, then skin; the hurt arrives a beat late and settles in deep and hot."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "Rook holds, breath going out slow through the teeth, and the pain narrows down into something small and manageable. The bleeding is less than the noise of it suggested; the arm still answers, and the seam is already closing."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "Behind, the torn rail keeps turning, patient, ready to come around again."
+        }
+      ],
+      "expected": {
+        "withdraw": true,
+        "rules": ["undeclared_action"]
+      }
+    },
+    {
+      "id": "spike-structured-2",
+      "source": "Recorded: 7.14 spike, plain definitions, structured run 2, Color.",
+      "role": "beat",
+      "latitude": "color",
+      "characters": [
+        {
+          "callsign": "Vesna",
+          "name": "Vesna Kade"
+        },
+        {
+          "callsign": "Rook",
+          "name": "Rook Ilari"
+        },
+        {
+          "callsign": "Juno",
+          "name": "Juno Marr"
+        }
+      ],
+      "facts": "[F1] (move, Rook) Rook makes the move Endure Harm with iron.\n[F2] (effect, Rook) The player set the health loss at 2 for Rook.\n[F3] (injury, Rook) The injury, as the Guide established it: A spur of sheared track catches Rook under the arm where the plating thins.\n[F4] (effect, Rook) Rook: health -2.\n[F5] (roll, Rook) Roll: action die 6 +3 iron = 9, against challenge dice 2 and 2: a strong hit, and the challenge dice match.\n[F6] (choice, Rook) The player chose: Shake it off: take +1 health.\n[F7] (effect, Rook) Rook: health +1.",
+      "text": "The rail housing has come apart along its seam, and a spur of sheared track juts from the wreck like a broken rib, bright where the metal parted. It catches Rook under the arm, in the soft gap where the plating thins, and drags a hot line through cloth and skin before the momentum carries Rook past it. The pain arrives and then flattens out into something manageable, no worse than a hundred other bad mornings; Rook braces against the housing, breathes through it, and the shaking in the hand settles. Somewhere below, the rail ticks as it cools, patient and unbothered.",
+      "segments": [
+        {
+          "about": "world",
+          "character": null,
+          "text": "The rail housing has come apart along its seam, and a spur of sheared track juts from the wreck like a broken rib, bright where the metal parted."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "It catches Rook under the arm, in the soft gap where the plating thins, and drags a hot line through cloth and skin before the momentum carries Rook past it."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "The pain arrives and then flattens out into something manageable, no worse than a hundred other bad mornings; Rook braces against the housing, breathes through it, and the shaking in the hand settles."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "Somewhere below, the rail ticks as it cools, patient and unbothered."
+        }
+      ],
+      "expected": {
+        "withdraw": true,
+        "rules": ["undeclared_action", "player_interior"]
+      }
+    },
+    {
+      "id": "spike-structured-3",
+      "source": "Recorded: 7.14 spike, plain definitions, structured run 3, Color.",
+      "role": "beat",
+      "latitude": "color",
+      "characters": [
+        {
+          "callsign": "Vesna",
+          "name": "Vesna Kade"
+        },
+        {
+          "callsign": "Rook",
+          "name": "Rook Ilari"
+        },
+        {
+          "callsign": "Juno",
+          "name": "Juno Marr"
+        }
+      ],
+      "facts": "[F1] (move, Rook) Rook makes the move Endure Harm with iron.\n[F2] (effect, Rook) The player set the health loss at 2 for Rook.\n[F3] (injury, Rook) The injury, as the Guide established it: A spur of sheared track catches Rook under the arm where the plating thins.\n[F4] (effect, Rook) Rook: health -2.\n[F5] (roll, Rook) Roll: action die 6 +3 iron = 9, against challenge dice 2 and 2: a strong hit, and the challenge dice match.\n[F6] (choice, Rook) The player chose: Shake it off: take +1 health.\n[F7] (effect, Rook) Rook: health +1.",
+      "text": "The sheared rail juts from the wreck like a broken rib, bright metal curled where the cutting torch left off, and the hold hums its low mechanical drone around it. The spur catches Rook under the arm, in the seam where the plating thins, and drags a hot line through the underlayer. Blood wells slow and dark into the padding. But the iron holds. Rook shakes the arm out, rolls the shoulder once to test it, and the wound settles into something merely inconvenient — a sting, a stain, nothing that stops the work. Somewhere deeper in the wreck, two separate groans of stressed metal answer each other, matched in pitch, and then go quiet.",
+      "segments": [
+        {
+          "about": "world",
+          "character": null,
+          "text": "The sheared rail juts from the wreck like a broken rib, bright metal curled where the cutting torch left off, and the hold hums its low mechanical drone around it."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "The spur catches Rook under the arm, in the seam where the plating thins, and drags a hot line through the underlayer. Blood wells slow and dark into the padding."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "But the iron holds. Rook shakes the arm out, rolls the shoulder once to test it, and the wound settles into something merely inconvenient — a sting, a stain, nothing that stops the work."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "Somewhere deeper in the wreck, two separate groans of stressed metal answer each other, matched in pitch, and then go quiet."
+        }
+      ],
+      "expected": {
+        "withdraw": true,
+        "rules": ["undeclared_action"]
+      }
+    },
+    {
+      "id": "spike-tagged-1",
+      "source": "Recorded: 7.14 spike, plain definitions, tagged run 1, Color.",
+      "role": "beat",
+      "latitude": "color",
+      "characters": [
+        {
+          "callsign": "Vesna",
+          "name": "Vesna Kade"
+        },
+        {
+          "callsign": "Rook",
+          "name": "Rook Ilari"
+        },
+        {
+          "callsign": "Juno",
+          "name": "Juno Marr"
+        }
+      ],
+      "facts": "[F1] (move, Rook) Rook makes the move Endure Harm with iron.\n[F2] (effect, Rook) The player set the health loss at 2 for Rook.\n[F3] (injury, Rook) The injury, as the Guide established it: A spur of sheared track catches Rook under the arm where the plating thins.\n[F4] (effect, Rook) Rook: health -2.\n[F5] (roll, Rook) Roll: action die 6 +3 iron = 9, against challenge dice 2 and 2: a strong hit, and the challenge dice match.\n[F6] (choice, Rook) The player chose: Shake it off: take +1 health.\n[F7] (effect, Rook) Rook: health +1.",
+      "text": "The hauler's track has shed a length of itself along the gantry, a bright curl of sheared metal standing up out of the deck like a thorn. Somewhere behind the bulkhead, a coolant line ticks as it cools. The spur catches Rook under the arm, where the plating thins to webbing, and opens a clean hot line through the underlayer. Blood goes tacky against the suit lining before the seal even registers the breach. It is not the worst the deck has done. Rook rolls the shoulder once, twice, until the burn settles into something that can be carried, and the shake works most of it loose.",
+      "segments": [
+        {
+          "about": "world",
+          "character": null,
+          "text": "The hauler's track has shed a length of itself along the gantry, a bright curl of sheared metal standing up out of the deck like a thorn. Somewhere behind the bulkhead, a coolant line ticks as it cools."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "The spur catches Rook under the arm, where the plating thins to webbing, and opens a clean hot line through the underlayer. Blood goes tacky against the suit lining before the seal even registers the breach."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "It is not the worst the deck has done. Rook rolls the shoulder once, twice, until the burn settles into something that can be carried, and the shake works most of it loose."
+        }
+      ],
+      "expected": {
+        "withdraw": true,
+        "rules": ["undeclared_action", "player_interior"]
+      }
+    },
+    {
+      "id": "spike-tagged-2",
+      "source": "Recorded: 7.14 spike, plain definitions, tagged run 2, Color.",
+      "role": "beat",
+      "latitude": "color",
+      "characters": [
+        {
+          "callsign": "Vesna",
+          "name": "Vesna Kade"
+        },
+        {
+          "callsign": "Rook",
+          "name": "Rook Ilari"
+        },
+        {
+          "callsign": "Juno",
+          "name": "Juno Marr"
+        }
+      ],
+      "facts": "[F1] (move, Rook) Rook makes the move Endure Harm with iron.\n[F2] (effect, Rook) The player set the health loss at 2 for Rook.\n[F3] (injury, Rook) The injury, as the Guide established it: A spur of sheared track catches Rook under the arm where the plating thins.\n[F4] (effect, Rook) Rook: health -2.\n[F5] (roll, Rook) Roll: action die 6 +3 iron = 9, against challenge dice 2 and 2: a strong hit, and the challenge dice match.\n[F6] (choice, Rook) The player chose: Shake it off: take +1 health.\n[F7] (effect, Rook) Rook: health +1.",
+      "text": "The collapsed track bed ticks as it cools, sheared rails jutting up out of the ballast like broken teeth, each one bright where the metal parted. One of those spurs finds the gap under Rook's arm, where the plating thins to jointing mesh, and drags a hot line through it. The pain arrives and goes nowhere useful; Rook has been carved on before, and the body knows the drill, breath steady, grip steady. A roll of the shoulder, a press of the palm to the seep, and the wound is just another thing to carry. The rails go on ticking.",
+      "segments": [
+        {
+          "about": "world",
+          "character": null,
+          "text": "The collapsed track bed ticks as it cools, sheared rails jutting up out of the ballast like broken teeth, each one bright where the metal parted."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "One of those spurs finds the gap under Rook's arm, where the plating thins to jointing mesh, and drags a hot line through it."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "The pain arrives and goes nowhere useful; Rook has been carved on before, and the body knows the drill, breath steady, grip steady."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "A roll of the shoulder, a press of the palm to the seep, and the wound is just another thing to carry. The rails go on ticking."
+        }
+      ],
+      "expected": {
+        "withdraw": true,
+        "rules": ["undeclared_action", "player_interior"]
+      }
+    },
+    {
+      "id": "r714-unshaken",
+      "source": "Recorded: 7.14 live pass, standalone Endure Harm, Color (section 7 notes, violation 4).",
+      "role": "beat",
+      "latitude": "color",
+      "characters": [
+        {
+          "callsign": "Vesna",
+          "name": "Vesna Kade"
+        },
+        {
+          "callsign": "Rook",
+          "name": "Rook Ilari"
+        },
+        {
+          "callsign": "Juno",
+          "name": "Juno Marr"
+        }
+      ],
+      "facts": "[F1] (move, Rook) Rook makes the move Endure Harm with health.\n[F2] (effect, Rook) The player set the health loss at 1 for Rook.\n[F3] (injury, Rook) The injury, as the Guide established it: A ruptured conduit sprays sparks across Rook's arm.\n[F4] (injury, Rook) The player judged it milder than the Guide's proposed 2: narrate that injury at the severity the player set.\n[F5] (effect, Rook) Rook: health -1.\n[F6] (roll, Rook) Roll: action die 5 +4 health = 9, against challenge dice 3 and 6: a strong hit.",
+      "text": "The relay station's spine ticks and settles, old coolant lines groaning somewhere behind the wall plating. A junction box lets out a dry cough of ozone. A conduit ruptures and throws a fan of white sparks across Rook's arm, the sleeve pocking with small black stars. The burn is shallow, a stripe of angry pink under scorched fabric rather than anything deep; health drops by one. The pain crests and fades fast, leaving Rook steady on the deck, unshaken by it. The severed line spits twice more, then dulls to a slow amber weeping, and the corridor lights come back at half strength.",
+      "segments": [
+        {
+          "about": "world",
+          "character": null,
+          "text": "The relay station's spine ticks and settles, old coolant lines groaning somewhere behind the wall plating. A junction box lets out a dry cough of ozone."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "A conduit ruptures and throws a fan of white sparks across Rook's arm, the sleeve pocking with small black stars."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "The burn is shallow, a stripe of angry pink under scorched fabric rather than anything deep; health drops by one."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "The pain crests and fades fast, leaving Rook steady on the deck, unshaken by it."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "The severed line spits twice more, then dulls to a slow amber weeping, and the corridor lights come back at half strength."
+        }
+      ],
+      "expected": {
+        "withdraw": true,
+        "rules": ["player_interior"]
+      }
+    },
+    {
+      "id": "r714-arm-plate",
+      "source": "Recorded: 7.14 live pass, Beat 7, Full voice (section 7 notes, violation 5): an action inside a permitted label.",
+      "role": "beat",
+      "latitude": "full_voice",
+      "characters": [
+        {
+          "callsign": "Vesna",
+          "name": "Vesna Kade"
+        },
+        {
+          "callsign": "Rook",
+          "name": "Rook Ilari"
+        },
+        {
+          "callsign": "Juno",
+          "name": "Juno Marr"
+        }
+      ],
+      "facts": "[F1] (move, Rook) Rook makes the move Face Danger with iron.\n[F2] (declared action, Rook) The player declared: \"Rook forces the sealed bulkhead.\"\n[F3] (roll, Rook) Roll: action die 2 +2 iron = 4, against challenge dice 7 and 9: a miss.\n[F4] (move) This leads to Pay the Price.\n[F5] (move, Rook) Rook makes the move Pay the Price.\n[F6] (choice, Rook) For Pay the Price, the player chose: Roll on the table.\n[F7] (roll) Oracle result (32): You are harmed.\n[F8] (move) This leads to Endure Harm.\n[F9] (move, Rook) Rook makes the move Endure Harm with health.\n[F10] (effect, Rook) The player set the health loss at 1 for Rook.\n[F11] (injury, Rook) The injury, as the Guide established it: A ruptured conduit sprays sparks across Rook's arm.\n[F12] (injury, Rook) The player judged it milder than the Guide's proposed 2: narrate that injury at the severity the player set.\n[F13] (effect, Rook) Rook: health -1.\n[F14] (roll, Rook) Roll: action die 5 +4 health = 9, against challenge dice 3 and 6: a strong hit.",
+      "text": "The relay station's bulkhead sits half-seated in its frame, seals gummed shut with decades of frozen lubricant, the emergency release long since stripped of power. Rook sets both palms flat against the cold plate and forces the sealed bulkhead, driving a shoulder into it until the metal groans in its track. The door gives half a handspan and no more. Somewhere above the frame, pressure finds the weak joint it has been waiting for, and a conduit lets go with a crack like a snapped bone. Sparks come down in a bright arc across Rook's forearm, burning through sleeve fabric in a spatter of small black holes and leaving a stripe of scorched skin beneath. A hiss escapes through Rook's teeth, then flattens into something steadier, almost dismissive, as the arm comes back up to the plate. The conduit spits itself empty and dies. The dark corridor beyond the gap breathes out stale, metallic air, and the bulkhead still stands only half open.",
+      "segments": [
+        {
+          "about": "world",
+          "character": null,
+          "text": "The relay station's bulkhead sits half-seated in its frame, seals gummed shut with decades of frozen lubricant, the emergency release long since stripped of power."
+        },
+        {
+          "about": "character_does",
+          "character": "Rook",
+          "text": "Rook sets both palms flat against the cold plate and forces the sealed bulkhead, driving a shoulder into it until the metal groans in its track."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "The door gives half a handspan and no more. Somewhere above the frame, pressure finds the weak joint it has been waiting for, and a conduit lets go with a crack like a snapped bone."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "Sparks come down in a bright arc across Rook's forearm, burning through sleeve fabric in a spatter of small black holes and leaving a stripe of scorched skin beneath."
+        },
+        {
+          "about": "character_says",
+          "character": "Rook",
+          "text": "A hiss escapes through Rook's teeth, then flattens into something steadier, almost dismissive, as the arm comes back up to the plate."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "The conduit spits itself empty and dies. The dark corridor beyond the gap breathes out stale, metallic air, and the bulkhead still stands only half open."
+        }
+      ],
+      "expected": {
+        "withdraw": true,
+        "rules": ["undeclared_action"]
+      }
+    },
+    {
+      "id": "spike-hardened-1",
+      "source": "Recorded: 7.14 spike, tightened definitions, run 1, Color. Judged clean.",
+      "role": "beat",
+      "latitude": "color",
+      "characters": [
+        {
+          "callsign": "Vesna",
+          "name": "Vesna Kade"
+        },
+        {
+          "callsign": "Rook",
+          "name": "Rook Ilari"
+        },
+        {
+          "callsign": "Juno",
+          "name": "Juno Marr"
+        }
+      ],
+      "facts": "[F1] (move, Rook) Rook makes the move Endure Harm with iron.\n[F2] (effect, Rook) The player set the health loss at 2 for Rook.\n[F3] (injury, Rook) The injury, as the Guide established it: A spur of sheared track catches Rook under the arm where the plating thins.\n[F4] (effect, Rook) Rook: health -2.\n[F5] (roll, Rook) Roll: action die 6 +3 iron = 9, against challenge dice 2 and 2: a strong hit, and the challenge dice match.\n[F6] (choice, Rook) The player chose: Shake it off: take +1 health.\n[F7] (effect, Rook) Rook: health +1.",
+      "text": "The wrecked track lies half-buried in grit, its links peeled back into bright, sheared teeth that catch the low light. One of those spurs finds the seam under Rook's arm, where the plating thins to webbing, and opens it in a single clean drag. Blood beads along the torn weave and darkens it, slow, a few drops ticking into the dust below. The wound is shallower than it looked, already closing tight and hot around the edges, the arm still answering, the plating still sitting where it should. Around the wreck, nothing changes; the dust settles back, and the sheared track stays exactly where it is.",
+      "segments": [
+        {
+          "about": "world",
+          "character": null,
+          "text": "The wrecked track lies half-buried in grit, its links peeled back into bright, sheared teeth that catch the low light."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "One of those spurs finds the seam under Rook's arm, where the plating thins to webbing, and opens it in a single clean drag."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "Blood beads along the torn weave and darkens it, slow, a few drops ticking into the dust below."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "The wound is shallower than it looked, already closing tight and hot around the edges, the arm still answering, the plating still sitting where it should."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "Around the wreck, nothing changes; the dust settles back, and the sheared track stays exactly where it is."
+        }
+      ],
+      "expected": {
+        "withdraw": false,
+        "rules": []
+      }
+    },
+    {
+      "id": "spike-hardened-2",
+      "source": "Recorded: 7.14 spike, tightened definitions, run 2, Color. Judged clean.",
+      "role": "beat",
+      "latitude": "color",
+      "characters": [
+        {
+          "callsign": "Vesna",
+          "name": "Vesna Kade"
+        },
+        {
+          "callsign": "Rook",
+          "name": "Rook Ilari"
+        },
+        {
+          "callsign": "Juno",
+          "name": "Juno Marr"
+        }
+      ],
+      "facts": "[F1] (move, Rook) Rook makes the move Endure Harm with iron.\n[F2] (effect, Rook) The player set the health loss at 2 for Rook.\n[F3] (injury, Rook) The injury, as the Guide established it: A spur of sheared track catches Rook under the arm where the plating thins.\n[F4] (effect, Rook) Rook: health -2.\n[F5] (roll, Rook) Roll: action die 6 +3 iron = 9, against challenge dice 2 and 2: a strong hit, and the challenge dice match.\n[F6] (choice, Rook) The player chose: Shake it off: take +1 health.\n[F7] (effect, Rook) Rook: health +1.",
+      "text": "The wrecked track lies open like a split seam, rails peeled back into bright ragged spurs where the drive gear tore loose. One of those spurs finds Rook under the arm, in the gap where the plating thins, and opens it in a clean hot line. Blood runs down over the dust on the rail and beads there, refusing to soak in. The wound is shallower than the width of it suggests; the bleeding slows on its own, and the arm still answers. The wreck ticks as it cools, settling by increments, patient about whatever comes next.",
+      "segments": [
+        {
+          "about": "world",
+          "character": null,
+          "text": "The wrecked track lies open like a split seam, rails peeled back into bright ragged spurs where the drive gear tore loose."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "One of those spurs finds Rook under the arm, in the gap where the plating thins, and opens it in a clean hot line."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "Blood runs down over the dust on the rail and beads there, refusing to soak in."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "The wound is shallower than the width of it suggests; the bleeding slows on its own, and the arm still answers."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "The wreck ticks as it cools, settling by increments, patient about whatever comes next."
+        }
+      ],
+      "expected": {
+        "withdraw": false,
+        "rules": []
+      }
+    },
+    {
+      "id": "spike-hardened-3",
+      "source": "Recorded: 7.14 spike, tightened definitions, run 3, Color. Judged clean.",
+      "role": "beat",
+      "latitude": "color",
+      "characters": [
+        {
+          "callsign": "Vesna",
+          "name": "Vesna Kade"
+        },
+        {
+          "callsign": "Rook",
+          "name": "Rook Ilari"
+        },
+        {
+          "callsign": "Juno",
+          "name": "Juno Marr"
+        }
+      ],
+      "facts": "[F1] (move, Rook) Rook makes the move Endure Harm with iron.\n[F2] (effect, Rook) The player set the health loss at 2 for Rook.\n[F3] (injury, Rook) The injury, as the Guide established it: A spur of sheared track catches Rook under the arm where the plating thins.\n[F4] (effect, Rook) Rook: health -2.\n[F5] (roll, Rook) Roll: action die 6 +3 iron = 9, against challenge dice 2 and 2: a strong hit, and the challenge dice match.\n[F6] (choice, Rook) The player chose: Shake it off: take +1 health.\n[F7] (effect, Rook) Rook: health +1.",
+      "text": "The track lies split along the gantry, one plate peeled up into a bright spur of sheared metal, still ticking as it cools. The spur catches Rook under the arm, where the plating thins to seam and webbing, and opens a hot line through it. Blood beads along the ruined seam and falls in slow, heavy drops onto the deck grating, where it hisses faintly against warm steel. The wound is shallower than it looked, already stiffening; the arm still answers, and the worst of it passes off as a dull, receding throb. Somewhere below, the track cycles once more, catches on the gap, and grinds itself quiet.",
+      "segments": [
+        {
+          "about": "world",
+          "character": null,
+          "text": "The track lies split along the gantry, one plate peeled up into a bright spur of sheared metal, still ticking as it cools."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "The spur catches Rook under the arm, where the plating thins to seam and webbing, and opens a hot line through it."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "Blood beads along the ruined seam and falls in slow, heavy drops onto the deck grating, where it hisses faintly against warm steel."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "The wound is shallower than it looked, already stiffening; the arm still answers, and the worst of it passes off as a dull, receding throb."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "Somewhere below, the track cycles once more, catches on the gap, and grinds itself quiet."
+        }
+      ],
+      "expected": {
+        "withdraw": false,
+        "rules": []
+      }
+    },
+    {
+      "id": "spike-hardened-4",
+      "source": "Recorded: 7.14 spike, tightened definitions, run 4, Color. Judged clean.",
+      "role": "beat",
+      "latitude": "color",
+      "characters": [
+        {
+          "callsign": "Vesna",
+          "name": "Vesna Kade"
+        },
+        {
+          "callsign": "Rook",
+          "name": "Rook Ilari"
+        },
+        {
+          "callsign": "Juno",
+          "name": "Juno Marr"
+        }
+      ],
+      "facts": "[F1] (move, Rook) Rook makes the move Endure Harm with iron.\n[F2] (effect, Rook) The player set the health loss at 2 for Rook.\n[F3] (injury, Rook) The injury, as the Guide established it: A spur of sheared track catches Rook under the arm where the plating thins.\n[F4] (effect, Rook) Rook: health -2.\n[F5] (roll, Rook) Roll: action die 6 +3 iron = 9, against challenge dice 2 and 2: a strong hit, and the challenge dice match.\n[F6] (choice, Rook) The player chose: Shake it off: take +1 health.\n[F7] (effect, Rook) Rook: health +1.",
+      "text": "The wrecked track bed ticks as it cools, sheared rail curling up out of the gravel like a torn ribbon of steel. A spur of it catches Rook under the arm, where the plating thins to seam and fabric, and the metal opens a hot line through the layers. Blood runs down the inside of the sleeve and collects at the cuff, warm and unhurried. The wound is shallower than the sound of it promised; the bleeding slows on its own, and the arm still answers. Somewhere down the line, the settling wreck groans twice, the same note both times.",
+      "segments": [
+        {
+          "about": "world",
+          "character": null,
+          "text": "The wrecked track bed ticks as it cools, sheared rail curling up out of the gravel like a torn ribbon of steel."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "A spur of it catches Rook under the arm, where the plating thins to seam and fabric, and the metal opens a hot line through the layers."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "Blood runs down the inside of the sleeve and collects at the cuff, warm and unhurried."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "The wound is shallower than the sound of it promised; the bleeding slows on its own, and the arm still answers."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "Somewhere down the line, the settling wreck groans twice, the same note both times."
+        }
+      ],
+      "expected": {
+        "withdraw": false,
+        "rules": []
+      }
+    },
+    {
+      "id": "spike-declared-1",
+      "source": "Recorded: 7.14 spike, declared action, run 1, Color. Judged clean.",
+      "role": "beat",
+      "latitude": "color",
+      "characters": [
+        {
+          "callsign": "Vesna",
+          "name": "Vesna Kade"
+        },
+        {
+          "callsign": "Rook",
+          "name": "Rook Ilari"
+        },
+        {
+          "callsign": "Juno",
+          "name": "Juno Marr"
+        }
+      ],
+      "facts": "[F1] (move, Rook) Rook makes the move Face Danger with iron.\n[F2] (declared action, Rook) The player declared: \"Rook forces the sealed bulkhead between the crew and the survivor.\"\n[F3] (roll, Rook) Roll: action die 2 +3 iron = 5, against challenge dice 7 and 9: a miss.\n[F4] (move, Rook) Rook makes the move Pay the Price; the player chose to roll on the table.\n[F5] (roll) Oracle result (32): You are harmed.\n[F6] (move, Rook) Rook makes the move Endure Harm with health.\n[F7] (effect, Rook) The player set the health loss at 1 for Rook.\n[F8] (injury, Rook) The injury, as the Guide established it: A ruptured conduit sprays sparks across Rook's arm.\n[F9] (injury, Rook) The player judged it milder than the Guide's proposed 2: narrate that injury at the severity the player set.\n[F10] (effect, Rook) Rook: health -1.\n[F11] (roll, Rook) Roll: action die 5 +4 health = 9, against challenge dice 3 and 6: a strong hit.",
+      "text": "Rook sets both hands against the seam of the sealed bulkhead and forces it, shoulders driving into the cold plate until the old servos whine. The door gives a handspan, then jams, and somewhere above the frame a pressure line shudders under a century of neglect. The conduit splits with a crack like a snapped bone, venting a white fan of sparks and scalding vapor across the gap. Sparks rake Rook's forearm, stitching a line of small bright burns through sleeve and skin, the smell of scorched fabric rising fast. The pain arrives late and shallow, a hot sting rather than a wound, blood beading in a thin scatter along the arm. It does not slow the hands or dim the eyes; the burn settles into something that can be carried, and Rook remains on both feet with the bulkhead still a handspan open. Beyond that narrow slot, the dark on the far side stays silent, the ruptured line hissing itself down to a whisper.",
+      "segments": [
+        {
+          "about": "character_does",
+          "character": "Rook",
+          "text": "Rook sets both hands against the seam of the sealed bulkhead and forces it, shoulders driving into the cold plate until the old servos whine."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "The door gives a handspan, then jams, and somewhere above the frame a pressure line shudders under a century of neglect."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "The conduit splits with a crack like a snapped bone, venting a white fan of sparks and scalding vapor across the gap."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "Sparks rake Rook's forearm, stitching a line of small bright burns through sleeve and skin, the smell of scorched fabric rising fast."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "The pain arrives late and shallow, a hot sting rather than a wound, blood beading in a thin scatter along the arm."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "It does not slow the hands or dim the eyes; the burn settles into something that can be carried, and Rook remains on both feet with the bulkhead still a handspan open."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "Beyond that narrow slot, the dark on the far side stays silent, the ruptured line hissing itself down to a whisper."
+        }
+      ],
+      "expected": {
+        "withdraw": false,
+        "rules": []
+      }
+    },
+    {
+      "id": "spike-declared-2",
+      "source": "Recorded: 7.14 spike, declared action, run 2, Color. Judged clean.",
+      "role": "beat",
+      "latitude": "color",
+      "characters": [
+        {
+          "callsign": "Vesna",
+          "name": "Vesna Kade"
+        },
+        {
+          "callsign": "Rook",
+          "name": "Rook Ilari"
+        },
+        {
+          "callsign": "Juno",
+          "name": "Juno Marr"
+        }
+      ],
+      "facts": "[F1] (move, Rook) Rook makes the move Face Danger with iron.\n[F2] (declared action, Rook) The player declared: \"Rook forces the sealed bulkhead between the crew and the survivor.\"\n[F3] (roll, Rook) Roll: action die 2 +3 iron = 5, against challenge dice 7 and 9: a miss.\n[F4] (move, Rook) Rook makes the move Pay the Price; the player chose to roll on the table.\n[F5] (roll) Oracle result (32): You are harmed.\n[F6] (move, Rook) Rook makes the move Endure Harm with health.\n[F7] (effect, Rook) The player set the health loss at 1 for Rook.\n[F8] (injury, Rook) The injury, as the Guide established it: A ruptured conduit sprays sparks across Rook's arm.\n[F9] (injury, Rook) The player judged it milder than the Guide's proposed 2: narrate that injury at the severity the player set.\n[F10] (effect, Rook) Rook: health -1.\n[F11] (roll, Rook) Roll: action die 5 +4 health = 9, against challenge dice 3 and 6: a strong hit.",
+      "text": "Rook sets both palms against the sealed bulkhead and drives against it, shoulder braced, boots grinding on the deck plating. The door gives a finger's width and stops, something behind it groaning under the strain. Above, in the ceiling channel, a pressure line swells and splits. The ruptured conduit whips loose and throws a white fan of sparks across Rook's arm, sleeve fabric blackening in an instant, skin stinging red beneath it. The spray dies as fast as it came, the conduit spitting itself empty into a thin gray thread of smoke that crawls along the corridor ceiling. The burn is shallow, more heat than wound, and the pain narrows into something small and bright and manageable. The bulkhead stays where it is, half a finger open, and from the far side comes a faint arrhythmic knocking, someone or something still there, still waiting.",
+      "segments": [
+        {
+          "about": "character_does",
+          "character": "Rook",
+          "text": "Rook sets both palms against the sealed bulkhead and drives against it, shoulder braced, boots grinding on the deck plating."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "The door gives a finger's width and stops, something behind it groaning under the strain. Above, in the ceiling channel, a pressure line swells and splits."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "The ruptured conduit whips loose and throws a white fan of sparks across Rook's arm, sleeve fabric blackening in an instant, skin stinging red beneath it."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "The spray dies as fast as it came, the conduit spitting itself empty into a thin gray thread of smoke that crawls along the corridor ceiling."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "The burn is shallow, more heat than wound, and the pain narrows into something small and bright and manageable."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "The bulkhead stays where it is, half a finger open, and from the far side comes a faint arrhythmic knocking, someone or something still there, still waiting."
+        }
+      ],
+      "expected": {
+        "withdraw": false,
+        "rules": []
+      }
+    },
+    {
+      "id": "spike-declared-3",
+      "source": "Recorded: 7.14 spike, declared action, run 3, Color. Judged clean.",
+      "role": "beat",
+      "latitude": "color",
+      "characters": [
+        {
+          "callsign": "Vesna",
+          "name": "Vesna Kade"
+        },
+        {
+          "callsign": "Rook",
+          "name": "Rook Ilari"
+        },
+        {
+          "callsign": "Juno",
+          "name": "Juno Marr"
+        }
+      ],
+      "facts": "[F1] (move, Rook) Rook makes the move Face Danger with iron.\n[F2] (declared action, Rook) The player declared: \"Rook forces the sealed bulkhead between the crew and the survivor.\"\n[F3] (roll, Rook) Roll: action die 2 +3 iron = 5, against challenge dice 7 and 9: a miss.\n[F4] (move, Rook) Rook makes the move Pay the Price; the player chose to roll on the table.\n[F5] (roll) Oracle result (32): You are harmed.\n[F6] (move, Rook) Rook makes the move Endure Harm with health.\n[F7] (effect, Rook) The player set the health loss at 1 for Rook.\n[F8] (injury, Rook) The injury, as the Guide established it: A ruptured conduit sprays sparks across Rook's arm.\n[F9] (injury, Rook) The player judged it milder than the Guide's proposed 2: narrate that injury at the severity the player set.\n[F10] (effect, Rook) Rook: health -1.\n[F11] (roll, Rook) Roll: action die 5 +4 health = 9, against challenge dice 3 and 6: a strong hit.",
+      "text": "Rook sets both hands to the sealed bulkhead and forces it, shoulder driving into the cold plate, prying the seam wider against the station's dead hydraulics. The door gives a hand's width and then locks, and somewhere above the frame a pressure line lets go with a sound like a struck bell. A ruptured conduit whips loose and sprays sparks across Rook's forearm, stitching bright orange points along the sleeve, scorching cloth and skin in a thin bracelet of burns. The severed line goes on hissing in the dark, throwing stuttering light down the corridor, and the smell of burnt insulation fills the narrow space. The pain arrives late and shallow, a heat that fades to a dull sting before it can take hold; the arm still answers, fingers still curl. Beyond the gap in the bulkhead, faint and muffled, something on the survivor's side strikes the metal twice.",
+      "segments": [
+        {
+          "about": "character_does",
+          "character": "Rook",
+          "text": "Rook sets both hands to the sealed bulkhead and forces it, shoulder driving into the cold plate, prying the seam wider against the station's dead hydraulics."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "The door gives a hand's width and then locks, and somewhere above the frame a pressure line lets go with a sound like a struck bell."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "A ruptured conduit whips loose and sprays sparks across Rook's forearm, stitching bright orange points along the sleeve, scorching cloth and skin in a thin bracelet of burns."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "The severed line goes on hissing in the dark, throwing stuttering light down the corridor, and the smell of burnt insulation fills the narrow space."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "The pain arrives late and shallow, a heat that fades to a dull sting before it can take hold; the arm still answers, fingers still curl."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "Beyond the gap in the bulkhead, faint and muffled, something on the survivor's side strikes the metal twice."
+        }
+      ],
+      "expected": {
+        "withdraw": false,
+        "rules": []
+      }
+    },
+    {
+      "id": "spike-declared-4",
+      "source": "Recorded: 7.14 spike, declared action, run 4, Color. Judged clean.",
+      "role": "beat",
+      "latitude": "color",
+      "characters": [
+        {
+          "callsign": "Vesna",
+          "name": "Vesna Kade"
+        },
+        {
+          "callsign": "Rook",
+          "name": "Rook Ilari"
+        },
+        {
+          "callsign": "Juno",
+          "name": "Juno Marr"
+        }
+      ],
+      "facts": "[F1] (move, Rook) Rook makes the move Face Danger with iron.\n[F2] (declared action, Rook) The player declared: \"Rook forces the sealed bulkhead between the crew and the survivor.\"\n[F3] (roll, Rook) Roll: action die 2 +3 iron = 5, against challenge dice 7 and 9: a miss.\n[F4] (move, Rook) Rook makes the move Pay the Price; the player chose to roll on the table.\n[F5] (roll) Oracle result (32): You are harmed.\n[F6] (move, Rook) Rook makes the move Endure Harm with health.\n[F7] (effect, Rook) The player set the health loss at 1 for Rook.\n[F8] (injury, Rook) The injury, as the Guide established it: A ruptured conduit sprays sparks across Rook's arm.\n[F9] (injury, Rook) The player judged it milder than the Guide's proposed 2: narrate that injury at the severity the player set.\n[F10] (effect, Rook) Rook: health -1.\n[F11] (roll, Rook) Roll: action die 5 +4 health = 9, against challenge dice 3 and 6: a strong hit.",
+      "text": "Rook sets both hands against the sealed bulkhead and forces it, driving shoulder and weight into the seam where the plates meet. The door gives a finger's width, then stops dead, and somewhere behind the wall panel a pressure line lets go with a sound like a struck bell. A ruptured conduit whips loose and sprays sparks across Rook's arm, a bright hissing arc that scorches sleeve fabric to black lace and leaves the skin beneath stinging and raw. The smell of burnt insulation floods the corridor, and the emergency lamps stutter down to a low red pulse. The burn is shallow, more heat than wound; the pain crests fast and then recedes to a manageable throb, the arm still answering, fingers still closing. Beyond the bulkhead, muffled by centimeters of alloy, something knocks three times against the far side of the door.",
+      "segments": [
+        {
+          "about": "character_does",
+          "character": "Rook",
+          "text": "Rook sets both hands against the sealed bulkhead and forces it, driving shoulder and weight into the seam where the plates meet."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "The door gives a finger's width, then stops dead, and somewhere behind the wall panel a pressure line lets go with a sound like a struck bell."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "A ruptured conduit whips loose and sprays sparks across Rook's arm, a bright hissing arc that scorches sleeve fabric to black lace and leaves the skin beneath stinging and raw."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "The smell of burnt insulation floods the corridor, and the emergency lamps stutter down to a low red pulse."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "The burn is shallow, more heat than wound; the pain crests fast and then recedes to a manageable throb, the arm still answering, fingers still closing."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "Beyond the bulkhead, muffled by centimeters of alloy, something knocks three times against the far side of the door."
+        }
+      ],
+      "expected": {
+        "withdraw": false,
+        "rules": []
+      }
+    },
+    {
+      "id": "r714-declared-color",
+      "source": "Recorded: 7.14 live pass, Beat 7, Color. Judged clean.",
+      "role": "beat",
+      "latitude": "color",
+      "characters": [
+        {
+          "callsign": "Vesna",
+          "name": "Vesna Kade"
+        },
+        {
+          "callsign": "Rook",
+          "name": "Rook Ilari"
+        },
+        {
+          "callsign": "Juno",
+          "name": "Juno Marr"
+        }
+      ],
+      "facts": "[F1] (move, Rook) Rook makes the move Face Danger with iron.\n[F2] (declared action, Rook) The player declared: \"Rook forces the sealed bulkhead.\"\n[F3] (roll, Rook) Roll: action die 2 +2 iron = 4, against challenge dice 7 and 9: a miss.\n[F4] (move) This leads to Pay the Price.\n[F5] (move, Rook) Rook makes the move Pay the Price.\n[F6] (choice, Rook) For Pay the Price, the player chose: Roll on the table.\n[F7] (roll) Oracle result (32): You are harmed.\n[F8] (move) This leads to Endure Harm.\n[F9] (move, Rook) Rook makes the move Endure Harm with health.\n[F10] (effect, Rook) The player set the health loss at 1 for Rook.\n[F11] (injury, Rook) The injury, as the Guide established it: A ruptured conduit sprays sparks across Rook's arm.\n[F12] (injury, Rook) The player judged it milder than the Guide's proposed 2: narrate that injury at the severity the player set.\n[F13] (effect, Rook) Rook: health -1.\n[F14] (roll, Rook) Roll: action die 5 +4 health = 9, against challenge dice 3 and 6: a strong hit.",
+      "text": "The bulkhead sits half-seated in its frame, seals fused by whatever heat passed through this corridor, and the station's dead air hums with current still crawling through the walls. Rook forces the sealed bulkhead, driving shoulder and pry-bar against a door that grinds a hand's width and no further. Somewhere behind the panelling a conduit gives with a wet metallic crack, and the dark floods white as a rope of sparks whips loose from the seam. The spray catches Rook's arm, sleeve scorched in a bright stitched line, skin beneath raw and stinging where the sparks landed. The pain arrives and then recedes fast, the arm still answering, fingers still closing, nothing in the burn deep enough to matter. The severed conduit gutters out to a slow orange drip of molten insulation, and the corridor settles back into its low, patient hum, the bulkhead still holding its narrow gap.",
+      "segments": [
+        {
+          "about": "world",
+          "character": null,
+          "text": "The bulkhead sits half-seated in its frame, seals fused by whatever heat passed through this corridor, and the station's dead air hums with current still crawling through the walls."
+        },
+        {
+          "about": "character_does",
+          "character": "Rook",
+          "text": "Rook forces the sealed bulkhead, driving shoulder and pry-bar against a door that grinds a hand's width and no further."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "Somewhere behind the panelling a conduit gives with a wet metallic crack, and the dark floods white as a rope of sparks whips loose from the seam."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "The spray catches Rook's arm, sleeve scorched in a bright stitched line, skin beneath raw and stinging where the sparks landed."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "The pain arrives and then recedes fast, the arm still answering, fingers still closing, nothing in the burn deep enough to matter."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "The severed conduit gutters out to a slow orange drip of molten insulation, and the corridor settles back into its low, patient hum, the bulkhead still holding its narrow gap."
+        }
+      ],
+      "expected": {
+        "withdraw": false,
+        "rules": []
+      }
+    },
+    {
+      "id": "r714-none-full-voice",
+      "source": "Recorded: 7.14 live pass, standalone Endure Harm, Full voice. Judged clean.",
+      "role": "beat",
+      "latitude": "full_voice",
+      "characters": [
+        {
+          "callsign": "Vesna",
+          "name": "Vesna Kade"
+        },
+        {
+          "callsign": "Rook",
+          "name": "Rook Ilari"
+        },
+        {
+          "callsign": "Juno",
+          "name": "Juno Marr"
+        }
+      ],
+      "facts": "[F1] (move, Rook) Rook makes the move Endure Harm with health.\n[F2] (effect, Rook) The player set the health loss at 1 for Rook.\n[F3] (injury, Rook) The injury, as the Guide established it: A ruptured conduit sprays sparks across Rook's arm.\n[F4] (injury, Rook) The player judged it milder than the Guide's proposed 2: narrate that injury at the severity the player set.\n[F5] (effect, Rook) Rook: health -1.\n[F6] (roll, Rook) Roll: action die 5 +4 health = 9, against challenge dice 3 and 6: a strong hit.",
+      "text": "The relay station's spine groans as a conduit lets go, splitting its housing with a dry crack. Sparks fan out into the corridor, bright and brief, and the air goes sharp with the smell of scorched insulation. The spray catches Rook's arm, stitching a line of small burns across the sleeve, fabric curling black at the edges. It is a shallow hurt, ugly to look at and little more. The conduit gutters out, its light dying to a slow orange bead, and the station's hum settles back into its old rhythm. The pain arrives and passes without taking anything with it; the arm still works, the grip still closes.",
+      "segments": [
+        {
+          "about": "world",
+          "character": null,
+          "text": "The relay station's spine groans as a conduit lets go, splitting its housing with a dry crack. Sparks fan out into the corridor, bright and brief, and the air goes sharp with the smell of scorched insulation."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "The spray catches Rook's arm, stitching a line of small burns across the sleeve, fabric curling black at the edges. It is a shallow hurt, ugly to look at and little more."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "The conduit gutters out, its light dying to a slow orange bead, and the station's hum settles back into its old rhythm."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "The pain arrives and passes without taking anything with it; the arm still works, the grip still closes."
+        }
+      ],
+      "expected": {
+        "withdraw": false,
+        "rules": []
+      }
+    },
+    {
+      "id": "r714-none-minimal",
+      "source": "Recorded: 7.14 live pass, standalone Endure Harm, Minimal. Judged clean.",
+      "role": "beat",
+      "latitude": "minimal",
+      "characters": [
+        {
+          "callsign": "Vesna",
+          "name": "Vesna Kade"
+        },
+        {
+          "callsign": "Rook",
+          "name": "Rook Ilari"
+        },
+        {
+          "callsign": "Juno",
+          "name": "Juno Marr"
+        }
+      ],
+      "facts": "[F1] (move, Rook) Rook makes the move Endure Harm with health.\n[F2] (effect, Rook) The player set the health loss at 1 for Rook.\n[F3] (injury, Rook) The injury, as the Guide established it: A ruptured conduit sprays sparks across Rook's arm.\n[F4] (injury, Rook) The player judged it milder than the Guide's proposed 2: narrate that injury at the severity the player set.\n[F5] (effect, Rook) Rook: health -1.\n[F6] (roll, Rook) Roll: action die 5 +4 health = 9, against challenge dice 3 and 6: a strong hit.",
+      "text": "A conduit in the relay station's wall ruptures, venting sparks in a short bright arc across the corridor. The spray catches Rook's arm, scorching the sleeve and the skin beneath. The burn is shallow, a line of blisters rather than anything deep, and costs Rook one health. The harm is endured; Rook's health holds at 4 and the pain does not carry further than the arm. The conduit continues to spit at intervals, lighting the passage in stutters, and the station's air fills with the smell of burnt insulation.",
+      "segments": [
+        {
+          "about": "world",
+          "character": null,
+          "text": "A conduit in the relay station's wall ruptures, venting sparks in a short bright arc across the corridor."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "The spray catches Rook's arm, scorching the sleeve and the skin beneath. The burn is shallow, a line of blisters rather than anything deep, and costs Rook one health."
+        },
+        {
+          "about": "character_undergoes",
+          "character": "Rook",
+          "text": "The harm is endured; Rook's health holds at 4 and the pain does not carry further than the arm."
+        },
+        {
+          "about": "world",
+          "character": null,
+          "text": "The conduit continues to spit at intervals, lighting the passage in stutters, and the station's air fills with the smell of burnt insulation."
+        }
+      ],
+      "expected": {
+        "withdraw": false,
+        "rules": []
+      }
+    },
+    {
+      "id": "injury-clean",
+      "source": "Golden session Beat 7's injury, as D-130 records it. Judged clean.",
+      "role": "injury",
+      "latitude": "color",
+      "characters": [
+        {
+          "callsign": "Vesna",
+          "name": "Vesna Kade"
+        },
+        {
+          "callsign": "Rook",
+          "name": "Rook Ilari"
+        },
+        {
+          "callsign": "Juno",
+          "name": "Juno Marr"
+        }
+      ],
+      "text": "A ruptured conduit sprays sparks across Rook's arm.",
+      "expected": {
+        "withdraw": false,
+        "rules": []
+      }
+    },
+    {
+      "id": "constructed-beat9-shaken",
+      "source": "Constructed from golden session Beat 9: the narration calls Rook shaken.",
+      "role": "revision",
+      "latitude": "color",
+      "characters": [
+        {
+          "callsign": "Vesna",
+          "name": "Vesna Kade"
+        },
+        {
+          "callsign": "Rook",
+          "name": "Rook Ilari"
+        },
+        {
+          "callsign": "Juno",
+          "name": "Juno Marr"
+        }
+      ],
+      "text": "The conduit gutters out, and Rook looks shaken as the sparks die on the sleeve.",
+      "expected": {
+        "withdraw": true,
+        "rules": ["player_interior"]
+      },
+      "facts": "Rook makes the move Face Danger with iron.\nThe player declared: \"Rook forces the sealed bulkhead.\"\nRoll: action die 2 +3 iron = 5, against challenge dice 7 and 9: a miss.\nThis leads to Pay the Price.\nRook makes the move Pay the Price.\nFor Pay the Price, the player chose: Roll on the table.\nOracle result (32): You are harmed.\nThis leads to Endure Harm.\nRook makes the move Endure Harm with health.\nThe player set the health loss at 1 for Rook.\nRook: health -1.\nRoll: action die 5 +4 health = 9, against challenge dice 3 and 6: a strong hit."
+    },
+    {
+      "id": "constructed-voice-color",
+      "source": "Constructed: a player character's spoken line at Color latitude.",
+      "role": "revision",
+      "latitude": "color",
+      "characters": [
+        {
+          "callsign": "Vesna",
+          "name": "Vesna Kade"
+        },
+        {
+          "callsign": "Rook",
+          "name": "Rook Ilari"
+        },
+        {
+          "callsign": "Juno",
+          "name": "Juno Marr"
+        }
+      ],
+      "text": "The sparks die. Rook grimaces and mutters, \"Not today.\"",
+      "expected": {
+        "withdraw": true,
+        "rules": ["voice"]
+      },
+      "facts": "Rook makes the move Face Danger with iron.\nThe player declared: \"Rook forces the sealed bulkhead.\"\nRoll: action die 2 +3 iron = 5, against challenge dice 7 and 9: a miss.\nThis leads to Pay the Price.\nRook makes the move Pay the Price.\nFor Pay the Price, the player chose: Roll on the table.\nOracle result (32): You are harmed.\nThis leads to Endure Harm.\nRook makes the move Endure Harm with health.\nThe player set the health loss at 1 for Rook.\nRook: health -1.\nRoll: action die 5 +4 health = 9, against challenge dice 3 and 6: a strong hit."
+    },
+    {
+      "id": "constructed-injury-mismatch",
+      "source": "Constructed: a wound other than the established one (D-130).",
+      "role": "beat",
+      "latitude": "color",
+      "characters": [
+        {
+          "callsign": "Vesna",
+          "name": "Vesna Kade"
+        },
+        {
+          "callsign": "Rook",
+          "name": "Rook Ilari"
+        },
+        {
+          "callsign": "Juno",
+          "name": "Juno Marr"
+        }
+      ],
+      "text": "A shard of window glass slices across Rook's thigh, deep enough to bleed through the undersuit.",
+      "expected": {
+        "withdraw": true,
+        "rules": ["injury"]
+      },
+      "facts": "[F1] (move, Rook) Rook makes the move Endure Harm with health.\n[F2] (effect, Rook) The player set the health loss at 1 for Rook.\n[F3] (injury, Rook) The injury, as the Guide established it: A ruptured conduit sprays sparks across Rook's arm.\n[F4] (injury, Rook) The player judged it milder than the Guide's proposed 2: narrate that injury at the severity the player set.\n[F5] (effect, Rook) Rook: health -1.\n[F6] (roll, Rook) Roll: action die 5 +4 health = 9, against challenge dice 3 and 6: a strong hit."
+    }
+  ]
+}

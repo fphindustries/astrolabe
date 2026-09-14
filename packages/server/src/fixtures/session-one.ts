@@ -205,6 +205,8 @@ export async function playSessionOne(
       throw new Error(`Fixture ${fixture} made an AI call it did not script.`);
     },
   });
+  // Passes every passage: the scripted passages are written to pass D-128.
+  const checker = new StubProvider();
 
   const move = async (
     label: string,
@@ -268,7 +270,10 @@ export async function playSessionOne(
     if (prepared.kind !== 'run') {
       throw new Error(`Fixture ${fixture}, ${label}: the beat was already narrated.`);
     }
-    const result = await runBeatNarration(sql, ai, prepared, { delta: () => {}, reset: () => {} });
+    const result = await runBeatNarration(sql, ai, checker, prepared, {
+      delta: () => {},
+      reset: () => {},
+    });
     if (!result.ok) {
       throw new Error(`Fixture ${fixture}, ${label}: narration failed — ${result.message}`);
     }

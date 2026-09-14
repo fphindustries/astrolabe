@@ -19,6 +19,7 @@ import {
 import {
   NarrationCorrectionRequestedSchema,
   NarrationRevisedSchema,
+  NarrationWithdrawnSchema,
   NarrationWrittenSchema,
 } from './narration.js';
 import { OracleRolledSchema } from './oracle.js';
@@ -40,7 +41,8 @@ import { EventVoidedSchema } from './void.js';
  * (4.2, 4.3), the move flow's choices, chains, oracle rolls and committed
  * amounts with group 6, and `amount.proposed` and `ai.failed` with the AI
  * provider (group 7, D-113, D-118), and `character.proposed` with concept-first
- * creation (3.3, D-124). The remaining types (complications, the
+ * creation (3.3, D-124), and `narration.withdrawn` with the authority check
+ * (7.15, D-128). The remaining types (complications, the
  * scene header) are designed in `docs/design-event-log.md` and land the
  * same way, so their payloads are shaped by a real caller rather than
  * guessed at a month early.
@@ -73,6 +75,7 @@ export const PAYLOAD_SCHEMAS = {
   'narration.written': NarrationWrittenSchema,
   'narration.correction_requested': NarrationCorrectionRequestedSchema,
   'narration.revised': NarrationRevisedSchema,
+  'narration.withdrawn': NarrationWithdrawnSchema,
   'event.voided': EventVoidedSchema,
   'ai.completed': AiCompletedSchema,
   'ai.failed': AiFailedSchema,
@@ -134,6 +137,7 @@ export const EventSchema = z.discriminatedUnion('type', [
   eventMember('narration.written'),
   eventMember('narration.correction_requested'),
   eventMember('narration.revised'),
+  eventMember('narration.withdrawn'),
   eventMember('event.voided'),
   eventMember('ai.completed'),
   eventMember('ai.failed'),

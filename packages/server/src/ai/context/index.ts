@@ -3,6 +3,8 @@
  * state and events to an `AiRequest`. No I/O, no clock, no provider SDK —
  * the same fence `projection/` sits behind.
  */
+export * from './authority-check.js';
+export * from './authority-rubric.js';
 export * from './beat-scope.js';
 export * from './creation.js';
 export * from './describe-beat.js';

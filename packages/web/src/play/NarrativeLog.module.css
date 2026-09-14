@@ -57,3 +57,39 @@
   font-size: var(--text-sm);
   color: var(--provenance-ai);
 }
+
+/* D-128: shown while written, not yet kept. Italic rather than colour alone. */
+.provisional {
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+/* D-128: a withdrawal is unmistakable — marked, reasoned, and a click from what it refused. */
+.withdrawal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border-left: 3px solid var(--provenance-override);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.withdrawalReason {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.withdrawalQuote {
+  color: var(--text-secondary);
+}
+
+.withdrawal summary {
+  cursor: pointer;
+  color: var(--provenance-override);
+}
+
+.struck {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import type { AstrolabeEvent, EnvelopeFields, NarrativeEntry, NarrativeLog } from '@astrolabe/shared';
+import type {
+  AstrolabeEvent,
+  EnvelopeFields,
+  NarrativeEntry,
+  NarrativeLog,
+} from '@astrolabe/shared';
 
 import { orderedBeats, toEntryView } from './entries.js';
 
@@ -113,7 +118,13 @@ describe('toEntryView', () => {
       entry({
         ...envelope(),
         type: 'ai.completed',
-        payload: { provider: 'anthropic', model: 'm', purpose: 'x', inputTokens: 1, outputTokens: 1 },
+        payload: {
+          provider: 'anthropic',
+          model: 'm',
+          purpose: 'x',
+          inputTokens: 1,
+          outputTokens: 1,
+        },
       }),
     );
     expect(completed.voidable).toBe(false);
@@ -177,7 +188,11 @@ describe('toEntryView', () => {
         payload: {
           trackId: 'trk-1' as never,
           ticks: 8,
-          cause: { kind: 'move_outcome', moveId: 'move:adventure/reach_a_milestone', tier: 'strong_hit' },
+          cause: {
+            kind: 'move_outcome',
+            moveId: 'move:adventure/reach_a_milestone',
+            tier: 'strong_hit',
+          },
         },
       }),
     );
@@ -209,7 +224,11 @@ describe('toEntryView', () => {
         payload: { role: 'beat', text: 'Original passage.', groundedIn: [] },
       }),
     );
-    expect(uncorrected.body).toEqual({ kind: 'narration', text: 'Original passage.', corrected: false });
+    expect(uncorrected.body).toEqual({
+      kind: 'narration',
+      text: 'Original passage.',
+      corrected: false,
+    });
 
     const corrected = toEntryView(
       entry(
@@ -234,6 +253,40 @@ describe('toEntryView', () => {
       corrected: true,
       original: 'Original passage.',
       note: 'Rook is a veteran.',
+    });
+  });
+
+  it('renders narration.withdrawn as its reason, its quotes and the rejected text (D-128)', () => {
+    const view = toEntryView(
+      entry({
+        ...envelope(),
+        type: 'narration.withdrawn',
+        payload: {
+          role: 'beat',
+          attempt: 1,
+          checker: 'authority_check',
+          model: 'claude-haiku-4-5',
+          latitude: 'color',
+          rejectedText: 'Rook walks on with the same steady tread.',
+          violations: [
+            {
+              rule: 'player_interior',
+              character: 'Rook',
+              segment: 0,
+              quote: 'the same steady tread',
+              why: 'A characteristic response.',
+            },
+          ],
+        },
+      }),
+    );
+    expect(view.body).toEqual({
+      kind: 'withdrawal',
+      role: 'beat',
+      reason:
+        'Withdrawn: it said what Rook thinks, feels or characteristically does, which is the player’s to decide.',
+      rejectedText: 'Rook walks on with the same steady tread.',
+      quotes: ['the same steady tread'],
     });
   });
 
@@ -286,7 +339,10 @@ describe('toEntryView', () => {
         payload: { summary: 'The crew secured the relay station.', openThreads: [] },
       }),
     );
-    expect(view.body).toEqual({ kind: 'session_ended', summary: 'The crew secured the relay station.' });
+    expect(view.body).toEqual({
+      kind: 'session_ended',
+      summary: 'The crew secured the relay station.',
+    });
   });
 
   it('renders move.choice_made', () => {

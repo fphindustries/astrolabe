@@ -211,10 +211,11 @@ export interface RevisionRequest {
    */
   readonly causedBy?: EventId;
   /**
-   * The AI calls that produced this rewrite (D-75, D-113), written in the
-   * same command so the tokens and the text they bought land together.
+   * The AI calls that produced this rewrite (D-75, D-113), and any rewrite
+   * withdrawn on the way (D-128), written in the same command so the tokens,
+   * the withdrawals and the text they bought land together.
    */
-  readonly accounting?: readonly NewEvent<'ai.completed' | 'ai.failed'>[];
+  readonly accounting?: readonly NewEvent<'ai.completed' | 'ai.failed' | 'narration.withdrawn'>[];
 }
 
 /** A15 / D-73, the AI's half: the rewrite that supersedes the passage in the log. */

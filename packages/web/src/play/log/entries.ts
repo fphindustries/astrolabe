@@ -1,5 +1,6 @@
 import {
   EVENT_TYPE_META,
+  withdrawalReason,
   type NarrativeBeat,
   type NarrativeEntry,
   type NarrativeLog,
@@ -71,6 +72,15 @@ export type EntryBody =
       readonly corrected: boolean;
       readonly original?: string;
       readonly note?: string;
+    }
+  | {
+      /** D-128: generated text that failed a check, struck, with its reason in words. */
+      readonly kind: 'withdrawal';
+      readonly role: 'beat' | 'revision' | 'injury';
+      readonly reason: string;
+      readonly rejectedText: string;
+      /** What the checker quoted, for the reader to see exactly what was wrong. */
+      readonly quotes: readonly string[];
     }
   | {
       readonly kind: 'override';
@@ -201,6 +211,14 @@ function toBody(entry: NarrativeEntry): EntryBody {
         ...(narration?.note !== undefined ? { note: narration.note } : {}),
       };
     }
+    case 'narration.withdrawn':
+      return {
+        kind: 'withdrawal',
+        role: event.payload.role,
+        reason: withdrawalReason(event.payload.violations),
+        rejectedText: event.payload.rejectedText,
+        quotes: event.payload.violations.map((v) => v.quote).filter((q) => q.length > 0),
+      };
     case 'state.overridden':
       return {
         kind: 'override',

@@ -92,6 +92,11 @@ export interface BuildAppOptions {
    * against the stub in tests (D-60) and against Claude in `serve.ts`.
    */
   readonly ai: AiProvider;
+  /**
+   * The authority checker (D-128): a second, faster model that judges what
+   * `ai` writes before it commits. A stub in tests, Claude in `serve.ts`.
+   */
+  readonly checker: AiProvider;
 }
 
 interface CampaignParams {
@@ -113,9 +118,9 @@ const LogQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(200).optional(),
 });
 
-export function buildApp({ sql, ai }: BuildAppOptions): FastifyInstance {
+export function buildApp({ sql, ai, checker }: BuildAppOptions): FastifyInstance {
   const app = Fastify({ logger: false });
-  registerAiRoutes(app, { sql, ai, status: new AiStatus(ai) });
+  registerAiRoutes(app, { sql, ai, checker, status: new AiStatus(ai) });
 
   app.get('/api/campaigns', async (): Promise<CampaignListResponse> => {
     return listCampaigns(sql);

@@ -236,6 +236,10 @@ const PROBES: { readonly [T in EventType]: Probe } = {
         { actor: AI_ACTOR },
       ),
   },
+  'narration.withdrawn': {
+    probe: (b) =>
+      b.add('narration.withdrawn', SAMPLE_PAYLOADS['narration.withdrawn'], { actor: AI_ACTOR }),
+  },
   'event.voided': {
     // Voids the vow the prelude created, so the tracks differ.
     probe: (b) =>

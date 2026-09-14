@@ -222,6 +222,7 @@ export class ClaudeProvider implements AiProvider {
   }
 
   #params(request: AiRequest) {
+    const reasoning = supportsReasoningControls(this.model);
     return {
       model: this.model,
       max_tokens: MAX_TOKENS,
@@ -231,12 +232,22 @@ export class ClaudeProvider implements AiProvider {
         ...(block.cache === true ? { cache_control: { type: 'ephemeral' as const } } : {}),
       })),
       messages: [{ role: 'user' as const, content: request.user }],
-      thinking: { type: 'adaptive' as const },
-      output_config: { effort: request.effort ?? 'medium' },
+      ...(reasoning ? { thinking: { type: 'adaptive' as const } } : {}),
+      output_config: reasoning ? { effort: request.effort ?? 'medium' } : {},
       betas: [FALLBACK_BETA],
       fallbacks: 'default' as const,
     };
   }
+}
+
+/**
+ * Whether a model takes adaptive thinking and `output_config.effort`
+ * (D-128, amended). Probed live: `claude-haiku-4-5`, the default checker,
+ * rejects both with a 400. Model knowledge stays here, so no caller has to
+ * know which model it is talking to.
+ */
+export function supportsReasoningControls(model: string): boolean {
+  return !model.startsWith('claude-haiku-4-5');
 }
 
 /** Text blocks only; thinking and fallback markers are not prose. */

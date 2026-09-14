@@ -59,7 +59,7 @@ describe.skipIf(!hasTestDatabase)('the HTTP read API', () => {
   beforeAll(async () => {
     db = await createTestDatabase('http-app');
     run = await playGoldenBeats(db.sql);
-    app = buildApp({ sql: db.sql, ai: new StubProvider() });
+    app = buildApp({ sql: db.sql, ai: new StubProvider(), checker: new StubProvider() });
     await app.ready();
   }, 60_000);
 

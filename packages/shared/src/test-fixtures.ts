@@ -289,6 +289,23 @@ export const SAMPLE_PAYLOADS: { [T in EventType]: PayloadFor<T> } = {
     targetEventId: testEventId(20),
     text: 'The bulkhead gives, and Rook shakes the sparks off his sleeve, annoyed.',
   },
+  'narration.withdrawn': {
+    role: 'beat',
+    attempt: 1,
+    checker: 'authority_check',
+    model: 'claude-haiku-4-5',
+    latitude: 'color',
+    rejectedText: 'The pain gets folded and stowed the way everything has been for thirty years.',
+    violations: [
+      {
+        rule: 'player_interior',
+        character: 'Rook',
+        segment: 0,
+        quote: 'the way everything has been for thirty years',
+        why: 'A disposition with a history.',
+      },
+    ],
+  },
   'event.voided': {
     targetEventId: testEventId(4),
     kind: 'player_void',

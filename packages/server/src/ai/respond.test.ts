@@ -1,12 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import * as z from 'zod';
 
-import {
-  accountingEvents,
-  generateValidated,
-  streamValidatedText,
-  type TextSink,
-} from './respond.js';
+import { streamCheckedText } from './checked.js';
+import { accountingEvents, generateValidated, type TextSink } from './respond.js';
 import { StubProvider } from './stub.js';
 
 const REQUEST = { purpose: 'beat', system: [{ text: 'rules' }], user: 'narrate' } as const;
@@ -28,19 +24,25 @@ function recordingSink() {
   };
 }
 
-describe('streamValidatedText (task 7.5)', () => {
-  it('streams a good passage and commits its trimmed text', async () => {
+const PASS = {
+  provider: new StubProvider(),
+  context: { latitude: 'color' as const, characters: [] },
+};
+
+describe('streamCheckedText (tasks 7.5, 7.15)', () => {
+  it('streams a good passage and commits its trimmed text once checked', async () => {
     const provider = new StubProvider({
       responses: [{ kind: 'text', text: '  The bulkhead gives.  ' }],
       chunkSize: 4,
     });
     const { sink, frames } = recordingSink();
 
-    const outcome = await streamValidatedText(provider, REQUEST, sink);
+    const result = await streamCheckedText(provider, REQUEST, PASS, sink);
 
-    expect(outcome).toMatchObject({ ok: true, value: 'The bulkhead gives.' });
+    expect(result.ending).toMatchObject({ ok: true, value: 'The bulkhead gives.' });
     expect(frames.length).toBeGreaterThan(1);
     expect(frames.every((f) => f.startsWith('delta:'))).toBe(true);
+    expect(result.checks).toHaveLength(1);
   });
 
   it('re-asks once after a truncated passage, telling the reader to discard it', async () => {
@@ -52,11 +54,14 @@ describe('streamValidatedText (task 7.5)', () => {
     });
     const { sink, frames } = recordingSink();
 
-    const outcome = await streamValidatedText(provider, REQUEST, sink);
+    const result = await streamCheckedText(provider, REQUEST, PASS, sink);
 
-    expect(outcome.ok).toBe(true);
-    expect(outcome.attempts).toHaveLength(2);
+    expect(result.ending.ok).toBe(true);
+    expect(result.attempts).toHaveLength(2);
     expect(frames.filter((f) => f.startsWith('reset:'))).toHaveLength(1);
+    // A cut-off reply is never checked, and never withdrawn.
+    expect(result.checks).toHaveLength(1);
+    expect(result.withdrawals).toHaveLength(0);
   });
 
   it('gives up after two rejected attempts with invalid_output', async () => {
@@ -67,10 +72,10 @@ describe('streamValidatedText (task 7.5)', () => {
       ],
     });
 
-    const outcome = await streamValidatedText(provider, REQUEST, recordingSink().sink);
+    const result = await streamCheckedText(provider, REQUEST, PASS, recordingSink().sink);
 
-    expect(outcome).toMatchObject({ ok: false, errorKind: 'invalid_output' });
-    expect(outcome.attempts).toHaveLength(2);
+    expect(result.ending).toMatchObject({ ok: false, by: 'narrator', errorKind: 'invalid_output' });
+    expect(result.attempts).toHaveLength(2);
   });
 
   it('does not re-ask after a provider error', async () => {
@@ -78,9 +83,13 @@ describe('streamValidatedText (task 7.5)', () => {
       responses: [{ kind: 'error', errorKind: 'unavailable', message: 'overloaded' }],
     });
 
-    const outcome = await streamValidatedText(provider, REQUEST, recordingSink().sink);
+    const result = await streamCheckedText(provider, REQUEST, PASS, recordingSink().sink);
 
-    expect(outcome).toMatchObject({ ok: false, errorKind: 'unavailable', message: 'overloaded' });
+    expect(result.ending).toMatchObject({
+      ok: false,
+      errorKind: 'unavailable',
+      message: 'overloaded',
+    });
     expect(provider.requests).toHaveLength(1);
   });
 
@@ -90,20 +99,21 @@ describe('streamValidatedText (task 7.5)', () => {
     });
     const { sink, frames } = recordingSink();
 
-    const outcome = await streamValidatedText(provider, REQUEST, sink);
+    const result = await streamCheckedText(provider, REQUEST, PASS, sink);
 
-    expect(outcome).toMatchObject({ ok: false, errorKind: 'refused' });
+    expect(result.ending).toMatchObject({ ok: false, errorKind: 'refused' });
     expect(frames.at(-1)).toMatch(/^reset:/);
     expect(provider.requests).toHaveLength(1);
   });
 
   it('reports not_configured without a credential', async () => {
-    const outcome = await streamValidatedText(
+    const result = await streamCheckedText(
       new StubProvider({ configured: false }),
       REQUEST,
+      PASS,
       recordingSink().sink,
     );
-    expect(outcome).toMatchObject({ ok: false, errorKind: 'not_configured' });
+    expect(result.ending).toMatchObject({ ok: false, errorKind: 'not_configured' });
   });
 });
 

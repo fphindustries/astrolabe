@@ -4,6 +4,7 @@ import type {
   AiErrorKind,
   AstrolabeEvent,
   CampaignId,
+  CampaignSettings,
   CampaignState,
   CommandId,
   EventId,
@@ -19,21 +20,23 @@ import {
   describeBeat,
   beatNarrationSchema,
   harmProposalSchema,
+  renderFacts,
   resolveBeatScope,
   resolveSegments,
   segmentContext,
   type BeatFacts,
+  type CheckContext,
   type SegmentContext,
 } from '../ai/context/index.js';
-import type { AiProvider, AiRequest } from '../ai/provider.js';
 import {
-  accountingEvents,
-  generateValidated,
-  streamValidatedSegments,
-  streamValidatedText,
-  type Outcome,
-  type TextSink,
-} from '../ai/respond.js';
+  checkedEvents,
+  generateChecked,
+  streamCheckedSegments,
+  streamCheckedText,
+  type CheckedResult,
+} from '../ai/checked.js';
+import type { AiProvider, AiRequest } from '../ai/provider.js';
+import { accountingEvents, type Outcome, type TextSink } from '../ai/respond.js';
 import type { AiStatus } from '../ai/status.js';
 import { livePassages } from '../projection/narrative-log.js';
 import { project } from '../projection/project.js';
@@ -55,6 +58,10 @@ import { uuidv7 } from './uuid.js';
  * Nothing mechanical waits on any of this: every move these narrate is
  * already committed, and a failure writes `ai.failed` and nothing else
  * (D-116). Every attempt's tokens are written, success or not (D-113).
+ *
+ * Every one of them is checked before it commits (D-128): `ai` writes and
+ * `checker` judges, and whatever was withdrawn on the way is written in the
+ * same command as the outcome.
  */
 
 const AI: Actor = { kind: 'ai' };
@@ -121,6 +128,49 @@ export function accounting(
   );
 }
 
+/** A checked call's accounting, withdrawals and any failure, enveloped (D-128). */
+function checkedAccounting(
+  ai: AiProvider,
+  purpose: string,
+  checker: AiProvider,
+  result: CheckedResult<unknown>,
+  withdrawal: Parameters<typeof checkedEvents>[4],
+  envelope: Envelope,
+) {
+  return checkedEvents(ai, purpose, checker, result, withdrawal).map((event) =>
+    withEnvelope(
+      { type: event.type, payload: event.payload } as NewEvent<
+        'ai.completed' | 'ai.failed' | 'narration.withdrawn'
+      >,
+      envelope,
+    ),
+  );
+}
+
+function recordEnding(status: AiStatus | undefined, result: CheckedResult<unknown>): void {
+  if (result.ending.ok) {
+    status?.recordSuccess();
+  } else {
+    status?.recordFailure(result.ending.errorKind, result.ending.message);
+  }
+}
+
+/** What the checker is told about the campaign, whatever it is checking. */
+function checkContextOf(
+  state: CampaignState,
+  latitude: CampaignSettings['narrationLatitude'],
+  facts: string | undefined,
+): CheckContext {
+  return {
+    latitude,
+    characters: Object.values(state.characters).map((c) => ({
+      callsign: c.callsign,
+      name: c.name,
+    })),
+    ...(facts !== undefined && facts.length > 0 ? { facts } : {}),
+  };
+}
+
 export function recordStatus(status: AiStatus | undefined, outcome: Outcome<unknown>): void {
   if (outcome.ok) {
     status?.recordSuccess();
@@ -163,6 +213,8 @@ export interface PreparedBeat {
   readonly aiRequest: AiRequest;
   /** The beat's keyed facts and characters the segments are checked against (D-127). */
   readonly segments: SegmentContext;
+  /** What the authority checker is told (D-128). */
+  readonly check: CheckContext;
   readonly causedBy: EventId;
   readonly envelope: Envelope;
 }
@@ -186,11 +238,13 @@ export async function prepareBeatNarration(
   }
 
   const facts = describeBeat(scope.events, state, events);
+  const segments = segmentContext(facts, state, settings.narrationLatitude);
   return {
     kind: 'run',
     request,
     aiRequest: buildBeatRequest(state, events, facts, settings),
-    segments: segmentContext(facts, state, settings.narrationLatitude),
+    segments,
+    check: checkContextOf(state, settings.narrationLatitude, renderFacts(segments)),
     causedBy: scope.causedBy,
     envelope: envelopeOf(request.campaignId, state),
   };
@@ -199,18 +253,21 @@ export async function prepareBeatNarration(
 export async function runBeatNarration(
   sql: Sql,
   ai: AiProvider,
+  checker: AiProvider,
   prepared: PreparedBeat,
   sink: TextSink,
   status?: AiStatus,
 ): Promise<AiCommandResult> {
-  const outcome = await streamValidatedSegments(
+  const checked = await streamCheckedSegments(
     ai,
     prepared.aiRequest,
     beatNarrationSchema(prepared.segments),
     prepared.segments,
+    { provider: checker, context: prepared.check },
     sink,
   );
-  recordStatus(status, outcome);
+  recordEnding(status, checked);
+  const outcome = checked.ending;
 
   const result = await appendCommand(sql, {
     campaignId: prepared.request.campaignId,
@@ -219,7 +276,14 @@ export async function runBeatNarration(
     actor: prepared.request.actor,
     causedBy: prepared.causedBy,
     events: [
-      ...accounting(ai, prepared.aiRequest.purpose, outcome, prepared.envelope),
+      ...checkedAccounting(
+        ai,
+        prepared.aiRequest.purpose,
+        checker,
+        checked,
+        { role: 'beat', latitude: prepared.check.latitude },
+        prepared.envelope,
+      ),
       ...(outcome.ok
         ? [
             withEnvelope(
@@ -259,6 +323,8 @@ export interface PreparedCorrection {
   readonly aiRequest: AiRequest;
   /** The player's `narration.correction_requested`, which the rewrite is caused by. */
   readonly requestEventId: EventId;
+  /** What the authority checker is told (D-128). */
+  readonly check: CheckContext;
 }
 
 /**
@@ -317,6 +383,7 @@ export async function prepareCorrection(
     kind: 'run',
     request,
     requestEventId,
+    check: checkContextOf(state, settingsOf(state).narrationLatitude, facts?.lines.join('\n')),
     aiRequest: buildRevisionRequest(
       state,
       { text: passage.text, note: request.note },
@@ -329,16 +396,34 @@ export async function prepareCorrection(
 export async function runCorrection(
   sql: Sql,
   ai: AiProvider,
+  checker: AiProvider,
   prepared: PreparedCorrection,
   sink: TextSink,
   status?: AiStatus,
 ): Promise<AiCommandResult> {
-  const outcome = await streamValidatedText(ai, prepared.aiRequest, sink);
-  recordStatus(status, outcome);
+  const checked = await streamCheckedText(
+    ai,
+    prepared.aiRequest,
+    { provider: checker, context: prepared.check },
+    sink,
+  );
+  recordEnding(status, checked);
+  const outcome = checked.ending;
 
   const events = await readEvents(sql, prepared.request.campaignId);
   const envelope = envelopeOf(prepared.request.campaignId, project(events));
-  const spent = accounting(ai, prepared.aiRequest.purpose, outcome, envelope);
+  const spent = checkedAccounting(
+    ai,
+    prepared.aiRequest.purpose,
+    checker,
+    checked,
+    {
+      role: 'revision',
+      latitude: prepared.check.latitude,
+      targetEventId: prepared.request.targetEventId,
+    },
+    envelope,
+  );
   // Server-minted: this is the Guide's follow-up to the player's command,
   // not a request any client made.
   const commandId = uuidv7() as CommandId;
@@ -394,6 +479,7 @@ export type ProposedAmountResult =
 export async function proposeAmount(
   sql: Sql,
   ai: AiProvider,
+  checker: AiProvider,
   request: ProposeAmountRequest,
   status?: AiStatus,
 ): Promise<ProposedAmountResult> {
@@ -449,8 +535,18 @@ export async function proposeAmount(
     { callsign: character.callsign, meter: intake.meter, range: intake.range },
     settings,
   );
-  const outcome = await generateValidated(ai, aiRequest, harmProposalSchema(intake.range));
-  recordStatus(status, outcome);
+  const checked = await generateChecked(
+    ai,
+    aiRequest,
+    harmProposalSchema(intake.range),
+    (proposal) => proposal.injury,
+    {
+      provider: checker,
+      context: checkContextOf(state, settings.narrationLatitude, facts.lines.join('\n')),
+    },
+  );
+  recordEnding(status, checked);
+  const outcome = checked.ending;
 
   const envelope = envelopeOf(request.campaignId, state);
   const result = await appendCommand(sql, {
@@ -460,7 +556,14 @@ export async function proposeAmount(
     actor: request.actor,
     causedBy,
     events: [
-      ...accounting(ai, aiRequest.purpose, outcome, envelope),
+      ...checkedAccounting(
+        ai,
+        aiRequest.purpose,
+        checker,
+        checked,
+        { role: 'injury', latitude: settings.narrationLatitude },
+        envelope,
+      ),
       ...(outcome.ok
         ? [
             {

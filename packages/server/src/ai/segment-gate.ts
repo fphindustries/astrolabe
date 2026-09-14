@@ -81,6 +81,15 @@ export class SegmentGate {
     });
   }
 
+  /** Everything generated so far, released or not: what a withdrawal records. */
+  get text(): string {
+    return [...this.#segments.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([, segment]) => segment.text.trim())
+      .filter((text) => text.length > 0)
+      .join(' ');
+  }
+
   /** The first check that failed, in words. */
   get problem(): string | undefined {
     return this.#problem;

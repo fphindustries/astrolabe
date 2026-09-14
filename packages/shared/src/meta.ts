@@ -274,6 +274,16 @@ export const EVENT_TYPE_META: MetaTable = {
     introduces: none,
     references: none,
   },
+  'narration.withdrawn': {
+    // D-128: a withdrawal stays in the log, struck, with its reason. Voidable
+    // like the passage it sits beside, so voiding the beat takes it too.
+    narrative: true,
+    significant: false,
+    mutatesState: false,
+    voidable: true,
+    introduces: none,
+    references: none,
+  },
   'event.voided': {
     narrative: true,
     significant: false,

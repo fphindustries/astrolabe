@@ -1,0 +1,376 @@
+{
+  "model": "claude-sonnet-5",
+  "recordedAt": "2026-09-14T14:14:58.799Z",
+  "verdicts": {
+    "r20-endure-harm": {
+      "answer": {
+        "review": "The declared action was only Endure Harm; no movement or additional action was declared. The text adds substantial undeclared physical action (bracing, counting breaths, pulling free, stepping through the gap into a new location) and interior/historical claims about Rook's disposition ('thirty years', 'whole of what matters'), plus an outward expression of coping ('breathing through it') that exceeds the stated latitude of no expression at all.",
+        "violations": [
+          {
+            "rule": "undeclared_action",
+            "character": "Rook",
+            "segment": 0,
+            "quote": "hand braced on the frame, breathing through it",
+            "why": "No declared action beyond enduring harm; bracing and controlled breathing are undeclared physical acts."
+          },
+          {
+            "rule": "undeclared_action",
+            "character": "Rook",
+            "segment": 0,
+            "quote": "Counts one breath. Counts a second.",
+            "why": "Deliberate counting is an undeclared mental/physical action beyond the resolved Endure Harm move."
+          },
+          {
+            "rule": "player_interior",
+            "character": "Rook",
+            "segment": 0,
+            "quote": "folded and stowed the way everything has been folded and stowed for thirty years of doing this",
+            "why": "Claims a history and characteristic disposition beyond this beat, which belongs to the player."
+          },
+          {
+            "rule": "player_interior",
+            "character": "Rook",
+            "segment": 0,
+            "quote": "That is the whole of what matters",
+            "why": "Asserts a value/motivation judgment belonging to the player."
+          },
+          {
+            "rule": "undeclared_action",
+            "character": "Rook",
+            "segment": 0,
+            "quote": "Rook pulls it free, flicks the wet from the gauntlet, and steps sideways through the gap into Varga Relay",
+            "why": "Moves the character to a new location and performs actions not declared or part of the resolved Endure Harm move."
+          },
+          {
+            "rule": "voice",
+            "character": "Rook",
+            "segment": 0,
+            "quote": "breathing through it",
+            "why": "Outward expression of coping, disallowed under the COLOR latitude which permits no spoken lines or outward expression."
+          }
+        ]
+      },
+      "agrees": true
+    },
+    "r20-harm-injury": {
+      "answer": {
+        "review": "The passage attributes an active deliberate action to Rook ('forces the relay's inner hatch') with no declared action given, violating undeclared_action. No speech or interior thoughts present.",
+        "violations": [
+          {
+            "rule": "undeclared_action",
+            "character": "Rook",
+            "segment": 0,
+            "quote": "Rook forces the relay's inner hatch",
+            "why": "Depicts Rook performing a deliberate action not established as declared by the player."
+          }
+        ]
+      },
+      "agrees": true
+    },
+    "r716-chained": {
+      "answer": {
+        "review": "Text has no segments (single passage). Rook performs undeclared actions beyond the declared 'forces the bulkhead': bracing, shoving free, rolling shoulder to test, and moving down corridor toward lit windows—none declared. Also 'does not waste breath on it' asserts interior disposition/habitual response.",
+        "violations": [
+          {
+            "rule": "undeclared_action",
+            "character": "Rook",
+            "segment": null,
+            "quote": "Braced boots, a shove with the good shoulder, and the edge peels back enough for the arm to come free.",
+            "why": "No declared action for bracing/shoving to free the arm."
+          },
+          {
+            "rule": "undeclared_action",
+            "character": "Rook",
+            "segment": null,
+            "quote": "rolls the shoulder once to prove the joint still works",
+            "why": "Deliberate testing action not declared by player."
+          },
+          {
+            "rule": "undeclared_action",
+            "character": "Rook",
+            "segment": null,
+            "quote": "then keeps moving down the corridor toward the lit windows",
+            "why": "Movement to a new place not declared by player."
+          },
+          {
+            "rule": "player_interior",
+            "character": "Rook",
+            "segment": null,
+            "quote": "Rook does not waste breath on it.",
+            "why": "Asserts a characteristic disposition/response beyond this beat's sensation."
+          }
+        ]
+      },
+      "agrees": true
+    },
+    "r716-standalone": {
+      "answer": {
+        "review": "The beat only resolves Endure Harm with 1 health loss. The text adds Rook's physical recovery actions (hauling leg out, shaking off grit) and further deliberate movement (walking on with steady tread) not covered by the declared action.",
+        "violations": [
+          {
+            "rule": "undeclared_action",
+            "character": "Rook",
+            "segment": 0,
+            "quote": "hauls the leg out of the hole, and shakes the grit loose from the plating",
+            "why": "No declared action beyond Endure Harm; this is an invented deliberate recovery action."
+          },
+          {
+            "rule": "undeclared_action",
+            "character": "Rook",
+            "segment": 0,
+            "quote": "Rook walks on with the same steady tread",
+            "why": "Continued movement not declared by the player; exceeds the resolved beat."
+          }
+        ]
+      },
+      "agrees": true
+    },
+    "spike-structured-1": {
+      "answer": {
+        "review": "Segment 2 contains outward physical expression (breath control) which is disallowed under COLOR latitude, and an interior characterization of how the pain is processed that goes beyond a bare sensation.",
+        "violations": [
+          {
+            "rule": "voice",
+            "character": "Rook",
+            "segment": 2,
+            "quote": "breath going out slow through the teeth",
+            "why": "Outward expression not permitted under COLOR latitude."
+          },
+          {
+            "rule": "player_interior",
+            "character": "Rook",
+            "segment": 2,
+            "quote": "the pain narrows down into something small and manageable",
+            "why": "Claims an interior processing/characterization of the pain beyond a bare sensation, belonging to the player."
+          }
+        ]
+      },
+      "agrees": true
+    },
+    "spike-structured-2": {
+      "answer": {
+        "review": "Segment 2 contains an undeclared physical action (bracing/breathing) not covered by the resolved moves, and a disposition/history claim comparing the pain to past mornings, which oversteps into player-owned interior territory.",
+        "violations": [
+          {
+            "rule": "undeclared_action",
+            "character": "Rook",
+            "segment": 2,
+            "quote": "Rook braces against the housing, breathes through it",
+            "why": "No declared action covers this deliberate physical response; only the Endure Harm effects were resolved."
+          },
+          {
+            "rule": "player_interior",
+            "character": "Rook",
+            "segment": 2,
+            "quote": "no worse than a hundred other bad mornings",
+            "why": "Claims a history/disposition about how Rook characteristically experiences pain, beyond this beat's sensation."
+          }
+        ]
+      },
+      "agrees": true
+    },
+    "spike-structured-3": {
+      "answer": {
+        "review": "The passage narrates Rook's injury and recovery consistent with the established facts (F3, F6). No spoken lines or outward expressions (facial expressions, tone of voice, etc.) appear in the text, so there is nothing to check against the COLOR latitude restriction. The physical actions (shaking arm, rolling shoulder) are direct execution of the declared 'Shake it off' choice, not voice/expression violations.",
+        "violations": []
+      },
+      "agrees": false
+    },
+    "spike-tagged-1": {
+      "answer": {
+        "review": "No spoken lines or outward expressions appear in the passage; the physical actions described (rolling the shoulder) are the direct execution of the declared 'Shake it off' choice. No interior claims beyond the beat, and the injury matches F3/F4. No violations found.",
+        "violations": []
+      },
+      "agrees": false
+    },
+    "spike-tagged-2": {
+      "answer": {
+        "review": "Segment 2 asserts a disposition/history ('has been carved on before, and the body knows the drill') beyond this beat's sensations, violating player-owned interior. Segment 3 shows deliberate physical actions (roll of shoulder, press of palm) not declared beyond the Endure Harm/Shake it off move—these could be seen as direct execution of shaking it off, borderline but likely acceptable as physical manifestation of the chosen effect. However the characterization 'the wound is just another thing to carry' asserts a settled disposition/attitude beyond the moment.",
+        "violations": [
+          {
+            "rule": "player_interior",
+            "character": "Rook",
+            "segment": 2,
+            "quote": "Rook has been carved on before, and the body knows the drill",
+            "why": "Claims a history and characteristic response beyond this beat, not just a sensation."
+          },
+          {
+            "rule": "player_interior",
+            "character": "Rook",
+            "segment": 3,
+            "quote": "the wound is just another thing to carry",
+            "why": "Asserts a settled disposition/attitude about how Rook characteristically handles injury, beyond this beat's sensation."
+          }
+        ]
+      },
+      "agrees": true
+    },
+    "r714-unshaken": {
+      "answer": {
+        "review": "The beat covers Rook's Endure Harm move and established injury. Segment 1-2 correctly narrate the ruptured conduit and shallow burn matching the player-set severity. Segment 3, however, asserts that Rook is 'steady on the deck, unshaken by it' - this claims an emotional/dispositional response beyond the immediate sensation, reaching into interior territory not granted by the resolved beat. No spoken lines or outward expressions appear, so no voice violations. No undeclared actions are present beyond the resolved move's direct effects.",
+        "violations": [
+          {
+            "rule": "player_interior",
+            "character": "Rook",
+            "segment": 3,
+            "quote": "unshaken by it",
+            "why": "Claims a characteristic emotional response/disposition beyond the immediate sensation, which belongs to the player."
+          }
+        ]
+      },
+      "agrees": true
+    },
+    "r714-arm-plate": {
+      "answer": {
+        "review": "The forcing action matches F2/F1. The spark injury in segment 3 matches the established injury and severity. Segment 4's hiss and steadying voice are permissible under full voice latitude. However, 'the arm comes back up to the plate' describes Rook initiating a further physical action (resuming pushing) not declared or resolved in the beat, which only covers the single force attempt.",
+        "violations": [
+          {
+            "rule": "undeclared_action",
+            "character": "Rook",
+            "segment": 4,
+            "quote": "the arm comes back up to the plate",
+            "why": "Depicts Rook taking a further physical action (resuming pushing) beyond the single declared 'forces the sealed bulkhead' action already resolved."
+          }
+        ]
+      },
+      "agrees": true
+    },
+    "spike-hardened-1": {
+      "answer": {
+        "review": "No spoken lines or expressions of Rook appear; all segments describe injury and environment consistent with the resolved beat, with no undeclared actions or interior claims.",
+        "violations": []
+      },
+      "agrees": true
+    },
+    "spike-hardened-2": {
+      "answer": {
+        "review": "Segments only narrate the world and the injury's physical consequences (bleeding slows, arm still answers), consistent with the established injury and health loss. No spoken lines or expressions appear for Rook. No violations found.",
+        "violations": []
+      },
+      "agrees": true
+    },
+    "spike-hardened-3": {
+      "answer": {
+        "review": "No spoken lines or outward expressions appear for Rook; all content is injury sensation consistent with established facts. No violations found.",
+        "violations": []
+      },
+      "agrees": true
+    },
+    "spike-hardened-4": {
+      "answer": {
+        "review": "No spoken lines or outward expressions of Rook or other PCs appear in the segments; text stays within injury/sensation description consistent with established facts. No violations found.",
+        "violations": []
+      },
+      "agrees": true
+    },
+    "spike-declared-1": {
+      "answer": {
+        "review": "Actions in segment 0 match declared bulkhead-forcing action. Injury in segments 2-4 matches established injury (ruptured conduit, sparks, milder burn severity). No spoken lines or overt expressions appear. Segment 5 however asserts a characterization beyond the beat's sensations—claiming the injury 'does not slow the hands or dim the eyes,' which reaches into disposition/interior territory not licensed by the resolved beat.",
+        "violations": [
+          {
+            "rule": "player_interior",
+            "character": "Rook",
+            "segment": 5,
+            "quote": "It does not slow the hands or dim the eyes",
+            "why": "Claims a general disposition/characteristic response beyond the immediate sensation, which belongs to the player."
+          }
+        ]
+      },
+      "agrees": false
+    },
+    "spike-declared-2": {
+      "answer": {
+        "review": "All actions in segment 0 correspond directly to the declared Face Danger action (forcing the bulkhead). Segments 2 and 4 describe sensory/physical effects of the established injury, consistent with the milder severity the player set. No spoken lines or outward expressions are narrated, and no interior state, disposition, or history is claimed. No violations found.",
+        "violations": []
+      },
+      "agrees": true
+    },
+    "spike-declared-3": {
+      "answer": {
+        "review": "No spoken lines or explicit outward expressions present; actions match declared action and injury matches established severity. No voice violations found.",
+        "violations": []
+      },
+      "agrees": true
+    },
+    "spike-declared-4": {
+      "answer": {
+        "review": "No spoken lines or outward expressions from Rook appear in the text; actions align with declared force-the-bulkhead move; injury matches established severity (shallow, milder burn). No violations found.",
+        "violations": []
+      },
+      "agrees": true
+    },
+    "r714-declared-color": {
+      "answer": {
+        "review": "No spoken lines or expressions appear for any player character in this passage; segments describe declared action (forcing bulkhead), world effects (spark rupture), and permitted bodily sensation following from the injury. No voice/color violations found.",
+        "violations": []
+      },
+      "agrees": true
+    },
+    "r714-none-full-voice": {
+      "answer": {
+        "review": "Injury matches established severity (milder, health -1). No dialogue or expression given for Rook. No undeclared actions or interior claims beyond present sensation. Clean beat.",
+        "violations": []
+      },
+      "agrees": true
+    },
+    "r714-none-minimal": {
+      "answer": {
+        "review": "Text stays within resolved facts: injury matches established severity (shallow burn, -1 health), no spoken lines or expressions, no undeclared actions or interior claims found.",
+        "violations": []
+      },
+      "agrees": true
+    },
+    "injury-clean": {
+      "answer": {
+        "review": "The text describes only an external event (sparks spraying across Rook's arm) with no action, thought, feeling, or speech attributed to Rook. No violations found.",
+        "violations": []
+      },
+      "agrees": true
+    },
+    "constructed-beat9-shaken": {
+      "answer": {
+        "review": "With COLOR latitude fully disallowed, any spoken line or outward expression for Rook is forbidden. The text describes Rook 'looks shaken', an outward expression not permitted under this latitude.",
+        "violations": [
+          {
+            "rule": "voice",
+            "character": "Rook",
+            "segment": null,
+            "quote": "Rook looks shaken",
+            "why": "Outward expression of a player character is disallowed under COLOR latitude, which forbids spoken lines and outward expression entirely."
+          }
+        ]
+      },
+      "agrees": true
+    },
+    "constructed-voice-color": {
+      "answer": {
+        "review": "With COLOR latitude, no spoken lines or outward expression are permitted at all. The text shows Rook grimacing and speaking a line, both of which violate this restriction.",
+        "violations": [
+          {
+            "rule": "voice",
+            "character": "Rook",
+            "segment": 0,
+            "quote": "Rook grimaces and mutters, \"Not today.\"",
+            "why": "COLOR latitude forbids any spoken lines or outward expression for the character."
+          }
+        ]
+      },
+      "agrees": true
+    },
+    "constructed-injury-mismatch": {
+      "answer": {
+        "review": "The established injury is sparks spraying across Rook's arm, but the text substitutes a different wound (a glass shard slicing the thigh, bleeding through the undersuit), which contradicts the Guide-established injury.",
+        "violations": [
+          {
+            "rule": "injury",
+            "character": "Rook",
+            "segment": null,
+            "quote": "A shard of window glass slices across Rook's thigh, deep enough to bleed through the undersuit.",
+            "why": "Established injury was a ruptured conduit spraying sparks across Rook's arm, not a glass shard cutting the thigh."
+          }
+        ]
+      },
+      "agrees": true
+    }
+  }
+}
