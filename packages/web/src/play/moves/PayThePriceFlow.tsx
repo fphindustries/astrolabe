@@ -1,4 +1,4 @@
-import { STARFORGED, type CharacterId, type MoveId } from '@astrolabe/rules';
+import { STARFORGED, withoutLinks, type CharacterId, type MoveId } from '@astrolabe/rules';
 import type { CommandId, ResolvePayThePriceResponse } from '@astrolabe/shared';
 
 import { useResolvePayThePrice } from '../../api/moves.js';
@@ -84,14 +84,16 @@ export function PayThePriceResult({
     <div className={styles.result}>
       {resolved.oracle !== undefined && (
         <p className={styles.oracleChip}>
-          {resolved.oracle.roll}: {resolved.oracle.rowText}
+          {resolved.oracle.roll}: {withoutLinks(resolved.oracle.rowText)}
         </p>
       )}
       {resolved.chain !== undefined && (
         <button
           type="button"
           className={styles.chainButton}
-          onClick={() => onInvokeChain(resolved.chain?.toMoveId as MoveId, actorCharacterId, commandId)}
+          onClick={() =>
+            onInvokeChain(resolved.chain?.toMoveId as MoveId, actorCharacterId, commandId)
+          }
         >
           {targetMove?.name ?? resolved.chain.toMoveId} →
         </button>

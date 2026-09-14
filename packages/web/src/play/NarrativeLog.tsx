@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 
+import { withoutLinks } from '@astrolabe/rules';
+
 import { useCampaignLog } from '../api/campaigns.js';
 
 import { CorrectionControl } from './log/CorrectionControl.js';
@@ -187,7 +189,7 @@ function describeEntry(entry: EntryView): string {
     case 'move_chained':
       return `Chains to ${body.toMoveId} (${body.mode}) — ${body.reason}`;
     case 'oracle_rolled':
-      return `Oracle: ${body.roll} — ${body.rowText}`;
+      return `Oracle: ${body.roll} — ${withoutLinks(body.rowText)}`;
     case 'amount_proposed':
       return `Guide proposes ${body.amount >= 0 ? '+' : ''}${body.amount} ${body.meter} — ${body.reason}`;
     case 'amount_committed':

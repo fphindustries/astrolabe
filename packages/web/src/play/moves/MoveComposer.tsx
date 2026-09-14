@@ -7,6 +7,7 @@ import {
   type CharacterId,
   type MoveId,
   type RollOption,
+  withoutLinks,
 } from '@astrolabe/rules';
 import type { CommandId, ProposeAmountResponse } from '@astrolabe/shared';
 
@@ -28,7 +29,10 @@ function rollOptionsFor(moveId: MoveId): readonly StatOrMeterOption[] {
   }
   return move.trigger.conditions
     .flatMap((condition) => condition.rollOptions)
-    .filter((option): option is StatOrMeterOption => option.using === 'stat' || option.using === 'condition_meter');
+    .filter(
+      (option): option is StatOrMeterOption =>
+        option.using === 'stat' || option.using === 'condition_meter',
+    );
 }
 
 function optionLabel(option: StatOrMeterOption): string {
@@ -70,7 +74,9 @@ export function MoveComposer({
   const move = STARFORGED.moves.find((m) => m.id === moveId);
   const automation = MOVE_AUTOMATION_SPECS.get(moveId);
   const rollOptions = rollOptionsFor(moveId);
-  const preRollEffect = automation?.preRoll?.effects.find((e) => e.effect.kind === 'proposed_amount')?.effect;
+  const preRollEffect = automation?.preRoll?.effects.find(
+    (e) => e.effect.kind === 'proposed_amount',
+  )?.effect;
   const preRollRange = preRollEffect?.kind === 'proposed_amount' ? preRollEffect.range : undefined;
   // Until the proposal arrives: the range's mildest end, so rolling
   // before it lands never commits more harm than the player chose.
@@ -100,7 +106,11 @@ export function MoveComposer({
     }
     proposalAsked.current = true;
     propose.mutate(
-      { moveId, actorCharacterId, ...(chainedFromCommandId !== undefined ? { chainedFromCommandId } : {}) },
+      {
+        moveId,
+        actorCharacterId,
+        ...(chainedFromCommandId !== undefined ? { chainedFromCommandId } : {}),
+      },
       {
         onSuccess: (result) => {
           setProposal(result);
@@ -161,7 +171,7 @@ export function MoveComposer({
           Cancel
         </button>
       </div>
-      <p className={styles.trigger}>{move.trigger.text}</p>
+      <p className={styles.trigger}>{withoutLinks(move.trigger.text)}</p>
 
       {rollOptions.length > 1 && (
         <fieldset className={styles.rollOptions}>
@@ -184,7 +194,7 @@ export function MoveComposer({
         <div className={styles.abilities}>
           {applicableAbilities.map((ability) => (
             <p key={ability.id} className={styles.abilityText}>
-              {ability.text}
+              {withoutLinks(ability.text)}
             </p>
           ))}
           <div className={styles.addRow}>
@@ -209,7 +219,8 @@ export function MoveComposer({
       {preRollRange !== undefined && (
         <label className={styles.field}>
           <span className={styles.label}>
-            Harm amount ({preRollRange[0]} to {preRollRange[1]}) — adjust it as the fiction calls for
+            Harm amount ({preRollRange[0]} to {preRollRange[1]}) — adjust it as the fiction calls
+            for
           </span>
           <input
             type="number"
@@ -225,7 +236,8 @@ export function MoveComposer({
             {propose.isPending && 'The Guide is judging how bad this is…'}
             {proposal?.ok === true &&
               `The Guide proposes ${proposal.amount}: ${proposal.reason}${harmEdited && harmAmount !== proposal.amount ? ` (you set ${harmAmount})` : ''}`}
-            {proposal?.ok === false && `No proposal from the Guide (${proposal.message}). Set the amount yourself.`}
+            {proposal?.ok === false &&
+              `No proposal from the Guide (${proposal.message}). Set the amount yourself.`}
             {propose.isError && 'No proposal from the Guide. Set the amount yourself.'}
           </span>
         </label>

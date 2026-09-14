@@ -1,4 +1,10 @@
-import type { AdaptedRuleset, Move, MoveCategoryId, MoveId } from '@astrolabe/rules';
+import {
+  withoutLinks,
+  type AdaptedRuleset,
+  type Move,
+  type MoveCategoryId,
+  type MoveId,
+} from '@astrolabe/rules';
 
 /**
  * Pure view-model for the moves reference browser (task 5.7, D-104): the
@@ -70,13 +76,13 @@ export function moveDetail(move: Move, oracles: AdaptedRuleset['oracles']): Move
   return {
     id: move.id,
     name: move.name,
-    triggerText: move.trigger.text,
+    triggerText: withoutLinks(move.trigger.text),
     outcomes:
       move.outcomes === null
         ? []
         : Object.entries(move.outcomes)
             .filter((pair): pair is [string, { text: string }] => pair[1] !== undefined)
-            .map(([tier, outcome]) => ({ tier, text: outcome.text })),
+            .map(([tier, outcome]) => ({ tier, text: withoutLinks(outcome.text) })),
     embeddedOracleNames: move.embeddedOracles.map((id) => oracleById.get(id)?.name ?? id),
   };
 }

@@ -3,6 +3,7 @@ import {
   STARFORGED,
   STARTING_STAT_ARRAY,
   validateCharacterDraft,
+  withoutLinks,
   type AssetId,
   type OracleId,
 } from '@astrolabe/rules';
@@ -69,10 +70,7 @@ const SUMMARY_LENGTH = 160;
 export function renderAssetCatalogue(): string {
   return SELECTABLE_ASSETS.map((asset) => {
     const first = asset.abilities[0]?.text ?? '';
-    const plain = first
-      .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-      .replace(/\s+/g, ' ')
-      .trim();
+    const plain = withoutLinks(first).replace(/\s+/g, ' ').trim();
     const summary =
       plain.length > SUMMARY_LENGTH ? `${plain.slice(0, SUMMARY_LENGTH - 1).trimEnd()}…` : plain;
     return `${asset.id} | ${asset.name} | ${asset.categoryId} | ${summary}`;

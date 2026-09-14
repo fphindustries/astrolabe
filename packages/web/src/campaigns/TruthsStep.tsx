@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { STARFORGED, type OracleTable } from '@astrolabe/rules';
+import { STARFORGED, withoutLinks, type OracleTable } from '@astrolabe/rules';
 
 import { useCampaignState } from '../api/campaigns.js';
 import { useSetTruth } from '../api/campaign-setup.js';
@@ -95,8 +95,8 @@ function TruthQuestion({
           >
             {truth.rows.map((row, index) => (
               <option key={index} value={index}>
-                {row.text.slice(0, 80)}
-                {row.text.length > 80 ? '…' : ''}
+                {withoutLinks(row.text).slice(0, 80)}
+                {withoutLinks(row.text).length > 80 ? '…' : ''}
               </option>
             ))}
           </select>

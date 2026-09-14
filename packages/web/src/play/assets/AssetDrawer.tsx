@@ -1,4 +1,4 @@
-import { STARFORGED, type AssetId } from '@astrolabe/rules';
+import { STARFORGED, withoutLinks, type AssetId } from '@astrolabe/rules';
 
 import { Drawer } from '../../ui/Drawer.js';
 
@@ -25,12 +25,12 @@ export function AssetDrawer({
         <>
           <p className={styles.category}>{asset.category}</p>
           {asset.requirement !== undefined && (
-            <p className={styles.requirement}>{asset.requirement}</p>
+            <p className={styles.requirement}>{withoutLinks(asset.requirement)}</p>
           )}
           <ul className={styles.list}>
             {asset.abilities.map((ability) => (
               <li key={ability.id} className={styles.ability}>
-                {ability.text}
+                {withoutLinks(ability.text)}
               </li>
             ))}
           </ul>

@@ -37,7 +37,11 @@ describe('movesByCategory', () => {
     const groups = movesByCategory([
       move({ id: 'move:adventure/gather_information' as MoveId, name: 'Gather Information' }),
       move({ id: 'move:adventure/face_danger' as MoveId, name: 'Face Danger' }),
-      move({ id: 'move:session/begin_session' as MoveId, name: 'Begin a Session', category: 'session' }),
+      move({
+        id: 'move:session/begin_session' as MoveId,
+        name: 'Begin a Session',
+        category: 'session',
+      }),
     ]);
 
     expect(groups.map((group) => group.category)).toEqual(['session', 'adventure']);
@@ -72,6 +76,24 @@ describe('moveDetail', () => {
       { tier: 'miss', text: "You fail, or you're stopped short." },
     ]);
     expect(detail.embeddedOracleNames).toEqual(['A Derelict Oracle']);
+  });
+
+  it('shows rules links as their labels, not markup', () => {
+    const detail = moveDetail(
+      move({
+        trigger: {
+          text: 'When you [Face Danger](id:move:adventure/face-danger) in armor…',
+          conditions: [],
+        },
+        outcomes: {
+          miss: { text: 'You fail. [Pay the Price](id:move:fate/pay-the-price).' },
+        },
+      }),
+      [],
+    );
+
+    expect(detail.triggerText).toBe('When you Face Danger in armor…');
+    expect(detail.outcomes).toEqual([{ tier: 'miss', text: 'You fail. Pay the Price.' }]);
   });
 
   it('returns no outcomes for a no_roll move', () => {
