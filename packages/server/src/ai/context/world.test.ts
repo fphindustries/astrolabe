@@ -103,6 +103,25 @@ describe('the world pass prompts and checks (task 8.1, D-138, D-140)', () => {
     );
   });
 
+  it('carries earlier passages of the session so a result can be checked against what they already established (D-156)', () => {
+    const withHistory: WorldBeat = {
+      ...BEAT,
+      recentNarration: ['Fletcher Hunt introduces himself as the sole survivor.'],
+    };
+    const plan = buildWorldPlanRequest(project([]), withHistory, [NPC_RECIPE]);
+    expect(plan.user).toContain(
+      '<recent_narration>\nFletcher Hunt introduces himself as the sole survivor.\n</recent_narration>',
+    );
+
+    const interpret = buildWorldInterpretRequest(project([]), withHistory, ROLLED, 2);
+    expect(interpret.user).toContain('<recent_narration>');
+
+    // Omitted entirely when there is none, same as outcomes and answers.
+    expect(buildWorldPlanRequest(project([]), BEAT, [NPC_RECIPE]).user).not.toContain(
+      '<recent_narration>',
+    );
+  });
+
   it('reads the outcome text at the tier a momentum burn left it on', () => {
     const events = [
       {

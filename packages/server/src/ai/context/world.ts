@@ -102,6 +102,16 @@ export interface WorldBeat {
   readonly outcomes: readonly string[];
   /** The committed passage the world pass follows. */
   readonly passage: string;
+  /**
+   * D-156: every earlier live passage of the current session, oldest first,
+   * so the plan and interpret calls can check a new result against what an
+   * NPC's own narrated words already established, not only the projected
+   * state (`renderState` carries no interiority or dialogue, by design).
+   * Excludes `passage` itself. Bounded to the session, the same unit the
+   * recap (D-147) already treats as fully remembered; earlier sessions are
+   * carried forward only through their recap, as before.
+   */
+  readonly recentNarration?: readonly string[];
   /** D-145: a miss, a match or a Pay the Price chain, which lets the plan set clocks. */
   readonly pressure?: boolean;
   /** D-28 (8.4): what the oracle answered the plan's questions, once rolled. */
@@ -111,6 +121,9 @@ export interface WorldBeat {
 function beatBlock(state: CampaignState, beat: WorldBeat): string {
   return [
     `<campaign_state>\n${renderState(state)}\n</campaign_state>`,
+    ...(beat.recentNarration !== undefined && beat.recentNarration.length > 0
+      ? [`<recent_narration>\n${beat.recentNarration.join('\n\n')}\n</recent_narration>`]
+      : []),
     `<resolved_beat>\n${beat.facts.lines.join('\n')}\n</resolved_beat>`,
     ...(beat.outcomes.length > 0
       ? [`<outcome_text>\n${beat.outcomes.join('\n')}\n</outcome_text>`]

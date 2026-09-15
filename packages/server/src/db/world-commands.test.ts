@@ -203,6 +203,22 @@ describe.skipIf(!hasTestDatabase)('the world pass (task 8.1, D-137, D-138)', () 
     expect(asked.user).not.toContain('- derelict:');
   });
 
+  it('carries the session’s earlier passages as recent narration, so a later pass can check a new result against them (D-156)', async () => {
+    const earlier = await scanned();
+    await pass(new StubProvider({ responses: [NOTHING] }), earlier.passageEventId);
+
+    const later = await scanned();
+    const ai = new StubProvider({ responses: [NOTHING] });
+    await pass(ai, later.passageEventId);
+
+    const asked = ai.requests[0]!;
+    expect(asked.purpose).toBe('world_plan');
+    // Extracted from its own tag, not the shared substring the later
+    // beat's own <passage> also carries — proves it's in recent_narration.
+    const block = /<recent_narration>\n([\s\S]*?)\n<\/recent_narration>/.exec(asked.user)?.[1];
+    expect(block).toContain('The trace narrows to one lit compartment deep in the relay.');
+  });
+
   it('writes only the plan’s accounting when the beat brings nothing new, caused by the passage', async () => {
     const { passageEventId } = await scanned();
     const commandId = newId<CommandId>();

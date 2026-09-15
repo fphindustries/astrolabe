@@ -58,6 +58,7 @@ import {
 import type { AiProvider } from '../ai/provider.js';
 import { generateValidated, type Outcome, type TextSink } from '../ai/respond.js';
 import type { AiStatus } from '../ai/status.js';
+import { livePassages } from '../projection/narrative-log.js';
 import { project } from '../projection/project.js';
 import { computeVoidState, isSuppressed } from '../projection/void-state.js';
 import { cryptoRandomSource } from '../random-source.js';
@@ -183,6 +184,12 @@ export async function prepareWorldPass(
   }
 
   const facts = describeBeat(scope.events, state, events);
+  // D-156: every earlier live passage of this session, so the plan and
+  // interpret calls can check a new result against what an NPC's own
+  // narrated words already established, not just the projected state.
+  const recentNarration = livePassages(
+    events.filter((event) => event.sessionId === passage.sessionId && event.seq < passage.seq),
+  ).map((p) => p.text);
   return {
     kind: 'run',
     mode: 'pass',
@@ -192,6 +199,7 @@ export async function prepareWorldPass(
       facts,
       outcomes: outcomeTexts(scope.events),
       passage: passage.payload.text,
+      recentNarration,
       // D-145: a miss, a match or a Pay the Price chain lets the plan set clocks.
       pressure:
         facts.miss ||
