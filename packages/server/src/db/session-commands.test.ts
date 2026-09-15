@@ -677,3 +677,68 @@ describe.skipIf(!hasTestDatabase)('resuming a campaign (9.5, D-150)', () => {
     }
   });
 });
+
+describe.skipIf(!hasTestDatabase)('the lifecycle round trip (A17 feeding A1)', () => {
+  it("builds session 3's recap from session 2's committed summary, not session 1's", async () => {
+    const db = await createTestDatabase('lifecycle_round_trip');
+    try {
+      const campaignId = SESSION_ONE_CAMPAIGN_ID;
+      await seedFixture(db.sql, SESSION_ONE);
+      const two = await beginSession(db.sql, { campaignId, commandId: newId(), actor: PLAYER });
+
+      const proposed = await proposeSessionSummary(
+        db.sql,
+        new StubProvider({
+          responses: [
+            {
+              kind: 'structured',
+              value: {
+                summary: 'The crew boarded Varga Relay and met Sura Vance.',
+                openThreads: ["Sura Vance's intent", 'The failing power'],
+              },
+            },
+          ],
+        }),
+        new StubProvider(),
+        { campaignId, commandId: newId(), actor: PLAYER },
+      );
+      if (!proposed.ok) throw new Error(proposed.message);
+      await endSession(db.sql, {
+        campaignId,
+        commandId: newId(),
+        actor: PLAYER,
+        proposalEventId: proposed.eventId,
+        summary: proposed.summary,
+        openThreads: ['Where the recorder is', ...proposed.openThreads],
+      });
+      const three = await beginSession(db.sql, { campaignId, commandId: newId(), actor: PLAYER });
+      expect(three.number).toBe(3);
+
+      const events = await readEvents(db.sql, campaignId);
+      const previous = previousSession(events, three.sessionId);
+      expect(previous?.sessionId).toBe(two.sessionId);
+      const facts = describeRecap(events, project(events), previous!.sessionId).lines;
+      expect(facts[0]).toBe(
+        'Summary of the last session: The crew boarded Varga Relay and met Sura Vance.',
+      );
+      expect(facts).toContain('Left open: Where the recorder is');
+      expect(facts.some((line) => line.includes('Deepwater Anchorage archive'))).toBe(false);
+
+      const prepared = await prepareRecap(db.sql, {
+        campaignId,
+        commandId: newId(),
+        actor: PLAYER,
+      });
+      if (prepared.kind !== 'run') throw new Error('expected a run');
+      expect(prepared.aiRequest.user).toMatch(
+        /\[F1\] \(last session\) Summary of the last session: The crew boarded Varga Relay/,
+      );
+      expect(prepared.causedBy).toBe(
+        events.find((e) => e.type === 'session.began' && e.payload.sessionId === three.sessionId)
+          ?.id,
+      );
+    } finally {
+      await db.close();
+    }
+  });
+});
