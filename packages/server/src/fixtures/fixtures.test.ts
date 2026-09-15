@@ -137,8 +137,9 @@ describe.skipIf(!hasTestDatabase)('the session-1 fixture (D-72, D-122)', () => {
     const passages = events.filter((e) => e.type === 'narration.written');
     expect(moves).toHaveLength(4);
     expect(passages).toHaveLength(4);
-    // One narration call and one authority check per passage (D-128).
-    expect(events.filter((e) => e.type === 'ai.completed')).toHaveLength(8);
+    // One narration call and one authority check per passage (D-128), and
+    // the same for the session summary (D-149).
+    expect(events.filter((e) => e.type === 'ai.completed')).toHaveLength(10);
     expect(events.filter((e) => e.type === 'narration.withdrawn')).toHaveLength(0);
   });
 

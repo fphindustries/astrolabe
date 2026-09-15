@@ -19,7 +19,7 @@ import {
 } from '../db/campaign-commands.js';
 import { createCharacter } from '../db/character-commands.js';
 import { appendCommand } from '../db/event-store.js';
-import { beginSession } from '../db/session-commands.js';
+import { beginSession, endSession, proposeSessionSummary } from '../db/session-commands.js';
 import { setComplication } from '../db/complication-commands.js';
 import { applyMoveChoice, invokeMove } from '../db/move-commands.js';
 import { prepareBeatNarration, runBeatNarration } from '../db/narration-commands.js';
@@ -41,10 +41,11 @@ import { actionRoll } from './loaded-dice.js';
  * Everything that has a command goes through it: creation validates the
  * characters, moves resolve through the rules engine with loaded dice, and
  * passages go through beat narration with a scripted stub, and the session
- * begins through Begin a Session (D-146). Two steps are appended directly:
+ * begins through Begin a Session (D-146). One step is appended directly:
  * the second scene, when the crew reaches Varga Relay, which is D-146's
  * fixture exception to D-71 so that session 2 carries the relay scene
- * forward; and the session's end, until 9.4 builds its command.
+ * forward. The session ends through End a Session (D-149), from a scripted
+ * proposal committed unedited.
  */
 
 export const SESSION_ONE = 'session-1';
@@ -52,7 +53,6 @@ export const SESSION_ONE = 'session-1';
 export const SESSION_ONE_CAMPAIGN_ID = fixtureUuid<CampaignId>(SESSION_ONE, 'campaign');
 
 const PLAYER: Actor = { kind: 'player', playerId: LOCAL_PLAYER_ID };
-const AI: Actor = { kind: 'ai' };
 
 const GATHER_INFORMATION = 'move:adventure/gather-information' as MoveId;
 const FACE_DANGER = 'move:adventure/face-danger' as MoveId;
@@ -411,30 +411,32 @@ export async function playSessionOne(
     ],
   ]);
 
-  // --- Ending session 1 -----------------------------------------------------
-  await appendCommand(sql, {
+  // --- Ending session 1 (D-149) -------------------------------------------
+  // The Guide's proposal, scripted, then committed unedited.
+  const summary =
+    "The crew of the Lantern Wake found the Meridian's Hope distress beacon in the " +
+    'Deepwater Anchorage archive. Vesna traced it to Varga Relay, a derelict station at ' +
+    'the edge of the sector that is repeating the signal, and brought the ship through ' +
+    'Kessel Drift to hold in the relay’s sensor shadow.';
+  const openThreads = [
+    'Who scrubbed the beacon’s origin coordinates, and why?',
+    'Why is a dead relay still repeating the signal?',
+    'One row of windows on Varga Relay is lit.',
+  ];
+  ai.enqueue({ kind: 'structured', value: { summary, openThreads } });
+  const proposal = await proposeSessionSummary(sql, ai, checker, {
+    ...base,
+    commandId: key('session:1:summary'),
+  });
+  if (!proposal.ok) {
+    throw new Error(`Fixture ${fixture}: the session summary failed — ${proposal.message}`);
+  }
+  await endSession(sql, {
     ...base,
     commandId: key('session:1:end'),
-    kind: 'session.end',
-    events: [
-      {
-        type: 'session.ended',
-        payload: {
-          summary:
-            "The crew of the Lantern Wake found the Meridian's Hope distress beacon in the " +
-            'Deepwater Anchorage archive. Vesna traced it to Varga Relay, a derelict station at ' +
-            'the edge of the sector that is repeating the signal, and brought the ship through ' +
-            'Kessel Drift to hold in the relay’s sensor shadow.',
-          openThreads: [
-            'Who scrubbed the beacon’s origin coordinates, and why?',
-            'Why is a dead relay still repeating the signal?',
-            'One row of windows on Varga Relay is lit.',
-          ],
-        },
-        sessionId,
-        actor: AI,
-      },
-    ],
+    proposalEventId: proposal.eventId,
+    summary,
+    openThreads,
   });
 
   return {

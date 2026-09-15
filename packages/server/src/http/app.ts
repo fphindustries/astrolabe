@@ -2,6 +2,7 @@ import {
   AddSectorLocationRequestBodySchema,
   AddSectorRouteRequestBodySchema,
   BeginSessionRequestBodySchema,
+  EndSessionRequestBodySchema,
   ApplyMoveChoiceRequestBodySchema,
   BurnMomentumRequestBodySchema,
   CreateCampaignRequestBodySchema,
@@ -14,6 +15,7 @@ import {
   VoidEventRequestBodySchema,
   type AddSectorLocationResponse,
   type BeginSessionResponse,
+  type EndSessionResponse,
   type BurnMomentumResponse,
   type CampaignListResponse,
   type CampaignStateResponse,
@@ -45,6 +47,7 @@ import {
   addSectorRoute,
   applyMoveChoice,
   beginSession,
+  endSession,
   SessionRejectedError,
   burnMomentum,
   CharacterRejectedError,
@@ -257,6 +260,40 @@ export function buildApp({ sql, ai, checker, planner = ai }: BuildAppOptions): F
                 },
               }
             : {}),
+        });
+        reply.code(201);
+        return result;
+      } catch (error) {
+        if (error instanceof SessionRejectedError) {
+          reply.code(422);
+          return { problem: error.message, reason: error.reason };
+        }
+        throw error;
+      }
+    },
+  );
+
+  // D-149: End a Session, from the Guide's proposal.
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/session-ends',
+    async (
+      request,
+      reply,
+    ): Promise<EndSessionResponse | { problem: string; reason: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
+        return undefined;
+      }
+      const parsedBody = EndSessionRequestBodySchema.safeParse(request.body);
+      if (!parsedBody.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        const result = await endSession(sql, {
+          campaignId: id,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          ...parsedBody.data,
         });
         reply.code(201);
         return result;

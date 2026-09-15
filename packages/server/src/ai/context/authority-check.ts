@@ -17,7 +17,7 @@ import type { Segment } from './segments.js';
 export type Violation = PayloadFor<'narration.withdrawn'>['violations'][number];
 
 export interface CheckSubject {
-  readonly role: 'beat' | 'revision' | 'injury';
+  readonly role: 'beat' | 'revision' | 'injury' | 'summary';
   /** The whole text: a passage, a rewrite, or an injury sentence. */
   readonly text: string;
   /** A beat passage's tagged segments (D-127). */
@@ -93,14 +93,20 @@ export function buildAuthorityCheckRequest(ctx: CheckContext, subject: CheckSubj
       ? 'The text is an injury the Guide proposes for a player character. It must describe only what happens to the character, never anything they do, think or feel.'
       : subject.role === 'revision'
         ? 'The text is a rewrite of a passage the player flagged.'
-        : subject.segments === undefined
-          ? 'The text is the passage narrating the beat.'
-          : 'The text is the passage narrating the beat, in labelled segments. Judge the words, whatever a segment is labelled.';
+        : subject.role === 'summary'
+          ? 'The text is the Guide’s summary of a session that is ending, retelling what the facts above record. A player character may do only what a declared action in them says.'
+          : subject.segments === undefined
+            ? 'The text is the passage narrating the beat.'
+            : 'The text is the passage narrating the beat, in labelled segments. Judge the words, whatever a segment is labelled.';
 
   const user = [
     latitudeVoice(ctx.latitude),
     `<player_characters>\n${crew}\n</player_characters>`,
-    ...(ctx.facts === undefined ? [] : [`<resolved_beat>\n${ctx.facts}\n</resolved_beat>`]),
+    ...(ctx.facts === undefined
+      ? []
+      : subject.role === 'summary'
+        ? [`<session>\n${ctx.facts}\n</session>`]
+        : [`<resolved_beat>\n${ctx.facts}\n</resolved_beat>`]),
     text,
     what,
   ].join('\n\n');

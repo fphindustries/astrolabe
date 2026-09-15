@@ -1,4 +1,5 @@
 import { stubComplicationOptions } from './context/complication.js';
+import { stubSessionSummary } from './context/summary.js';
 import { stubWhatNow } from './context/what-now.js';
 import { ClaudeProvider, DEFAULT_CLAUDE_MODEL } from './claude.js';
 import type { AiProvider } from './provider.js';
@@ -158,6 +159,9 @@ function devStubResponse(
         clocks: { create: [], tick: [] },
       },
     };
+  }
+  if (mode === 'structured' && request.purpose === 'session_summary') {
+    return { kind: 'structured', value: stubSessionSummary() };
   }
   if (mode === 'structured' && request.purpose === 'what_now') {
     return { kind: 'structured', value: stubWhatNow(request.user) };

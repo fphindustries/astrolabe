@@ -19,6 +19,8 @@ import {
   type SetComplicationResponse,
   SceneFrameRequestBodySchema,
   RecapRequestBodySchema,
+  ProposeSessionSummaryRequestBodySchema,
+  type ProposeSessionSummaryResponse,
   type AiStatusResponse,
   type NarrationFrame,
   type NarrationRefusalResponse,
@@ -56,6 +58,7 @@ import {
   prepareSceneFrame,
   runSceneFrame,
   prepareRecap,
+  proposeSessionSummary,
   runRecap,
   type AiCommandResult,
 } from '../db/index.js';
@@ -260,6 +263,38 @@ export function registerAiRoutes(
             ? prepared.result
             : runSceneFrame(sql, ai, checker, prepared, sink, status, planner),
         );
+      } catch (error) {
+        return refusal(error, reply);
+      }
+    },
+  );
+
+  // D-149: End a Session's proposal, checked before it is shown.
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/session-summaries',
+    async (
+      request,
+      reply,
+    ): Promise<ProposeSessionSummaryResponse | NarrationRefusalResponse | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
+        return undefined;
+      }
+      const parsedBody = ProposeSessionSummaryRequestBodySchema.safeParse(request.body);
+      if (!parsedBody.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        const result = await proposeSessionSummary(
+          sql,
+          ai,
+          checker,
+          { campaignId: id, commandId: parsedBody.data.commandId, actor: PLAYER },
+          status,
+        );
+        reply.code(201);
+        return result;
       } catch (error) {
         return refusal(error, reply);
       }

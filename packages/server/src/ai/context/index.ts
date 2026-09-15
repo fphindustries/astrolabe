@@ -15,6 +15,7 @@ export * from './prompt.js';
 export * from './recap.js';
 export * from './render-state.js';
 export * from './segments.js';
+export * from './summary.js';
 export * from './suggestion.js';
 export * from './what-now.js';
 export * from './world.js';

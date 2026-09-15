@@ -179,7 +179,7 @@ narrative log is a second read model with its own paged query.
 - [x] 9.1 Begin a session, with a recap generated from the event log. A command, not a move; the scene carries forward; the log is per session; no moves outside a session (D-146, D-147). Verified live at all three latitudes and in the browser on the stub (see "Implementation notes (task 9.1)")
 - [ ] ~~9.2 Scene proposals: inline, one click to accept, editable title~~ — moved out of M1 (D-71). The scene model and header binding stay, under 5.3
 - [x] 9.3 "What now?" suggested actions: three, anchored in state, any move including Reference ones (D-148). Verified live and in the browser on the stub (see "Implementation notes (task 9.3)")
-- [ ] 9.4 End a session: summary and open threads, proposed, reviewed and committed; Reach a Milestone as a reminder only (D-149)
+- [x] 9.4 End a session: summary and open threads, proposed, reviewed and committed; Reach a Milestone as a reminder only (D-149). Verified live and in the browser on the stub (see "Implementation notes (task 9.4)")
 - [ ] 9.5 Resume a campaign from committed state: Begin Session after an ended session, resume in place, Narrate for a chain owed a passage (D-150)
 
 ### 10. Polish and packaging
@@ -2238,4 +2238,67 @@ The pass ran 2026-09-14 with claude-opus-5 on `session-2-open`, after Beat 3's s
 3. **Use this** on the Gather Information card opened the composer on that move with its action text.
 
 The console showed only the duplicate-key warning from 6.3's ability list, recorded in 8.1's notes.
+
+## Implementation notes (task 9.4, End a Session)
+
+9.4 is done (A17, D-149). The Guide proposes a summary and open threads; the player reviews them, may edit either, and commits `session.ended`.
+
+### Shape
+
+- **Proposal** (`ai/context/summary.ts`, `proposeSessionSummary`).
+  - The facts are the recap's read (`describeRecap`) over the session that is ending: its significant, non-voided events. The next recap is then built from a summary made from the same kind of record.
+  - The answer is `{ summary, openThreads }`: 80–150 words, and 2–5 threads, each about the world, an NPC, a clock or a vow.
+  - `checkSessionSummary` checks what the SDK doesn't enforce (8.1's notes): the thread count, no repeated threads, and D-140's name check on every thread.
+  - The summary goes through D-128's checker. `generateChecked` gained optional `role` and `check` arguments, so the harm proposal and the summary share it. The checker is told the text is a session summary, with the session's facts under `<session>`.
+  - `narration.withdrawn` gained the role `summary`.
+  - One `session.propose_summary` command writes the accounting, any withdrawals, and `session.summary_proposed` or `ai.failed`. It refuses `no_session`. The session stays open whatever the outcome.
+  - Route: `POST /api/campaigns/:id/session-summaries`.
+- **Commit** (`endSession`, `POST /api/campaigns/:id/session-ends`).
+  - It needs a live proposal from the open session (`unknown_proposal`) and a summary (`no_summary`). Blank threads are dropped.
+  - `session.ended` gained `proposalEventId`, and is caused by the proposal.
+  - It is authored by the AI when the words match the proposal exactly, and by the player otherwise.
+- **Events.** `session.summary_proposed` is not narrative, changes no state, and is voidable. It was registered in 9.3's commit alongside `actions.suggested`.
+- **Web** (`session/EndSession.tsx`, `session/end-session.ts`).
+  - **End session** in the composer's acting row opens the panel in place of the composer and asks for the proposal at once.
+  - The panel shows the summary, marked Guide, in an editable box; each thread as an input with Remove; **Add a thread**; and "Reach a Milestone is available for "…" if you judge one was earned" for each open vow.
+  - Once anything is edited it says "Edited: the record will be yours." Then comes **End session**.
+  - A failed proposal shows "Guide unavailable — the session stays open", with Retry. **Cancel** returns to play. That is a deviation from D-149's wording ("pauses under D-116"). The failure blocks only ending the session, which is the one step that waits on it, and a player who wants to go on playing isn't locked out.
+  - After the commit, the panel closes and Begin Session takes over (D-146).
+- **Fixture.** `session-1` ends through `proposeSessionSummary` with a scripted stub and `endSession`, unedited, so its record is the Guide's as before. It now has 10 `ai.completed` events instead of 8.
+- **Dev stub.** It answers `session_summary`.
+
+### Live pass
+
+The pass ran 2026-09-14 with claude-opus-5 writing and claude-sonnet-5 checking, on `session-2-open` after scripted Beats 3, 6 and 7:
+- Juno's logs and the live circuit;
+- Vesna's heat signature, with an NPC, Sura Vance;
+- Rook's jammed bulkhead and the flickering lights.
+
+There were 3 runs, recorded in `ai/eval/live-summary-9.4.json`.
+
+- **3 of 3 valid, with no withdrawals,** in 8.3–8.8 s. Summaries ran 125–130 words.
+- **Threads, 5 per run.** Every run covered Beat 10's three: the survivor's intent ("What Sura Vance wants from strangers at her door"), the failing power, and where the recorder is. The other two were the jammed bulkhead and why the logs break off. No thread named a player character.
+- **Summaries.** Each retold the three declared actions as declared, and gave no one a feeling. Two stated what the facts only implied: "Someone had been keeping the relay alive: Sura Vance". The script established the heat signature and Sura Vance separately. The player can correct that in review, which is why D-149 has one.
+
+### Verification
+
+`npm run typecheck`, `npm run lint`, `npm test` (1023 tests, 1 skipped) and the web build pass. The new tests cover:
+
+- a proposal from the session's facts, checked as a summary, with replay and the session still open;
+- an unedited commit authored by the AI, caused by the proposal, projected into `sessionSummaries`, with the next proposal refused;
+- an edited commit authored by the player, and an unknown proposal refused;
+- threads naming Rook, re-asked and then failed with the session still open;
+- a summary giving Rook a feeling, withdrawn with role `summary` and re-asked;
+- the draft helpers and the milestone reminders.
+
+**Browser pass on the stub** (`session-2-open`):
+1. **End session** opened the panel with the stub's summary, its two threads, and the Reach a Milestone reminder for the vow.
+2. Editing the first thread showed the edited note.
+3. **End session** ended session 2. The log showed "Session ended: …", and the composer offered "Session 3 opens on The derelict relay station, at Varga Relay".
+4. The database recorded `session.ended` as player-authored, with the edited thread.
+5. **Begin session** opened session 3 with its recap, and the composer returned to play.
+
+The console was clean.
+
+A scripted click that awaited inside the page froze the tab once. It didn't reproduce with real clicks, and no request had reached the server.
 

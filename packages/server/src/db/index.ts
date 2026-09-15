@@ -114,6 +114,8 @@ export {
 } from './move-commands.js';
 export {
   beginSession,
+  endSession,
+  proposeSessionSummary,
   prepareRecap,
   runRecap,
   RECAP_COMMAND_KIND,

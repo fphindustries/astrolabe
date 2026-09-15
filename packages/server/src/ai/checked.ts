@@ -346,10 +346,15 @@ export function generateChecked<T>(
   schema: z.ZodType<T>,
   injuryOf: (value: T) => string,
   checker: Checker,
+  /** D-149: the summary reuses this with its own role and a check the schema can't say. */
+  options: {
+    readonly role?: 'injury' | 'summary';
+    readonly check?: (value: T) => string | undefined;
+  } = {},
 ): Promise<CheckedResult<T>> {
   const silent: TextSink = { delta: () => {}, reset: () => {} };
   return runChecked<T>(request, checker, silent, async (asked, io) => {
-    const outcome = await generateValidated(provider, asked, schema);
+    const outcome = await generateValidated(provider, asked, schema, options.check);
     io.attempts.push(...outcome.attempts.filter((a) => a.kind === 'completed'));
     if (!outcome.ok) {
       const thrown = outcome.attempts.find((a) => a.kind === 'failed');
@@ -361,7 +366,11 @@ export function generateChecked<T>(
         : { kind: 'failed', errorKind: outcome.errorKind, message: outcome.message };
     }
     const injury = injuryOf(outcome.value);
-    return { kind: 'passage', value: outcome.value, subject: { role: 'injury', text: injury } };
+    return {
+      kind: 'passage',
+      value: outcome.value,
+      subject: { role: options.role ?? 'injury', text: injury },
+    };
   });
 }
 

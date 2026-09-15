@@ -1,8 +1,11 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CharacterId, MoveId } from '@astrolabe/rules';
 import type {
   AiStatusResponse,
   BeginSessionResponse,
+  EndSessionRequestBody,
+  EndSessionResponse,
+  ProposeSessionSummaryResponse,
   CommandId,
   EntityId,
   NarrationFrame,
@@ -133,6 +136,35 @@ export function useBeginSession(campaignId: string) {
   return useMutation({
     mutationFn: (input: BeginSessionInput) =>
       apiPost<BeginSessionResponse>(`/campaigns/${campaignId}/sessions`, {
+        commandId: crypto.randomUUID(),
+        ...input,
+      }),
+    onSuccess: invalidate,
+  });
+}
+
+/** D-149: End a Session's proposal. It changes nothing until the player commits. */
+export function useProposeSessionSummary(campaignId: string) {
+  const invalidate = useInvalidateCampaign(campaignId);
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiPost<ProposeSessionSummaryResponse>(`/campaigns/${campaignId}/session-summaries`, {
+        commandId: crypto.randomUUID(),
+      }),
+    onSettled: () => {
+      invalidate();
+      void queryClient.invalidateQueries({ queryKey: aiKeys.status });
+    },
+  });
+}
+
+/** D-149: the commit, edited or not. */
+export function useEndSession(campaignId: string) {
+  const invalidate = useInvalidateCampaign(campaignId);
+  return useMutation({
+    mutationFn: (input: Omit<EndSessionRequestBody, 'commandId'>) =>
+      apiPost<EndSessionResponse>(`/campaigns/${campaignId}/session-ends`, {
         commandId: crypto.randomUUID(),
         ...input,
       }),

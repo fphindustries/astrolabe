@@ -13,6 +13,7 @@ import { PayThePricePicker, PayThePriceResult } from './moves/PayThePriceFlow.js
 import { ResultCard } from './moves/ResultCard.js';
 import { WhatNow } from './moves/WhatNow.js';
 import { BeginSession } from './session/BeginSession.js';
+import { EndSession } from './session/EndSession.js';
 import { toSessionView } from './session/session.js';
 import styles from './Composer.module.css';
 
@@ -48,6 +49,8 @@ export function Composer({
   // D-148: a suggestion the composer can't play still carries its words into
   // the prompt; bumping `version` remounts the prompt with them.
   const [draft, setDraft] = useState({ text: '', version: 0 });
+  // D-149: End a Session replaces the composer while it is under review.
+  const [ending, setEnding] = useState(false);
 
   if (crew.length === 0) {
     return <div className={styles.composer}>No one to act yet.</div>;
@@ -85,6 +88,14 @@ export function Composer({
     );
   }
 
+  if (ending && flow.step === 'idle') {
+    return (
+      <div className={styles.composer}>
+        <EndSession campaignId={campaignId} onCancel={() => setEnding(false)} />
+      </div>
+    );
+  }
+
   const finish = (commandId: CommandId) => {
     narration.narrateAfter(commandId);
     reset();
@@ -114,6 +125,11 @@ export function Composer({
             </option>
           ))}
         </select>
+        {flow.step === 'idle' && (
+          <button type="button" className={styles.endSession} onClick={() => setEnding(true)}>
+            End session
+          </button>
+        )}
       </div>
 
       {flow.step === 'idle' && actor !== undefined && (

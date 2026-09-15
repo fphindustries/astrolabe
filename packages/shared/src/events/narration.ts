@@ -100,7 +100,8 @@ export const AuthorityViolationSchema = z.object({
  * `ai.failed` — so a voided beat takes its withdrawals with it.
  */
 export const NarrationWithdrawnSchema = z.object({
-  role: z.enum(['beat', 'revision', 'injury']),
+  /** `summary` is End a Session's proposed summary (D-149). */
+  role: z.enum(['beat', 'revision', 'injury', 'summary']),
   /** For a revision, the passage it was rewriting. */
   targetEventId: EventIdSchema.optional(),
   /** Which attempt this was: 1, or 2 for the re-ask. */

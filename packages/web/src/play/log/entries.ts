@@ -99,7 +99,7 @@ export type EntryBody =
   | {
       /** D-128: generated text that failed a check, struck, with its reason in words. */
       readonly kind: 'withdrawal';
-      readonly role: 'beat' | 'revision' | 'injury';
+      readonly role: 'beat' | 'revision' | 'injury' | 'summary';
       readonly reason: string;
       readonly rejectedText: string;
       /** What the checker quoted, for the reader to see exactly what was wrong. */

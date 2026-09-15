@@ -14,6 +14,8 @@ import { StubProvider, type StubResponse } from '../ai/stub.js';
 import {
   SESSION_ONE,
   SESSION_ONE_CAMPAIGN_ID,
+  SESSION_TWO_OPEN,
+  SESSION_TWO_OPEN_CAMPAIGN_ID,
   actionRoll,
   seedFixture,
 } from '../fixtures/index.js';
@@ -23,7 +25,13 @@ import { project } from '../projection/project.js';
 import { createCampaign } from './campaign-commands.js';
 import { readEvents } from './event-store.js';
 import { invokeMove, MoveRejectedError } from './move-commands.js';
-import { beginSession, prepareRecap, runRecap } from './session-commands.js';
+import {
+  beginSession,
+  endSession,
+  prepareRecap,
+  proposeSessionSummary,
+  runRecap,
+} from './session-commands.js';
 import { createTestDatabase, hasTestDatabase, type TestDatabase } from './testing.js';
 import { uuidv7 } from './uuid.js';
 
@@ -357,6 +365,180 @@ describe.skipIf(!hasTestDatabase)('the session lifecycle (group 9, D-146, D-147)
       expect(again.json()).toMatchObject({ reason: 'already_recapped' });
     } finally {
       await db2.close();
+    }
+  });
+});
+
+describe.skipIf(!hasTestDatabase)('End a Session (9.4, D-149)', () => {
+  const campaignId = SESSION_TWO_OPEN_CAMPAIGN_ID;
+  const SUMMARY = {
+    summary: 'The crew boarded the relay and found one circuit still drawing power.',
+    openThreads: ['What is the circuit keeping alive?', 'Who scrubbed the beacon?'],
+  };
+  const proposal = (value: unknown): StubResponse => ({ kind: 'structured', value });
+
+  it('proposes a checked summary from the session, and commits it unedited as the Guide’s', async () => {
+    const db = await createTestDatabase('end_session');
+    try {
+      await seedFixture(db.sql, SESSION_TWO_OPEN);
+      const ai = new StubProvider({ responses: [proposal(SUMMARY)] });
+      const checker = new StubProvider();
+      const commandId = newId<CommandId>();
+      const proposed = await proposeSessionSummary(db.sql, ai, checker, {
+        campaignId,
+        commandId,
+        actor: PLAYER,
+      });
+
+      if (!proposed.ok) throw new Error(proposed.message);
+      expect(proposed).toMatchObject(SUMMARY);
+      expect(ai.requests[0]?.purpose).toBe('session_summary');
+      expect(ai.requests[0]?.user).toMatch(/A scene: The derelict relay station/);
+      expect(checker.requests[0]?.user).toMatch(/summary of a session that is ending/);
+      // Replay answers the same proposal, and the session is still open.
+      expect(
+        await proposeSessionSummary(db.sql, new StubProvider(), checker, {
+          campaignId,
+          commandId,
+          actor: PLAYER,
+        }),
+      ).toEqual(proposed);
+      expect(project(await readEvents(db.sql, campaignId)).session?.endedAt).toBeUndefined();
+
+      const ended = await endSession(db.sql, {
+        campaignId,
+        commandId: newId(),
+        actor: PLAYER,
+        proposalEventId: proposed.eventId,
+        ...SUMMARY,
+      });
+      expect(ended.edited).toBe(false);
+      const events = await readEvents(db.sql, campaignId);
+      const event = events.find((e) => e.id === ended.eventId);
+      expect(event).toMatchObject({
+        actor: { kind: 'ai' },
+        causedBy: proposed.eventId,
+        payload: { ...SUMMARY, proposalEventId: proposed.eventId },
+      });
+      const state = project(events);
+      expect(state.session?.endedAt).toBeDefined();
+      expect(state.canon.sessionSummaries.at(-1)).toMatchObject({ number: 2, ...SUMMARY });
+
+      await expect(
+        proposeSessionSummary(db.sql, new StubProvider(), checker, {
+          campaignId,
+          commandId: newId(),
+          actor: PLAYER,
+        }),
+      ).rejects.toMatchObject({ reason: 'no_session' });
+    } finally {
+      await db.close();
+    }
+  });
+
+  it('records an edited summary as the player’s, and refuses a proposal that isn’t live', async () => {
+    const db = await createTestDatabase('end_session_edited');
+    try {
+      await seedFixture(db.sql, SESSION_TWO_OPEN);
+      const proposed = await proposeSessionSummary(
+        db.sql,
+        new StubProvider({ responses: [proposal(SUMMARY)] }),
+        new StubProvider(),
+        { campaignId, commandId: newId(), actor: PLAYER },
+      );
+      if (!proposed.ok) throw new Error(proposed.message);
+
+      await expect(
+        endSession(db.sql, {
+          campaignId,
+          commandId: newId(),
+          actor: PLAYER,
+          proposalEventId: newId(),
+          ...SUMMARY,
+        }),
+      ).rejects.toMatchObject({ reason: 'unknown_proposal' });
+
+      const ended = await endSession(db.sql, {
+        campaignId,
+        commandId: newId(),
+        actor: PLAYER,
+        proposalEventId: proposed.eventId,
+        summary: SUMMARY.summary,
+        openThreads: [...SUMMARY.openThreads, 'Where is the flight recorder?'],
+      });
+      expect(ended.edited).toBe(true);
+      const event = (await readEvents(db.sql, campaignId)).find((e) => e.id === ended.eventId);
+      expect(event?.actor.kind).toBe('player');
+    } finally {
+      await db.close();
+    }
+  });
+
+  it('re-asks threads that name a player character, then fails with the session still open', async () => {
+    const db = await createTestDatabase('end_session_names');
+    try {
+      await seedFixture(db.sql, SESSION_TWO_OPEN);
+      const naming = proposal({
+        summary: SUMMARY.summary,
+        openThreads: ['Whether Rook trusts the survivor', 'The failing power'],
+      });
+      const ai = new StubProvider({ responses: [naming, naming] });
+      const result = await proposeSessionSummary(db.sql, ai, new StubProvider(), {
+        campaignId,
+        commandId: newId(),
+        actor: PLAYER,
+      });
+
+      expect(result.ok).toBe(false);
+      expect(ai.requests[1]?.user).toMatch(/names Rook/);
+      const state = project(await readEvents(db.sql, campaignId));
+      expect(state.session?.endedAt).toBeUndefined();
+    } finally {
+      await db.close();
+    }
+  });
+
+  it('withdraws a summary that gives a character a feeling, and re-asks', async () => {
+    const db = await createTestDatabase('end_session_withdraw');
+    try {
+      await seedFixture(db.sql, SESSION_TWO_OPEN);
+      const feeling = 'Rook was quietly afraid of the dark station.';
+      const ai = new StubProvider({
+        responses: [proposal({ ...SUMMARY, summary: feeling }), proposal(SUMMARY)],
+      });
+      const checker = new StubProvider({
+        responses: [
+          {
+            kind: 'structured',
+            value: {
+              review: 'A feeling.',
+              violations: [
+                {
+                  rule: 'player_interior',
+                  character: 'Rook',
+                  segment: null,
+                  quote: 'quietly afraid',
+                  why: 'A feeling the player did not state.',
+                },
+              ],
+            },
+          },
+          { kind: 'structured', value: { review: 'Fine.', violations: [] } },
+        ],
+      });
+      const result = await proposeSessionSummary(db.sql, ai, checker, {
+        campaignId,
+        commandId: newId(),
+        actor: PLAYER,
+      });
+
+      expect(result).toMatchObject({ ok: true, summary: SUMMARY.summary });
+      const withdrawn = (await readEvents(db.sql, campaignId)).filter(
+        (e) => e.type === 'narration.withdrawn',
+      );
+      expect(withdrawn).toMatchObject([{ payload: { role: 'summary', rejectedText: feeling } }]);
+    } finally {
+      await db.close();
     }
   });
 });

@@ -2,6 +2,8 @@ import type {
   Actor,
   AstrolabeEvent,
   BeginSessionResponse,
+  EndSessionResponse,
+  ProposeSessionSummaryResponse,
   CampaignId,
   CommandId,
   EntityId,
@@ -12,6 +14,9 @@ import type {
 import type { Sql } from 'postgres';
 
 import {
+  buildSessionSummaryRequest,
+  checkSessionSummary,
+  sessionSummarySchema,
   buildRecapRequest,
   describeRecap,
   previousSession,
@@ -20,15 +25,20 @@ import {
   type CheckContext,
   type SegmentContext,
 } from '../ai/context/index.js';
+import { generateChecked } from '../ai/checked.js';
 import type { AiProvider, AiRequest } from '../ai/provider.js';
 import type { TextSink } from '../ai/respond.js';
 import type { AiStatus } from '../ai/status.js';
 import { project } from '../projection/project.js';
+import { computeVoidState, isSuppressed } from '../projection/void-state.js';
 
-import { appendCommand, readEvents, readEventsByCommand } from './event-store.js';
+import { appendCommand, readEvents, readEventsByCommand, type NewEvent } from './event-store.js';
 import {
   AiRequestRefusedError,
   checkContextOf,
+  checkedAccounting,
+  recordEnding,
+  withEnvelope,
   commitSegmentedPassage,
   envelopeOf,
   interrupted,
@@ -253,4 +263,177 @@ export async function runRecap(
     sink,
     status,
   );
+}
+
+// ---------------------------------------------------------------------------
+// End a Session (9.4, D-149)
+// ---------------------------------------------------------------------------
+
+export const SUMMARY_PROPOSAL_COMMAND_KIND = 'session.propose_summary';
+export const SESSION_END_COMMAND_KIND = 'session.end';
+
+export interface ProposeSessionSummaryRequest {
+  readonly campaignId: CampaignId;
+  readonly commandId: CommandId;
+  readonly actor: Actor;
+}
+
+/**
+ * D-149's first step: the Guide proposes a summary and open threads from
+ * the ending session's significant events. The summary goes through D-128's
+ * checker, because the next recap reads it as canon; the threads get
+ * D-140's name check. One command writes the accounting, any withdrawals,
+ * and `session.summary_proposed` or `ai.failed`. The session stays open
+ * either way: ending it waits on this, and nothing else does.
+ */
+export async function proposeSessionSummary(
+  sql: Sql,
+  ai: AiProvider,
+  checker: AiProvider,
+  request: ProposeSessionSummaryRequest,
+  status?: AiStatus,
+): Promise<ProposeSessionSummaryResponse> {
+  const already = await readEventsByCommand(sql, request.campaignId, request.commandId);
+  if (already.length > 0) {
+    return summaryResultFrom(already);
+  }
+
+  const events = await readEvents(sql, request.campaignId);
+  const state = project(events);
+  const settings = settingsOf(state);
+  requireOpenSession(state);
+
+  const facts = describeRecap(events, state, state.session!.id);
+  const characters = segmentContext(facts, state, settings.narrationLatitude).characters;
+  const aiRequest = buildSessionSummaryRequest(state, facts, settings);
+  const checked = await generateChecked(
+    ai,
+    aiRequest,
+    sessionSummarySchema(),
+    (proposal) => proposal.summary,
+    {
+      provider: checker,
+      context: checkContextOf(state, settings.narrationLatitude, facts.lines.join('\n')),
+    },
+    { role: 'summary', check: (value) => checkSessionSummary(value, characters) },
+  );
+  recordEnding(status, checked);
+  const outcome = checked.ending;
+
+  const envelope = envelopeOf(request.campaignId, state);
+  const result = await appendCommand(sql, {
+    campaignId: request.campaignId,
+    commandId: request.commandId,
+    kind: SUMMARY_PROPOSAL_COMMAND_KIND,
+    actor: request.actor,
+    events: [
+      ...checkedAccounting(
+        ai,
+        aiRequest.purpose,
+        checker,
+        checked,
+        { role: 'summary', latitude: settings.narrationLatitude },
+        envelope,
+      ),
+      ...(outcome.ok
+        ? [
+            withEnvelope(
+              {
+                type: 'session.summary_proposed',
+                payload: {
+                  summary: outcome.value.summary.trim(),
+                  openThreads: outcome.value.openThreads
+                    .map((t) => t.trim())
+                    .filter((t) => t.length > 0),
+                },
+              } as NewEvent<'session.summary_proposed'>,
+              envelope,
+            ),
+          ]
+        : []),
+    ],
+  });
+  return summaryResultFrom(result.events);
+}
+
+function summaryResultFrom(events: readonly AstrolabeEvent[]): ProposeSessionSummaryResponse {
+  const proposed = events.find((e) => e.type === 'session.summary_proposed');
+  if (proposed?.type === 'session.summary_proposed') {
+    return { ok: true, eventId: proposed.id, ...proposed.payload };
+  }
+  const result = resultFrom(events, 'session.summary_proposed') ?? interrupted();
+  return result.ok ? interrupted() : result;
+}
+
+export interface EndSessionRequest {
+  readonly campaignId: CampaignId;
+  readonly commandId: CommandId;
+  readonly actor: Actor;
+  readonly proposalEventId: EventId;
+  readonly summary: string;
+  readonly openThreads: readonly string[];
+}
+
+/**
+ * D-149's commit: `session.ended`, naming the proposal. Authored by the AI
+ * when the player kept the Guide's words exactly, and by the player when
+ * they edited the summary or the threads.
+ */
+export async function endSession(
+  sql: Sql,
+  request: EndSessionRequest,
+): Promise<EndSessionResponse> {
+  const already = await readEventsByCommand(sql, request.campaignId, request.commandId);
+  const stored = already.find((e) => e.type === 'session.ended');
+  if (stored?.type === 'session.ended') {
+    return { eventId: stored.id, edited: stored.actor.kind !== 'ai' };
+  }
+
+  const summary = request.summary.trim();
+  const openThreads = request.openThreads.map((t) => t.trim()).filter((t) => t.length > 0);
+  if (summary.length === 0) {
+    throw new SessionRejectedError('no_summary', 'Write the summary first.');
+  }
+
+  const events = await readEvents(sql, request.campaignId);
+  const state = project(events);
+  if (state.session === null || state.session.endedAt !== undefined) {
+    throw new SessionRejectedError('no_session', 'There is no open session to end.');
+  }
+  const voids = computeVoidState(events);
+  const proposal = events.find((e) => e.id === request.proposalEventId);
+  if (
+    proposal?.type !== 'session.summary_proposed' ||
+    proposal.sessionId !== state.session.id ||
+    isSuppressed(proposal, voids)
+  ) {
+    throw new SessionRejectedError(
+      'unknown_proposal',
+      'That is not the Guide’s live proposal for this session.',
+    );
+  }
+
+  const edited =
+    summary !== proposal.payload.summary ||
+    openThreads.length !== proposal.payload.openThreads.length ||
+    openThreads.some((t, i) => t !== proposal.payload.openThreads[i]);
+  const envelope = envelopeOf(request.campaignId, state);
+  const result = await appendCommand(sql, {
+    campaignId: request.campaignId,
+    commandId: request.commandId,
+    kind: SESSION_END_COMMAND_KIND,
+    actor: request.actor,
+    causedBy: proposal.id,
+    events: [
+      {
+        type: 'session.ended',
+        payload: { summary, openThreads, proposalEventId: proposal.id },
+        sessionId: envelope.sessionId,
+        sceneId: envelope.sceneId,
+        ...(edited ? {} : { actor: { kind: 'ai' } as const }),
+      },
+    ],
+  });
+  const ended = result.events.find((e) => e.type === 'session.ended')!;
+  return { eventId: ended.id, edited: ended.actor.kind !== 'ai' };
 }

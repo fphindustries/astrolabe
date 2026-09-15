@@ -454,6 +454,35 @@ export interface BeginSessionResponse {
   readonly recap: boolean;
 }
 
+/** D-149: End a Session's proposal. The server knows which session. */
+export const ProposeSessionSummaryRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+});
+
+export type ProposeSessionSummaryRequestBody = z.infer<
+  typeof ProposeSessionSummaryRequestBodySchema
+>;
+
+export type ProposeSessionSummaryResponse =
+  | ({ readonly ok: true; readonly eventId: EventId } & PayloadFor<'session.summary_proposed'>)
+  | { readonly ok: false; readonly errorKind: AiErrorKind; readonly message: string };
+
+/** D-149: the commit, edited or not, naming the proposal it started from. */
+export const EndSessionRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  proposalEventId: EventIdSchema,
+  summary: z.string().trim().min(1).max(4000),
+  openThreads: z.array(z.string().trim().min(1).max(300)).max(10),
+});
+
+export type EndSessionRequestBody = z.infer<typeof EndSessionRequestBodySchema>;
+
+export interface EndSessionResponse {
+  readonly eventId: EventId;
+  /** Whether the player changed the Guide's words, so the record is theirs. */
+  readonly edited: boolean;
+}
+
 /** D-147: the recap of the previous session. The server knows which session; the client only asks. */
 export const RecapRequestBodySchema = z.object({
   commandId: CommandIdSchema,
