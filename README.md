@@ -47,11 +47,25 @@ npm run dev --workspace @astrolabe/web      # :5173
 
 `npm run harness` plays the golden session into a throwaway schema and prints the state and log it produced. The same run is asserted by `packages/server/src/fixtures/golden-session.test.ts` (D-152).
 
-## Running on a Linux server
+## Installing and updating the container
 
-`main` always has a built image: every push to it (a merge from `dev` included) triggers a GitHub Actions workflow that builds `Dockerfile` and pushes `ghcr.io/fphindustries/astrolabe:latest` (D-157). Installing or updating is a pull, not a build.
+`main` always has a built image: every push to it (a merge from `dev` included) triggers a GitHub Actions workflow that builds `Dockerfile` and pushes `ghcr.io/fphindustries/astrolabe:latest` (D-157). Installing or updating is a pull, not a build, and the steps below are the same on Windows and Linux — Docker itself is the only thing that differs.
 
-**First install.** Clone the repo (or just copy `docker-compose.yml`), and create a `.env` next to it:
+### Prerequisites
+
+- **Linux:** Docker Engine and the Compose plugin (`docker compose version` should print something). Most distributions' package managers install both together as `docker.io`/`docker-ce` plus `docker-compose-plugin`.
+- **Windows:** [Docker Desktop](https://www.docker.com/products/docker-desktop/), with the WSL2 backend (the installer sets this up; it needs the Windows Subsystem for Linux, which the installer also offers to enable). Compose is bundled — no separate install. Run the commands below from PowerShell.
+
+### First install
+
+Clone the repo (or just copy `docker-compose.yml` — it's the only file the container needs):
+
+```bash
+git clone https://github.com/fphindustries/astrolabe.git
+cd astrolabe
+```
+
+Create a `.env` file next to `docker-compose.yml` — a plain text file, the same on both OSes:
 
 ```bash
 ANTHROPIC_API_KEY=sk-ant-...
@@ -66,17 +80,29 @@ The repo is private, so the image is too: pulling it needs a login once, with a 
 docker login ghcr.io -u <your-github-username>
 ```
 
-Then:
+Then, from the folder holding `docker-compose.yml` (Windows: PowerShell; Linux: any shell):
 
 ```bash
-docker compose pull && docker compose up -d
+docker compose pull
+docker compose up -d
 ```
 
-This pulls the published image, starts Postgres, migrates, and serves the app at `http://<host>:3000`. The database starts empty: create a campaign in the app. Fixtures are for development, and `db:seed` and `db:reset` refuse under `NODE_ENV=production`. Postgres is published on `127.0.0.1` only. There is no authentication in Milestone 1, so keep the app on a trusted network. Campaign data lives in the `astrolabe-pgdata` volume; back it up with `docker compose exec db pg_dump -U astrolabe astrolabe`.
+This pulls the published image, starts Postgres, migrates, and serves the app at `http://localhost:3000` (or `http://<host>:3000` from another machine on a Linux server; change the port with `ASTROLABE_PORT`). The database starts empty: create a campaign in the app. Fixtures are for development, and `db:seed` and `db:reset` refuse under `NODE_ENV=production`. Postgres is published on `127.0.0.1` only. There is no authentication in Milestone 1, so keep the app on a trusted network. Campaign data lives in the `astrolabe-pgdata` volume; back it up with `docker compose exec db pg_dump -U astrolabe astrolabe`.
 
-**To update**, once `main` has what you want: `docker compose pull && docker compose up -d`. The server migrates on start.
+### Updating
 
-**Building from source instead** — working on the app itself, or `main`'s image isn't reachable — `docker compose up -d --build` builds `Dockerfile` locally instead of pulling.
+Once `main` has what you want:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+The server migrates on start. On Windows, Docker Desktop needs to be running first; on Linux, the daemon is normally already running as a service.
+
+### Building from source instead
+
+Working on the app itself, or `main`'s image isn't reachable: `docker compose up -d --build` builds `Dockerfile` locally instead of pulling. This needs the repo cloned (not just `docker-compose.yml`) and takes longer, but otherwise works the same on both OSes.
 
 ## Documentation
 
