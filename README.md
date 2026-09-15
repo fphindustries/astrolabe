@@ -49,7 +49,9 @@ npm run dev --workspace @astrolabe/web      # :5173
 
 ## Running on a Linux server
 
-One `docker compose up` (D-154). From a checkout, create a `.env` next to `docker-compose.yml`:
+`main` always has a built image: every push to it (a merge from `dev` included) triggers a GitHub Actions workflow that builds `Dockerfile` and pushes `ghcr.io/fphindustries/astrolabe:latest` (D-157). Installing or updating is a pull, not a build.
+
+**First install.** Clone the repo (or just copy `docker-compose.yml`), and create a `.env` next to it:
 
 ```bash
 ANTHROPIC_API_KEY=sk-ant-...
@@ -58,15 +60,23 @@ POSTGRES_PASSWORD=choose-a-password   # read once, when the database volume is c
 # ASTROLABE_CLAUDE_MODEL=, ASTROLABE_PLAN_MODEL=, ASTROLABE_CHECK_MODEL=   # optional overrides
 ```
 
+The repo is private, so the image is too: pulling it needs a login once, with a GitHub personal access token that has `read:packages`:
+
+```bash
+docker login ghcr.io -u <your-github-username>
+```
+
 Then:
 
 ```bash
-docker compose up -d --build
+docker compose pull && docker compose up -d
 ```
 
-This builds one image holding the server and the built web client, starts Postgres, migrates, and serves the app at `http://<host>:3000`. The database starts empty: create a campaign in the app. Fixtures are for development, and `db:seed` and `db:reset` refuse under `NODE_ENV=production`. Postgres is published on `127.0.0.1` only. There is no authentication in Milestone 1, so keep the app on a trusted network. Campaign data lives in the `astrolabe-pgdata` volume; back it up with `docker compose exec db pg_dump -U astrolabe astrolabe`.
+This pulls the published image, starts Postgres, migrates, and serves the app at `http://<host>:3000`. The database starts empty: create a campaign in the app. Fixtures are for development, and `db:seed` and `db:reset` refuse under `NODE_ENV=production`. Postgres is published on `127.0.0.1` only. There is no authentication in Milestone 1, so keep the app on a trusted network. Campaign data lives in the `astrolabe-pgdata` volume; back it up with `docker compose exec db pg_dump -U astrolabe astrolabe`.
 
-To update, pull and run `docker compose up -d --build` again. The server migrates on start.
+**To update**, once `main` has what you want: `docker compose pull && docker compose up -d`. The server migrates on start.
+
+**Building from source instead** — working on the app itself, or `main`'s image isn't reachable — `docker compose up -d --build` builds `Dockerfile` locally instead of pulling.
 
 ## Documentation
 

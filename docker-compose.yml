@@ -1,13 +1,20 @@
 # Astrolabe on the Linux home server (task 10.5, D-55, D-154), and the
 # Postgres that local development and the tests use.
 #
-# Production, from a checkout with a `.env` next to this file:
+# The `app` service names an `image` as well as a local `build`, so:
+#
+#   docker compose pull && docker compose up -d
+#
+# fetches the image GitHub Actions built and pushed from `main` (D-157) and
+# runs it — no local build. To build from source instead (working on the
+# app itself, or `main`'s image isn't reachable):
 #
 #   docker compose up -d --build
 #
-# builds the app image, starts Postgres, migrates, and serves the app on
+# Either way this starts Postgres, migrates, and serves the app on
 # http://<host>:3000 (ASTROLABE_PORT to change it). The database starts
-# empty; create a campaign in the app. See README.md for the `.env` keys.
+# empty; create a campaign in the app. See README.md for the `.env` keys
+# and how to update.
 #
 # Development runs natively and needs only the database:
 #
@@ -39,6 +46,7 @@ services:
       retries: 10
 
   app:
+    image: ghcr.io/fphindustries/astrolabe:latest
     build: .
     restart: unless-stopped
     depends_on:
