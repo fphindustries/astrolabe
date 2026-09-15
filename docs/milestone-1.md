@@ -191,7 +191,7 @@ Worked in the order 10.4 · 10.5 · 10.1 · 10.2 · 10.3 (D-151).
 - [ ] 10.2 Purpose-built treatments for progress tracks, clocks, meters, and momentum
 - [ ] 10.3 Keyboard navigation and focus states
 - [x] 10.4 Golden session as an automated end-to-end test with a stubbed AI provider, loaded dice rather than a seeded RNG, and the session-1 fixture event log (D-72), from the shared fixture mechanism (D-122). Played through the HTTP routes; `golden-beats.ts` retired (D-151, D-152; see "Implementation notes (task 10.4)")
-- [ ] 10.5 Docker Compose packaging for the Linux home server
+- [x] 10.5 Docker Compose packaging for the Linux home server: one app image serving the API and the built client, plus Postgres; production is not seeded (D-154). Built and smoke-tested with `docker compose` (see "Implementation notes (task 10.5)")
 
 ---
 
@@ -2390,3 +2390,35 @@ The golden session now runs start to finish as an automated test (§10, D-152). 
 ### Verification
 
 1035 tests passed and 1 skipped against the real database (the golden session adds 24), and typecheck and lint are clean. `npm run harness` prints the session, and `db:reset` seeds all three fixtures.
+
+---
+
+## Implementation notes (task 10.5)
+
+`docker compose up -d --build` runs Astrolabe on a Linux host (D-55, D-154).
+
+### Shape
+
+- **`Dockerfile`, two stages on `node:22-alpine`.** The build stage runs `npm ci` from the manifests first, then builds `shared`, `rules` and `server` with tsc and the client with tsc and Vite. The runtime stage installs only the server workspace's production dependencies (`npm ci --omit=dev --workspace @astrolabe/server`), copies the four `dist` folders, runs as `node`, and starts `packages/server/dist/http/serve.js`. That entry point migrates before it listens. A `HEALTHCHECK` calls `/api/ai/status`.
+- **The server serves the client.** `buildApp` takes an optional `webRoot`, and `@fastify/static` serves it. Any other GET outside `/api/` gets `index.html`, so a reload on `/campaigns/:id/play` works, and an unknown `/api/` path stays a JSON 404. Files under `assets/` are fingerprinted by Vite and cached as immutable; everything else is `no-cache`. `serve.ts` reads `ASTROLABE_WEB_ROOT`, set in the image, and otherwise uses `packages/web/dist` when it has been built, so `npm start` after a build also serves the whole app. `npm run dev` is unchanged: no `webRoot`, and Vite proxies `/api`.
+- **`docker-compose.yml` gains `app`** beside `db`. `app` builds from `.`, waits for a healthy `db`, reads `.env` if present (`required: false`), and sets `DATABASE_URL`, `NODE_ENV=production` and `PORT` itself, so a development `.env`'s localhost URL never wins. `POSTGRES_PASSWORD`, `ASTROLABE_PORT` and `POSTGRES_PORT` interpolate with defaults.
+- **Postgres is published on `127.0.0.1` only.** Before this, the development mapping `5433:5432` listened on every interface, which on a home server exposes the database to the LAN. Local development and the tests connect exactly as before. The existing dev container keeps its old mapping until `npm run db:up` recreates it; the volume is unaffected.
+- **Production is not seeded.** `fixtures/cli.ts` now refuses `seed`, as well as `reset`, under `NODE_ENV=production`.
+- **`.dockerignore`** keeps `node_modules`, every `dist`, `.env*`, `.git` and `docs` out of the build context, so secrets never enter an image layer.
+
+### Verification
+
+- The image built from a clean context.
+- A separate compose project (`-p astrolabe-smoke`, ports 3100 and 5434) came up healthy:
+  - `/` and a client route returned the app;
+  - a fingerprinted asset carried `immutable`;
+  - `/api/campaigns` answered `[]` on the empty database;
+  - `POST /api/campaigns` created a campaign that survived an app restart;
+  - `seed` inside the container was refused.
+- The project was then removed with its volume.
+- `web-client.test.ts` covers the serving rules without a database.
+- 1039 tests passed and 1 skipped; typecheck and lint are clean.
+
+### Not covered
+
+TLS, backups (the README gives the `pg_dump` command) and authentication stay out of Milestone 1 (D-52, D-154). The app has no login, so it belongs on a trusted network.

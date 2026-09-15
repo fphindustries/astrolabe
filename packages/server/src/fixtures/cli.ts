@@ -11,8 +11,8 @@ import { FIXTURES, seedFixture } from './index.js';
  *   reset --yes    drop the schema, migrate, and seed every fixture
  *
  * Reset destroys every campaign in the database, not only the seeded ones,
- * so without `--yes` it lists what it would drop and stops. It refuses
- * outright under NODE_ENV=production.
+ * so without `--yes` it lists what it would drop and stops. Both refuse
+ * outright under NODE_ENV=production (D-154).
  */
 async function main(argv: readonly string[]): Promise<void> {
   const [command, ...rest] = argv;
@@ -25,10 +25,11 @@ async function main(argv: readonly string[]): Promise<void> {
 
   const sql = createDb(databaseUrlFromEnv(), { max: 2 });
   try {
+    // D-154: production starts empty, and the player creates a campaign in the app.
+    if (process.env['NODE_ENV'] === 'production') {
+      throw new Error(`Refusing to ${command} a database under NODE_ENV=production.`);
+    }
     if (command === 'reset') {
-      if (process.env['NODE_ENV'] === 'production') {
-        throw new Error('Refusing to reset a database under NODE_ENV=production.');
-      }
       const doomed = await summariseCampaigns(sql);
       if (!flags.has('--yes')) {
         console.log(describeDoomed(doomed));

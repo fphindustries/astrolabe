@@ -10,7 +10,7 @@ Built first for solo play, then for a private table of up to six players in a sh
 
 ## Status
 
-**Milestone 1, in build.** The rules package is complete; the event log and state projection are under way. Scope and progress: [docs/milestone-1.md](docs/milestone-1.md).
+**Milestone 1, in build.** The golden session plays end to end; the visual design pass and keyboard work are under way. Scope and progress: [docs/milestone-1.md](docs/milestone-1.md).
 
 ## Development
 
@@ -38,12 +38,35 @@ To run the app, copy `.env.example` to `.env` and fill in `ANTHROPIC_API_KEY`. T
 
 ```bash
 npm run db:up
-npm run db:seed                             # fixture campaigns; open "session 2 open" to play (D-122)
+npm run db:seed                             # fixture campaigns (D-122): "session 1" to play Beat 1 on, "golden session" to read the finished session
 npm run dev --workspace @astrolabe/server   # :3000
 npm run dev --workspace @astrolabe/web      # :5173
 ```
 
 `npm run db:reset -- --yes` wipes the database back to the seeded fixtures. It drops and recreates the schema, then migrates and seeds, because the event log can't be deleted from. It removes **every** campaign, so without `--yes` it only lists what it would drop.
+
+`npm run harness` plays the golden session into a throwaway schema and prints the state and log it produced. The same run is asserted by `packages/server/src/fixtures/golden-session.test.ts` (D-152).
+
+## Running on a Linux server
+
+One `docker compose up` (D-154). From a checkout, create a `.env` next to `docker-compose.yml`:
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-...
+POSTGRES_PASSWORD=choose-a-password   # read once, when the database volume is created
+# ASTROLABE_PORT=3000                 # the host port the app is published on
+# ASTROLABE_CLAUDE_MODEL=, ASTROLABE_PLAN_MODEL=, ASTROLABE_CHECK_MODEL=   # optional overrides
+```
+
+Then:
+
+```bash
+docker compose up -d --build
+```
+
+This builds one image holding the server and the built web client, starts Postgres, migrates, and serves the app at `http://<host>:3000`. The database starts empty: create a campaign in the app. Fixtures are for development, and `db:seed` and `db:reset` refuse under `NODE_ENV=production`. Postgres is published on `127.0.0.1` only. There is no authentication in Milestone 1, so keep the app on a trusted network. Campaign data lives in the `astrolabe-pgdata` volume; back it up with `docker compose exec db pg_dump -U astrolabe astrolabe`.
+
+To update, pull and run `docker compose up -d --build` again. The server migrates on start.
 
 ## Documentation
 

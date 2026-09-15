@@ -1,26 +1,35 @@
-# Local development and test database.
+# Astrolabe on the Linux home server (task 10.5, D-55, D-154), and the
+# Postgres that local development and the tests use.
 #
-# Task 10.5 adds the application services for the Linux home server; this
-# file is deliberately just Postgres, because that is all the event log's
-# integration tests need and all local development needs (D-55: production
-# runs in Docker, development runs natively).
+# Production, from a checkout with a `.env` next to this file:
 #
-#   docker compose up -d db
+#   docker compose up -d --build
+#
+# builds the app image, starts Postgres, migrates, and serves the app on
+# http://<host>:3000 (ASTROLABE_PORT to change it). The database starts
+# empty; create a campaign in the app. See README.md for the `.env` keys.
+#
+# Development runs natively and needs only the database:
+#
+#   npm run db:up
 #   export DATABASE_URL=postgres://astrolabe:astrolabe@localhost:5433/astrolabe
 #   npm test
 #
-# Port 5433 on the host, not 5432, so this never collides with a Postgres
-# someone already runs locally.
+# Postgres is published on 127.0.0.1 only, port 5433 rather than 5432 so it
+# never collides with a Postgres someone already runs locally.
 
 services:
   db:
     image: postgres:17-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_USER: astrolabe
-      POSTGRES_PASSWORD: astrolabe
+      # Read once, when the volume is first initialised; changing it later
+      # doesn't change the database's password.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-astrolabe}
       POSTGRES_DB: astrolabe
     ports:
-      - '5433:5432'
+      - '127.0.0.1:${POSTGRES_PORT:-5433}:5432'
     volumes:
       - astrolabe-pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -28,6 +37,24 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    # ANTHROPIC_API_KEY and the optional ASTROLABE_* model overrides.
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Set here, so a development `.env`'s localhost URL never wins.
+      DATABASE_URL: postgres://astrolabe:${POSTGRES_PASSWORD:-astrolabe}@db:5432/astrolabe
+      NODE_ENV: production
+      PORT: '3000'
+    ports:
+      - '${ASTROLABE_PORT:-3000}:3000'
 
 volumes:
   astrolabe-pgdata:

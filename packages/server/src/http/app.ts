@@ -30,6 +30,7 @@ import {
   type VoidEventResponse,
   type VoidPreviewResult,
 } from '@astrolabe/shared';
+import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { Sql } from 'postgres';
 import * as z from 'zod';
@@ -115,6 +116,12 @@ export interface BuildAppOptions {
    * (D-152).
    */
   readonly rng?: RandomSource;
+  /**
+   * The built web client (`packages/web/dist`), served from the same
+   * address as the API so its `/api` paths work unchanged (D-154). Omitted
+   * in development, where Vite serves the client and proxies `/api`.
+   */
+  readonly webRoot?: string;
 }
 
 interface CampaignParams {
@@ -142,8 +149,12 @@ export function buildApp({
   checker,
   planner = ai,
   rng,
+  webRoot,
 }: BuildAppOptions): FastifyInstance {
   const app = Fastify({ logger: false });
+  if (webRoot !== undefined) {
+    serveWebClient(app, webRoot);
+  }
   const dice = rng !== undefined ? { rng } : {};
   registerAiRoutes(app, { sql, ai, checker, planner, status: new AiStatus(ai), dice });
 
@@ -757,4 +768,35 @@ export function buildApp({
   );
 
   return app;
+}
+
+/**
+ * D-154: the web client's files, and `index.html` for any other GET outside
+ * `/api`, so a reload on a client route (`/campaigns/:id/play`) still opens
+ * the app. An unknown `/api` path stays an ordinary 404.
+ */
+function serveWebClient(app: FastifyInstance, root: string): void {
+  void app.register(fastifyStatic, {
+    root,
+    wildcard: false,
+    // Vite fingerprints everything under assets/, so those never change;
+    // index.html names them, so it is always revalidated.
+    cacheControl: false,
+    setHeaders: (response, path) => {
+      response.setHeader(
+        'cache-control',
+        /[\\/]assets[\\/]/.test(path) ? 'public, max-age=31536000, immutable' : 'no-cache',
+      );
+    },
+  });
+  app.setNotFoundHandler((request, reply) => {
+    if (request.method === 'GET' && !request.url.startsWith('/api/')) {
+      return reply.sendFile('index.html');
+    }
+    return reply.code(404).send({
+      message: `Route ${request.method}:${request.url} not found`,
+      error: 'Not Found',
+      statusCode: 404,
+    });
+  });
 }

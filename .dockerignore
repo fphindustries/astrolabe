@@ -1,0 +1,13 @@
+# Built inside the image, never copied in.
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+
+# Secrets stay on the host; compose passes them as environment variables.
+.env
+.env.*
+
+.git
+docs
+coverage
+**/*.log
