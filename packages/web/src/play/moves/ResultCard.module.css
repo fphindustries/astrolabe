@@ -1,23 +1,25 @@
+/* The outcome leads (A4): its word, large, with the tier's edge beside it. */
 .card {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--surface-border);
+  border-left-width: 4px;
   border-radius: var(--radius-md);
-  background: var(--surface-1);
+  background: var(--surface-2);
 }
 
 .card[data-tier='strong_hit'] {
-  border-color: var(--outcome-strong-hit);
+  border-left-color: var(--outcome-strong-hit);
 }
 
 .card[data-tier='weak_hit'] {
-  border-color: var(--outcome-weak-hit);
+  border-left-color: var(--outcome-weak-hit);
 }
 
 .card[data-tier='miss'] {
-  border-color: var(--outcome-miss);
+  border-left-color: var(--outcome-miss);
 }
 
 .headline {
@@ -27,13 +29,19 @@
 }
 
 .moveName {
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
 .tier {
+  font-family: var(--font-display);
   font-size: var(--text-xl);
   font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
 }
 
 .card[data-tier='strong_hit'] .tier {
@@ -49,7 +57,10 @@
 }
 
 .match {
-  font-size: var(--text-sm);
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
   color: var(--accent-strong);
   border: 1px solid var(--accent-strong);
   border-radius: var(--radius-sm);
@@ -57,14 +68,8 @@
 }
 
 .mathToggle {
+  composes: quiet from '../../ui/controls.module.css';
   align-self: flex-start;
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  text-decoration: underline;
-  cursor: pointer;
-  font-size: var(--text-sm);
-  padding: 0;
 }
 
 .math {
@@ -100,22 +105,11 @@
 }
 
 .payThePrice {
+  composes: danger from '../../ui/controls.module.css';
   align-self: flex-start;
-  padding: var(--space-1) var(--space-3);
-  border: none;
-  border-radius: var(--radius-sm);
-  background: var(--outcome-miss);
-  color: var(--text-primary);
-  font-weight: 600;
-  cursor: pointer;
 }
 
 .done {
+  composes: secondary from '../../ui/controls.module.css';
   align-self: flex-start;
-  background: none;
-  border: 1px solid var(--surface-border);
-  border-radius: var(--radius-sm);
-  padding: var(--space-1) var(--space-3);
-  color: var(--text-secondary);
-  cursor: pointer;
 }

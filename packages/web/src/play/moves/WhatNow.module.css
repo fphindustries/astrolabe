@@ -11,21 +11,16 @@
   gap: var(--space-2);
 }
 
-.ask,
-.use,
-.dismiss {
-  background: var(--surface-2);
-  color: var(--text-primary);
-  border: 1px solid var(--surface-border);
-  border-radius: var(--radius-sm);
-  padding: var(--space-1) var(--space-3);
-  font-size: var(--text-sm);
-  cursor: pointer;
+.ask {
+  composes: secondary from '../../ui/controls.module.css';
 }
 
-.ask:disabled {
-  color: var(--text-muted);
-  cursor: not-allowed;
+.use {
+  composes: secondary from '../../ui/controls.module.css';
+}
+
+.dismiss {
+  composes: secondary from '../../ui/controls.module.css';
 }
 
 .hint {
@@ -60,10 +55,8 @@
 }
 
 .badge {
+  composes: aiBadge from '../../ui/controls.module.css';
   flex: none;
-  border: 1px solid currentColor;
-  border-radius: var(--radius-sm);
-  padding: 0 var(--space-1);
 }
 
 .body {
@@ -78,7 +71,10 @@
   color: var(--text-primary);
 }
 
-.meta,
+.meta {
+  color: var(--text-secondary);
+}
+
 .reason {
   color: var(--text-secondary);
 }

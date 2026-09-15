@@ -33,7 +33,7 @@ describe('serving the web client (10.5, D-154)', () => {
 
   it('serves index.html at the root and for client routes', async () => {
     const server = app();
-    for (const url of ['/', '/campaigns/0190/play']) {
+    for (const url of ['/', '/campaigns/0190', '/campaigns/new']) {
       const response = await server.inject({ method: 'GET', url });
       expect(response.statusCode).toBe(200);
       expect(response.body).toContain('<div id="root">');

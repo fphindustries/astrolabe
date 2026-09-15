@@ -28,6 +28,7 @@ export function CrewRail({
 
   return (
     <div className={styles.rail}>
+      <h3 className={styles.title}>Crew</h3>
       {visible.map((card) => (
         <CrewCard
           key={card.characterId}

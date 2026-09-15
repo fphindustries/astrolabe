@@ -187,8 +187,8 @@ narrative log is a second read model with its own paged query.
 Worked in the order 10.4 · 10.5 · 10.1 · 10.2 · 10.3 (D-151).
 
 
-- [ ] 10.1 Visual design pass: dark surfaces, amber accents, Starforged typographic rhythm
-- [ ] 10.2 Purpose-built treatments for progress tracks, clocks, meters, and momentum
+- [x] 10.1 Visual design pass: dark surfaces, amber accents, Starforged typographic rhythm. Oxanium for display, final tokens, shared control styles, the log as prose (D-151, D-153; see "Implementation notes (tasks 10.1, 10.2)")
+- [x] 10.2 Purpose-built treatments for progress tracks, clocks, meters, and momentum: ticked boxes, segmented clocks, pips and a momentum scale, each still readable without colour (D-151; see "Implementation notes (tasks 10.1, 10.2)")
 - [ ] 10.3 Keyboard navigation and focus states
 - [x] 10.4 Golden session as an automated end-to-end test with a stubbed AI provider, loaded dice rather than a seeded RNG, and the session-1 fixture event log (D-72), from the shared fixture mechanism (D-122). Played through the HTTP routes; `golden-beats.ts` retired (D-151, D-152; see "Implementation notes (task 10.4)")
 - [x] 10.5 Docker Compose packaging for the Linux home server: one app image serving the API and the built client, plus Postgres; production is not seeded (D-154). Built and smoke-tested with `docker compose` (see "Implementation notes (task 10.5)")
@@ -2400,7 +2400,7 @@ The golden session now runs start to finish as an automated test (§10, D-152). 
 ### Shape
 
 - **`Dockerfile`, two stages on `node:22-alpine`.** The build stage runs `npm ci` from the manifests first, then builds `shared`, `rules` and `server` with tsc and the client with tsc and Vite. The runtime stage installs only the server workspace's production dependencies (`npm ci --omit=dev --workspace @astrolabe/server`), copies the four `dist` folders, runs as `node`, and starts `packages/server/dist/http/serve.js`. That entry point migrates before it listens. A `HEALTHCHECK` calls `/api/ai/status`.
-- **The server serves the client.** `buildApp` takes an optional `webRoot`, and `@fastify/static` serves it. Any other GET outside `/api/` gets `index.html`, so a reload on `/campaigns/:id/play` works, and an unknown `/api/` path stays a JSON 404. Files under `assets/` are fingerprinted by Vite and cached as immutable; everything else is `no-cache`. `serve.ts` reads `ASTROLABE_WEB_ROOT`, set in the image, and otherwise uses `packages/web/dist` when it has been built, so `npm start` after a build also serves the whole app. `npm run dev` is unchanged: no `webRoot`, and Vite proxies `/api`.
+- **The server serves the client.** `buildApp` takes an optional `webRoot`, and `@fastify/static` serves it. Any other GET outside `/api/` gets `index.html`, so a reload on `/campaigns/:id` works, and an unknown `/api/` path stays a JSON 404. Files under `assets/` are fingerprinted by Vite and cached as immutable; everything else is `no-cache`. `serve.ts` reads `ASTROLABE_WEB_ROOT`, set in the image, and otherwise uses `packages/web/dist` when it has been built, so `npm start` after a build also serves the whole app. `npm run dev` is unchanged: no `webRoot`, and Vite proxies `/api`.
 - **`docker-compose.yml` gains `app`** beside `db`. `app` builds from `.`, waits for a healthy `db`, reads `.env` if present (`required: false`), and sets `DATABASE_URL`, `NODE_ENV=production` and `PORT` itself, so a development `.env`'s localhost URL never wins. `POSTGRES_PASSWORD`, `ASTROLABE_PORT` and `POSTGRES_PORT` interpolate with defaults.
 - **Postgres is published on `127.0.0.1` only.** Before this, the development mapping `5433:5432` listened on every interface, which on a home server exposes the database to the LAN. Local development and the tests connect exactly as before. The existing dev container keeps its old mapping until `npm run db:up` recreates it; the volume is unaffected.
 - **Production is not seeded.** `fixtures/cli.ts` now refuses `seed`, as well as `reset`, under `NODE_ENV=production`.
@@ -2422,3 +2422,35 @@ The golden session now runs start to finish as an automated test (§10, D-152). 
 ### Not covered
 
 TLS, backups (the README gives the `pg_dump` command) and authentication stay out of Milestone 1 (D-52, D-154). The app has no login, so it belongs on a trusted network.
+
+---
+
+## Implementation notes (tasks 10.1, 10.2)
+
+The golden session's screens now look finished at 1280×720 (D-151). No feature was added. Screens the beats don't show, such as creation and the campaign list, pick up the shared tokens and base control styles, and nothing more.
+
+### 10.1: the visual pass
+
+- **Tokens (`styles/tokens.css`).** Warm near-black surfaces in four layers, with a stronger border for hover and emphasis. One amber accent with a soft tint. The outcome and provenance tones were retuned, and each text tone was checked against every surface it sits on: `--text-muted` holds at least 4.87:1 on the three resting surfaces. Also added: `--text-xs`, `--text-prose`, `--label-tracking` and `--shadow-overlay`.
+- **Type (D-153).** Oxanium 500, 600 and 700 come from `@fontsource/oxanium`, imported in `main.tsx`, so Vite bundles the files and nothing loads from a CDN. It sets headings, the campaign and scene titles, outcome words, stats, and the small-caps labels (rail sections, field names, log tags). Body text stays on the system face, with tabular figures throughout.
+- **Base styles (`styles/global.css`).** Buttons, inputs, selects and textareas get a default look inside `:where()`, so they carry no specificity and every module's own rule still wins. A bare `<button>`, like the old "Frame the scene", no longer renders as the browser default. `prefers-reduced-motion` shortens animations and transitions.
+- **Shared controls (`ui/controls.module.css`).** The look is decided once, as `primary`, `secondary`, `quiet`, `danger`, `aiBadge`, `panel` and `fieldLabel`. Fifteen component modules reuse these through CSS Modules `composes:`, so class names and markup didn't change. They had drifted to at least four variants of the same accent button.
+- **The narrative log.** Passages render as prose in a centred 46rem measure at `--text-prose` with 1.7 line height. Mechanical entries are single lines, each led by a small tag (Move, Roll, Price, Oracle, Track, Edited…), with the declared action quoted beneath its move. Outcome words take the tier's tone as well as the word. A scene starts with a rule, and a session's end is a panel. Flag and Void sit at the right of their entry, dimmed until the entry is hovered or focused. `play/log/describe.ts` now holds the entry wording, moved out of JSX and tested: moves and chains read by name ("Offers Pay the Price"), not id, and Pay the Price's method and a declined choice read in words.
+- **Frame and rails.** The top bar shows the session as a pill, and the Guide and connection dots have a halo. The scene header gets a larger display title and its location as an amber label. The rails get section labels (a new "Crew" label joins "Present"). Entity cards shrink to one line with a provenance pill, so the golden session's four entities fit without truncation. Drawers and popovers get the overlay shadow, and the drawer title uses the display size. The result card leads with its outcome on a tier-coloured left edge.
+- **The composer's height.** `--composer-max` is now `min(22rem, 42dvh)`: a ceiling, not a height. The idle composer still takes only what it needs, and a move with asset abilities listed no longer scrolls inside a 12rem box. The inner `.composer` `overflow` was removed, since it drew a second scrollbar inside the layout's.
+- **The acting character's card.** It is marked from the start. Before this, the composer acted as the first crew member while no card said so, until another character was picked (D-98).
+
+### 10.2: purpose-built treatments
+
+All four are pure SVG or CSS over pure geometry in `ui/tracks.ts`, which is unit tested. Each carries an accessible name with its numbers, and each draws its state as shape as well as colour (§10).
+
+- **Progress tracks (`ProgressTrack`).** Ten boxes, marked stroke by stroke as Starforged does: a diagonal, a cross, a third stroke, then a filled box. They appear on vows in the pressure rail, the tracker drawer and the character drawer.
+- **Clocks (`Clock`).** A circle of wedges filled clockwise from the top, each segment outlined so an empty one still shows. They appear in the pressure rail and the tracker drawer.
+- **Condition meters (`Meter`).** Pips, hollow when empty and solid when filled. On crew cards (health) and in the character drawer (health, spirit, supply).
+- **Momentum (`MomentumScale`).** One cell per point from −6 to the maximum, filled from zero toward the value. Zero stands taller, negative momentum is striped rather than only red, and the reset point is notched. The signed value is always written beside it. On crew cards in a compact form, and in the character drawer with its reset.
+- **`OverrideControl` gained a `visual` slot**, so the hand-edit control (A16) shows the drawing beside the number it edits.
+
+### Verification
+
+- Checked in the browser on the stub at a 1280×720 layout, using CSS zoom, because the machine's screen is smaller than 1280×720: the golden-session campaign's log, rails and character drawer; Beat 1's Begin Session on `session-1`; a Gather Information roll through its result card and passage; What now?; and the End Session panel.
+- 130 web tests pass, including the new `tracks.test.ts` and `describe.test.ts`. Typecheck, lint and the web build are clean.

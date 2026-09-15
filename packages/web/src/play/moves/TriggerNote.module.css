@@ -8,10 +8,8 @@
 }
 
 .badge {
+  composes: aiBadge from '../../ui/controls.module.css';
   flex: none;
-  border: 1px solid currentColor;
-  border-radius: var(--radius-sm);
-  padding: 0 var(--space-1);
 }
 
 .body {

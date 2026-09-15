@@ -59,3 +59,17 @@ export function rowsForKind(grouped: GroupedTracks, kind: TrackKind): readonly T
       return grouped.expeditions;
   }
 }
+
+/** Who last changed a track, in words (Beat 8: "who ticked it and why"). */
+export function actorWords(actorKind: string): string {
+  switch (actorKind) {
+    case 'ai':
+      return 'the Guide';
+    case 'player':
+      return 'the player';
+    case 'system':
+      return 'the rules';
+    default:
+      return actorKind;
+  }
+}

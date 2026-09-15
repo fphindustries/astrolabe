@@ -6,10 +6,12 @@
 }
 
 .label {
-  color: var(--text-muted);
+  composes: fieldLabel from '../../ui/controls.module.css';
 }
 
 .select {
+  align-self: flex-start;
+  min-width: 16rem;
   background: var(--surface-1);
   color: var(--text-primary);
   border: 1px solid var(--surface-border);

@@ -772,7 +772,7 @@ export function buildApp({
 
 /**
  * D-154: the web client's files, and `index.html` for any other GET outside
- * `/api`, so a reload on a client route (`/campaigns/:id/play`) still opens
+ * `/api`, so a reload on a client route (`/campaigns/:id`) still opens
  * the app. An unknown `/api` path stays an ordinary 404.
  */
 function serveWebClient(app: FastifyInstance, root: string): void {

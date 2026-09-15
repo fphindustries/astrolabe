@@ -2,6 +2,9 @@ import { STARFORGED, type AssetId, type CharacterId } from '@astrolabe/rules';
 
 import { useCampaignState } from '../../api/campaigns.js';
 import { Drawer } from '../../ui/Drawer.js';
+import { Meter } from '../../ui/Meter.js';
+import { MomentumScale } from '../../ui/MomentumScale.js';
+import { ProgressTrack } from '../../ui/ProgressTrack.js';
 import { OverrideControl } from '../overrides/OverrideControl.js';
 
 import { toCharacterSheet } from './crew.js';
@@ -54,7 +57,7 @@ export function CharacterDrawer({
 
           <section className={styles.section}>
             <h3 className={styles.sectionTitle}>Meters</h3>
-            <div className={styles.row}>
+            <div className={styles.meters}>
               {sheet.meters.map((meter) => (
                 <OverrideControl
                   key={meter.id}
@@ -66,14 +69,17 @@ export function CharacterDrawer({
                   max={meter.max}
                   overridden={meter.overridden}
                   format={(value) => `${value}/${meter.max}`}
+                  visual={
+                    <Meter
+                      label={meter.id}
+                      value={meter.value}
+                      max={meter.max}
+                      showLabel={false}
+                      showValue={false}
+                    />
+                  }
                 />
               ))}
-            </div>
-          </section>
-
-          <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>Momentum</h3>
-            <p>
               <OverrideControl
                 campaignId={campaignId}
                 target={{ kind: 'momentum', characterId }}
@@ -82,12 +88,20 @@ export function CharacterDrawer({
                 min={sheet.momentum.min}
                 max={sheet.momentum.max}
                 overridden={sheet.momentum.overridden}
-                format={(value) => `${value >= 0 ? '+' : ''}${value} / ${sheet.momentum.max}`}
-              />{' '}
-              (reset {sheet.momentum.resetValue})
-            </p>
+                format={() => ''}
+                visual={
+                  <MomentumScale
+                    value={sheet.momentum.value}
+                    min={sheet.momentum.min}
+                    max={sheet.momentum.max}
+                    reset={sheet.momentum.resetValue}
+                  />
+                }
+              />
+            </div>
+            <p className={styles.note}>Momentum resets to {signed(sheet.momentum.resetValue)}.</p>
             {sheet.bonusNextMove !== undefined && (
-              <p>
+              <p className={styles.note}>
                 +{sheet.bonusNextMove.amount} on the next move
                 {sheet.bonusNextMove.excludes === 'progress_moves' ? ' (not progress moves)' : ''}
               </p>
@@ -135,8 +149,9 @@ export function CharacterDrawer({
             ) : (
               <ul className={styles.list}>
                 {sheet.vows.map((vow) => (
-                  <li key={vow.trackId}>
-                    {vow.title} — {vow.ticks}/{vow.maxTicks}
+                  <li key={vow.trackId} className={styles.vow}>
+                    <span>{vow.title}</span>
+                    <ProgressTrack title={vow.title} ticks={vow.ticks} maxTicks={vow.maxTicks} />
                   </li>
                 ))}
               </ul>
@@ -158,3 +173,5 @@ export function CharacterDrawer({
     </Drawer>
   );
 }
+
+const signed = (n: number) => (n > 0 ? `+${n}` : String(n));

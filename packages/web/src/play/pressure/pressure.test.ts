@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { TrackId } from '@astrolabe/rules';
 import type { FieldProvenance, TrackState } from '@astrolabe/shared';
 
-import { groupTracksByKind, rowsForKind, toTrackRow } from './pressure.js';
+import { actorWords, groupTracksByKind, rowsForKind, toTrackRow } from './pressure.js';
 
 const PROVENANCE: FieldProvenance = {
   eventId: 'evt-1' as never,
@@ -82,5 +82,13 @@ describe('groupTracksByKind / rowsForKind', () => {
     expect(rowsForKind(grouped, 'clock')).toBe(grouped.clocks);
     expect(rowsForKind(grouped, 'vow')).toBe(grouped.vows);
     expect(rowsForKind(grouped, 'expedition')).toBe(grouped.expeditions);
+  });
+});
+
+describe('actorWords (10.1)', () => {
+  it('names who changed a track in words', () => {
+    expect(actorWords('ai')).toBe('the Guide');
+    expect(actorWords('player')).toBe('the player');
+    expect(actorWords('system')).toBe('the rules');
   });
 });

@@ -1,10 +1,9 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 
-import { withoutLinks } from '@astrolabe/rules';
-
 import { useCampaignLog } from '../api/campaigns.js';
 
 import { CorrectionControl } from './log/CorrectionControl.js';
+import { entryTag, entryText } from './log/describe.js';
 import { OwedPassages } from './log/OwedPassages.js';
 import {
   orderedBeats,
@@ -219,22 +218,6 @@ function Entry({ campaignId, entry }: { readonly campaignId: string; readonly en
       </div>
     );
   }
-  if (body.kind === 'complication_offered') {
-    // D-143: the options as offered, each with its Action + Theme chips.
-    return (
-      <div className={styles.entry} data-voided={entry.voided}>
-        <span className={styles.text}>The Guide offers complications:</span>
-        <ol className={styles.offered}>
-          {body.options.map((option, index) => (
-            <li key={index}>
-              <span className={styles.text}>{option.text}</span>
-              <OracleChips chips={option.chips} />
-            </li>
-          ))}
-        </ol>
-      </div>
-    );
-  }
   if (body.kind === 'withdrawal') {
     // A record of what was refused, not a thing to correct or void on its
     // own: voiding its beat takes it with the rest (D-128).
@@ -244,89 +227,90 @@ function Entry({ campaignId, entry }: { readonly campaignId: string; readonly en
       </div>
     );
   }
-  return (
-    <div className={styles.entry} data-voided={entry.voided}>
-      <span className={styles.text}>{describeEntry(entry)}</span>
-      {body.kind === 'narration' && body.chips.length > 0 && <OracleChips chips={body.chips} />}
-      {body.kind === 'narration' && !entry.voided && <CorrectionControl eventId={entry.eventId} />}
-      {/* A11/D-27: only a live, voidable event offers this — an already-voided one is history, not undone twice. */}
-      {entry.voidable && !entry.voided && (
-        <VoidControl campaignId={campaignId} eventId={entry.eventId} />
-      )}
-      {body.kind === 'narration' && body.corrected && (
-        <details className={styles.correction}>
-          <summary>Corrected</summary>
-          {body.original !== undefined && <p>Originally: {body.original}</p>}
-          {body.note !== undefined && <p>Why: {body.note}</p>}
-        </details>
-      )}
-      {entry.voidMarks.map((mark, index) => (
-        <span key={index} className={styles.voidReason}>
-          {mark.kind === 'reroll' ? 'Rerolled' : 'Voided'}: {mark.reason}
+
+  // A11/D-27: only a live, voidable event offers this — an already-voided one is history, not undone twice.
+  const voidControl = entry.voidable && !entry.voided && (
+    <VoidControl campaignId={campaignId} eventId={entry.eventId} />
+  );
+  const voidMarks = entry.voidMarks.map((mark, index) => (
+    <span key={index} className={styles.voidReason}>
+      {mark.kind === 'reroll' ? 'Rerolled' : 'Voided'}: {mark.reason}
+    </span>
+  ));
+
+  if (body.kind === 'narration') {
+    return (
+      <div className={styles.entry} data-kind="prose" data-voided={entry.voided}>
+        <p className={styles.prose}>{body.text}</p>
+        {body.chips.length > 0 && <OracleChips chips={body.chips} />}
+        <div className={styles.footer}>
+          {body.corrected && (
+            <details className={styles.correction}>
+              <summary>Corrected</summary>
+              {body.original !== undefined && <p>Originally: {body.original}</p>}
+              {body.note !== undefined && <p>Why: {body.note}</p>}
+            </details>
+          )}
+          <span className={styles.controls}>
+            {!entry.voided && <CorrectionControl eventId={entry.eventId} />}
+            {voidControl}
+          </span>
+        </div>
+        {voidMarks}
+      </div>
+    );
+  }
+
+  if (body.kind === 'scene') {
+    return (
+      <div className={styles.entry} data-kind="scene" data-voided={entry.voided}>
+        <span className={styles.sceneRule}>
+          <span className={styles.sceneLabel}>Scene</span>
+          <span className={styles.text}>{body.title}</span>
+          <span className={styles.controls}>{voidControl}</span>
         </span>
-      ))}
+        {voidMarks}
+      </div>
+    );
+  }
+
+  if (body.kind === 'session_ended') {
+    return (
+      <div className={styles.entry} data-kind="session" data-voided={entry.voided}>
+        <span className={styles.sessionLabel}>Session ended</span>
+        <p className={styles.summary}>{body.summary}</p>
+        <span className={styles.controls}>{voidControl}</span>
+        {voidMarks}
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.entry} data-kind="mechanic" data-voided={entry.voided}>
+      <div className={styles.line}>
+        <span className={styles.tag} data-tone={body.kind === 'amount_proposed' ? 'ai' : undefined}>
+          {entryTag(body)}
+        </span>
+        <span className={styles.text} data-tier={body.kind === 'roll' ? body.tier : undefined}>
+          {entryText(body)}
+        </span>
+        <span className={styles.controls}>{voidControl}</span>
+      </div>
+      {body.kind === 'move' && body.actionText !== undefined && (
+        <q className={styles.action}>{body.actionText}</q>
+      )}
+      {body.kind === 'complication_offered' && (
+        // D-143: the options as offered, each with its Action + Theme chips.
+        <ol className={styles.offered}>
+          {body.options.map((option, index) => (
+            <li key={index}>
+              <span className={styles.text}>{option.text}</span>
+              <OracleChips chips={option.chips} />
+            </li>
+          ))}
+        </ol>
+      )}
+      {voidMarks}
     </div>
   );
-}
-
-function describeEntry(entry: EntryView): string {
-  const body = entry.body;
-  switch (body.kind) {
-    case 'scene':
-      return `Scene: ${body.title}`;
-    case 'move':
-      return (
-        `Move: ${body.moveId}${body.aiding ? ' (aiding an ally)' : ''}` +
-        (body.actionText === undefined ? '' : ` — ${body.actionText}`)
-      );
-    case 'roll':
-      return (
-        `Roll: ${body.tier.replace('_', ' ')}${body.isMatch ? ' (match)' : ''}` +
-        (body.burnOffered ? (body.burnTaken ? ' — burned momentum' : ' — burn offered') : '')
-      );
-    case 'burn':
-      return `Momentum burned: ${body.tierBefore.replace('_', ' ')} → ${body.tierAfter.replace('_', ' ')}`;
-    case 'move_choice_made':
-      return `Choice: ${body.choiceId}${body.optionIds.length === 0 ? ' (declined)' : ` — ${body.optionIds.join(', ')}`}`;
-    case 'move_method_chosen':
-      return `Method: ${body.optionId}`;
-    case 'move_chained':
-      return `Chains to ${body.toMoveId} (${body.mode}) — ${body.reason}`;
-    case 'oracle_rolled':
-      return `Oracle: ${body.roll} — ${withoutLinks(body.rowText)}`;
-    case 'amount_proposed':
-      return `Guide proposes ${body.amount >= 0 ? '+' : ''}${body.amount} ${body.meter} — ${body.injury === undefined ? body.reason : `${body.injury} (${body.reason})`}`;
-    case 'amount_committed':
-      return `Committed ${body.amount >= 0 ? '+' : ''}${body.amount} ${body.meter}`;
-    case 'track_created':
-      return `Track created: ${body.title}`;
-    case 'complication_offered':
-      return `The Guide offers complications: ${body.options.map((o, i) => `(${i + 1}) ${o.text}`).join(' ')}`;
-    case 'complication_set':
-      return `Complication (${
-        body.source === 'offered'
-          ? 'picked from the Guide’s options'
-          : body.fromOffer
-            ? 'edited from the Guide’s option'
-            : 'written by the player'
-      }): ${body.text}`;
-    case 'track_advanced':
-      return `Track advanced by ${body.ticks}${body.reason === undefined ? '' : ` — ${body.reason}`}`;
-    case 'entity_established':
-      return `Entity established: ${body.name}`;
-    case 'narration':
-      return body.text;
-    case 'withdrawal':
-      return body.reason;
-    case 'trigger_note':
-      return `The Guide notes the trigger may not fit: ${body.reason}`;
-    case 'override':
-      return `Override: ${body.from} → ${body.to}${body.reason === undefined ? '' : ` (${body.reason})`}`;
-    case 'void':
-      return `Voided ${body.cascadedCount} event${body.cascadedCount === 1 ? '' : 's'}: ${body.reason}`;
-    case 'session_ended':
-      return `Session ended: ${body.summary}`;
-    case 'unknown':
-      return body.type;
-  }
 }

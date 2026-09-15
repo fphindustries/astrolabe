@@ -12,15 +12,14 @@
 }
 
 .moveName {
+  font-family: var(--font-display);
   font-weight: 600;
   font-size: var(--text-lg);
+  letter-spacing: 0.02em;
 }
 
 .cancel {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
+  composes: quiet from '../../ui/controls.module.css';
 }
 
 .trigger {
@@ -82,7 +81,7 @@
 }
 
 .label {
-  color: var(--text-muted);
+  composes: fieldLabel from '../../ui/controls.module.css';
 }
 
 .actionText {
@@ -96,19 +95,8 @@
 }
 
 .roll {
+  composes: primary from '../../ui/controls.module.css';
   align-self: flex-start;
-  padding: var(--space-2) var(--space-4);
-  border: none;
-  border-radius: var(--radius-sm);
-  background: var(--accent);
-  color: var(--accent-text);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.roll:disabled {
-  opacity: 0.6;
-  cursor: default;
 }
 
 /* D-118: the Guide's proposal and its reason, labelled as the Guide's own words. */
@@ -128,7 +116,5 @@
 }
 
 .badge {
-  border: 1px solid currentColor;
-  border-radius: var(--radius-sm);
-  padding: 0 var(--space-1);
+  composes: aiBadge from '../../ui/controls.module.css';
 }

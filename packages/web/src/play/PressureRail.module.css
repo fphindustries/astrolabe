@@ -7,7 +7,7 @@
 .rail {
   height: 100%;
   overflow: hidden;
-  padding: var(--space-2);
+  padding: var(--space-3);
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -16,46 +16,95 @@
 .section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
 .sectionTitle {
   margin: 0;
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
+  font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: var(--label-tracking);
 }
 
 .row {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: var(--space-2);
+  flex-direction: column;
+  gap: 0.375rem;
   width: 100%;
   text-align: left;
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--surface-border);
   border-radius: var(--radius-sm);
   background: var(--surface-1);
   color: inherit;
-  cursor: pointer;
 }
 
 .row:hover {
-  border-color: var(--accent);
+  border-color: var(--surface-border-strong);
+  background: var(--surface-2);
+}
+
+.rowLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
 }
 
 .rowTitle {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.rowTitle[data-wrap='true'] {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
+  line-height: 1.35;
+}
+
+.rank {
+  flex: 0 0 auto;
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--accent-strong);
 }
 
 .rowProgress {
+  flex: 0 0 auto;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  font-family: var(--font-display);
   color: var(--text-secondary);
   font-size: var(--text-sm);
   white-space: nowrap;
+}
+
+/* A16: a hand-set value says so in words. */
+.edited {
+  font-size: var(--text-xs);
+  color: var(--provenance-override);
+}
+
+.popoverTitle {
+  font-weight: 600;
+}
+
+.popoverMeta {
+  color: var(--text-secondary);
+  text-transform: capitalize;
 }
 
 .overflow {
@@ -65,7 +114,6 @@
   font-size: var(--text-sm);
   text-align: left;
   padding: var(--space-1) var(--space-2);
-  cursor: pointer;
 }
 
 .overflow:hover {

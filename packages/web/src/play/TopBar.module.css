@@ -10,26 +10,32 @@
 
 .campaign {
   font-family: var(--font-display);
+  font-weight: 600;
   font-size: var(--text-lg);
+  letter-spacing: 0.03em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .session {
+  padding: 0.0625rem var(--space-2);
+  border: 1px solid var(--surface-border-strong);
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
   color: var(--text-secondary);
-  font-size: var(--text-sm);
   white-space: nowrap;
 }
 
 .movesButton {
   background: none;
   border: 1px solid var(--surface-border);
-  border-radius: var(--radius-sm);
   color: var(--text-secondary);
   font-size: var(--text-sm);
-  padding: var(--space-1) var(--space-2);
-  cursor: pointer;
+  padding: var(--space-1) var(--space-3);
 }
 
 .movesButton:hover {
@@ -42,9 +48,9 @@
 }
 
 .tokens {
-  color: var(--text-secondary);
+  color: var(--text-muted);
   font-size: var(--text-sm);
-  font-family: var(--font-mono);
+  font-family: var(--font-display);
   white-space: nowrap;
 }
 
@@ -57,13 +63,16 @@
   white-space: nowrap;
 }
 
+/* Paired with its words ("Guide ready", "Disconnected"); the dot is only a cue. */
 .dot {
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
   background: var(--outcome-strong-hit);
+  box-shadow: 0 0 0 3px rgb(103 187 128 / 18%);
 }
 
 .dot[data-status='disconnected'] {
   background: var(--outcome-miss);
+  box-shadow: 0 0 0 3px var(--outcome-miss-soft);
 }

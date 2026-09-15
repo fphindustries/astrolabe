@@ -12,24 +12,19 @@
 }
 
 .moveButton {
-  padding: var(--space-1) var(--space-2);
+  padding: 0.1875rem var(--space-3);
   border: 1px solid var(--surface-border);
-  border-radius: var(--radius-sm);
-  background: var(--surface-1);
+  border-radius: 999px;
+  background: var(--surface-2);
   color: var(--text-primary);
-  cursor: pointer;
   font-size: var(--text-sm);
 }
 
 .moveButton:hover {
   border-color: var(--accent);
+  background: var(--surface-3);
 }
 
 .fullList {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: var(--text-sm);
-  text-decoration: underline;
+  composes: quiet from '../../ui/controls.module.css';
 }

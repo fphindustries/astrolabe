@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import type { OverrideRequestBody } from '@astrolabe/shared';
 
@@ -25,6 +25,7 @@ export function OverrideControl({
   max,
   overridden,
   format = String,
+  visual,
 }: {
   readonly campaignId: string;
   readonly target: OverrideRequestBody['target'];
@@ -34,6 +35,8 @@ export function OverrideControl({
   readonly max: number;
   readonly overridden: boolean;
   readonly format?: (value: number) => string;
+  /** 10.2: the value drawn (pips, a scale, a track), shown before its number. */
+  readonly visual?: ReactNode;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -62,7 +65,8 @@ export function OverrideControl({
     return (
       <span className={styles.value}>
         <span className={styles.label}>{label}</span>
-        <span>{format(value)}</span>
+        {visual}
+        <span className={styles.number}>{format(value)}</span>
         {overridden && <span className={styles.edited}>edited</span>}
         <button
           type="button"

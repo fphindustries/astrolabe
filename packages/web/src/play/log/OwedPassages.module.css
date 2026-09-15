@@ -21,11 +21,5 @@
 }
 
 .narrate {
-  background: var(--accent);
-  color: var(--accent-text);
-  border: none;
-  border-radius: var(--radius-sm);
-  padding: var(--space-1) var(--space-3);
-  font-weight: 600;
-  cursor: pointer;
+  composes: primary from '../../ui/controls.module.css';
 }

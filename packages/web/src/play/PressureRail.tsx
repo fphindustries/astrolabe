@@ -3,11 +3,19 @@ import { useRef, useState } from 'react';
 import type { TrackKind } from '@astrolabe/shared';
 
 import { useCampaignState } from '../api/campaigns.js';
+import { Clock } from '../ui/Clock.js';
 import { Popover } from '../ui/Popover.js';
+import { ProgressTrack } from '../ui/ProgressTrack.js';
 
 import { OverrideControl } from './overrides/OverrideControl.js';
 
-import { groupTracksByKind, rowsForKind, type GroupedTracks, type TrackRowView } from './pressure/pressure.js';
+import {
+  actorWords,
+  groupTracksByKind,
+  rowsForKind,
+  type GroupedTracks,
+  type TrackRowView,
+} from './pressure/pressure.js';
 import styles from './PressureRail.module.css';
 
 const MAX_VISIBLE = 6;
@@ -34,7 +42,8 @@ export function PressureRail({
 }) {
   const { data } = useCampaignState(campaignId, (state) => groupTracksByKind(state.tracks));
   const grouped: GroupedTracks = data ?? { clocks: [], vows: [], expeditions: [] };
-  const isEmpty = grouped.clocks.length === 0 && grouped.vows.length === 0 && grouped.expeditions.length === 0;
+  const isEmpty =
+    grouped.clocks.length === 0 && grouped.vows.length === 0 && grouped.expeditions.length === 0;
 
   if (isEmpty) {
     return <div className={styles.empty}>Nothing tracked yet.</div>;
@@ -87,7 +96,13 @@ function Section({
   );
 }
 
-function TrackRow({ campaignId, row }: { readonly campaignId: string; readonly row: TrackRowView }) {
+function TrackRow({
+  campaignId,
+  row,
+}: {
+  readonly campaignId: string;
+  readonly row: TrackRowView;
+}) {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -97,18 +112,38 @@ function TrackRow({ campaignId, row }: { readonly campaignId: string; readonly r
         ref={buttonRef}
         type="button"
         className={styles.row}
+        data-kind={row.kind}
         onClick={() => setOpen((wasOpen) => !wasOpen)}
       >
-        <span className={styles.rowTitle}>{row.title}</span>
-        <span className={styles.rowProgress}>
-          {row.ticks}/{row.maxTicks}
-          {row.overridden ? ' (edited)' : ''}
-        </span>
+        {row.kind === 'clock' ? (
+          <span className={styles.rowLine}>
+            <Clock title={row.title} filled={row.ticks} segments={row.maxTicks} />
+            <span className={styles.rowTitle}>{row.title}</span>
+            <span className={styles.rowProgress}>
+              {row.ticks}/{row.maxTicks}
+              {row.overridden && <span className={styles.edited}>edited</span>}
+            </span>
+          </span>
+        ) : (
+          <>
+            <span className={styles.rowTitle} data-wrap="true">
+              {row.title}
+            </span>
+            <span className={styles.rowLine}>
+              <ProgressTrack title={row.title} ticks={row.ticks} maxTicks={row.maxTicks} />
+              <span className={styles.rowProgress}>
+                {row.overridden && <span className={styles.edited}>edited</span>}
+                {row.rank !== undefined && <span className={styles.rank}>{row.rank}</span>}
+              </span>
+            </span>
+          </>
+        )}
       </button>
       <Popover open={open} onClose={() => setOpen(false)} anchorRef={buttonRef}>
-        {row.rank !== undefined && <p>{row.rank}</p>}
+        <p className={styles.popoverTitle}>{row.title}</p>
+        {row.rank !== undefined && <p className={styles.popoverMeta}>{row.rank}</p>}
         <p>
-          Last changed by {row.actorKind}
+          Last changed by {actorWords(row.actorKind)}
           {row.reason === undefined ? '' : ` — ${row.reason}`}
         </p>
         <OverrideControl

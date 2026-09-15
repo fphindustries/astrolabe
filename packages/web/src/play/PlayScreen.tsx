@@ -64,6 +64,8 @@ function PlayScreenContent({ campaignId }: { readonly campaignId: string }) {
   // D-98: choosing the acting character is the composer's own control, not
   // the crew card's click — that still opens the character drawer.
   const [actingCharacterId, setActingCharacterId] = useState<CharacterId | undefined>(undefined);
+  // The composer acts as the first crew member until another is chosen; the card says so too.
+  const acting = actingCharacterId ?? crew.data?.[0]?.characterId;
   const {
     openCharacterDrawer,
     openEntityDrawer,
@@ -99,7 +101,7 @@ function PlayScreenContent({ campaignId }: { readonly campaignId: string }) {
             <div className={styles.crewSection}>
               <CrewRail
                 crew={crew.data ?? []}
-                {...(actingCharacterId !== undefined ? { actingCharacterId } : {})}
+                {...(acting !== undefined ? { actingCharacterId: acting } : {})}
                 onOpen={openCharacterDrawer}
               />
             </div>

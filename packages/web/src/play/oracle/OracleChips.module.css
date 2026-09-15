@@ -9,10 +9,12 @@
 }
 
 .chip {
-  padding: 0 var(--space-2);
+  padding: 0.0625rem var(--space-2);
   border: 1px solid var(--surface-border);
   border-radius: 999px;
-  font-size: var(--text-sm);
+  background: var(--surface-1);
+  font-size: var(--text-xs);
+  line-height: 1.5;
   color: var(--text-secondary);
 }
 
@@ -22,6 +24,9 @@
 }
 
 .label {
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
   color: var(--provenance-ai);
 }
 
