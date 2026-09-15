@@ -3,9 +3,9 @@ import { useEffect, type RefObject } from 'react';
 /**
  * Keyboard play (task 10.3, §10: keyboard navigable).
  *
- * Two small rules the platform doesn't give for free. `<dialog>` already
- * traps focus, closes on Escape and hands focus back (see `Drawer`); these
- * cover what the composer and popovers do instead.
+ * Where focus lands when the composer's step changes or a popover opens.
+ * `<dialog>` traps focus and closes on Escape, but an unmounted one can't
+ * hand focus back, so `Drawer` does that itself.
  */
 
 const FOCUSABLE =
