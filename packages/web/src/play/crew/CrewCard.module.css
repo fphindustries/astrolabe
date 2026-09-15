@@ -1,0 +1,62 @@
+/**
+ * D-97: at 1280×720 the left rail budget puts a card at ≤ 56px tall, so
+ * six of them fit without the rail scrolling.
+ */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3125rem;
+  width: 100%;
+  max-height: 3.5rem;
+  text-align: left;
+  padding: 0.4375rem var(--space-3);
+  border: 1px solid var(--surface-border);
+  border-left: 3px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  color: inherit;
+}
+
+.card:hover {
+  border-color: var(--surface-border-strong);
+  background: var(--surface-2);
+}
+
+/* The acting character: an amber edge, and the word "Acting". */
+.card[data-acting='true'] {
+  border-left-color: var(--accent);
+  background: linear-gradient(90deg, var(--accent-soft), transparent 70%), var(--surface-1);
+}
+
+.top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  line-height: 1.2;
+}
+
+.callsign {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-base);
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actingBadge {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--accent-strong);
+}
+
+.meters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}

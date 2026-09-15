@@ -1,0 +1,64 @@
+.value {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.label {
+  composes: fieldLabel from '../../ui/controls.module.css';
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.value .label {
+  min-width: 4.5rem;
+}
+
+.value .number {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* A16: a hand-set value is marked in words; the colour only reinforces it. */
+.edited {
+  padding: 0 0.375rem;
+  border: 1px solid var(--provenance-override);
+  border-radius: 999px;
+  color: var(--provenance-override);
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+}
+
+.edit {
+  composes: quiet from '../../ui/controls.module.css';
+  font-size: var(--text-xs);
+}
+
+.form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.form .number {
+  width: 4rem;
+}
+
+.reason {
+  flex: 1 1 8rem;
+}
+
+.save {
+  composes: primary from '../../ui/controls.module.css';
+}
+
+.problem {
+  flex-basis: 100%;
+  font-size: var(--text-sm);
+  color: var(--outcome-miss);
+}

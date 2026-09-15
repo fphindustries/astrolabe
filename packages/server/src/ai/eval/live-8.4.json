@@ -1,0 +1,72 @@
+{
+  "date": "2026-09-14",
+  "runs": [
+    {
+      "run": 0,
+      "beat": "frame",
+      "ok": true,
+      "questions": []
+    },
+    {
+      "run": 0,
+      "beat": "beat6",
+      "ok": true,
+      "questions": [],
+      "entities": ["Valda Mackenson"],
+      "passage": "The comm channel opens without preamble, a woman's voice scraped thin by bad air, riding the same trunk line the trace just mapped. \"Whoever you are, you are sitting in my blind side and you are not subtle about it.\" Behind the lit windows a shape crosses the glass: grey-skinned, hollow at the temples, moving slowly along the racked instruments as though the cold has been chewing on her for years. \"This station is claimed,\" she says. \"There is work here older than you and it will finish. Turn around and I will not have to make that happen a harder way.\" Under her voice the beacon keeps its forty-year rhythm, steady as a pulse, and one of the spliced cables twitches where she passes it."
+    },
+    {
+      "run": 0,
+      "beat": "beat7",
+      "ok": true,
+      "questions": [],
+      "entities": []
+    },
+    {
+      "run": 1,
+      "beat": "frame",
+      "ok": true,
+      "questions": []
+    },
+    {
+      "run": 1,
+      "beat": "beat6",
+      "ok": true,
+      "questions": [
+        "Is someone still alive aboard the relay, keeping the core warm? [likely] → Yes (20)"
+      ],
+      "entities": [],
+      "passage": "The fat artery of power flickers once, then steadies, and the flicker is not decay: something aft has adjusted the load, hand on a valve, trimming the burn to hold the core warm. Behind the lit windows the pale shapes scatter from the glass all at once, as if driven off, and for a moment the row of panes is only frost and yellow light. Under the beacon's patient repetition a second signal rides the same line, thin and irregular, a carrier opened and closed in short bursts from inside the wheel. It resolves into a voice, dry and cracked and slowed by forty years of cold air: \"—still here. Core's still warm. Somebody count the burn with me.\""
+    },
+    {
+      "run": 1,
+      "beat": "beat7",
+      "ok": true,
+      "questions": [],
+      "entities": []
+    },
+    {
+      "run": 2,
+      "beat": "frame",
+      "ok": true,
+      "questions": []
+    },
+    {
+      "run": 2,
+      "beat": "beat6",
+      "ok": true,
+      "questions": [
+        "Is the repeated call being actively sent by a living person aboard the station? [unlikely] → No (70)"
+      ],
+      "entities": [],
+      "passage": "The call repeats on the open band, and it repeats exactly: the same forty-second span, the same burst of carrier hiss at the seam where the loop bites its own tail. No hand has touched it. There is no drift in the timing, no gap where someone paused to listen, none of the small ragged variances a living operator leaves behind. The beacon is only a machine talking to an empty sector, fed by one cell below the scorched collar, saying the Meridian's Hope's name into the dark because nothing ever came to tell it to stop. Behind the lit windows the many-legged shapes go on pouring over the glass, indifferent to it."
+    },
+    {
+      "run": 2,
+      "beat": "beat7",
+      "ok": true,
+      "questions": [],
+      "entities": []
+    }
+  ]
+}

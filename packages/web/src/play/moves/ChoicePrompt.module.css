@@ -1,0 +1,42 @@
+.prompt {
+  composes: panel from '../../ui/controls.module.css';
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.question {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  font-size: var(--text-sm);
+}
+
+.option[data-unavailable='true'] {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.unavailableNote {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.confirm {
+  composes: primary from '../../ui/controls.module.css';
+  align-self: flex-start;
+}

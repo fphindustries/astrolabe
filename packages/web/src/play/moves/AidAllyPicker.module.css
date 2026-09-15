@@ -1,0 +1,20 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.label {
+  composes: fieldLabel from '../../ui/controls.module.css';
+}
+
+.select {
+  align-self: flex-start;
+  min-width: 16rem;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+}

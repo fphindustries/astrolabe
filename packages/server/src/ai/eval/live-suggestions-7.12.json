@@ -1,0 +1,305 @@
+{
+  "about": "Task 7.12 live pass, 2026-09-14: claude-opus-5 suggesting moves (D-135) on the session-2-open fixture. Pass 1 is ten actions with the first prompt; pass 2 repeats the four Rook actions twice after the pronoun rule was added (pass 1 gave Rook \"them\").",
+  "runs": [
+    {
+      "pass": "first prompt",
+      "callsign": "Juno",
+      "actionText": "Juno jacks into the docking port and pulls the station logs.",
+      "expected": "Gather Information +wits (Beat 3)",
+      "ms": 3728,
+      "attempts": 1,
+      "result": {
+        "moveId": "move:adventure/gather-information",
+        "rollOption": {
+          "using": "stat",
+          "stat": "wits"
+        },
+        "triggerText": "search for clues, conduct an investigation",
+        "reason": "Juno pulls the station logs to search for clues in the derelict relay's records.",
+        "confidence": "high"
+      }
+    },
+    {
+      "pass": "first prompt",
+      "callsign": "Vesna",
+      "actionText": "Vesna traces the power draw with the Lantern Wake's sensors.",
+      "expected": "Gather Information (Beat 4)",
+      "ms": 2607,
+      "attempts": 1,
+      "result": {
+        "moveId": "move:adventure/gather-information",
+        "rollOption": {
+          "using": "stat",
+          "stat": "wits"
+        },
+        "triggerText": "you search for clues, conduct an investigation",
+        "reason": "Tracing the power draw with ship sensors is investigating the derelict station for clues.",
+        "confidence": "high"
+      }
+    },
+    {
+      "pass": "first prompt",
+      "callsign": "Rook",
+      "actionText": "Rook secures the airlock before anyone goes deeper.",
+      "expected": "Secure an Advantage (Beat 4)",
+      "ms": 2318,
+      "attempts": 1,
+      "result": {
+        "moveId": "move:adventure/secure-an-advantage",
+        "rollOption": {
+          "using": "stat",
+          "stat": "wits"
+        },
+        "triggerText": "make preparations, or attempt to gain leverage",
+        "reason": "Rook prepares by securing the airlock before the crew presses deeper, using expertise and focus.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "pass": "first prompt",
+      "callsign": "Rook",
+      "actionText": "Rook shoulders through the jammed bulkhead before it seals.",
+      "expected": "Face Danger +iron",
+      "ms": 2709,
+      "attempts": 1,
+      "result": {
+        "moveId": "move:adventure/face-danger",
+        "rollOption": {
+          "using": "stat",
+          "stat": "iron"
+        },
+        "triggerText": "attempt something risky or react to an imminent threat",
+        "reason": "Rook forces through a jammed bulkhead before it closes, a risky act of brute strength.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "pass": "first prompt",
+      "callsign": "Juno",
+      "actionText": "Juno slips past the maintenance drones without being seen.",
+      "expected": "Face Danger +shadow",
+      "ms": 3287,
+      "attempts": 1,
+      "result": {
+        "moveId": "move:adventure/face-danger",
+        "rollOption": {
+          "using": "stat",
+          "stat": "shadow"
+        },
+        "triggerText": "When you attempt something risky",
+        "reason": "Juno sneaks past active drones unseen, a risky act using stealth.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "pass": "first prompt",
+      "callsign": "Vesna",
+      "actionText": "Vesna swears on her blade to find whoever left the station to die.",
+      "expected": "Swear an Iron Vow",
+      "ms": 2363,
+      "attempts": 1,
+      "result": {
+        "moveId": "move:quest/swear-an-iron-vow",
+        "rollOption": {
+          "using": "stat",
+          "stat": "heart"
+        },
+        "triggerText": "When you swear upon iron to complete a quest",
+        "reason": "Vesna swears on her iron blade to complete a quest: finding whoever abandoned the station.",
+        "confidence": "high"
+      }
+    },
+    {
+      "pass": "first prompt",
+      "callsign": "Juno",
+      "actionText": "Juno closes the hatch behind her.",
+      "expected": "none",
+      "ms": 2062,
+      "attempts": 1,
+      "result": {
+        "moveId": null,
+        "reason": "Closing a hatch as stated carries no risk, uncertainty, or investigation, so no move is needed.",
+        "confidence": "high"
+      }
+    },
+    {
+      "pass": "first prompt",
+      "callsign": "Rook",
+      "actionText": "Rook eats a ration bar.",
+      "expected": "none",
+      "ms": 2231,
+      "attempts": 1,
+      "result": {
+        "moveId": null,
+        "reason": "Eating a ration bar carries no risk or uncertainty, so no move is triggered.",
+        "confidence": "high"
+      }
+    },
+    {
+      "pass": "first prompt",
+      "callsign": "Vesna",
+      "actionText": "Vesna wonders whether anyone is still alive aboard, and asks the oracle.",
+      "expected": "Ask the Oracle",
+      "ms": 2463,
+      "attempts": 1,
+      "result": {
+        "moveId": "move:fate/ask-the-oracle",
+        "triggerText": "When you seek to resolve questions, reveal details",
+        "reason": "Vesna poses a question about whether anyone aboard is alive and turns to the oracle for the answer.",
+        "confidence": "high"
+      }
+    },
+    {
+      "pass": "first prompt",
+      "callsign": "Rook",
+      "actionText": "Rook punches the security drone as it lunges.",
+      "expected": "not a candidate (combat)",
+      "ms": 2420,
+      "attempts": 1,
+      "result": {
+        "moveId": "move:adventure/face-danger",
+        "rollOption": {
+          "using": "stat",
+          "stat": "iron"
+        },
+        "triggerText": "react to an imminent threat",
+        "reason": "Rook reacts with aggression to a drone lunging at them.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "pass": "with pronoun rule",
+      "callsign": "Rook",
+      "actionText": "Rook secures the airlock before anyone goes deeper.",
+      "expected": "Secure an Advantage (Beat 4)",
+      "ms": 2609,
+      "attempts": 1,
+      "result": {
+        "moveId": "move:adventure/secure-an-advantage",
+        "rollOption": {
+          "using": "stat",
+          "stat": "wits"
+        },
+        "triggerText": "make preparations",
+        "reason": "Rook secures the airlock as a preparation before the crew goes deeper, applying expertise and focus.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "pass": "with pronoun rule",
+      "callsign": "Rook",
+      "actionText": "Rook shoulders through the jammed bulkhead before it seals.",
+      "expected": "Face Danger +iron",
+      "ms": 3045,
+      "attempts": 1,
+      "result": {
+        "moveId": "move:adventure/face-danger",
+        "rollOption": {
+          "using": "stat",
+          "stat": "iron"
+        },
+        "triggerText": "attempt something risky or react to an imminent threat",
+        "reason": "Rook forces through a jammed bulkhead before it seals, a risky act of brute strength against an imminent closing hatch.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "pass": "with pronoun rule",
+      "callsign": "Rook",
+      "actionText": "Rook eats a ration bar.",
+      "expected": "none",
+      "ms": 2322,
+      "attempts": 1,
+      "result": {
+        "moveId": null,
+        "reason": "Eating a ration bar is a mundane act with no stated risk, threat, or uncertainty, so no move is triggered.",
+        "confidence": "high"
+      }
+    },
+    {
+      "pass": "with pronoun rule",
+      "callsign": "Rook",
+      "actionText": "Rook punches the security drone as it lunges.",
+      "expected": "not a candidate (combat)",
+      "ms": 2492,
+      "attempts": 1,
+      "result": {
+        "moveId": "move:adventure/face-danger",
+        "rollOption": {
+          "using": "stat",
+          "stat": "iron"
+        },
+        "triggerText": "react to an imminent threat",
+        "reason": "Rook strikes back with aggression as the drone lunges, reacting to an imminent threat.",
+        "confidence": "high"
+      }
+    },
+    {
+      "pass": "with pronoun rule",
+      "callsign": "Rook",
+      "actionText": "Rook secures the airlock before anyone goes deeper.",
+      "expected": "Secure an Advantage (Beat 4)",
+      "ms": 2534,
+      "attempts": 1,
+      "result": {
+        "moveId": "move:adventure/secure-an-advantage",
+        "rollOption": {
+          "using": "stat",
+          "stat": "wits"
+        },
+        "triggerText": "make preparations",
+        "reason": "Rook secures the airlock as a preparation before the crew goes deeper, applying expertise and focus.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "pass": "with pronoun rule",
+      "callsign": "Rook",
+      "actionText": "Rook shoulders through the jammed bulkhead before it seals.",
+      "expected": "Face Danger +iron",
+      "ms": 2923,
+      "attempts": 1,
+      "result": {
+        "moveId": "move:adventure/face-danger",
+        "rollOption": {
+          "using": "stat",
+          "stat": "iron"
+        },
+        "triggerText": "attempt something risky or react to an imminent threat",
+        "reason": "Rook forces through a jammed bulkhead before it seals, a risky act of brute strength against an imminent closing.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "pass": "with pronoun rule",
+      "callsign": "Rook",
+      "actionText": "Rook eats a ration bar.",
+      "expected": "none",
+      "ms": 2282,
+      "attempts": 1,
+      "result": {
+        "moveId": null,
+        "reason": "Eating a ration bar is a mundane act with no stated risk, threat, or uncertainty, so no move is triggered.",
+        "confidence": "high"
+      }
+    },
+    {
+      "pass": "with pronoun rule",
+      "callsign": "Rook",
+      "actionText": "Rook punches the security drone as it lunges.",
+      "expected": "not a candidate (combat)",
+      "ms": 2807,
+      "attempts": 1,
+      "result": {
+        "moveId": "move:adventure/face-danger",
+        "rollOption": {
+          "using": "stat",
+          "stat": "iron"
+        },
+        "triggerText": "react to an imminent threat",
+        "reason": "Rook reacts to the lunging drone with a punch, using strength and aggression.",
+        "confidence": "medium"
+      }
+    }
+  ]
+}

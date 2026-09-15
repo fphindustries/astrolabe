@@ -1,0 +1,120 @@
+.composer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.moveName {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-lg);
+  letter-spacing: 0.02em;
+}
+
+.cancel {
+  composes: quiet from '../../ui/controls.module.css';
+}
+
+.trigger {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+.rollOptions {
+  display: flex;
+  gap: var(--space-3);
+  border: none;
+  padding: 0;
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.radio {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+}
+
+.abilities {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+}
+
+.abilityText {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.addRow {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.addLabel {
+  flex: 1;
+}
+
+.addAmount {
+  width: 4rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.label {
+  composes: fieldLabel from '../../ui/controls.module.css';
+}
+
+.actionText {
+  resize: vertical;
+  min-height: 3rem;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+}
+
+.roll {
+  composes: primary from '../../ui/controls.module.css';
+  align-self: flex-start;
+}
+
+/* D-118: the Guide's proposal and its reason, labelled as the Guide's own words. */
+.proposal {
+  font-size: var(--text-sm);
+  color: var(--provenance-ai);
+}
+
+/* D-135: the move came from the Guide's suggestion. */
+.suggested {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--provenance-ai);
+}
+
+.badge {
+  composes: aiBadge from '../../ui/controls.module.css';
+}

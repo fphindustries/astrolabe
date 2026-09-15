@@ -1,0 +1,125 @@
+{
+  "ran": "2026-09-15T01:42:06.186Z",
+  "model": "claude-opus-5",
+  "runs": [
+    {
+      "run": 1,
+      "ms": 7606,
+      "suggestions": [
+        {
+          "who": "Juno",
+          "action": "Juno traces the live life-support circuit back through the station's power grid from the docking port terminal.",
+          "move": "Gather Information",
+          "reason": "The one humming circuit is the only lead on who or what is still aboard after eleven years.",
+          "anchors": [
+            "The player set a complication: The station was abandoned, yet one life-support circuit is still drawing power.",
+            "As narrated: Juno jacks into the docking port and pulls the logs. The evacuation records break off mid-entry, eleven years ago. And yet one life-support circuit, deep in the station, still hums with power.",
+            "Left open last session: One row of windows on Varga Relay is lit."
+          ]
+        },
+        {
+          "who": "Vesna",
+          "action": "Vesna sweeps the relay's transmitter array with the Sensor Array to find what is still feeding the repeating signal.",
+          "move": "Gather Information",
+          "reason": "A dead relay should not be broadcasting, and the beacon is the thread back to Meridian's Hope.",
+          "anchors": [
+            "Left open last session: Why is a dead relay still repeating the signal?",
+            "Left open last session: Who scrubbed the beacon’s origin coordinates, and why?",
+            "Vesna: health 5, spirit 5, supply 5, momentum 7.",
+            "Vow (formidable) \"Recover the flight recorder of Meridian's Hope\": 0 of 10 progress boxes."
+          ]
+        },
+        {
+          "who": "Rook",
+          "action": "Rook moves ahead into the dark corridor toward the lit row of windows, weapon up, clearing each junction.",
+          "move": "Secure an Advantage",
+          "reason": "Someone or something kept those lights burning, and the crew is walking into it blind.",
+          "anchors": [
+            "Left open last session: One row of windows on Varga Relay is lit.",
+            "The player set a complication: The station was abandoned, yet one life-support circuit is still drawing power.",
+            "Rook: health 5, spirit 5, supply 5, momentum 2."
+          ]
+        }
+      ]
+    },
+    {
+      "run": 2,
+      "ms": 6442,
+      "suggestions": [
+        {
+          "who": "Juno",
+          "action": "Juno traces the live life-support circuit back through the station's power schematics to find which compartment it feeds.",
+          "move": "Gather Information",
+          "reason": "The one circuit still drawing power is the thread that could explain the lit windows.",
+          "anchors": [
+            "The player set a complication: The station was abandoned, yet one life-support circuit is still drawing power.",
+            "As narrated: Juno jacks into the docking port and pulls the logs. The evacuation records break off mid-entry, eleven years ago. And yet one life-support circuit, deep in the station, still hums with power.",
+            "Left open last session: One row of windows on Varga Relay is lit."
+          ]
+        },
+        {
+          "who": "Vesna",
+          "action": "Vesna runs the Sensor Array across the relay's transmitter mast to find what is still driving the repeating signal.",
+          "move": "Gather Information",
+          "reason": "A dead relay should not be broadcasting, and the beacon is the trail to Meridian's Hope.",
+          "anchors": [
+            "Left open last session: Why is a dead relay still repeating the signal?",
+            "Left open last session: Who scrubbed the beacon’s origin coordinates, and why?",
+            "Vesna: health 5, spirit 5, supply 5, momentum 7.",
+            "Vow (formidable) \"Recover the flight recorder of Meridian's Hope\": 0 of 10 progress boxes."
+          ]
+        },
+        {
+          "who": "Rook",
+          "action": "Rook moves ahead into the station's dark corridor toward the lit row of windows, weapon up.",
+          "move": "Face Danger",
+          "reason": "Something kept those lights burning for eleven years, and the crew is about to walk into it.",
+          "anchors": [
+            "Left open last session: One row of windows on Varga Relay is lit.",
+            "Rook: health 5, spirit 5, supply 5, momentum 2.",
+            "The scene: The derelict relay station, at Varga Relay."
+          ]
+        }
+      ]
+    },
+    {
+      "run": 3,
+      "ms": 6429,
+      "suggestions": [
+        {
+          "who": "Juno",
+          "action": "Juno keeps digging through the station's broken logs for the entry that shows who cut the beacon's origin coordinates.",
+          "move": "Gather Information",
+          "reason": "The logs are already open and the scrubbed coordinates are the thread back to Meridian's Hope.",
+          "anchors": [
+            "Left open last session: Who scrubbed the beacon’s origin coordinates, and why?",
+            "As narrated: Juno jacks into the docking port and pulls the logs. The evacuation records break off mid-entry, eleven years ago. And yet one life-support circuit, deep in the station, still hums with power.",
+            "Vow (formidable) \"Recover the flight recorder of Meridian's Hope\": 0 of 10 progress boxes."
+          ]
+        },
+        {
+          "who": "Vesna",
+          "action": "Vesna sweeps the Sensor Array across the hull to trace the live circuit and the lit row of windows to a single compartment.",
+          "move": "Secure an Advantage",
+          "reason": "Pinpointing the powered compartment tells the crew where to go before anyone steps inside.",
+          "anchors": [
+            "Left open last session: One row of windows on Varga Relay is lit.",
+            "The player set a complication: The station was abandoned, yet one life-support circuit is still drawing power.",
+            "Vesna: health 5, spirit 5, supply 5, momentum 7."
+          ]
+        },
+        {
+          "who": "Rook",
+          "action": "Rook cycles through the docking hatch and moves down the dark corridor toward the humming circuit, weapon up.",
+          "move": "Face Danger",
+          "reason": "Something has kept power alive for eleven years, and Rook is armored for meeting it.",
+          "anchors": [
+            "The player set a complication: The station was abandoned, yet one life-support circuit is still drawing power.",
+            "Rook: health 5, spirit 5, supply 5, momentum 2.",
+            "The scene: The derelict relay station, at Varga Relay."
+          ]
+        }
+      ]
+    }
+  ]
+}

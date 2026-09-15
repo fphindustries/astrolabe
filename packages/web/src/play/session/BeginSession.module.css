@@ -1,0 +1,50 @@
+.begin {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--surface-border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2) var(--space-4);
+}
+
+.title {
+  font-weight: 600;
+  align-self: center;
+}
+
+.scene {
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.label {
+  composes: fieldLabel from '../../ui/controls.module.css';
+}
+
+.input {
+  background: var(--surface-0);
+  color: var(--text-primary);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  font: inherit;
+}
+
+.start {
+  composes: primary from '../../ui/controls.module.css';
+  margin-left: auto;
+}
+
+.problem {
+  flex-basis: 100%;
+  color: var(--outcome-miss);
+}

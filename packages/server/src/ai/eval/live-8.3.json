@@ -1,0 +1,188 @@
+{
+  "date": "2026-09-14",
+  "runs": [
+    {
+      "scenario": "contradiction",
+      "run": 0,
+      "ok": true,
+      "ms": 21170,
+      "interpretCalls": 2,
+      "rerolls": [
+        "The passage establishes the sleeper as a child, small and light-framed; 'Large' contradicts that."
+      ],
+      "rolls": [
+        "role: Crew",
+        "goal: Claim a resource",
+        "first_look: Large",
+        "disposition: Curious",
+        "given_name: Bruno",
+        "family_name: Valenus",
+        "first_look: Mutated (reroll)"
+      ],
+      "entity": [
+        {
+          "name": "Bruno Valenus",
+          "fields": {
+            "goal": "There is something here he means to have and hold — the station's last working power cell, cabled into the pod and hoarded in the lit compartment. Everything in the room is arranged around keeping it his.",
+            "role": "The child wears the patched jumpsuit of a ship's crewhand, cuffs rolled and a duty harness cinched to the smallest notch. Whatever vessel claimed this berth, the boy was counted among its working hands.",
+            "first_look": "His skin carries a faint mineral sheen along the throat and hands, and the fingers have too many joints, folding oddly where they rest on the pod's rim.",
+            "disposition": "He sleeps lightly, and waking he is more interested than afraid — the sort to ask questions before raising his voice or reaching for a tool."
+          }
+        }
+      ],
+      "chips": 6,
+      "passage": "The lit compartment resolves on the scope: a salvaged medical pod cabled by thick umbilicals to a power cell braced in a nest of scavenged padding, the only bright thing aboard Varga Relay. Every crate and panel in the room has been dragged into a rough ring around it. The child inside wears a crewhand's patched jumpsuit, cuffs rolled, duty harness cinched to its smallest notch. His hands rest on the pod's rim, fingers folding at too many joints, and a faint mineral sheen runs along his throat. He stirs at nothing, lids lifting, and looks toward the compartment hatch without alarm. \"You're not the station,\" he says. \"What are you, then?\""
+    },
+    {
+      "scenario": "contradiction",
+      "run": 1,
+      "ok": true,
+      "ms": 17409,
+      "interpretCalls": 2,
+      "rerolls": [
+        "The passage already establishes the sleeper as a child, small and light-framed; 'Large' contradicts that."
+      ],
+      "rolls": [
+        "role: Crew",
+        "goal: Claim a resource",
+        "first_look: Large",
+        "disposition: Curious",
+        "given_name: Bruno",
+        "family_name: Valenus",
+        "first_look: Scruffy (reroll)"
+      ],
+      "entity": [
+        {
+          "name": "Bruno Valenus",
+          "fields": {
+            "goal": "He wants to claim a resource here and hold it as his own: the station's remaining power is being drawn to one compartment, and he means to keep it.",
+            "role": "The child is crew — signed on to a ship's roster, not a passenger, and carries himself like someone with duties and a berth.",
+            "first_look": "Scruffy — patched coveralls cut down to fit, hair shorn unevenly, grime worked into the creases of his hands.",
+            "disposition": "Curious rather than hostile; he watches new things closely and wants to know what they are before deciding anything about them."
+          }
+        }
+      ],
+      "chips": 6,
+      "passage": "The sleeper is not asleep. The lid of the pod swings up with a hydraulic sigh and a boy sits forward into the light, patched coveralls cut down to fit him, hair shorn unevenly close. Grime is worked deep into the creases of his hands as he swings his legs out and stands on the deck plating like someone with a berth and a shift to keep. Behind him the compartment hums, every remaining watt in Varga Relay bled down the corridors and pooled here, warm against the cold of the rest of the station. He looks up at the scan haze and the dark viewport beyond it, head tilted, unhurried. \"You're new,\" he says. \"Say what you are before you come any closer. This compartment's mine.\""
+    },
+    {
+      "scenario": "contradiction",
+      "run": 2,
+      "ok": true,
+      "ms": 18143,
+      "interpretCalls": 2,
+      "rerolls": [
+        "The passage establishes the sleeper as a child, small and light-framed; 'Large' contradicts that."
+      ],
+      "rolls": [
+        "role: Crew",
+        "goal: Claim a resource",
+        "first_look: Large",
+        "disposition: Curious",
+        "given_name: Bruno",
+        "family_name: Valenus",
+        "first_look: Plain (reroll)"
+      ],
+      "entity": [
+        {
+          "name": "Bruno Valenus",
+          "fields": {
+            "goal": "Whatever the station still has — power, air, the stores in that compartment — Bruno means to hold it as his own.",
+            "role": "The child wears the worn insignia and utility harness of ship's crew, sized down and cinched to fit.",
+            "first_look": "Plain-featured and unremarkable, the sort of face that would vanish in any dock crowd.",
+            "disposition": "He is curious rather than frightened, the kind who asks questions before he decides what to do about the answers."
+          }
+        }
+      ],
+      "chips": 6,
+      "passage": "The lid of the pod lifts another handspan from the inside, and the sleeper is not sleeping anymore. A boy sits up in the cold blue light, small enough that the crew insignia on his chest has been cut down and restitched to fit, the utility harness cinched in at the last hole. His face is plain, forgettable, the kind that would slide past unnoticed in any dock crowd — but the eyes track the compartment hatch steadily, without hurry and without fear. He swings his legs over the pod rim and plants himself between the hatch and the stacked crates behind him, one hand settling on the frame. \"Who's out there?\" he calls, unhurried. \"The air in here is mine. So's the power. Say what you came for.\""
+    },
+    {
+      "scenario": "control",
+      "run": 0,
+      "ok": true,
+      "ms": 15153,
+      "interpretCalls": 1,
+      "rerolls": [],
+      "rolls": [
+        "role: Crew",
+        "goal: Claim a resource",
+        "first_look: Scruffy",
+        "disposition: Curious",
+        "given_name: Bruno",
+        "family_name: Valenus"
+      ],
+      "entity": [
+        {
+          "name": "Bruno Valenus",
+          "fields": {
+            "goal": "He wants a resource held and named as his: the power the lit compartment still draws, and whatever keeps it flowing.",
+            "role": "For all his small size, the child wears the station like a berth he's been assigned to — crew, by his own reckoning, keeping watch over a post nobody else mans.",
+            "first_look": "Scruffy — hair grown out in uneven hanks, coverall sleeves rolled and re-rolled, grime worked deep into the creases of his hands.",
+            "disposition": "Curious rather than frightened; he wakes wanting to know, questions ready before caution is."
+          }
+        }
+      ],
+      "chips": 6,
+      "passage": "The pod's lid lifts with a pneumatic sigh, and the boy inside sits up all at once, blinking into the compartment's one working light. Hair grown out in uneven hanks, coverall sleeves rolled and re-rolled past his wrists, grime worked deep into the creases of his hands. He swings his legs out and drops to the decking barefoot, unhurried, the way crew move through a space they have stood watch in a long time. His eyes go first to the conduit panel above the pod, where the indicator still burns steady amber. \"You came off the ice side,\" he says to the dark beyond the window row, voice thin and clear over the hum. \"Nobody comes off the ice side. What are you drawing on? Because this compartment's power is mine — Bruno Valenus, and I keep it lit.\""
+    },
+    {
+      "scenario": "control",
+      "run": 1,
+      "ok": true,
+      "ms": 14807,
+      "interpretCalls": 1,
+      "rerolls": [],
+      "rolls": [
+        "role: Crew",
+        "goal: Claim a resource",
+        "first_look: Scruffy",
+        "disposition: Curious",
+        "given_name: Bruno",
+        "family_name: Valenus"
+      ],
+      "entity": [
+        {
+          "name": "Bruno Valenus",
+          "fields": {
+            "goal": "He is set on claiming something here for himself — a resource he has been hoarding in the lit compartment and will not easily give up.",
+            "role": "Despite his size, the boy wears the patched jumpsuit and tool harness of station crew, a tag at the collar naming him one of the relay's complement.",
+            "first_look": "Scruffy: hair hacked short with a blade, grime worked into every crease, sleeves cut down to fit and frayed at the ends.",
+            "disposition": "Curious rather than fearful — he watches strangers the way he watches unfamiliar machinery, wanting to know what it does before deciding whether to run."
+          }
+        }
+      ],
+      "chips": 6,
+      "passage": "The life sign shifts. On the scope the small shape uncurls, and the medical pod's cracked lid swings wider with a groan that carries up the station's cold spine. He is bigger than the trace suggested — a boy in a station jumpsuit patched at both knees, sleeves hacked down and frayed, a tool harness slung across his chest and a crew tag at the collar reading Bruno Valenus. Hair cut short with a blade, grime in every crease, he plants himself between the pod and a stack of crates lashed under the lit compartment's only working lamp. His voice comes thin through the relay's still-open channel, unafraid and interested. \"I hear your engines. What is it you fly?\""
+    },
+    {
+      "scenario": "control",
+      "run": 2,
+      "ok": true,
+      "ms": 13889,
+      "interpretCalls": 1,
+      "rerolls": [],
+      "rolls": [
+        "role: Crew",
+        "goal: Claim a resource",
+        "first_look: Scruffy",
+        "disposition: Curious",
+        "given_name: Bruno",
+        "family_name: Valenus"
+      ],
+      "entity": [
+        {
+          "name": "Bruno Valenus",
+          "fields": {
+            "goal": "He wants the station's last working power cell for himself — the one thing keeping his compartment lit and warm.",
+            "role": "Despite his size, the boy wears the patched coverall of ship's crew, sleeves rolled and cuffs cut to fit.",
+            "first_look": "Scruffy: matted hair, grime worked into the creases of his neck and hands, the coverall stained past cleaning.",
+            "disposition": "He is more curious than afraid, the sort who asks questions before he decides whether to run."
+          }
+        }
+      ],
+      "chips": 6,
+      "passage": "The pod's lid rocks on its hinge, and the small shape inside sits up all at once, blinking into the compartment's brown emergency light. He is a boy, no more than waist-high, in a ship's crew coverall patched a dozen times, sleeves rolled thick at the elbow and cuffs sawn short to fit him. Matted hair stands up on one side; grime has settled into the creases of his neck and knuckles, and the coverall is stained well past any washing. He does not bolt. He swings his legs over the pod's edge, tips his head toward the hatch, and says, \"You came in quiet. You after the cell, or something else?\" Behind him, a single cable runs from a battered power cell to the compartment's heater, which ticks steadily in the cold."
+    }
+  ]
+}

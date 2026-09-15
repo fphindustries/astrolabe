@@ -1,0 +1,16 @@
+.clock {
+  flex: 0 0 auto;
+  display: block;
+}
+
+.segment {
+  fill: var(--surface-0);
+  stroke: var(--surface-border-strong);
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+
+.segment[data-filled='true'] {
+  fill: var(--accent);
+  stroke: var(--surface-1);
+}

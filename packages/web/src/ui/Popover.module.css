@@ -1,0 +1,20 @@
+.popover {
+  position: fixed;
+  margin: 0;
+  max-width: 20rem;
+  padding: var(--space-3);
+  border: 1px solid var(--surface-border-strong);
+  box-shadow: var(--shadow-overlay);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+
+.popover p {
+  margin: 0;
+}
+
+.popover p + p {
+  margin-top: var(--space-1);
+}

@@ -1,0 +1,1268 @@
+{
+  "date": "2026-09-14",
+  "narrator": "claude-opus-5",
+  "note": "Step-0 world-pass spike (D-138). Run 1 (no outcome text in the plan prompt, 2 runs per planner, Opus/Sonnet) was overwritten; its timings are in the milestone notes. Run 2: Beat 6 with outcome text. Run 3: Haiku 4.5, recipe forced when not requested.",
+  "run2": [
+    {
+      "label": "beat6-scan",
+      "plannerModel": "claude-opus-5",
+      "run": 0,
+      "planMs": 2658,
+      "plan": {
+        "recipes": [
+          {
+            "recipe": "recipe:derelict",
+            "why": "The power draw traces to a previously unestablished derelict hulk docked to or drifting at the relay, discovered by the sensor sweep."
+          }
+        ],
+        "clocks": []
+      },
+      "rolls": [
+        "condition: Heavily damaged",
+        "outer_first_look: Sending a signal or message",
+        "inner_first_look: Fluctuating power"
+      ],
+      "interpretMs": 7710,
+      "interpreted": {
+        "review": [
+          {
+            "roll": "R1",
+            "fits": true,
+            "reason": "A relay station dark for a generation being heavily damaged fits its derelict state."
+          },
+          {
+            "roll": "R2",
+            "fits": true,
+            "reason": "A signal being sent explains the power draw Vesna traced with sensors."
+          },
+          {
+            "roll": "R3",
+            "fits": true,
+            "reason": "Fluctuating power inside matches the intermittent draw detected."
+          }
+        ],
+        "entity": {
+          "name": "Varga Relay Station",
+          "fields": [
+            {
+              "slot": "condition",
+              "text": "Heavily damaged: whole sections of the ring hull are torn open, antenna masts snapped and drifting on their cables.",
+              "cites": ["R1"]
+            },
+            {
+              "slot": "outer_first_look",
+              "text": "Despite the ruin, a narrow-beam transmission pulses outward from the station's core on a repeating cycle — something in there is still talking.",
+              "cites": ["R2"]
+            },
+            {
+              "slot": "inner_first_look",
+              "text": "Inside, power surges and dies in waves: corridor lights flare, then drown in darkness, as the source of the draw cycles somewhere deeper.",
+              "cites": ["R3"]
+            }
+          ]
+        }
+      },
+      "narrationFirstTextMs": 1752,
+      "firstTextFromRequestMs": 12120,
+      "narrationMs": 6347,
+      "facts": "[F1] (move, Vesna) Vesna makes the move Gather Information with wits.\n[F2] (declared action, Vesna) The player declared: \"Vesna traces the power draw with the Lantern Wake's sensors.\"\n[F3] (roll, Vesna) Roll: action die 6 +2 wits = 8, against challenge dice 3 and 2: a strong hit.\n[F4] (effect, Vesna) Vesna: momentum +2.\n[F5] (effect) A non-player character is established from oracle rolls: Varga Relay Station (condition: Heavily damaged: whole sections of the ring hull are torn open, antenna masts snapped and drifting on their cables.; outer_first_look: Despite the ruin, a narrow-beam transmission pulses outward from the station's core on a repeating cycle — something in there is still talking.; inner_first_look: Inside, power surges and dies in waves: corridor lights flare, then drown in darkness, as the source of the draw cycles somewhere deeper.).",
+      "passage": {
+        "segments": [
+          {
+            "about": "character_does",
+            "character": "Vesna",
+            "basis": ["F1", "F2"],
+            "text": "Vesna traces the power draw with the Lantern Wake's sensors, walking the array's gain up a notch at a time until the station resolves out of the cold."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F3", "F5"],
+            "text": "The returns come back clean and unambiguous: the ring hull is torn open in whole sections, antenna masts snapped and trailing on their cables like cut tendons."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F5"],
+            "text": "Through all that ruin, a narrow-beam transmission pulses outward from the station's core on a patient repeating cycle, something in there still talking to nobody."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F5"],
+            "text": "The draw itself comes in waves — the one lit row of windows flares, drowns, flares again, the source of it cycling somewhere deeper in than the scopes can reach."
+          },
+          {
+            "about": "character_undergoes",
+            "character": "Vesna",
+            "basis": ["F4"],
+            "text": "The reading settles under Vesna's hands with the easy weight of a thing already half-understood."
+          }
+        ]
+      }
+    },
+    {
+      "label": "beat6-scan",
+      "plannerModel": "claude-opus-5",
+      "run": 1,
+      "planMs": 4912,
+      "plan": {
+        "recipes": [
+          {
+            "recipe": "recipe:npc",
+            "why": "The sensor trace pins the power draw to a single compartment still running life support — someone has been living aboard the dark station, and this person is not yet established."
+          }
+        ],
+        "clocks": []
+      },
+      "rolls": [
+        "role: Spacer",
+        "goal: End a conflict",
+        "first_look: Mutated",
+        "disposition: Wanting",
+        "given_name: Gavin",
+        "family_name: Vandu"
+      ],
+      "interpretMs": 8017,
+      "interpreted": {
+        "review": [
+          {
+            "roll": "R1",
+            "fits": true,
+            "reason": "A spacer surviving alone aboard the dark relay station fits the derelict setting."
+          },
+          {
+            "roll": "R2",
+            "fits": true,
+            "reason": "Ending a conflict works as a goal for a lone holdout drawing power in secret."
+          },
+          {
+            "roll": "R3",
+            "fits": true,
+            "reason": "A generation in an unshielded relay station plausibly mutated him."
+          },
+          {
+            "roll": "R4",
+            "fits": true,
+            "reason": "Wanting fits someone starved for supply and contact."
+          },
+          {
+            "roll": "R5",
+            "fits": true,
+            "reason": "Human given name, consistent with Forge survivors."
+          },
+          {
+            "roll": "R6",
+            "fits": true,
+            "reason": "Family name consistent with Exodus-descended lineages."
+          }
+        ],
+        "entity": {
+          "name": "Gavin Vandu",
+          "fields": [
+            {
+              "slot": "role",
+              "text": "A spacer, sole living occupant of Varga Relay, source of the power draw Vesna's sensors traced to the station's lower core.",
+              "cites": ["R1"]
+            },
+            {
+              "slot": "goal",
+              "text": "Wants to end the old conflict that stranded him here — a feud between the relay crew and a ship that never came back.",
+              "cites": ["R2"]
+            },
+            {
+              "slot": "first_look",
+              "text": "Mutated: pallid, radiation-etched skin and too-long fingers, eyes adapted to darkness.",
+              "cites": ["R3"]
+            },
+            {
+              "slot": "disposition",
+              "text": "Wanting — desperate for supplies, working parts, and any voice that isn't the station's own echo.",
+              "cites": ["R4"]
+            }
+          ]
+        }
+      },
+      "narrationFirstTextMs": 2066,
+      "firstTextFromRequestMs": 14995,
+      "narrationMs": 19874,
+      "facts": "[F1] (move, Vesna) Vesna makes the move Gather Information with wits.\n[F2] (declared action, Vesna) The player declared: \"Vesna traces the power draw with the Lantern Wake's sensors.\"\n[F3] (roll, Vesna) Roll: action die 6 +2 wits = 8, against challenge dice 3 and 2: a strong hit.\n[F4] (effect, Vesna) Vesna: momentum +2.\n[F5] (effect) A non-player character is established from oracle rolls: Gavin Vandu (role: A spacer, sole living occupant of Varga Relay, source of the power draw Vesna's sensors traced to the station's lower core.; goal: Wants to end the old conflict that stranded him here — a feud between the relay crew and a ship that never came back.; first_look: Mutated: pallid, radiation-etched skin and too-long fingers, eyes adapted to darkness.; disposition: Wanting — desperate for supplies, working parts, and any voice that isn't the station's own echo.).",
+      "passage": {
+        "segments": [
+          {
+            "about": "character_does",
+            "character": "Vesna",
+            "basis": ["F1", "F2"],
+            "text": "Vesna walks the Lantern Wake's sensors across the relay's hull, narrowing the sweep until the power draw resolves into a single thread."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F3"],
+            "text": "The trace runs down through dead decks and ends in the lower core, where a jury-rigged tap bleeds off just enough current to keep one row of windows lit and one air recycler turning."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F5"],
+            "text": "There is a body moving in that light: pallid, radiation-etched skin, fingers too long on the console, eyes wide and pale as a deep-water thing's. The station's own log answers the ping with a name worn smooth by repetition — Gavin Vandu, sole occupant, still broadcasting a grievance about a ship that never came back."
+          },
+          {
+            "about": "character_undergoes",
+            "character": "Vesna",
+            "basis": ["F4"],
+            "text": "The readout settles clean and steady, and the Lantern Wake's helm comes alive under Vesna's hands with the easy surplus of a course already known."
+          }
+        ]
+      }
+    },
+    {
+      "label": "beat6-scan",
+      "plannerModel": "claude-opus-5",
+      "run": 2,
+      "planMs": 3797,
+      "plan": {
+        "recipes": [
+          {
+            "recipe": "recipe:derelict",
+            "why": "The power draw leads to an unestablished derelict structure within the relay station's dark hulk; its type and condition should be rolled, not invented."
+          }
+        ],
+        "clocks": [
+          {
+            "title": "Something answers the sensor sweep",
+            "segments": 6,
+            "filled": 1,
+            "reason": "An active power draw in a station dark for a generation means whatever is drawing it now knows it has been scanned."
+          }
+        ]
+      },
+      "rolls": [
+        "condition: Damaged or breached",
+        "outer_first_look: Overgrown or entangled",
+        "inner_first_look: Creaking hull"
+      ],
+      "interpretMs": 7415,
+      "interpreted": {
+        "review": [
+          {
+            "roll": "R1",
+            "fits": true,
+            "reason": "A generation-dark relay station being damaged or breached fits its abandonment and explains an odd power draw."
+          },
+          {
+            "roll": "R2",
+            "fits": true,
+            "reason": "Overgrown/entangled works as creeping growth or cable-tangle on the station's exterior at the sector edge."
+          },
+          {
+            "roll": "R3",
+            "fits": true,
+            "reason": "A creaking hull suits a stressed, breached structure still drawing power."
+          }
+        ],
+        "entity": {
+          "name": "Varga Relay Station",
+          "fields": [
+            {
+              "slot": "condition",
+              "text": "The station is breached — a ragged tear along its lower ring, atmosphere long since bled out, yet a stubborn trickle of power still runs through its spine.",
+              "cites": ["R1"]
+            },
+            {
+              "slot": "outer_first_look",
+              "text": "From outside it looks swallowed: snarls of drifting cable and pale filament growth have wrapped the antenna array like roots over a grave marker.",
+              "cites": ["R2"]
+            },
+            {
+              "slot": "inner_first_look",
+              "text": "Inside, the hull creaks and groans around the intruders, metal flexing as if the station is still settling after a generation of silence.",
+              "cites": ["R3"]
+            }
+          ]
+        }
+      },
+      "narrationFirstTextMs": 2822,
+      "firstTextFromRequestMs": 14034,
+      "narrationMs": 7126,
+      "facts": "[F1] (move, Vesna) Vesna makes the move Gather Information with wits.\n[F2] (declared action, Vesna) The player declared: \"Vesna traces the power draw with the Lantern Wake's sensors.\"\n[F3] (roll, Vesna) Roll: action die 6 +2 wits = 8, against challenge dice 3 and 2: a strong hit.\n[F4] (effect, Vesna) Vesna: momentum +2.\n[F5] (effect) A non-player character is established from oracle rolls: Varga Relay Station (condition: The station is breached — a ragged tear along its lower ring, atmosphere long since bled out, yet a stubborn trickle of power still runs through its spine.; outer_first_look: From outside it looks swallowed: snarls of drifting cable and pale filament growth have wrapped the antenna array like roots over a grave marker.; inner_first_look: Inside, the hull creaks and groans around the intruders, metal flexing as if the station is still settling after a generation of silence.).\n[F6] (effect) The Guide starts a clock, \"Something answers the sensor sweep\" (6 segments), with 1 filled: An active power draw in a station dark for a generation means whatever is drawing it now knows it has been scanned.",
+      "passage": {
+        "segments": [
+          {
+            "about": "character_does",
+            "character": "Vesna",
+            "basis": ["F1", "F2"],
+            "text": "Vesna runs the sensor array along the relay's spine, walking the return through the power bands until the trickle resolves into a line she can trace."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F3", "F5"],
+            "text": "The picture comes back clean: a ragged tear opened along the lower ring, atmosphere long since bled out, and still a thread of current running the station's length. Outside, drifting cable and pale filament growth have wrapped the antenna array like roots over a grave marker."
+          },
+          {
+            "about": "character_undergoes",
+            "character": "Vesna",
+            "basis": ["F4"],
+            "text": "The read lands solid, and the Lantern Wake's drive note rises a half-step under the deck plates."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F6"],
+            "text": "On the scope, the draw flickers once, out of rhythm. Whatever is pulling that power has just been touched by the sweep, and the dark row of windows holds steady, watching back."
+          }
+        ]
+      }
+    },
+    {
+      "label": "beat6-scan",
+      "plannerModel": "claude-sonnet-5",
+      "run": 0,
+      "planMs": 3696,
+      "plan": {
+        "recipes": [],
+        "clocks": []
+      },
+      "rolls": [],
+      "narrationFirstTextMs": 1805,
+      "firstTextFromRequestMs": 5501,
+      "narrationMs": 18961,
+      "facts": "[F1] (move, Vesna) Vesna makes the move Gather Information with wits.\n[F2] (declared action, Vesna) The player declared: \"Vesna traces the power draw with the Lantern Wake's sensors.\"\n[F3] (roll, Vesna) Roll: action die 6 +2 wits = 8, against challenge dice 3 and 2: a strong hit.\n[F4] (effect, Vesna) Vesna: momentum +2.",
+      "passage": {
+        "segments": [
+          {
+            "about": "character_does",
+            "character": "Vesna",
+            "basis": ["F1", "F2"],
+            "text": "Vesna walks the Sensor Array along the relay's hull, tracing the power draw from that one lit row of windows back toward its source."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F3"],
+            "text": "The return comes back cleaner than it has any right to: a thin trickle of current running down a single spine of conduit, feeding one compartment deep in the station's core. Everything else on Varga Relay is cold iron and vacuum, forty years dead."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F3"],
+            "text": "The draw pulses in a slow, patient rhythm, the signature of a reactor idling at the lowest setting a machine can hold and still call itself alive. Whatever is repeating the beacon is down there, and it is drawing barely enough to notice."
+          },
+          {
+            "about": "character_undergoes",
+            "character": "Vesna",
+            "basis": ["F4"],
+            "text": "The plot resolves on the display, sharp-edged and certain, and the Lantern Wake's hull ticks softly around her in the cold."
+          }
+        ]
+      }
+    },
+    {
+      "label": "beat6-scan",
+      "plannerModel": "claude-sonnet-5",
+      "run": 1,
+      "planMs": 2415,
+      "plan": {
+        "recipes": [],
+        "clocks": [
+          {
+            "title": "Hidden system waking within Varga Relay",
+            "segments": 6,
+            "filled": 1,
+            "reason": "The traced power draw reveals something aboard the derelict is drawing energy and stirring after a generation of silence."
+          }
+        ]
+      },
+      "rolls": [],
+      "narrationFirstTextMs": 3702,
+      "firstTextFromRequestMs": 6117,
+      "narrationMs": 16920,
+      "facts": "[F1] (move, Vesna) Vesna makes the move Gather Information with wits.\n[F2] (declared action, Vesna) The player declared: \"Vesna traces the power draw with the Lantern Wake's sensors.\"\n[F3] (roll, Vesna) Roll: action die 6 +2 wits = 8, against challenge dice 3 and 2: a strong hit.\n[F4] (effect, Vesna) Vesna: momentum +2.\n[F5] (effect) The Guide starts a clock, \"Hidden system waking within Varga Relay\" (6 segments), with 1 filled: The traced power draw reveals something aboard the derelict is drawing energy and stirring after a generation of silence.",
+      "passage": {
+        "segments": [
+          {
+            "about": "character_does",
+            "character": "Vesna",
+            "basis": ["F1", "F2"],
+            "text": "Vesna traces the power draw with the Lantern Wake's sensors, walking the array across the relay's hull in slow overlapping sweeps."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F3"],
+            "text": "The return comes back clean: a thin thread of current running from the lit row of windows down through the station's spine, steady as a pulse."
+          },
+          {
+            "about": "character_undergoes",
+            "character": "Vesna",
+            "basis": ["F4"],
+            "text": "The console warms under her hands as the array holds its lock, the readout settling into something usable."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F5"],
+            "text": "Deep in the derelict, something is drawing energy after a generation of dark. The draw ticks upward by a fraction while the scopes watch, and the cold smudge of Varga Relay keeps turning against the ice."
+          }
+        ]
+      }
+    },
+    {
+      "label": "beat6-scan",
+      "plannerModel": "claude-sonnet-5",
+      "run": 2,
+      "planMs": 5516,
+      "plan": {
+        "recipes": [
+          {
+            "recipe": "recipe:npc",
+            "why": "The power draw traced by Vesna's sensors leads to an active presence aboard the derelict station—something or someone still drawing energy after a generation of silence needs to be defined."
+          }
+        ],
+        "clocks": [
+          {
+            "title": "Power Anomaly Escalation",
+            "segments": 6,
+            "filled": 1,
+            "reason": "The traced power draw reveals unstable, active systems aboard a station dark for a generation, hinting at a threat that could awaken as the crew investigates further."
+          }
+        ]
+      },
+      "rolls": [
+        "role: Smuggler",
+        "goal: Repair a technology",
+        "first_look: Well-equipped",
+        "disposition: Suspicious",
+        "given_name: Brennan",
+        "family_name: Keelan"
+      ],
+      "interpretMs": 6885,
+      "interpreted": {
+        "review": [
+          {
+            "roll": "R1",
+            "fits": true,
+            "reason": "A smuggler lurking at a dark derelict relay fits the isolated, lawless edges of the Forge."
+          },
+          {
+            "roll": "R2",
+            "fits": true,
+            "reason": "Repairing tech explains the power draw Vesna detected on her sensors."
+          },
+          {
+            "roll": "R3",
+            "fits": true,
+            "reason": "Well-equipped suits a smuggler who has managed to survive alone at a derelict station."
+          },
+          {
+            "roll": "R4",
+            "fits": true,
+            "reason": "Suspicious disposition fits someone caught unexpectedly by scanning strangers."
+          },
+          {
+            "roll": "R5",
+            "fits": true,
+            "reason": "Works as a first name for the NPC."
+          },
+          {
+            "roll": "R6",
+            "fits": true,
+            "reason": "Works as a family name for the NPC."
+          }
+        ],
+        "entity": {
+          "name": "Brennan Keelan",
+          "fields": [
+            {
+              "slot": "role",
+              "text": "A smuggler who has been using the relay station as a hidden waystation for illicit cargo.",
+              "cites": ["R1"]
+            },
+            {
+              "slot": "goal",
+              "text": "He's holed up trying to repair a damaged piece of technology, and the odd power draw Vesna picked up is his rig at work.",
+              "cites": ["R2"]
+            },
+            {
+              "slot": "first_look",
+              "text": "Despite the station's decay, Brennan is well-equipped: good gear, spare parts, and a functioning workshop carved out of the wreck.",
+              "cites": ["R3"]
+            },
+            {
+              "slot": "disposition",
+              "text": "He's wary and suspicious of the newcomers, unsure if they're salvagers, authorities, or rivals come to take what he's claimed.",
+              "cites": ["R4"]
+            }
+          ]
+        }
+      },
+      "narrationFirstTextMs": 1974,
+      "firstTextFromRequestMs": 14375,
+      "narrationMs": 6381,
+      "facts": "[F1] (move, Vesna) Vesna makes the move Gather Information with wits.\n[F2] (declared action, Vesna) The player declared: \"Vesna traces the power draw with the Lantern Wake's sensors.\"\n[F3] (roll, Vesna) Roll: action die 6 +2 wits = 8, against challenge dice 3 and 2: a strong hit.\n[F4] (effect, Vesna) Vesna: momentum +2.\n[F5] (effect) A non-player character is established from oracle rolls: Brennan Keelan (role: A smuggler who has been using the relay station as a hidden waystation for illicit cargo.; goal: He's holed up trying to repair a damaged piece of technology, and the odd power draw Vesna picked up is his rig at work.; first_look: Despite the station's decay, Brennan is well-equipped: good gear, spare parts, and a functioning workshop carved out of the wreck.; disposition: He's wary and suspicious of the newcomers, unsure if they're salvagers, authorities, or rivals come to take what he's claimed.).\n[F6] (effect) The Guide starts a clock, \"Power Anomaly Escalation\" (6 segments), with 1 filled: The traced power draw reveals unstable, active systems aboard a station dark for a generation, hinting at a threat that could awaken as the crew investigates further.",
+      "passage": {
+        "segments": [
+          {
+            "about": "character_does",
+            "character": "Vesna",
+            "basis": ["F1", "F2", "F3"],
+            "text": "Vesna walks the Lantern Wake's sensors across the relay's flank, tracing the power draw down through the scorched hull until the return resolves clean and bright on the board."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F5"],
+            "text": "The draw narrows to one compartment behind the lit windows: a workshop cut out of the wreck, racked with spare parts and good tools, and a man at the center of it bent over a damaged piece of technology, his rig pulling current. The station's registry is forty years silent, but the salvager's own transponder chirps a name into the gap: Brennan Keelan."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F6"],
+            "text": "Past his little island of light, older systems answer the scan too, drawing unevenly, stirring in a hull that has been dark for a generation."
+          }
+        ]
+      }
+    }
+  ],
+  "run3": [
+    {
+      "label": "beat6-scan",
+      "plannerModel": "claude-haiku-4-5",
+      "run": 0,
+      "planMs": 4322,
+      "plan": {
+        "recipes": [],
+        "clocks": [
+          {
+            "title": "Power source reactivation sequence",
+            "segments": 6,
+            "filled": 1,
+            "reason": "Vesna's sensors detected active power draw at a dark relay station, suggesting something is coming online after a generation of silence."
+          }
+        ]
+      },
+      "rolls": [
+        "role: Roll twice",
+        "goal: Claim a resource",
+        "first_look: Alluring",
+        "disposition: Suspicious",
+        "given_name: Saren",
+        "family_name: Gray"
+      ],
+      "interpretMs": 16095,
+      "interpreted": {
+        "review": [
+          {
+            "roll": "R1",
+            "fits": true,
+            "reason": "An NPC role fits naturally as Vesna's sensor sweep discovers evidence of someone or something at the relay station, grounding the world's isolation and the unknown fate of settlements."
+          },
+          {
+            "roll": "R2",
+            "fits": true,
+            "reason": "An NPC goal to claim a resource aligns with the scarcity and desperation established in the setting—survivors in this galaxy are starved for resources."
+          },
+          {
+            "roll": "R3",
+            "fits": true,
+            "reason": "An alluring first look fits the discovery context; Vesna's strong hit reveals something compelling enough to warrant further investigation at this dark, abandoned station."
+          },
+          {
+            "roll": "R4",
+            "fits": true,
+            "reason": "Suspicious disposition fits the isolation and wariness of the Forge's survivors, especially someone encountered at a derelict station after a generation of darkness."
+          },
+          {
+            "roll": "R5",
+            "fits": true,
+            "reason": "A given name grounds the NPC as a real individual with history in this world."
+          },
+          {
+            "roll": "R6",
+            "fits": true,
+            "reason": "A family name completes the NPC's identity, suggesting lineage and connections within the scattered settlements of the Forge."
+          }
+        ],
+        "entity": {
+          "name": "Saren Gray",
+          "fields": [
+            {
+              "slot": "role",
+              "text": "A scavenger or technician who has made the relay station a hidden refuge, drawn to the isolated outpost for reasons of their own.",
+              "cites": ["R1"]
+            },
+            {
+              "slot": "goal",
+              "text": "Secure valuable salvage or technology from the station's systems before rivals or authorities discover what lies here.",
+              "cites": ["R2"]
+            },
+            {
+              "slot": "first_look",
+              "text": "A figure with striking features—perhaps bearing the weathered grace of long survival, or adorned with salvaged tech that catches the light in unexpected ways.",
+              "cites": ["R3"]
+            },
+            {
+              "slot": "disposition",
+              "text": "Wary and guarded, viewing the crew's arrival as a threat to their operation; unlikely to trust outsiders without proof of good intentions.",
+              "cites": ["R4"]
+            }
+          ]
+        }
+      },
+      "narrationFirstTextMs": 3428,
+      "firstTextFromRequestMs": 23845,
+      "narrationMs": 19964,
+      "facts": "[F1] (move, Vesna) Vesna makes the move Gather Information with wits.\n[F2] (declared action, Vesna) The player declared: \"Vesna traces the power draw with the Lantern Wake's sensors.\"\n[F3] (roll, Vesna) Roll: action die 6 +2 wits = 8, against challenge dice 3 and 2: a strong hit.\n[F4] (effect, Vesna) Vesna: momentum +2.\n[F5] (effect) A non-player character is established from oracle rolls: Saren Gray (role: A scavenger or technician who has made the relay station a hidden refuge, drawn to the isolated outpost for reasons of their own.; goal: Secure valuable salvage or technology from the station's systems before rivals or authorities discover what lies here.; first_look: A figure with striking features—perhaps bearing the weathered grace of long survival, or adorned with salvaged tech that catches the light in unexpected ways.; disposition: Wary and guarded, viewing the crew's arrival as a threat to their operation; unlikely to trust outsiders without proof of good intentions.).\n[F6] (effect) The Guide starts a clock, \"Power source reactivation sequence\" (6 segments), with 1 filled: Vesna's sensors detected active power draw at a dark relay station, suggesting something is coming online after a generation of silence.",
+      "passage": {
+        "segments": [
+          {
+            "about": "character_does",
+            "character": "Vesna",
+            "basis": ["F1", "F2"],
+            "text": "Vesna traces the power draw with the Lantern Wake's sensors, walking the array across the relay's hull one meter at a time."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F3"],
+            "text": "The return is clean: a thin, steady bleed of current running from the station's spine toward a reactor housing that should have been cold for a generation."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F6"],
+            "text": "The draw is climbing in slow, deliberate steps, the shape of a startup sequence being coaxed along by hand rather than one waking on its own."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F5"],
+            "text": "Halfway down that lit row of windows a figure crosses the glass, weathered and unhurried, salvaged plating at one shoulder throwing back a hard flake of light before the shape moves out of frame."
+          },
+          {
+            "about": "character_undergoes",
+            "character": "Vesna",
+            "basis": ["F4"],
+            "text": "The scope hum settles into a smoother register under Vesna's palms, the readouts arriving faster than they need to be chased."
+          }
+        ]
+      }
+    },
+    {
+      "label": "beat6-scan",
+      "plannerModel": "claude-haiku-4-5",
+      "run": 1,
+      "planMs": 4114,
+      "plan": {
+        "recipes": [],
+        "clocks": [
+          {
+            "title": "Varga Relay power systems destabilization",
+            "segments": 6,
+            "filled": 1,
+            "reason": "Ancient relay station's hidden power source detected by active sensor scan; degraded systems may cascade if further disturbed."
+          }
+        ]
+      },
+      "rolls": [
+        "role: Scout",
+        "goal: Seek redemption",
+        "first_look: Weathered",
+        "disposition: Demanding",
+        "given_name: Saren",
+        "family_name: Sutton"
+      ],
+      "interpretMs": 9621,
+      "interpreted": {
+        "review": [
+          {
+            "roll": "R1",
+            "fits": true,
+            "reason": "A scout fits naturally at a relay station - someone who would maintain or investigate communications infrastructure"
+          },
+          {
+            "roll": "R2",
+            "fits": true,
+            "reason": "Seeking redemption is a compelling personal motivation for someone isolated at a derelict outpost for a generation"
+          },
+          {
+            "roll": "R3",
+            "fits": true,
+            "reason": "Weathered appearance suits someone who has endured long isolation at an abandoned relay station"
+          },
+          {
+            "roll": "R4",
+            "fits": true,
+            "reason": "A demanding personality creates friction and narrative tension with the crew investigating the station"
+          },
+          {
+            "roll": "R5",
+            "fits": true,
+            "reason": "A given name is appropriate for an NPC character"
+          },
+          {
+            "roll": "R6",
+            "fits": true,
+            "reason": "A family name completes the NPC identity"
+          }
+        ],
+        "entity": {
+          "name": "Saren Sutton",
+          "fields": [
+            {
+              "slot": "role",
+              "text": "A scout who once maintained communications across this sector",
+              "cites": ["R1"]
+            },
+            {
+              "slot": "goal",
+              "text": "Seek redemption for failures that may have contributed to the relay's abandonment",
+              "cites": ["R2"]
+            },
+            {
+              "slot": "appearance",
+              "text": "Weathered by years of isolation, bearing the physical and emotional wear of a generation alone",
+              "cites": ["R3"]
+            },
+            {
+              "slot": "demeanor",
+              "text": "Demanding and difficult, testing the crew's patience and intentions",
+              "cites": ["R4"]
+            }
+          ]
+        }
+      },
+      "narrationFirstTextMs": 2297,
+      "firstTextFromRequestMs": 16032,
+      "narrationMs": 21692,
+      "facts": "[F1] (move, Vesna) Vesna makes the move Gather Information with wits.\n[F2] (declared action, Vesna) The player declared: \"Vesna traces the power draw with the Lantern Wake's sensors.\"\n[F3] (roll, Vesna) Roll: action die 6 +2 wits = 8, against challenge dice 3 and 2: a strong hit.\n[F4] (effect, Vesna) Vesna: momentum +2.\n[F5] (effect) A non-player character is established from oracle rolls: Saren Sutton (role: A scout who once maintained communications across this sector; goal: Seek redemption for failures that may have contributed to the relay's abandonment; appearance: Weathered by years of isolation, bearing the physical and emotional wear of a generation alone; demeanor: Demanding and difficult, testing the crew's patience and intentions).\n[F6] (effect) The Guide starts a clock, \"Varga Relay power systems destabilization\" (6 segments), with 1 filled: Ancient relay station's hidden power source detected by active sensor scan; degraded systems may cascade if further disturbed.",
+      "passage": {
+        "segments": [
+          {
+            "about": "character_does",
+            "character": "Vesna",
+            "basis": ["F1", "F2"],
+            "text": "Vesna traces the power draw with the Lantern Wake's sensors, walking the beam slow across the relay's flank until the return resolves."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F3"],
+            "text": "The trace comes back clean: a thin, steady bleed of current running from somewhere deep in the station's spine up to that one lit row of windows, too regular to be a fault."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F5"],
+            "text": "Under the carrier hum sits a voice, dry and unhurried, demanding to know who is scanning and what they think they are owed. It gives a name — Saren Sutton — and says the sector's comm lines were once kept alive by that name, before they weren't."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F6"],
+            "text": "Deeper in the hull, something old registers the touch of the beam. A power source stirs, and the station's degraded systems answer with a flicker that runs the length of the docking collar."
+          },
+          {
+            "about": "character_undergoes",
+            "character": "Vesna",
+            "basis": ["F4"],
+            "text": "The console's tone settles under Vesna's hands, the read holding firm and clear."
+          }
+        ]
+      }
+    },
+    {
+      "label": "beat6-scan",
+      "plannerModel": "claude-haiku-4-5",
+      "run": 2,
+      "planMs": 1413,
+      "plan": {
+        "recipes": [],
+        "clocks": [
+          {
+            "title": "Varga Relay's dormant systems reawaken",
+            "segments": 8,
+            "filled": 1,
+            "reason": "Vesna's sensor probe into power distribution has triggered activity in a station that has been dark for a generation"
+          }
+        ]
+      },
+      "rolls": [
+        "role: Soldier",
+        "goal: Cure an ill",
+        "first_look: Grim",
+        "disposition: Wanting",
+        "given_name: Cassidy",
+        "family_name: Pearson"
+      ],
+      "interpretMs": 3547,
+      "interpreted": {
+        "review": [
+          {
+            "roll": "R1",
+            "fits": true,
+            "reason": "A soldier fits a relay station - military or security personnel would logically staff such facilities"
+          },
+          {
+            "roll": "R2",
+            "fits": true,
+            "reason": "'Cure an ill' could reflect someone trying to heal or restore the station itself, or seeking medical aid in isolation"
+          },
+          {
+            "roll": "R3",
+            "fits": true,
+            "reason": "A derelict station dark for a generation would present grim conditions and appearances"
+          },
+          {
+            "roll": "R4",
+            "fits": true,
+            "reason": "A character wanting something creates immediate narrative tension and motivation in an encounter"
+          },
+          {
+            "roll": "R5",
+            "fits": true,
+            "reason": "A given name is appropriate for an NPC encountered at the station"
+          },
+          {
+            "roll": "R6",
+            "fits": true,
+            "reason": "A family name completes the NPC identity, grounding them in the world"
+          }
+        ],
+        "entity": {
+          "name": "Cassidy Pearson",
+          "fields": [
+            {
+              "slot": "role",
+              "text": "Soldier",
+              "cites": ["R1"]
+            },
+            {
+              "slot": "goal",
+              "text": "Cure an ill",
+              "cites": ["R2"]
+            },
+            {
+              "slot": "first_look",
+              "text": "Grim",
+              "cites": ["R3"]
+            },
+            {
+              "slot": "disposition",
+              "text": "Wanting",
+              "cites": ["R4"]
+            }
+          ]
+        }
+      },
+      "narrationFirstTextMs": 3479,
+      "firstTextFromRequestMs": 8439,
+      "narrationMs": 8416,
+      "facts": "[F1] (move, Vesna) Vesna makes the move Gather Information with wits.\n[F2] (declared action, Vesna) The player declared: \"Vesna traces the power draw with the Lantern Wake's sensors.\"\n[F3] (roll, Vesna) Roll: action die 6 +2 wits = 8, against challenge dice 3 and 2: a strong hit.\n[F4] (effect, Vesna) Vesna: momentum +2.\n[F5] (effect) A non-player character is established from oracle rolls: Cassidy Pearson (role: Soldier; goal: Cure an ill; first_look: Grim; disposition: Wanting).\n[F6] (effect) The Guide starts a clock, \"Varga Relay's dormant systems reawaken\" (8 segments), with 1 filled: Vesna's sensor probe into power distribution has triggered activity in a station that has been dark for a generation",
+      "passage": {
+        "segments": [
+          {
+            "about": "character_does",
+            "character": "Vesna",
+            "basis": ["F1", "F2", "F3"],
+            "text": "Vesna traces the power draw with the Lantern Wake's sensors, walking the beam slowly along the relay's spine until the readings resolve clean and certain."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F3", "F5"],
+            "text": "The draw all runs to one habitation ring, and in it a single life sign, sitting near a medical bay that is pulling more current than anything else aboard. A comm channel opens unprompted, and a voice gives a name, Cassidy Pearson, flat and grim and asking whether the ship carries medicine."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F6"],
+            "text": "Somewhere below the docking collar, relays that have been dark for a generation begin to click over one by one, following the path the scan took."
+          },
+          {
+            "about": "character_undergoes",
+            "character": "Vesna",
+            "basis": ["F4"],
+            "text": "The console runs warm under Vesna's palms as the plot settles into place."
+          }
+        ]
+      }
+    },
+    {
+      "label": "beat7-force",
+      "plannerModel": "claude-haiku-4-5",
+      "run": 0,
+      "planMs": 1298,
+      "plan": {
+        "recipes": [],
+        "clocks": [
+          {
+            "title": "Structural instability of the sealed bulkhead",
+            "segments": 6,
+            "filled": 1,
+            "reason": "Rook's forced attempt has damaged the bulkhead's integrity; further stress may cause catastrophic failure or environmental hazard."
+          }
+        ]
+      },
+      "rolls": [
+        "role: Pilgrim",
+        "goal: Prove worthiness",
+        "first_look: Grim",
+        "disposition: Desperate",
+        "given_name: Doran",
+        "family_name: Hawking"
+      ],
+      "interpretMs": 9939,
+      "interpreted": {
+        "review": [
+          {
+            "roll": "R1",
+            "fits": true,
+            "reason": "An NPC pilgrim fits the isolated derelict relay station setting where survivors are scattered and desperate"
+          },
+          {
+            "roll": "R2",
+            "fits": true,
+            "reason": "A pilgrim seeking to prove worthiness aligns with the Ironsworn ethos of vows and honor despite hardship"
+          },
+          {
+            "roll": "R3",
+            "fits": true,
+            "reason": "A grim appearance suits someone aboard a derelict station dark for a generation, weathered by isolation"
+          },
+          {
+            "roll": "R4",
+            "fits": true,
+            "reason": "Desperate disposition reflects the broader truth that settlements are starved and on the brink of ruin"
+          },
+          {
+            "roll": "R5",
+            "fits": true,
+            "reason": "A given name is needed to establish this NPC who Rook has just encountered during the forced bulkhead breach"
+          },
+          {
+            "roll": "R6",
+            "fits": true,
+            "reason": "A family name completes the NPC's identity, grounding them as a real person in this moment"
+          }
+        ],
+        "entity": {
+          "name": "Doran Hawking",
+          "fields": [
+            {
+              "slot": "role",
+              "text": "A pilgrim who has survived alone or in hiding at this relay station",
+              "cites": ["R1"]
+            },
+            {
+              "slot": "goal",
+              "text": "Seeks to prove their worthiness to be counted among the worthy survivors of the Exodus",
+              "cites": ["R2"]
+            },
+            {
+              "slot": "bearing",
+              "text": "Grim and hardened by long isolation in this dark place",
+              "cites": ["R3"]
+            },
+            {
+              "slot": "state",
+              "text": "Desperate, clinging to survival in a starved and ruined outpost",
+              "cites": ["R4"]
+            }
+          ]
+        }
+      },
+      "narrationFirstTextMs": 1840,
+      "firstTextFromRequestMs": 13077,
+      "narrationMs": 9415,
+      "facts": "[F1] (move, Rook) Rook makes the move Face Danger with iron.\n[F2] (declared action, Rook) The player declared: \"Rook forces the sealed bulkhead.\"\n[F3] (roll, Rook) Roll: action die 1 +3 iron = 4, against challenge dice 9 and 7: a miss.\n[F4] (move) This leads to Pay the Price.\n[F5] (move, Rook) Rook makes the move Pay the Price.\n[F6] (choice, Rook) For Pay the Price, the player chose: Roll on the table.\n[F7] (roll) Oracle result (76): You are harmed\n[F8] (move) This leads to Endure Harm.\n[F9] (move, Rook) Rook makes the move Endure Harm.\n[F10] (effect, Rook) The player set the health loss at 1 for Rook.\n[F11] (effect, Rook) Rook: health -1.\n[F12] (roll, Rook) Roll: action die 4 = 4, against challenge dice 2 and 8: a weak hit.\n[F13] (effect) A non-player character is established from oracle rolls: Doran Hawking (role: A pilgrim who has survived alone or in hiding at this relay station; goal: Seeks to prove their worthiness to be counted among the worthy survivors of the Exodus; bearing: Grim and hardened by long isolation in this dark place; state: Desperate, clinging to survival in a starved and ruined outpost).\n[F14] (effect) The Guide starts a clock, \"Structural instability of the sealed bulkhead\" (6 segments), with 1 filled: Rook's forced attempt has damaged the bulkhead's integrity; further stress may cause catastrophic failure or environmental hazard.",
+      "passage": {
+        "segments": [
+          {
+            "about": "character_does",
+            "character": "Rook",
+            "basis": ["F1", "F2"],
+            "text": "Rook sets against the sealed bulkhead and forces it, iron-braced shoulder to cold plate, the whole corridor ringing with the effort."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F3", "F14"],
+            "text": "The door gives a hand's width and then something behind it lets go all at once — a shear of frame, a shriek of stressed metal running the length of the seam. Frost blows out of the gap in a white breath, and the seal chatters against itself where it no longer sits true."
+          },
+          {
+            "about": "character_undergoes",
+            "character": "Rook",
+            "basis": ["F4", "F5", "F7", "F10", "F11", "F12"],
+            "text": "A sprung edge of plating catches Rook across the arm, a bright hot line opening under the armor's seam. The blood comes slow and cold in the station's air, and the arm still answers, just badly."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F13"],
+            "text": "Light moves in the gap. A man stands in it with a cutting bar held low and a face gone hard from too many years alone in the dark. \"You've broken it,\" he says. \"Forty years that door held, and you've broken it. Doran Hawking. This station's mine, and I have kept it, and I mean to be counted for it.\""
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F14"],
+            "text": "Behind him the bulkhead ticks, settling wrong."
+          }
+        ]
+      }
+    },
+    {
+      "label": "beat7-force",
+      "plannerModel": "claude-haiku-4-5",
+      "run": 1,
+      "planMs": 1355,
+      "plan": {
+        "recipes": [],
+        "clocks": [
+          {
+            "title": "Structural instability from forced entry",
+            "segments": 6,
+            "filled": 1,
+            "reason": "Rook's violent breach of the sealed bulkhead has compromised the relay station's integrity"
+          }
+        ]
+      },
+      "rolls": [
+        "role: Artisan",
+        "goal: Sabotage a technology",
+        "first_look: Athletic",
+        "disposition: Cooperative",
+        "given_name: Jorunn",
+        "family_name: Legrand"
+      ],
+      "interpretMs": 8804,
+      "interpreted": {
+        "review": [
+          {
+            "roll": "R1",
+            "fits": true,
+            "reason": "An Artisan NPC fits the derelict relay station setting—someone with technical skills could logically be present, stranded, or have been stationed here."
+          },
+          {
+            "roll": "R2",
+            "fits": true,
+            "reason": "Sabotaging a technology aligns with the mystery of a derelict station dark for a generation and potential threats in the Forge."
+          },
+          {
+            "roll": "R3",
+            "fits": true,
+            "reason": "Athletic appearance is a neutral descriptor appropriate for any NPC, fitting the established setting."
+          },
+          {
+            "roll": "R4",
+            "fits": true,
+            "reason": "Cooperative disposition contrasts interestingly with sabotage motivations, creating narrative tension that serves the scene."
+          },
+          {
+            "roll": "R5",
+            "fits": true,
+            "reason": "Jorunn is a reasonable given name for the Forge's diverse survivor population."
+          },
+          {
+            "roll": "R6",
+            "fits": true,
+            "reason": "Legrand is a reasonable family name fitting the established cultural backdrop."
+          }
+        ],
+        "entity": {
+          "name": "Jorunn Legrand",
+          "fields": [
+            {
+              "slot": "role",
+              "text": "An artisan with technical expertise",
+              "cites": ["R1"]
+            },
+            {
+              "slot": "goal",
+              "text": "Sabotage a technology",
+              "cites": ["R2"]
+            },
+            {
+              "slot": "first_look",
+              "text": "Athletic build and bearing",
+              "cites": ["R3"]
+            },
+            {
+              "slot": "disposition",
+              "text": "Cooperative in manner",
+              "cites": ["R4"]
+            }
+          ]
+        }
+      },
+      "narrationFirstTextMs": 2228,
+      "firstTextFromRequestMs": 12387,
+      "narrationMs": 10419,
+      "facts": "[F1] (move, Rook) Rook makes the move Face Danger with iron.\n[F2] (declared action, Rook) The player declared: \"Rook forces the sealed bulkhead.\"\n[F3] (roll, Rook) Roll: action die 1 +3 iron = 4, against challenge dice 9 and 7: a miss.\n[F4] (move) This leads to Pay the Price.\n[F5] (move, Rook) Rook makes the move Pay the Price.\n[F6] (choice, Rook) For Pay the Price, the player chose: Roll on the table.\n[F7] (roll) Oracle result (76): You are harmed\n[F8] (move) This leads to Endure Harm.\n[F9] (move, Rook) Rook makes the move Endure Harm.\n[F10] (effect, Rook) The player set the health loss at 1 for Rook.\n[F11] (effect, Rook) Rook: health -1.\n[F12] (roll, Rook) Roll: action die 4 = 4, against challenge dice 2 and 8: a weak hit.\n[F13] (effect) A non-player character is established from oracle rolls: Jorunn Legrand (role: An artisan with technical expertise; goal: Sabotage a technology; first_look: Athletic build and bearing; disposition: Cooperative in manner).\n[F14] (effect) The Guide starts a clock, \"Structural instability from forced entry\" (6 segments), with 1 filled: Rook's violent breach of the sealed bulkhead has compromised the relay station's integrity",
+      "passage": {
+        "segments": [
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F2"],
+            "text": "The sealed bulkhead sits in its frame like a tooth in a dead jaw, seams welded shut by forty years of cold and something older than rust."
+          },
+          {
+            "about": "character_does",
+            "character": "Rook",
+            "basis": ["F1", "F2", "F3"],
+            "text": "Rook forces the sealed bulkhead, and the metal gives all at once with a shriek that runs the length of the corridor."
+          },
+          {
+            "about": "character_undergoes",
+            "character": "Rook",
+            "basis": ["F7", "F11"],
+            "text": "A shorn edge of the frame comes around with the door and catches Rook above the wrist, a bright hot line opening through the armor's seam."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F14"],
+            "text": "Beyond the breach the deck groans, a long structural complaint travelling out through the relay's spine, and somewhere far off a plate lets go and falls."
+          },
+          {
+            "about": "character_undergoes",
+            "character": "Rook",
+            "basis": ["F12"],
+            "text": "The corridor tilts underfoot and steadies again, and Rook is still standing in the open doorway with blood going tacky at the glove cuff."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F13"],
+            "text": "Light comes up in the room past the threshold. A woman stands at a gutted console with a soldering probe in one hand, athletic, unhurried, half the station's transmitter array stripped out and laid open in front of her. \"You've just cost this deck about a week,\" she says. \"Jorunn Legrand. Come in, if you're coming.\""
+          }
+        ]
+      }
+    },
+    {
+      "label": "beat7-force",
+      "plannerModel": "claude-haiku-4-5",
+      "run": 2,
+      "planMs": 3901,
+      "plan": {
+        "recipes": [],
+        "clocks": [
+          {
+            "title": "Structural integrity of the sealed bulkhead",
+            "segments": 6,
+            "filled": 1,
+            "reason": "Rook's forced entry attempt has damaged the mechanism; repeated attempts or environmental stress may cause catastrophic failure."
+          }
+        ]
+      },
+      "rolls": [
+        "role: Entertainer",
+        "goal: Refute a falsehood",
+        "first_look: Shifty",
+        "disposition: Helpful",
+        "given_name: Kiri",
+        "family_name: Dykstra"
+      ],
+      "interpretMs": 4420,
+      "interpreted": {
+        "review": [
+          {
+            "roll": "R1",
+            "fits": true,
+            "reason": "An entertainer could plausibly be present at a relay station—perhaps stranded, or using it as a waypoint. Fits the isolated settlement archetype."
+          },
+          {
+            "roll": "R2",
+            "fits": true,
+            "reason": "Refuting a falsehood aligns with the mystery of the cataclysm and the lost colonies; someone with information or a contrary account could be at a derelict relay."
+          },
+          {
+            "roll": "R3",
+            "fits": true,
+            "reason": "Shifty behavior fits someone at an abandoned station—evasive about their presence, their knowledge, or their intentions."
+          },
+          {
+            "roll": "R4",
+            "fits": true,
+            "reason": "Helpful disposition is plausible despite shiftiness; they may aid the crew despite their own secrecy or caution."
+          },
+          {
+            "roll": "R5",
+            "fits": true,
+            "reason": "A given name grounds the NPC as a real person in this world."
+          },
+          {
+            "roll": "R6",
+            "fits": true,
+            "reason": "A family name completes the NPC identity, fitting Ironsworn's approach to character naming."
+          }
+        ],
+        "entity": {
+          "name": "Kiri Dykstra",
+          "fields": [
+            {
+              "slot": "role",
+              "text": "Entertainer",
+              "cites": ["R1"]
+            },
+            {
+              "slot": "goal",
+              "text": "Refute a falsehood",
+              "cites": ["R2"]
+            },
+            {
+              "slot": "first_look",
+              "text": "Shifty",
+              "cites": ["R3"]
+            },
+            {
+              "slot": "disposition",
+              "text": "Helpful",
+              "cites": ["R4"]
+            }
+          ]
+        }
+      },
+      "narrationFirstTextMs": 1826,
+      "firstTextFromRequestMs": 10147,
+      "narrationMs": 10303,
+      "facts": "[F1] (move, Rook) Rook makes the move Face Danger with iron.\n[F2] (declared action, Rook) The player declared: \"Rook forces the sealed bulkhead.\"\n[F3] (roll, Rook) Roll: action die 1 +3 iron = 4, against challenge dice 9 and 7: a miss.\n[F4] (move) This leads to Pay the Price.\n[F5] (move, Rook) Rook makes the move Pay the Price.\n[F6] (choice, Rook) For Pay the Price, the player chose: Roll on the table.\n[F7] (roll) Oracle result (76): You are harmed\n[F8] (move) This leads to Endure Harm.\n[F9] (move, Rook) Rook makes the move Endure Harm.\n[F10] (effect, Rook) The player set the health loss at 1 for Rook.\n[F11] (effect, Rook) Rook: health -1.\n[F12] (roll, Rook) Roll: action die 4 = 4, against challenge dice 2 and 8: a weak hit.\n[F13] (effect) A non-player character is established from oracle rolls: Kiri Dykstra (role: Entertainer; goal: Refute a falsehood; first_look: Shifty; disposition: Helpful).\n[F14] (effect) The Guide starts a clock, \"Structural integrity of the sealed bulkhead\" (6 segments), with 1 filled: Rook's forced entry attempt has damaged the mechanism; repeated attempts or environmental stress may cause catastrophic failure.",
+      "passage": {
+        "segments": [
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F1", "F2"],
+            "text": "The bulkhead sits in its frame like a tooth in a dead jaw, seams welded shut by forty years of cold and the slow creep of ice. Its manual override lever is half-swallowed by frost."
+          },
+          {
+            "about": "character_does",
+            "character": "Rook",
+            "basis": ["F2", "F1", "F3"],
+            "text": "Rook forces the sealed bulkhead, iron against iron, the lever grinding a quarter turn before the mechanism catches and bites back."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F3", "F14"],
+            "text": "Something inside the door shears with a flat industrial bang, and the frost jumps off the frame in a white breath. The lever hangs crooked now, the housing split along one seam, the whole assembly ticking as it settles into a shape it was never meant to hold."
+          },
+          {
+            "about": "character_undergoes",
+            "character": "Rook",
+            "basis": ["F4", "F5", "F7", "F9", "F10", "F11", "F12"],
+            "text": "The recoil comes back up Rook's arms as a dull, spreading ache, and warmth seeps where the split housing has opened the suit at the forearm. It is a small wound and a loud one."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": ["F13"],
+            "text": "Light spills through the finger-width gap the door has given up, and a voice comes with it, careful and too bright for the dark. \"Don't pull it again,\" says a woman on the far side, eyes moving quick behind the gap. \"I'm Kiri Dykstra. Whatever that beacon told you about this place, it's lying, and I can prove it.\""
+          }
+        ]
+      }
+    }
+  ]
+}

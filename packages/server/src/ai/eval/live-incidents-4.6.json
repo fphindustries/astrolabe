@@ -1,0 +1,210 @@
+{
+  "about": "Task 4.6 live pass, 2026-09-14: claude-opus-5 proposing inciting incidents (D-132-D-134) for a campaign with three truths, two sector locations and a route; runs 1-3 with a two-character crew (hooks and background vows), runs 4-5 with no crew. Each run with its time, attempts, rolls and proposal.",
+  "runs": [
+    {
+      "run": 1,
+      "crew": true,
+      "ms": 15807,
+      "attempts": 1,
+      "ok": true,
+      "rolls": [
+        {
+          "roll": 16,
+          "rowText": "Defend the people of a beleaguered settlement against raiders"
+        },
+        {
+          "roll": 97,
+          "rowText": "Transport a displaced people to their new home"
+        },
+        {
+          "roll": 8,
+          "rowText": "Broker peace between two feuding settlements"
+        }
+      ],
+      "options": [
+        {
+          "title": "Defend Deepwater Anchorage against the raiders bleeding it dry before the ring is cut apart.",
+          "rank": "dangerous",
+          "situation": "Raiders flying no clan colors have hit Deepwater Anchorage three times in a season, cutting loose outer hulls and towing them off with families still aboard. The ring's traders are down to a handful of working guns and the next strike will take the docking spine that keeps the whole anchorage breathing.",
+          "reason": "Builds the raider roll onto the crew's own refueling port, where Vesna's salvage debt is held."
+        },
+        {
+          "title": "Carry the refugees of a dying station to a habitable world before their air runs out.",
+          "rank": "formidable",
+          "situation": "Varga Relay has woken: its dark generation turns out to have been a warren of squatters, and the failing reactor gives them weeks at most. Some four hundred people are waiting at a station with no working drive and no clan willing to claim them, while Deepwater Anchorage has neither berths nor water to spare.",
+          "reason": "Takes the transport roll to the sector's derelict relay, an evacuation run like the one in Vesna's record."
+        },
+        {
+          "title": "Broker peace between the two clans whose feud is about to burn Deepwater Anchorage down.",
+          "rank": "dangerous",
+          "situation": "Two Founder Clans both claim the salvage rights to Varga Relay, and their skirmishing has followed the trade route back to Deepwater Anchorage, where partisans of each now hold opposite arcs of the ring. Iron has already been drawn in the corridors, and the anchorage's traders say one more killing ends the truce that keeps the docks open.",
+          "reason": "Sets the peace-brokering roll in the clan territorial skirmishes of the truths, with the sector's two locations as the disputed ground and Rook's fleet service as standing."
+        }
+      ]
+    },
+    {
+      "run": 2,
+      "crew": true,
+      "ms": 14338,
+      "attempts": 1,
+      "ok": true,
+      "rolls": [
+        {
+          "roll": 44,
+          "rowText": "Investigate terrifying manifestations at a remote settlement"
+        },
+        {
+          "roll": 80,
+          "rowText": "Sabotage an enemy installation"
+        },
+        {
+          "roll": 12,
+          "rowText": "Chart a new passage between isolated settlements"
+        }
+      ],
+      "options": [
+        {
+          "title": "Uncover what walks the dark decks of Varga Relay and silence it",
+          "rank": "dangerous",
+          "situation": "Traders putting in at Deepwater Anchorage report that Varga Relay, dark for a generation, has begun answering hails with voices — crew rosters read aloud, ships' names from fleets that burned in the Exodus. Two salvage teams have gone aboard; neither has come back, and the Anchorage is refusing further contracts until someone brings back an answer.",
+          "reason": "Builds the terrifying-manifestation roll into the sector's derelict relay, where recited rosters of lost fleets reach Rook, who served in a fleet that no longer exists."
+        },
+        {
+          "title": "Chart a safe passage from Deepwater Anchorage to the settlements cut off beyond the relay",
+          "rank": "formidable",
+          "situation": "The only charted route out of Deepwater Anchorage runs past Varga Relay, and with the relay dark the beacons that once guided ships through are silent; two Founder Clans have closed the lanes on either side while they skirmish over the approach. Three settlements beyond have gone eight months without a resupply run, and the Anchorage's own stores are thinning.",
+          "reason": "Takes the new-passage roll into clan territorial skirmishes and the sector's two locations, with a run to cut-off colonists that echoes Vesna's last evacuation flight."
+        },
+        {
+          "title": "Cripple the clan waystation that has choked off Deepwater Anchorage's last fuel line",
+          "rank": "dangerous",
+          "situation": "A Founder Clan has planted an armed waystation across the fuel lane feeding Deepwater Anchorage, taxing every hull that passes and seizing those that cannot pay. The salvage guild that holds Vesna's debt has been seizing collateral from stranded ships, and the Anchorage has quietly let it be known that boarding blades, not guns, are what the job would take.",
+          "reason": "Runs the sabotage roll through clan skirmishes and the iron truth's close-quarters blades, with the salvage guild Vesna owes pressing on the same lane."
+        }
+      ]
+    },
+    {
+      "run": 3,
+      "crew": true,
+      "ms": 16866,
+      "attempts": 1,
+      "ok": true,
+      "rolls": [
+        {
+          "roll": 33,
+          "rowText": "Ferry a rescue team to a perilous disaster site"
+        },
+        {
+          "roll": 84,
+          "rowText": "Search for a missing expedition in the depths of a precursor vault"
+        },
+        {
+          "roll": 37,
+          "rowText": "Infiltrate a fortified base to steal crucial data"
+        }
+      ],
+      "options": [
+        {
+          "title": "Carry the rescue team to the burning station and bring out everyone still breathing.",
+          "rank": "formidable",
+          "situation": "A clan habitat two jumps out is venting and dropping toward its star after a reactor cascade, and the only rescue team within reach is stranded at Deepwater Anchorage with no hull fast enough to make the window. The Anchorage's channels carry the habitat's automated distress loop, thinning by the hour.",
+          "reason": "The roll's rescue ferry set at the Anchorage, with a dying star's light over it, echoes the evacuation run in Vesna's record."
+        },
+        {
+          "title": "Find the lost expedition in the vault beneath Varga Relay and bring them into the light.",
+          "rank": "dangerous",
+          "situation": "Varga Relay woke for eleven minutes last month, long enough to broadcast a survey team's beacon from a precursor vault the station was apparently built to cap. Twelve people went down through the relay's floor and none have come up; the beacon still pulses, slower each day.",
+          "reason": "The roll's missing expedition in a precursor vault hangs on the sector's generation-dark relay, and a vanished unit's names are what Rook already carries."
+        },
+        {
+          "title": "Steal the clan fleet's targeting archive from their fortified base and put it in open hands.",
+          "rank": "dangerous",
+          "situation": "A Founder Clan has fortified a moonbase above the lanes into Deepwater Anchorage and holds an archive naming every hull it intends to seize as contested salvage; the Anchorage's brokers, including the salvage guild that holds Vesna's ship debt, are trading rumors of the list and pricing hulls accordingly. The base's interior is too fragile for gunfire, and its guards carry blades.",
+          "reason": "The roll's data heist grows from clan territorial skirmishes, the sword-and-infiltration truth of iron, and the guild debt recorded for Vesna."
+        }
+      ]
+    },
+    {
+      "run": 4,
+      "crew": false,
+      "ms": 17253,
+      "attempts": 1,
+      "ok": true,
+      "rolls": [
+        {
+          "roll": 38,
+          "rowText": "Infiltrate a fortified base to steal crucial data"
+        },
+        {
+          "roll": 84,
+          "rowText": "Search for a missing expedition in the depths of a precursor vault"
+        },
+        {
+          "roll": 36,
+          "rowText": "Infiltrate a fortified base to steal crucial data"
+        }
+      ],
+      "options": [
+        {
+          "title": "Steal the clan's sun-plague archive from its fortified listening post before the data is purged.",
+          "rank": "formidable",
+          "situation": "One of the Founder Clans has quietly fortified a listening post and, by the traffic leaving it, holds a salvaged archive from the Exodus fleets bearing on what snuffed out the old stars. Word at Deepwater Anchorage is that the archive is being culled section by section, and that a rival clan's squadron is already burning toward the post.",
+          "reason": "Builds the fortified-base infiltration roll around the cataclysm's unanswered cause and the clans' territorial grip."
+        },
+        {
+          "title": "Find the expedition lost in the precursor vault beneath Varga Relay and bring its people home.",
+          "rank": "dangerous",
+          "situation": "Varga Relay has been dark for a generation, and a salvage expedition out of Deepwater Anchorage went into the precursor vault its builders anchored to and has not come back. Their beacon still repeats on a dead loop, and the station's lights have begun cycling in a pattern nobody at the Anchorage recognizes.",
+          "reason": "Takes the missing-expedition roll into the sector's derelict relay and the trade ring that outfitted them."
+        },
+        {
+          "title": "Recover the bond-ledger of forsworn iron from the clan fortress that seized it.",
+          "rank": "dangerous",
+          "situation": "A Founder Clan has taken a fortified holding at the sector's edge and with it the ledger recording which oaths were kept and which iron was abandoned, for hundreds of Ironsworn across the settled domains. Names are already being read out as disgraced at Deepwater Anchorage, and the entries are being rewritten to suit the clan that holds them.",
+          "reason": "Turns the second fortified-base roll toward the iron truth, where a stolen record of vows is a weapon."
+        }
+      ]
+    },
+    {
+      "run": 5,
+      "crew": false,
+      "ms": 15916,
+      "attempts": 1,
+      "ok": true,
+      "rolls": [
+        {
+          "roll": 76,
+          "rowText": "Sabotage an enemy installation"
+        },
+        {
+          "roll": 46,
+          "rowText": "Liberate prisoners at a cruel labor camp"
+        },
+        {
+          "roll": 26,
+          "rowText": "Escort a tradeship carrying a prized cargo"
+        }
+      ],
+      "options": [
+        {
+          "title": "Darken the clan gun-platform seeded inside Varga Relay before its guns range on Deepwater Anchorage.",
+          "rank": "formidable",
+          "situation": "Varga Relay has been dark for a generation, but salvage crews now report shuttles running to it under a Founder Clan's colors, and its old dish array has begun to turn. Deepwater Anchorage sits at the far end of the only charted route, a ring of lashed hulls with no armor and nowhere to run.",
+          "reason": "Builds the sabotage roll into a clan claim staked on the derelict relay that threatens the anchorage."
+        },
+        {
+          "title": "Free the sworn labor gang cutting hulks in the shadow of Deepwater Anchorage.",
+          "rank": "dangerous",
+          "situation": "A clan work contractor moored a string of stripped hulks off Deepwater Anchorage and fills them with debtors and prisoners taken in territorial skirmishes, cutting plate in vacuum on short air. Their swords were taken at intake and hang in a locker on the overseer's barge, so every one of them stands forsworn and disgraced until the iron comes back.",
+          "reason": "Turns the labor camp roll toward the anchorage, using the iron truth's disgrace of the bladeless and the clans' skirmish captives."
+        },
+        {
+          "title": "Escort the seedstock convoy from Deepwater Anchorage to the relay and see its cargo delivered intact.",
+          "rank": "dangerous",
+          "situation": "A tradeship at Deepwater Anchorage carries the last viable seedstock and gene-vaults hauled out of the dead galaxy during the Exodus, bound outward along the Varga Relay route to settle a new holding. Two Founder Clans have both declared that stretch of the route their own, and neither will let a cargo like that pass into the other's reach.",
+          "reason": "Takes the escort roll along the sector's one route, with Exodus heritage cargo caught between clan territorial claims."
+        }
+      ]
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-# Astrolabe — Golden Session (Draft v0.3)
+# Astrolabe — Golden Session (v1.0, Approved)
 
 **Astrolabe** is a web app for playing *Ironsworn: Starforged* with a Generative AI Game Guide. Players make the decisions, the AI turns them into vivid narrative and runs the world, and the app tracks every piece of game state so nobody is ever unsure what's happening or what to do next.
 
@@ -38,9 +38,11 @@ Christopher combines two of them: Rook covers the airlock while Vesna runs the s
 *Tests:* nudge only on request, suggestions anchored in current state, player free to remix suggestions.
 
 ### Beat 5 — Helping an ally, and a momentum decision (0:11)
-Christopher picks Secure an Advantage for Rook and marks it as direct support for Vesna. The app applies Aid Your Ally and explains that the benefit goes to her. Rook rolls a strong hit, and Christopher chooses to give Vesna +1 on her next move. Vesna's scan is Gather Information +wits, with the +1 already applied. The result card reads **Weak hit**; clicking it shows an action score of 5 against challenge dice of 6 and 3. The app sees that Vesna's +7 momentum would beat both dice and offers: *"Burn momentum to upgrade to a strong hit? Momentum resets to +2."* Christopher accepts.
+Christopher picks Secure an Advantage for Rook and marks it as direct support for Vesna. The app applies Aid Your Ally and explains that the benefits go to her. Rook rolls a strong hit, so Vesna takes both benefits: +2 momentum and +1 on her next move. Vesna's scan is Gather Information +wits, with the +1 already applied. The result card reads **Weak hit**; clicking it shows an action score of 5 against challenge dice of 6 and 3. The app sees that Vesna's +7 momentum would beat both dice and offers: *"Burn momentum to upgrade to a strong hit? Momentum resets to +2."* Christopher accepts.
 
-*Tests:* controlling multiple characters, choices within a move, a rule the player didn't think to ask about surfaced when it matters, clear cost for a choice, outcome first with math on demand.
+*Tests:* controlling multiple characters, benefits redirected to an aided ally, a rule the player didn't think to ask about surfaced when it matters, clear cost for a choice, outcome first with math on demand.
+
+*(Amended under D-61: Secure an Advantage grants both benefits on a strong hit with no choice. The choice sits on the weak hit.)*
 
 ### Beat 6 — The world gets a new face (0:14)
 On the strong hit, Vesna finds a heat signature: someone is alive aboard. The AI rolls character oracles for role, goal, first look, disposition, and name. One result contradicts what the evacuation logs established, so the AI rerolls it, and the discarded chip stays visible, struck through. An NPC card appears in the side panel, badged as AI-established. The AI narrates the first contact over comms, and the NPC's wariness comes straight from the disposition roll.

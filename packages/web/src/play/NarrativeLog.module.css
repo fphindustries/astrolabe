@@ -1,0 +1,237 @@
+.empty {
+  padding: var(--space-6);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+/* The log reads like a story: a measure for prose, mechanics beside it in a smaller voice. */
+.entries {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 46rem;
+  margin-inline: auto;
+  padding: var(--space-4) var(--space-6) var(--space-6);
+}
+
+.beat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.beat + .beat {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--surface-border);
+}
+
+.beat[data-voided='true'] {
+  opacity: 0.6;
+}
+
+.entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.entry[data-voided='true'] .text,
+.entry[data-voided='true'] .prose,
+.entry[data-voided='true'] .action,
+.entry[data-voided='true'] .summary {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.text {
+  color: var(--text-primary);
+}
+
+/* A passage: the story itself. */
+.prose {
+  margin: 0;
+  font-size: var(--text-prose);
+  line-height: 1.7;
+  color: var(--text-primary);
+}
+
+.footer {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+/* Correct and void: always reachable, quiet until wanted. */
+.controls {
+  display: inline-flex;
+  gap: var(--space-2);
+  margin-left: auto;
+  opacity: 0.55;
+  transition: opacity 120ms ease;
+}
+
+.entry:hover .controls,
+.controls:focus-within {
+  opacity: 1;
+}
+
+/* A mechanic: a tag and one line. */
+.line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.tag {
+  flex: 0 0 5.5rem;
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.tag[data-tone='ai'] {
+  color: var(--provenance-ai);
+}
+
+.line .text {
+  color: var(--text-secondary);
+}
+
+/* An outcome is a word; its colour only repeats it. */
+.text[data-tier] {
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+.text[data-tier='strong_hit'] {
+  color: var(--outcome-strong-hit);
+}
+
+.text[data-tier='weak_hit'] {
+  color: var(--outcome-weak-hit);
+}
+
+.text[data-tier='miss'] {
+  color: var(--outcome-miss);
+}
+
+.action {
+  margin-left: calc(5.5rem + var(--space-2));
+  font-size: var(--text-sm);
+  font-style: italic;
+  color: var(--text-primary);
+}
+
+.sceneRule {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--surface-border-strong);
+}
+
+.sceneRule .text {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.sceneLabel,
+.sessionLabel {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--accent-strong);
+}
+
+.entry[data-kind='session'] {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--surface-border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+}
+
+.summary {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.voidReason {
+  font-size: var(--text-sm);
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+.correction {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.correction summary {
+  color: var(--provenance-override);
+}
+
+.correction p {
+  margin: var(--space-1) 0 0;
+}
+
+.pendingLabel {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--provenance-ai);
+}
+
+/* D-128: shown while written, not yet kept. Italic rather than colour alone. */
+.provisional {
+  font-size: var(--text-prose);
+  line-height: 1.7;
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+/* D-128: a withdrawal is unmistakable — marked, reasoned, and a click from what it refused. */
+.withdrawal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--provenance-override);
+  background: var(--surface-1);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.withdrawalReason {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.withdrawalQuote {
+  color: var(--text-secondary);
+}
+
+.withdrawal summary {
+  color: var(--provenance-override);
+}
+
+.struck {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.offered {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: calc(5.5rem + var(--space-2) + var(--space-4));
+  font-size: var(--text-sm);
+}

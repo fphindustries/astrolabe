@@ -1,0 +1,85 @@
+/**
+ * Design tokens (tasks 5.1, 10.1; D-46, D-97, D-153).
+ *
+ * Starforged's direction, not its assets (§8): near-black warm surfaces in
+ * layers, one amber accent, a squared-off display face (Oxanium, bundled
+ * through @fontsource so it works offline) for headings, labels and
+ * outcomes, and the system face for reading.
+ *
+ * Meaning is never carried by colour alone (§10 NFRs). Every tone below is
+ * paired with a text label or a shape wherever it's used: an outcome is a
+ * word ("Weak hit"), AI provenance is a labelled badge, a manual override
+ * says "edited", a filled pip is a shape as well as a colour.
+ *
+ * Text colours hold at least 4.5:1 against every surface they sit on;
+ * `--text-muted` is the floor.
+ */
+:root {
+  color-scheme: dark;
+
+  /* Surfaces: warm near-black, each layer a step lighter (D-46). */
+  --surface-0: #0e0d0b;
+  --surface-1: #171512;
+  --surface-2: #211e19;
+  --surface-3: #2c2821;
+  --surface-border: #37322a;
+  --surface-border-strong: #544c3f;
+
+  /* Text. */
+  --text-primary: #eee7d8;
+  --text-secondary: #bdb29e;
+  --text-muted: #948a77;
+
+  /* One amber accent (D-46). */
+  --accent: #e39b36;
+  --accent-strong: #f5b652;
+  --accent-soft: rgb(227 155 54 / 14%);
+  --accent-text: #1b1104;
+
+  /* Outcome tones: always paired with the outcome's name as text. */
+  --outcome-strong-hit: #67bb80;
+  --outcome-weak-hit: #e39b36;
+  --outcome-miss: #db6152;
+  --outcome-miss-soft: rgb(219 97 82 / 14%);
+
+  /* Provenance tones: always paired with a badge label (A10, A16). */
+  --provenance-ai: #8aa6e6;
+  --provenance-ai-soft: rgb(138 166 230 / 12%);
+  --provenance-player: #bdb29e;
+  --provenance-system: #948a77;
+  --provenance-override: #dcc54e;
+
+  /* Spacing scale. */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+
+  --radius-sm: 0.1875rem;
+  --radius-md: 0.375rem;
+
+  --shadow-overlay: 0 0.75rem 2rem rgb(0 0 0 / 55%);
+
+  /* Type (D-153). Oxanium for display; the system face for reading. */
+  --font-display: 'Oxanium', 'Segoe UI', system-ui, sans-serif;
+  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', Consolas, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-prose: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+
+  /* Small-caps labels: rail sections, field names, tags. */
+  --label-tracking: 0.08em;
+
+  /* Layout sizes (D-97: 1280×720 minimum). */
+  --topbar-h: 3rem;
+  --rail-left: 15rem;
+  --rail-right: 18rem;
+  --composer-max: min(22rem, 42dvh);
+}

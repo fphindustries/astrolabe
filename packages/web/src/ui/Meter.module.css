@@ -1,0 +1,38 @@
+.meter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  line-height: 1;
+}
+
+.label {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.pips {
+  display: inline-flex;
+  gap: 0.1875rem;
+}
+
+/* Hollow when empty, solid when filled: a shape, not only a colour. */
+.pip {
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border: 1px solid var(--text-muted);
+  border-radius: 50%;
+}
+
+.pip[data-filled='true'] {
+  border-color: var(--text-primary);
+  background: var(--text-primary);
+}
+
+.value {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}

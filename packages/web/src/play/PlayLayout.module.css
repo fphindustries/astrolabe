@@ -1,0 +1,63 @@
+/**
+ * The four zones (D-40, §8): top bar, left rail, centre, right rail, and
+ * the composer, with only the narrative log scrolling.
+ *
+ * `minmax(0, 1fr)` and `min-height: 0` are load-bearing: without them a
+ * grid child grows to fit its content and pushes the whole page into
+ * scroll, which is exactly what D-40 rules out. `.log` is the one
+ * `overflow-y: auto` in the shell.
+ */
+.shell {
+  height: 100dvh;
+  display: grid;
+  grid-template-columns: var(--rail-left) minmax(0, 1fr) var(--rail-right);
+  grid-template-rows: var(--topbar-h) minmax(0, 1fr) auto;
+  grid-template-areas:
+    'top top top'
+    'left centre right'
+    'composer composer composer';
+  overflow: hidden;
+  background: var(--surface-0);
+}
+
+.top {
+  grid-area: top;
+  min-width: 0;
+}
+
+.left {
+  grid-area: left;
+  min-height: 0;
+  overflow: hidden;
+  border-right: 1px solid var(--surface-border);
+}
+
+.right {
+  grid-area: right;
+  min-height: 0;
+  overflow: hidden;
+  border-left: 1px solid var(--surface-border);
+}
+
+.centre {
+  grid-area: centre;
+  min-height: 0;
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.log {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.composer {
+  grid-area: composer;
+  max-height: var(--composer-max);
+  border-top: 1px solid var(--surface-border);
+  background: var(--surface-1);
+  box-shadow: 0 -0.5rem 1.5rem rgb(0 0 0 / 35%);
+  overflow-y: auto;
+}

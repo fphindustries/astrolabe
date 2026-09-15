@@ -1,0 +1,60 @@
+/* Flag and Void on a log entry: small text controls. */
+.trigger {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  padding: 0.125rem 0.25rem;
+}
+
+.trigger:hover:not(:disabled) {
+  color: var(--accent-strong);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 16rem;
+}
+
+.summaryTitle {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.summaryList {
+  margin: 0;
+  padding-left: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.refusal {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--outcome-miss);
+}
+
+.reason {
+  background: var(--surface-1);
+  color: var(--text-primary);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+}
+
+.confirm {
+  composes: danger from '../../ui/controls.module.css';
+  align-self: flex-start;
+}
+
+/* Task 7.9's correction popover reuses this panel; its submit is not destructive, so it is not the void's red. */
+.rewrite {
+  composes: primary from '../../ui/controls.module.css';
+  align-self: flex-start;
+}

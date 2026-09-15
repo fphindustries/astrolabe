@@ -1,0 +1,102 @@
+.prompt {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.label {
+  composes: fieldLabel from '../../ui/controls.module.css';
+}
+
+.actionText {
+  background: var(--surface-0);
+  color: var(--text-primary);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+  font: inherit;
+  min-height: 3rem;
+  resize: vertical;
+}
+
+.askRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ask {
+  composes: secondary from '../../ui/controls.module.css';
+}
+
+.use {
+  composes: secondary from '../../ui/controls.module.css';
+}
+
+.hint {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.failure {
+  font-size: var(--text-sm);
+  color: var(--outcome-miss);
+}
+
+/* The Guide's suggestion: the AI provenance colour, as on every proposal. */
+.suggestion {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--provenance-ai);
+}
+
+.badge {
+  composes: aiBadge from '../../ui/controls.module.css';
+  flex: none;
+}
+
+.body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.headline {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.confidence {
+  color: var(--text-secondary);
+}
+
+.why {
+  flex-basis: 100%;
+  color: var(--text-secondary);
+}
+
+.why summary {
+  cursor: pointer;
+  color: var(--provenance-ai);
+}
+
+.quote {
+  margin: var(--space-1) 0;
+  padding-left: var(--space-2);
+  border-left: 2px solid var(--provenance-ai);
+  color: var(--text-primary);
+}
+
+.reason {
+  margin: 0;
+}

@@ -1,0 +1,62 @@
+.momentum {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  line-height: 1;
+}
+
+.cells {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.cell {
+  position: relative;
+  width: 0.375rem;
+  height: 0.625rem;
+  background: var(--surface-3);
+}
+
+.momentum[data-compact='true'] .cell {
+  width: 0.25rem;
+  height: 0.5rem;
+}
+
+/* Zero stands taller, so the scale reads from its middle. */
+.cell[data-zero='true'] {
+  height: 0.875rem;
+  background: var(--surface-border-strong);
+}
+
+.momentum[data-compact='true'] .cell[data-zero='true'] {
+  height: 0.6875rem;
+}
+
+.cell[data-filled='true'] {
+  background: var(--accent);
+}
+
+/* Negative momentum is striped, not only a different colour. */
+.cell[data-filled='true'][data-negative='true'] {
+  background: repeating-linear-gradient(135deg, var(--outcome-miss) 0 2px, transparent 2px 3px);
+}
+
+/* The reset point: a notch under its cell. */
+.cell[data-reset='true']::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 2px;
+  background: var(--text-secondary);
+}
+
+.value {
+  min-width: 1.5rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}

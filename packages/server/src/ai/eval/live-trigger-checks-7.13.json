@@ -1,0 +1,141 @@
+{
+  "about": "Task 7.13 live pass, 2026-09-14: claude-opus-5 checking move triggers (D-136) on the session-2-open fixture, after each move was rolled with the stat shown. Beat 7 +edge must fit (no note); four chosen moves are deliberate mismatches.",
+  "runs": [
+    {
+      "callsign": "Rook",
+      "moveId": "move:adventure/face-danger",
+      "stat": "edge",
+      "actionText": "Rook forces the sealed bulkhead between the crew and the survivor.",
+      "expected": "fits (Beat 7 +edge: no note, D-136)",
+      "ms": 3560,
+      "attempts": 1,
+      "result": {
+        "ok": true,
+        "fits": true
+      }
+    },
+    {
+      "callsign": "Juno",
+      "moveId": "move:adventure/gather-information",
+      "stat": "wits",
+      "actionText": "Juno jacks into the docking port and pulls the station logs.",
+      "expected": "fits (Beat 3)",
+      "ms": 2341,
+      "attempts": 1,
+      "result": {
+        "ok": true,
+        "fits": true
+      }
+    },
+    {
+      "callsign": "Rook",
+      "moveId": "move:adventure/secure-an-advantage",
+      "stat": "wits",
+      "actionText": "Rook secures the airlock before anyone goes deeper.",
+      "expected": "fits (Beat 4)",
+      "ms": 2351,
+      "attempts": 1,
+      "result": {
+        "ok": true,
+        "fits": true
+      }
+    },
+    {
+      "callsign": "Vesna",
+      "moveId": "move:adventure/gather-information",
+      "stat": "wits",
+      "actionText": "Vesna traces the power draw with the Lantern Wake's sensors.",
+      "expected": "fits (Beat 4)",
+      "ms": 2229,
+      "attempts": 1,
+      "result": {
+        "ok": true,
+        "fits": true
+      }
+    },
+    {
+      "callsign": "Juno",
+      "moveId": "move:adventure/face-danger",
+      "stat": "wits",
+      "actionText": "Juno reads the station logs in the quiet of the cockpit.",
+      "expected": "mismatch",
+      "ms": 2215,
+      "attempts": 1,
+      "result": {
+        "ok": true,
+        "fits": false,
+        "eventId": "01a0a0cb-fe0e-74cb-851f-2af65134e402",
+        "note": {
+          "moveId": "move:adventure/face-danger",
+          "actionText": "Juno reads the station logs in the quiet of the cockpit.",
+          "triggerText": "When you attempt something risky or react to an imminent threat",
+          "reason": "Juno is calmly reading logs in a quiet cockpit, not facing risk or threat.",
+          "confidence": "high"
+        }
+      }
+    },
+    {
+      "callsign": "Rook",
+      "moveId": "move:adventure/gather-information",
+      "stat": "wits",
+      "actionText": "Rook shoulders through the jammed bulkhead before it seals.",
+      "expected": "mismatch",
+      "ms": 2280,
+      "attempts": 1,
+      "result": {
+        "ok": true,
+        "fits": false,
+        "eventId": "01a0a0cc-0700-78b1-a6e8-a24564942c88",
+        "note": {
+          "moveId": "move:adventure/gather-information",
+          "actionText": "Rook shoulders through the jammed bulkhead before it seals.",
+          "triggerText": "search for clues, conduct an investigation, analyze evidence, or do research",
+          "reason": "Rook is forcing through a jammed bulkhead, a physical effort, not investigating.",
+          "confidence": "high"
+        }
+      }
+    },
+    {
+      "callsign": "Vesna",
+      "moveId": "move:adventure/secure-an-advantage",
+      "stat": "heart",
+      "actionText": "Vesna swears on her blade to find whoever left the station to die.",
+      "expected": "mismatch",
+      "ms": 2104,
+      "attempts": 1,
+      "result": {
+        "ok": true,
+        "fits": false,
+        "eventId": "01a0a0cc-0f41-768b-868a-7f873adc0a96",
+        "note": {
+          "moveId": "move:adventure/secure-an-advantage",
+          "actionText": "Vesna swears on her blade to find whoever left the station to die.",
+          "triggerText": "When you assess a situation, make preparations, or attempt to gain leverage",
+          "reason": "Vesna is swearing an oath, not assessing or preparing.",
+          "confidence": "high"
+        }
+      }
+    },
+    {
+      "callsign": "Juno",
+      "moveId": "move:quest/swear-an-iron-vow",
+      "stat": "heart",
+      "actionText": "Juno kicks the drone away from the console.",
+      "expected": "mismatch",
+      "ms": 2069,
+      "attempts": 1,
+      "result": {
+        "ok": true,
+        "fits": false,
+        "eventId": "01a0a0cc-175e-7a2e-8af5-02402b1cb76a",
+        "note": {
+          "moveId": "move:quest/swear-an-iron-vow",
+          "actionText": "Juno kicks the drone away from the console.",
+          "triggerText": "When you swear upon iron to complete a quest",
+          "reason": "Juno is physically kicking a drone away from a console, not swearing a vow.",
+          "confidence": "high"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,203 @@
+{
+  "ran": "2026-09-15T01:24:13.417Z",
+  "narrator": "claude-opus-5",
+  "checker": "claude-sonnet-5",
+  "runs": [
+    {
+      "latitude": "minimal",
+      "run": 1,
+      "ok": true,
+      "firstTextMs": 2473,
+      "totalMs": 12505,
+      "firstTokenMs": [3, 0, 0, 0, 2472],
+      "withdrawals": [],
+      "segments": [
+        {
+          "about": "character_does",
+          "text": "At Deepwater Anchorage, Juno dug the Meridian's Hope distress beacon out of the anchorage's signal archive. The capture was clipped, its origin coordinates scrubbed on purpose."
+        },
+        {
+          "about": "character_does",
+          "text": "Vesna ran the clipped signal against the Lantern Wake's star charts, and the source was not the colony ship at all, but Varga Relay, dark for a generation and still repeating the call."
+        },
+        {
+          "about": "character_does",
+          "text": "Vesna threaded the Lantern Wake through the ice of Kessel Drift, and the ship came out the far side with the relay on the forward scopes."
+        },
+        {
+          "about": "character_does",
+          "text": "Vesna parked the Lantern Wake in the relay's sensor shadow, close enough to see the scorched docking collar."
+        },
+        {
+          "about": "world",
+          "text": "Who scrubbed the coordinates was unknown, and why a dead relay still spoke. One row of the station's windows was lit."
+        }
+      ],
+      "text": "At Deepwater Anchorage, Juno dug the Meridian's Hope distress beacon out of the anchorage's signal archive. The capture was clipped, its origin coordinates scrubbed on purpose. Vesna ran the clipped signal against the Lantern Wake's star charts, and the source was not the colony ship at all, but Varga Relay, dark for a generation and still repeating the call. Vesna threaded the Lantern Wake through the ice of Kessel Drift, and the ship came out the far side with the relay on the forward scopes. Vesna parked the Lantern Wake in the relay's sensor shadow, close enough to see the scorched docking collar. Who scrubbed the coordinates was unknown, and why a dead relay still spoke. One row of the station's windows was lit."
+    },
+    {
+      "latitude": "minimal",
+      "run": 2,
+      "ok": true,
+      "firstTextMs": 2117,
+      "totalMs": 11843,
+      "firstTokenMs": [0, 0, 0, 0, 2116],
+      "withdrawals": [],
+      "segments": [
+        {
+          "about": "character_does",
+          "text": "Juno dug the Meridian's Hope distress beacon out of the anchorage's signal archive. The capture was clipped, and its origin coordinates had been scrubbed."
+        },
+        {
+          "about": "character_does",
+          "text": "Vesna ran the clipped signal against the Lantern Wake's star charts. The transmission was not the colony ship at all, but Varga Relay, dark for a generation, repeating it."
+        },
+        {
+          "about": "character_does",
+          "text": "Vesna threaded the Lantern Wake through the ice of Kessel Drift, and the relay came up on the forward scopes."
+        },
+        {
+          "about": "character_does",
+          "text": "Vesna parked the ship in the relay's sensor shadow before going closer."
+        },
+        {
+          "about": "world",
+          "text": "From there the scorched docking collar was visible, and one row of windows was lit. Who scrubbed the coordinates, and why a dead station still called, remained unanswered."
+        }
+      ],
+      "text": "Juno dug the Meridian's Hope distress beacon out of the anchorage's signal archive. The capture was clipped, and its origin coordinates had been scrubbed. Vesna ran the clipped signal against the Lantern Wake's star charts. The transmission was not the colony ship at all, but Varga Relay, dark for a generation, repeating it. Vesna threaded the Lantern Wake through the ice of Kessel Drift, and the relay came up on the forward scopes. Vesna parked the ship in the relay's sensor shadow before going closer. From there the scorched docking collar was visible, and one row of windows was lit. Who scrubbed the coordinates, and why a dead station still called, remained unanswered."
+    },
+    {
+      "latitude": "color",
+      "run": 1,
+      "ok": true,
+      "firstTextMs": 2067,
+      "totalMs": 23446,
+      "firstTokenMs": [0, 0, 0, 0, 2067],
+      "withdrawals": [],
+      "segments": [
+        {
+          "about": "character_does",
+          "text": "Juno dug the Meridian's Hope distress beacon out of the anchorage's signal archive, a landfill of half-corrupted captures forty years deep."
+        },
+        {
+          "about": "world",
+          "text": "The capture was clipped, its origin coordinates scrubbed on purpose, and it was not the original — something had been repeating it."
+        },
+        {
+          "about": "character_does",
+          "text": "Vesna ran the clipped signal against the Lantern Wake's star charts, and the drift lined up with Varga Relay, a station dark for a generation."
+        },
+        {
+          "about": "character_does",
+          "text": "Vesna threaded the Lantern Wake through the ice of Kessel Drift, then parked the ship in the relay's sensor shadow."
+        },
+        {
+          "about": "world",
+          "text": "From behind a tumbling slab of ice, the scorched docking collar was visible, and one row of windows was lit. The dead relay was still repeating the call."
+        }
+      ],
+      "text": "Juno dug the Meridian's Hope distress beacon out of the anchorage's signal archive, a landfill of half-corrupted captures forty years deep. The capture was clipped, its origin coordinates scrubbed on purpose, and it was not the original — something had been repeating it. Vesna ran the clipped signal against the Lantern Wake's star charts, and the drift lined up with Varga Relay, a station dark for a generation. Vesna threaded the Lantern Wake through the ice of Kessel Drift, then parked the ship in the relay's sensor shadow. From behind a tumbling slab of ice, the scorched docking collar was visible, and one row of windows was lit. The dead relay was still repeating the call."
+    },
+    {
+      "latitude": "color",
+      "run": 2,
+      "ok": true,
+      "firstTextMs": 2279,
+      "totalMs": 23562,
+      "firstTokenMs": [0, 0, 0, 0, 2278],
+      "withdrawals": [],
+      "segments": [
+        {
+          "about": "character_does",
+          "text": "Previously: at Deepwater Anchorage, Juno dug the Meridian's Hope distress beacon out of the anchorage's signal archive, finding it looping under forty years of static."
+        },
+        {
+          "about": "world",
+          "text": "The capture was clipped, its origin coordinates scrubbed on purpose, and it was not the original — something had been repeating it."
+        },
+        {
+          "about": "character_does",
+          "text": "Vesna ran the clipped signal against the Lantern Wake's star charts, and the drift lined up on Varga Relay, a station dark for a generation."
+        },
+        {
+          "about": "character_does",
+          "text": "Vesna threaded the Lantern Wake through the ice of Kessel Drift, then parked the ship in the relay's sensor shadow."
+        },
+        {
+          "about": "world",
+          "text": "From behind the ice sat the scorched docking collar, one row of windows lit, and a dead relay still calling."
+        }
+      ],
+      "text": "Previously: at Deepwater Anchorage, Juno dug the Meridian's Hope distress beacon out of the anchorage's signal archive, finding it looping under forty years of static. The capture was clipped, its origin coordinates scrubbed on purpose, and it was not the original — something had been repeating it. Vesna ran the clipped signal against the Lantern Wake's star charts, and the drift lined up on Varga Relay, a station dark for a generation. Vesna threaded the Lantern Wake through the ice of Kessel Drift, then parked the ship in the relay's sensor shadow. From behind the ice sat the scorched docking collar, one row of windows lit, and a dead relay still calling."
+    },
+    {
+      "latitude": "full_voice",
+      "run": 1,
+      "ok": true,
+      "firstTextMs": 2005,
+      "totalMs": 25083,
+      "firstTokenMs": [0, 0, 0, 0, 2005],
+      "withdrawals": [],
+      "segments": [
+        {
+          "about": "character_does",
+          "text": "At Deepwater Anchorage, Juno dug the Meridian's Hope distress beacon out of the anchorage's signal archive, a landfill of half-corrupted captures."
+        },
+        {
+          "about": "world",
+          "text": "The beacon was still calling under forty years of static, but the capture was clipped and someone had scrubbed the origin coordinates on purpose."
+        },
+        {
+          "about": "character_does",
+          "text": "Vesna ran the clipped signal against the Lantern Wake's star charts, and the drift lined up with something real."
+        },
+        {
+          "about": "world",
+          "text": "The call was not coming from the colony ship. It was being repeated by Varga Relay, dark for a generation."
+        },
+        {
+          "about": "character_does",
+          "text": "Vesna threaded the ship through the ice of Kessel Drift, then parked her in the relay's sensor shadow."
+        },
+        {
+          "about": "world",
+          "text": "From there: a scorched docking collar, and one row of windows still lit."
+        }
+      ],
+      "text": "At Deepwater Anchorage, Juno dug the Meridian's Hope distress beacon out of the anchorage's signal archive, a landfill of half-corrupted captures. The beacon was still calling under forty years of static, but the capture was clipped and someone had scrubbed the origin coordinates on purpose. Vesna ran the clipped signal against the Lantern Wake's star charts, and the drift lined up with something real. The call was not coming from the colony ship. It was being repeated by Varga Relay, dark for a generation. Vesna threaded the ship through the ice of Kessel Drift, then parked her in the relay's sensor shadow. From there: a scorched docking collar, and one row of windows still lit."
+    },
+    {
+      "latitude": "full_voice",
+      "run": 2,
+      "ok": true,
+      "firstTextMs": 2161,
+      "totalMs": 10629,
+      "firstTokenMs": [0, 0, 0, 0, 2161],
+      "withdrawals": [],
+      "segments": [
+        {
+          "about": "character_does",
+          "text": "Previously: at Deepwater Anchorage, Juno dug the Meridian's Hope distress beacon out of the anchorage's signal archive, and found it looping under forty years of static — clipped, its origin coordinates scrubbed on purpose."
+        },
+        {
+          "about": "character_does",
+          "text": "Vesna ran the clipped signal against the Lantern Wake's star charts, and the drift pointed not to the colony ship but to Varga Relay, dark for a generation."
+        },
+        {
+          "about": "character_does",
+          "text": "Vesna threaded the Lantern Wake through the ice of Kessel Drift, and the ship came out clean."
+        },
+        {
+          "about": "character_does",
+          "text": "Then Vesna parked the ship in the relay's sensor shadow, close enough to see the scorched docking collar."
+        },
+        {
+          "about": "world",
+          "text": "A dead station was still repeating a dead ship's call. One row of its windows was lit."
+        }
+      ],
+      "text": "Previously: at Deepwater Anchorage, Juno dug the Meridian's Hope distress beacon out of the anchorage's signal archive, and found it looping under forty years of static — clipped, its origin coordinates scrubbed on purpose. Vesna ran the clipped signal against the Lantern Wake's star charts, and the drift pointed not to the colony ship but to Varga Relay, dark for a generation. Vesna threaded the Lantern Wake through the ice of Kessel Drift, and the ship came out clean. Then Vesna parked the ship in the relay's sensor shadow, close enough to see the scorched docking collar. A dead station was still repeating a dead ship's call. One row of its windows was lit."
+    }
+  ]
+}

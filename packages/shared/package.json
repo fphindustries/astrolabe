@@ -1,0 +1,27 @@
+{
+  "name": "@astrolabe/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Event and DTO types shared by the server and the client",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./test-fixtures": {
+      "types": "./dist/test-fixtures.d.ts",
+      "default": "./dist/test-fixtures.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "tsc --build --clean"
+  },
+  "dependencies": {
+    "@astrolabe/rules": "*",
+    "zod": "^4.1.0"
+  }
+}

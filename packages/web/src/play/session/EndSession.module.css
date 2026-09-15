@@ -1,0 +1,128 @@
+.end {
+  composes: panel from '../../ui/controls.module.css';
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.thread {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.failure {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.header {
+  justify-content: space-between;
+}
+
+.actions {
+  justify-content: flex-end;
+}
+
+.title {
+  font-weight: 600;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.threads {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.label {
+  composes: fieldLabel from '../../ui/controls.module.css';
+}
+
+.badge {
+  composes: aiBadge from '../../ui/controls.module.css';
+}
+
+.summary {
+  background: var(--surface-0);
+  color: var(--text-primary);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  font: inherit;
+}
+
+.input {
+  background: var(--surface-0);
+  color: var(--text-primary);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  font: inherit;
+}
+
+.summary {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+.input {
+  flex: 1;
+}
+
+.hint {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.reminder {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--accent);
+}
+
+.failure {
+  font-size: var(--text-sm);
+  color: var(--outcome-miss);
+}
+
+.error {
+  font-size: var(--text-sm);
+  color: var(--outcome-miss);
+}
+
+.primary {
+  composes: primary from '../../ui/controls.module.css';
+}
+
+.secondary {
+  composes: secondary from '../../ui/controls.module.css';
+}

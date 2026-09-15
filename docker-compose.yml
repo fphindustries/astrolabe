@@ -1,0 +1,68 @@
+# Astrolabe on the Linux home server (task 10.5, D-55, D-154), and the
+# Postgres that local development and the tests use.
+#
+# The `app` service names an `image` as well as a local `build`, so:
+#
+#   docker compose pull && docker compose up -d
+#
+# fetches the image GitHub Actions built and pushed from `main` (D-157) and
+# runs it — no local build. To build from source instead (working on the
+# app itself, or `main`'s image isn't reachable):
+#
+#   docker compose up -d --build
+#
+# Either way this starts Postgres, migrates, and serves the app on
+# http://<host>:3000 (ASTROLABE_PORT to change it). The database starts
+# empty; create a campaign in the app. See README.md for the `.env` keys
+# and how to update.
+#
+# Development runs natively and needs only the database:
+#
+#   npm run db:up
+#   export DATABASE_URL=postgres://astrolabe:astrolabe@localhost:5433/astrolabe
+#   npm test
+#
+# Postgres is published on 127.0.0.1 only, port 5433 rather than 5432 so it
+# never collides with a Postgres someone already runs locally.
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: astrolabe
+      # Read once, when the volume is first initialised; changing it later
+      # doesn't change the database's password.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-astrolabe}
+      POSTGRES_DB: astrolabe
+    ports:
+      - '127.0.0.1:${POSTGRES_PORT:-5433}:5432'
+    volumes:
+      - astrolabe-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U astrolabe -d astrolabe']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    image: ghcr.io/fphindustries/astrolabe:latest
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    # ANTHROPIC_API_KEY and the optional ASTROLABE_* model overrides.
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Set here, so a development `.env`'s localhost URL never wins.
+      DATABASE_URL: postgres://astrolabe:${POSTGRES_PASSWORD:-astrolabe}@db:5432/astrolabe
+      NODE_ENV: production
+      PORT: '3000'
+    ports:
+      - '${ASTROLABE_PORT:-3000}:3000'
+
+volumes:
+  astrolabe-pgdata:
