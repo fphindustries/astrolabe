@@ -1,3 +1,4 @@
+import { stubComplicationOptions } from './context/complication.js';
 import { ClaudeProvider, DEFAULT_CLAUDE_MODEL } from './claude.js';
 import type { AiProvider } from './provider.js';
 import { StubProvider, type StubResponse } from './stub.js';
@@ -147,8 +148,17 @@ function devStubResponse(
     // Most beats bring nothing new, and a stubbed session plays without generating.
     return {
       kind: 'structured',
-      value: { review: 'Stub plan: nothing new enters the world.', recipes: [], questions: [] },
+      // Clock fields are stripped on a beat that isn't a pressure beat (D-145).
+      value: {
+        review: 'Stub plan: nothing new enters the world.',
+        recipes: [],
+        questions: [],
+        clocks: { create: [], tick: [] },
+      },
     };
+  }
+  if (mode === 'structured' && request.purpose === 'complication_options') {
+    return { kind: 'structured', value: stubComplicationOptions() };
   }
   if (mode === 'structured' && request.purpose === 'incident_proposal') {
     return { kind: 'structured', value: stubIncidentProposal(request.user) };

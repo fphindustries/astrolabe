@@ -6,6 +6,7 @@ import type { DeepMutable, DeepReadonly } from '../readonly.js';
 import { AiCompletedSchema, AiFailedSchema } from './ai.js';
 import { AmountCommittedSchema, AmountProposedSchema } from './amount.js';
 import { CampaignCreatedSchema } from './campaign.js';
+import { ComplicationOfferedSchema, ComplicationSetSchema } from './complication.js';
 import { CharacterCreatedSchema, CharacterProposedSchema } from './character.js';
 import { EntityEstablishedSchema } from './entity.js';
 import { IncidentProposedSchema } from './incident.js';
@@ -90,6 +91,8 @@ export const PAYLOAD_SCHEMAS = {
   'incident.proposed': IncidentProposedSchema,
   'move.suggested': MoveSuggestedSchema,
   'move.trigger_noted': MoveTriggerNotedSchema,
+  'complication.offered': ComplicationOfferedSchema,
+  'complication.set': ComplicationSetSchema,
 } as const;
 
 export type EventType = keyof typeof PAYLOAD_SCHEMAS;
@@ -155,6 +158,8 @@ export const EventSchema = z.discriminatedUnion('type', [
   eventMember('incident.proposed'),
   eventMember('move.suggested'),
   eventMember('move.trigger_noted'),
+  eventMember('complication.offered'),
+  eventMember('complication.set'),
 ]);
 
 /**

@@ -8,6 +8,7 @@ import {
   type OracleId,
   type OracleRecipe,
   type OutcomeTier,
+  type TrackId,
 } from '@astrolabe/rules';
 import type { AstrolabeEvent, CampaignState, EventId } from '@astrolabe/shared';
 import * as z from 'zod';
@@ -34,7 +35,7 @@ export const WORLD_RULES = `You run the world for a solo game of Ironsworn: Star
 You never invent what an oracle would decide. When the world needs something new that dice should ground, you name a recipe, the app rolls its oracle tables, and you interpret the results.`;
 
 /** D-28 (8.4): the Guide may ask the oracle about the world, with odds it sets. */
-export const QUESTION_RULES = `Questions: when something about the world is genuinely uncertain, matters to what comes next, and is not yours to simply decide from what is established, ask it as a yes/no question with the odds of a yes you judge from everything established: small_chance, unlikely, fifty_fifty, likely or almost_certain. The app rolls it. Most of the time there is no question: answer with an empty list. Never ask about anything a player character does, thinks, feels or decides, and never name a player character in a question. Do not request a recipe that only makes sense if a question comes out one way.`;
+export const QUESTION_RULES = `Questions: when something about the world is genuinely uncertain, matters to what comes next, and is not yours to simply decide from what is established, ask it as a yes/no question with the odds of a yes you judge from everything established: small_chance, unlikely, fifty_fifty, likely or almost_certain. The app rolls it. Most of the time there is no question: answer with an empty list. Never ask about anything a player character does, thinks, feels or decides, and never name a player character in a question. When a recipe only makes sense if the answer is yes (someone is there only if the oracle says so), name it in that question's onYes instead of requesting it: it is rolled only on a yes. Otherwise onYes is null.`;
 
 const PLAN_RULES = `A beat of play has just resolved and been narrated. Decide whether it brings anything new into the world that the dice should ground.
 
@@ -101,6 +102,8 @@ export interface WorldBeat {
   readonly outcomes: readonly string[];
   /** The committed passage the world pass follows. */
   readonly passage: string;
+  /** D-145: a miss, a match or a Pay the Price chain, which lets the plan set clocks. */
+  readonly pressure?: boolean;
   /** D-28 (8.4): what the oracle answered the plan's questions, once rolled. */
   readonly answers?: readonly string[];
 }
@@ -138,8 +141,110 @@ export function recipeOf(offered: readonly OracleRecipe[], name: string): Oracle
   return offered.find((recipe) => planName(recipe) === name);
 }
 
-export function worldPlanSchema(offered: readonly OracleRecipe[]) {
+/** An unfilled clock the plan may tick, by key (D-145). */
+export interface OpenClock {
+  /** `C1`, `C2`, … */
+  readonly key: string;
+  readonly trackId: TrackId;
+  readonly title: string;
+  readonly ticks: number;
+  readonly maxTicks: number;
+}
+
+/**
+ * D-145: present only on a pressure beat (a miss, a match or a Pay the Price
+ * chain), and absent from a scene frame. Without it the plan has no clock
+ * fields at all.
+ */
+export interface ClockOffer {
+  readonly open: readonly OpenClock[];
+}
+
+/** The unfilled clocks, keyed in the order the campaign created them. */
+export function openClocks(state: CampaignState): readonly OpenClock[] {
+  return Object.values(state.tracks)
+    .filter((track) => track.kind === 'clock' && track.ticks < track.maxTicks)
+    .map((track, i) => ({
+      key: `C${i + 1}`,
+      trackId: track.id,
+      title: track.title,
+      ticks: track.ticks,
+      maxTicks: track.maxTicks,
+    }));
+}
+
+const CLOCK_SEGMENTS = [4, 6, 8, 10] as const;
+
+export interface ClockCreate {
+  readonly title: string;
+  readonly segments: (typeof CLOCK_SEGMENTS)[number];
+  readonly filled: number;
+  readonly reason: string;
+}
+
+export interface ClockTick {
+  readonly clock: string;
+  readonly segments: number;
+  readonly reason: string;
+}
+
+export interface WorldPlan {
+  readonly review: string;
+  readonly recipes: readonly { readonly recipe: string; readonly reason: string }[];
+  readonly questions: readonly {
+    readonly question: string;
+    readonly odds: (typeof ORACLE_ODDS)[number];
+    readonly onYes: string | null;
+  }[];
+  readonly clocks?: {
+    readonly create: readonly ClockCreate[];
+    readonly tick?: readonly ClockTick[];
+  };
+}
+
+export function worldPlanSchema(
+  offered: readonly OracleRecipe[],
+  clocks?: ClockOffer,
+): z.ZodType<WorldPlan> {
   const names = offered.map(planName) as [string, ...string[]];
+  const keys = (clocks?.open ?? []).map((c) => c.key) as [string, ...string[]];
+  const clockFields =
+    clocks === undefined
+      ? {}
+      : {
+          clocks: z
+            .object({
+              create: z
+                .array(
+                  z.object({
+                    title: z.string().min(1).describe('What is building, in a few words.'),
+                    segments: z.union(CLOCK_SEGMENTS.map((n) => z.literal(n)) as never),
+                    filled: z.int().min(0).describe('Segments already filled when it is created.'),
+                    reason: z.string().min(1).describe('One line: what in this beat set it going.'),
+                  }),
+                )
+                .max(1)
+                .describe('At most one new clock. Usually empty.'),
+              ...(keys.length > 0
+                ? {
+                    tick: z
+                      .array(
+                        z.object({
+                          clock: z.enum(keys),
+                          segments: z.int().min(1),
+                          reason: z
+                            .string()
+                            .min(1)
+                            .describe('One line: why this beat advances it.'),
+                        }),
+                      )
+                      .max(2)
+                      .describe('Existing clocks this beat advances. Usually empty.'),
+                  }
+                : {}),
+            })
+            .describe('Clocks: only for a threat or pressure this beat sets building.'),
+        };
   return z.object({
     review: z
       .string()
@@ -164,19 +269,25 @@ export function worldPlanSchema(offered: readonly OracleRecipe[]) {
         z.object({
           question: z.string().min(1).describe('A yes/no question about the world.'),
           odds: z.enum(ORACLE_ODDS),
+          onYes: z
+            .enum(names)
+            .nullable()
+            .describe(
+              'A recipe to roll only if the answer is yes (D-138, amended); otherwise null.',
+            ),
         }),
       )
       .max(2)
       .describe('Yes/no questions about the world for the oracle (D-28). Usually empty.'),
-  });
+    ...clockFields,
+  }) as unknown as z.ZodType<WorldPlan>;
 }
-
-export type WorldPlan = z.infer<ReturnType<typeof worldPlanSchema>>;
 
 /** D-140: a question is world text, and names no player character. */
 export function checkWorldPlan(
   value: WorldPlan,
   characters: SegmentContext['characters'],
+  clocks?: ClockOffer,
 ): string | undefined {
   for (const { question } of value.questions) {
     const named = namedCharacter(question, characters);
@@ -184,7 +295,81 @@ export function checkWorldPlan(
       return `The question "${question}" names ${named.callsign}, a player character. Ask about the world, not about a player character.`;
     }
   }
+  return value.clocks === undefined ? undefined : checkClocks(value.clocks, characters, clocks);
+}
+
+/** D-145's gate and limits, and D-140's name check on clock text. */
+function checkClocks(
+  planned: NonNullable<WorldPlan['clocks']>,
+  characters: SegmentContext['characters'],
+  offer: ClockOffer | undefined,
+): string | undefined {
+  const tick = planned.tick ?? [];
+  if (offer === undefined) {
+    return planned.create.length > 0 || tick.length > 0
+      ? 'Clocks are set only after a miss, a match or a Pay the Price. This beat had none: leave clocks out.'
+      : undefined;
+  }
+  if (planned.create.length > 1) {
+    return 'Create at most one clock.';
+  }
+  for (const clock of planned.create) {
+    if (!(CLOCK_SEGMENTS as readonly number[]).includes(clock.segments)) {
+      return `A clock has 4, 6, 8 or 10 segments, not ${clock.segments}.`;
+    }
+    if (clock.filled < 0 || clock.filled >= clock.segments) {
+      return `A new clock of ${clock.segments} segments starts with 0 to ${clock.segments - 1} filled, not ${clock.filled}.`;
+    }
+  }
+  if (tick.length > 2) {
+    return 'Tick at most two clocks.';
+  }
+  const seen = new Set<string>();
+  for (const t of tick) {
+    const open = offer.open.find((c) => c.key === t.clock);
+    if (open === undefined) {
+      return `${t.clock} is not an open clock.`;
+    }
+    if (seen.has(t.clock)) {
+      return `${t.clock} is ticked twice; tick it once by the segments it advances.`;
+    }
+    seen.add(t.clock);
+    const room = open.maxTicks - open.ticks;
+    if (t.segments < 1 || t.segments > room) {
+      return `"${open.title}" has ${room} segment${room === 1 ? '' : 's'} left; tick it by 1 to ${room}.`;
+    }
+  }
+  const texts = [
+    ...planned.create.flatMap((c) => [c.title, c.reason]),
+    ...tick.map((t) => t.reason),
+  ];
+  for (const text of texts) {
+    const named = namedCharacter(text, characters);
+    if (named !== undefined) {
+      return `A clock's title or reason names ${named.callsign}, a player character. Say what builds in the world, without naming any player character.`;
+    }
+  }
   return undefined;
+}
+
+/**
+ * D-145's rules, sent only on a pressure beat, with the clocks that can
+ * still be ticked. On any other beat the plan hears nothing about clocks.
+ */
+export function clockSection(offer: ClockOffer): string {
+  const open =
+    offer.open.length === 0
+      ? 'There are no open clocks.'
+      : offer.open
+          .map((c) => `- [${c.key}] "${c.title}": ${c.ticks} of ${c.maxTicks} segments filled`)
+          .join('\n');
+  return [
+    'Clocks: this beat had a miss, a match or a price paid, so it may set pressure building.',
+    'Create a clock only for a specific threat or pressure this beat set in motion that will build over later beats, and that nothing established already tracks. Most such beats still need no clock. A clock has 4, 6 or more segments (4 for pressure that will come to a head soon); it may start with segments filled if this beat already advanced it, and needs a one-line reason grounded in the beat.',
+    'Tick an open clock only when this beat plainly advances what it tracks, by the segments it advances, with a one-line reason.',
+    'Never name a player character in a clock title or reason.',
+    `Open clocks you may tick:\n${open}`,
+  ].join('\n');
 }
 
 /** What a yes/no roll answered, as a line of fact (D-28). A match brings the move's twist (8.4). */
@@ -203,6 +388,7 @@ export function buildWorldPlanRequest(
   state: CampaignState,
   beat: WorldBeat,
   offered: readonly OracleRecipe[],
+  clocks?: ClockOffer,
 ): AiRequest {
   const recipes = offered
     .map((recipe) => `- ${planName(recipe)}: ${recipe.label} (rolls ${slotList(recipe)})`)
@@ -210,7 +396,9 @@ export function buildWorldPlanRequest(
   return {
     purpose: 'world_plan',
     system: [{ text: WORLD_RULES }, { text: PLAN_RULES, cache: true }],
-    user: `${beatBlock(state, beat)}\n\nRecipes you may request:\n${recipes}`,
+    user:
+      `${beatBlock(state, beat)}\n\nRecipes you may request:\n${recipes}` +
+      (clocks === undefined ? '' : `\n\n${clockSection(clocks)}`),
     effort: 'low',
   };
 }

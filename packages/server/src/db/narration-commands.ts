@@ -23,6 +23,7 @@ import {
   renderFacts,
   resolveBeatScope,
   groundedInOf,
+  missingComplication,
   resolveSegments,
   segmentContext,
   type BeatFacts,
@@ -236,6 +237,12 @@ export async function prepareBeatNarration(
   const scope = resolveBeatScope(events, request.afterCommandId);
   if (!scope.ok) {
     throw new AiRequestRefusedError(scope.reason, scope.detail);
+  }
+  if (missingComplication(scope.events)) {
+    throw new AiRequestRefusedError(
+      'complication_required',
+      'This outcome calls for a complication: write one, or pick from the Guide’s options, first.',
+    );
   }
 
   const facts = describeBeat(scope.events, state, events);

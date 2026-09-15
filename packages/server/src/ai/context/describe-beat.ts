@@ -268,6 +268,17 @@ export function describeBeat(
         );
         break;
       }
+      case 'complication.set': {
+        const p = event.payload;
+        const offer =
+          p.offeredEventId === undefined ? undefined : log.find((e) => e.id === p.offeredEventId);
+        const grounds =
+          offer?.type === 'complication.offered' && p.optionIndex !== undefined
+            ? offer.payload.options[p.optionIndex]?.groundedIn
+            : undefined;
+        push('choice', mover, `The player set the complication: ${p.text}`, grounds);
+        break;
+      }
       case 'state.overridden':
       case 'amount.proposed':
       default:

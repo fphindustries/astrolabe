@@ -1,0 +1,88 @@
+{
+  "date": "2026-09-14",
+  "runs": [
+    {
+      "run": 0,
+      "complication": {
+        "ok": true,
+        "offerMs": 8742,
+        "options": [
+          "The logs show the station wasn't abandoned so much as evacuated in stages, the last crew stripping the relay's power cells to keep their own life support running as they withdrew. The docking port is drawing off the ship's reserves to stay awake, and supply will bleed for as long as the connection holds. [Withdraw + Survival]",
+          "Half the log entries are overwritten by more recent access stamps — someone raided this archive within the last month and took the Meridian's Hope telemetry with them. What's left is a cold record of a boarding, and the raiders knew exactly which files they wanted. [Raid + Humanity]",
+          "The final transmissions are a quarantine order: Meridian's Hope was refused docking here because something aboard was spreading, and the station logged her crew's pleas until they stopped. The recorder is still out there, but so is whatever they were carrying. [Surrender + Cure]"
+        ],
+        "passage": "Juno jacks into the docking port, the collar's scorched sleeve swallowing the line, and pulls the station logs. They come up slow and out of order, forty years of watch entries thinning toward the end. Varga Relay was not abandoned; it was emptied in stages, each departing crew stripping another rank of power cells to keep their own life support breathing on the way out. The port hums as it feeds, drawing off the Lantern Wake's reserves to keep itself awake, and it will keep drinking for as long as the connection holds. The readout settles under Juno's hands, steady, legible enough to work with. [chips 2]"
+      },
+      "clocks": {
+        "beat7": {
+          "ok": true,
+          "created": [],
+          "advanced": [],
+          "entities": []
+        },
+        "beat6": {
+          "ok": true,
+          "created": [],
+          "advanced": [],
+          "entities": ["Nassar Valk"]
+        }
+      }
+    },
+    {
+      "run": 1,
+      "complication": {
+        "ok": true,
+        "offerMs": 8215,
+        "options": [
+          "The logs come through, but the station's dying power grid bleeds back along the jack and cooks half the diagnostic rig — the tool that pulled the data is now slag, and any further deep reads will have to be done by hand, slowly, in the dark. [Weaken + Tool]",
+          "The manifest confirms Meridian's Hope docked here, but the flight recorder's transfer record has been deliberately scrubbed and the gap patched over — someone hid the trail on purpose, and whoever they were, they knew the station's systems intimately. [Hide + Quest]",
+          "The logs show a salvage beacon still broadcasting from the wreck site, an open invitation that's been running for a generation; the trail is easy to follow now, but it has been just as easy for everyone else, and the station's last entry records three ships answering it. [Weaken + Opportunity]"
+        ],
+        "passage": "Juno jacks into the docking port, the connector seating with a dry click, and pulls the station logs. Data crawls up out of the relay in slow cold packets, forty years of watch-shifts and maintenance gripes, the beacon entry buried somewhere in the middle of it. Then the station's grid stutters — something deep in the dark hull surging as it dies — and the surge comes back up the line. The diagnostic rig lights white, then black; half its board is slag, the casing hot and stinking of scorched resin, the logs still safe in memory but locked behind a tool that will never read deep again. What came through was enough, and the weight of it sits in Juno's hands. [chips 2]"
+      },
+      "clocks": {
+        "beat7": {
+          "ok": true,
+          "created": [],
+          "advanced": [],
+          "entities": []
+        },
+        "beat6": {
+          "ok": true,
+          "created": [],
+          "advanced": [],
+          "entities": ["Alisa Valenus"]
+        }
+      }
+    },
+    {
+      "run": 2,
+      "complication": {
+        "ok": true,
+        "offerMs": 8182,
+        "options": [
+          "The logs are intact but their timestamps run wrong — entries from the same hour arrive weeks apart, as if the station kept syncing to a clock that wasn't its own. Sorting Meridian's Hope out of the jumble means finding the drift pattern first, and the station's power will not hold forever. [Coordinate + Time]",
+          "The final entries show the station's last crew stripping the archive and bartering the recovered data away piecemeal to passing ships in exchange for fuel and food. Whatever was logged about Meridian's Hope was deleted at the buyer's insistence, and the only trace is a manifest of who took it. [Eliminate + Trade]",
+          "The moment the port accepts the connection, a stored distress broadcast floods every channel — a generation of unanswered voices, thousands of hours of them, playing at once and refusing to stop. It will carry far across the sector, and anything listening now knows the station has woken. [Overwhelm + Spirit]"
+        ],
+        "passage": "Juno jacks into the docking port, the connector seating with a dull magnetic knock, and pulls the station logs. The collar's dead panel wakes a finger's width at a time, amber characters crawling up out of forty years of cold storage. The logs are all there, unbroken — but the timestamps run wrong, entries from a single hour arriving weeks apart, as if the relay kept syncing to a clock that was never its own. Somewhere in that jumble the Meridian's Hope is filed, and finding it means finding the drift pattern first. Behind the readout, the station's power draw ticks down in a slow, honest line. It will not hold forever. The connection holds steady in Juno's hands, the data coming faster than expected. [chips 2]"
+      },
+      "clocks": {
+        "beat7": {
+          "ok": true,
+          "created": [
+            "Something in the dark closes in (6): The forced bulkhead announced the crew's presence, and something metal stirred deeper in the station."
+          ],
+          "advanced": [1],
+          "entities": []
+        },
+        "beat6": {
+          "ok": true,
+          "created": [],
+          "advanced": [],
+          "entities": []
+        }
+      }
+    }
+  ]
+}

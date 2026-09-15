@@ -72,6 +72,18 @@ export type EntryBody =
       readonly amount: number;
       readonly meter: 'health' | 'spirit' | 'supply';
     }
+  | {
+      /** D-143: the Guide's options, as offered. */
+      readonly kind: 'complication_offered';
+      readonly options: readonly { readonly text: string; readonly chips: readonly ChipView[] }[];
+    }
+  | {
+      /** D-15, D-143: the complication the player set, and where its words came from. */
+      readonly kind: 'complication_set';
+      readonly text: string;
+      readonly source: 'written' | 'offered';
+      readonly fromOffer: boolean;
+    }
   | { readonly kind: 'track_created'; readonly title: string }
   | { readonly kind: 'track_advanced'; readonly ticks: number; readonly reason?: string }
   | { readonly kind: 'entity_established'; readonly name: string }
@@ -242,6 +254,23 @@ function toBody(entry: NarrativeEntry): EntryBody {
         amount: event.payload.amount,
         meter: event.payload.meter,
       };
+    case 'complication.offered':
+      return {
+        kind: 'complication_offered',
+        options: event.payload.options.map((option) => ({
+          text: option.text,
+          chips: (entry.chips ?? [])
+            .filter((chip) => option.groundedIn.includes(chip.eventId))
+            .map(toChipView),
+        })),
+      };
+    case 'complication.set':
+      return {
+        kind: 'complication_set',
+        text: event.payload.text,
+        source: event.payload.source,
+        fromOffer: event.payload.offeredEventId !== undefined,
+      };
     case 'track.created':
       return { kind: 'track_created', title: event.payload.title };
     case 'track.advanced':
@@ -304,7 +333,11 @@ export function withoutChippedRolls(beats: readonly BeatView[]): readonly BeatVi
   const chipped = new Set(
     beats.flatMap((beat) =>
       beat.entries.flatMap((entry) =>
-        entry.body.kind === 'narration' ? entry.body.chips.map((chip) => chip.eventId) : [],
+        entry.body.kind === 'narration'
+          ? entry.body.chips.map((chip) => chip.eventId)
+          : entry.body.kind === 'complication_offered'
+            ? entry.body.options.flatMap((option) => option.chips.map((chip) => chip.eventId))
+            : [],
       ),
     ),
   );

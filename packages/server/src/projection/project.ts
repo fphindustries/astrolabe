@@ -172,6 +172,8 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
     case 'incident.proposed':
     case 'move.suggested':
     case 'move.trigger_noted':
+    case 'complication.offered':
+    case 'complication.set':
     case 'amount.proposed':
     case 'amount.committed':
       // None of these change projected state. Rolls, chains, oracle results,

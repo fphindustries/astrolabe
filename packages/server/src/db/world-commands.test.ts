@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { createSeededRandomSource, type CharacterId } from '@astrolabe/rules';
+import { createSeededRandomSource, type CharacterId, type RandomSource } from '@astrolabe/rules';
 import { LOCAL_PLAYER_ID, type Actor, type CommandId, type EventId } from '@astrolabe/shared';
 
 import type { TextSink } from '../ai/respond.js';
@@ -133,18 +133,53 @@ describe.skipIf(!hasTestDatabase)('the world pass (task 8.1, D-137, D-138)', () 
     return { moveCommandId, passageEventId: result.eventId };
   }
 
+  /** Rook forces the bulkhead, Face Danger +iron, a miss, narrated: a pressure beat (D-145). */
+  async function missed(): Promise<{ passageEventId: EventId }> {
+    const state = project(await readEvents(db.sql, campaignId));
+    const rook = Object.values(state.characters).find((c) => c.callsign === 'Rook')!.id;
+    const moveCommandId = newId<CommandId>();
+    await invokeMove(db.sql, {
+      campaignId,
+      commandId: moveCommandId,
+      actor: PLAYER,
+      moveId: 'move:adventure/face-danger',
+      actorCharacterId: rook,
+      using: { using: 'stat', stat: 'iron' },
+      adds: [],
+      actionText: 'Rook forces the sealed bulkhead.',
+      rng: actionRoll(1, [9, 7]),
+    });
+    const prepared = await prepareBeatNarration(db.sql, {
+      campaignId,
+      commandId: newId(),
+      actor: PLAYER,
+      afterCommandId: moveCommandId,
+    });
+    if (prepared.kind !== 'run') throw new Error('expected a fresh narration');
+    const result = await runBeatNarration(
+      db.sql,
+      new StubProvider({ responses: [PASSAGE] }),
+      new StubProvider(),
+      prepared,
+      SINK,
+    );
+    if (!result.ok) throw new Error(result.message);
+    return { passageEventId: result.eventId };
+  }
+
   async function pass(
     ai: StubProvider,
     passageEventId: EventId,
     commandId: CommandId = newId<CommandId>(),
     sink: TextSink = SINK,
+    rng: RandomSource = createSeededRandomSource(6),
   ) {
     const prepared = await prepareWorldPass(db.sql, {
       campaignId,
       commandId,
       actor: PLAYER,
       passageEventId,
-      rng: createSeededRandomSource(6),
+      rng,
     });
     return prepared.kind === 'replay'
       ? prepared.result
@@ -666,7 +701,9 @@ describe.skipIf(!hasTestDatabase)('the world pass (task 8.1, D-137, D-138)', () 
       value: {
         review: 'Whether the relay still has air is uncertain and matters.',
         recipes: [],
-        questions: [{ question: 'Does the lit compartment still hold air?', odds: 'likely' }],
+        questions: [
+          { question: 'Does the lit compartment still hold air?', odds: 'likely', onYes: null },
+        ],
       },
     };
 
@@ -720,6 +757,72 @@ describe.skipIf(!hasTestDatabase)('the world pass (task 8.1, D-137, D-138)', () 
       expect(ai.requests[1]?.user).toContain('<oracle_answers>');
     });
 
+    /** The question's d100 lands on `face`; everything after rolls as the seeded tests always have. */
+    const answering = (face: number): RandomSource => {
+      const rest = createSeededRandomSource(6);
+      let first = true;
+      return {
+        next: () => {
+          if (first) {
+            first = false;
+            return (face - 0.5) / 100;
+          }
+          return rest.next();
+        },
+      };
+    };
+    const ALIVE: StubResponse = {
+      kind: 'structured',
+      value: {
+        review: 'Whether anyone survived is uncertain.',
+        recipes: [],
+        questions: [{ question: 'Is someone alive aboard?', odds: 'likely', onYes: 'npc' }],
+      },
+    };
+
+    it('rolls a question’s onYes recipe when the oracle answers Yes (D-138, amended)', async () => {
+      const { passageEventId } = await scanned();
+      const commandId = newId<CommandId>();
+      const ai = new StubProvider({
+        responses: [ALIVE, interpretation({ name: 'Ada Voss' }), WORLD_PASSAGE],
+      });
+
+      const result = await pass(ai, passageEventId, commandId, SINK, answering(20));
+
+      expect(result.ok).toBe(true);
+      expect(ai.requests.map((r) => r.purpose)).toEqual([
+        'world_plan',
+        'world_interpret',
+        'world_passage',
+      ]);
+      expect(ai.requests[1]?.user).toContain(
+        'because the oracle answered yes to "Is someone alive aboard?"',
+      );
+      const written = (await readEvents(db.sql, campaignId)).filter(
+        (e) => e.commandId === commandId,
+      );
+      expect(written.find((e) => e.type === 'oracle.rolled')).toMatchObject({
+        payload: { question: 'Is someone alive aboard?', rowText: 'Yes', roll: 20 },
+      });
+      expect(written.some((e) => e.type === 'entity.established')).toBe(true);
+    });
+
+    it('rolls nothing more on a No, and narrates the answer', async () => {
+      const { passageEventId } = await scanned();
+      const commandId = newId<CommandId>();
+      const ai = new StubProvider({ responses: [ALIVE, WORLD_PASSAGE] });
+
+      const result = await pass(ai, passageEventId, commandId, SINK, answering(90));
+
+      expect(result.ok).toBe(true);
+      expect(ai.requests.map((r) => r.purpose)).toEqual(['world_plan', 'world_passage']);
+      const written = (await readEvents(db.sql, campaignId)).filter(
+        (e) => e.commandId === commandId,
+      );
+      expect(written.filter((e) => e.type === 'oracle.rolled')).toHaveLength(1);
+      expect(written.some((e) => e.type === 'entity.established')).toBe(false);
+    });
+
     it('re-asks a plan whose question names a player character (D-140)', async () => {
       const { passageEventId } = await scanned();
       const naming: StubResponse = {
@@ -727,7 +830,9 @@ describe.skipIf(!hasTestDatabase)('the world pass (task 8.1, D-137, D-138)', () 
         value: {
           review: 'r',
           recipes: [],
-          questions: [{ question: 'Does Vesna recognise the signal?', odds: 'unlikely' }],
+          questions: [
+            { question: 'Does Vesna recognise the signal?', odds: 'unlikely', onYes: null },
+          ],
         },
       };
       const ai = new StubProvider({ responses: [naming, NOTHING] });
@@ -736,6 +841,118 @@ describe.skipIf(!hasTestDatabase)('the world pass (task 8.1, D-137, D-138)', () 
 
       expect(result.ok).toBe(true);
       expect(ai.requests[1]?.user).toMatch(/names Vesna, a player character/);
+    });
+  });
+
+  describe('clocks (8.6, D-145)', () => {
+    const CLOCK: StubResponse = {
+      kind: 'structured',
+      value: {
+        review: 'Forcing the bulkhead tripped emergency load-shedding.',
+        recipes: [],
+        questions: [],
+        clocks: {
+          create: [
+            {
+              title: 'Station power failing',
+              segments: 4,
+              filled: 1,
+              reason: 'Forcing the bulkhead tripped emergency load-shedding.',
+            },
+          ],
+          tick: [],
+        },
+      },
+    };
+
+    it('creates a clock after a miss, filled with its reason, shown and not narrated (Beat 8)', async () => {
+      const { passageEventId } = await missed();
+      const commandId = newId<CommandId>();
+      const ai = new StubProvider({ responses: [CLOCK] });
+
+      const result = await pass(ai, passageEventId, commandId);
+
+      expect(result.ok).toBe(true);
+      expect(ai.requests.map((r) => r.purpose)).toEqual(['world_plan']);
+      expect(ai.requests[0]?.user).toContain('Clocks: this beat had a miss');
+      const events = await readEvents(db.sql, campaignId);
+      const written = events.filter((e) => e.commandId === commandId);
+      expect(written.map((e) => e.type)).toEqual([
+        'ai.completed',
+        'track.created',
+        'track.advanced',
+      ]);
+      expect(written.slice(1).every((e) => e.actor.kind === 'ai')).toBe(true);
+      const clock = Object.values(project(events).tracks).find(
+        (t) => t.title === 'Station power failing',
+      );
+      expect(clock).toMatchObject({
+        kind: 'clock',
+        ticks: 1,
+        maxTicks: 4,
+        lastChangedBy: {
+          actorKind: 'ai',
+          reason: 'Forcing the bulkhead tripped emergency load-shedding.',
+        },
+      });
+    });
+
+    it('ticks an open clock on a later pressure beat', async () => {
+      const first = await missed();
+      await pass(new StubProvider({ responses: [CLOCK] }), first.passageEventId);
+      const state = project(await readEvents(db.sql, campaignId));
+      const open = Object.values(state.tracks).filter(
+        (t) => t.kind === 'clock' && t.ticks < t.maxTicks,
+      );
+      const key = `C${open.findIndex((t) => t.title === 'Station power failing') + 1}`;
+
+      const second = await missed();
+      const ai = new StubProvider({
+        responses: [
+          {
+            kind: 'structured',
+            value: {
+              review: 'The failing power spreads.',
+              recipes: [],
+              questions: [],
+              clocks: {
+                create: [],
+                tick: [
+                  { clock: key, segments: 1, reason: 'Another bulkhead forced, more load shed.' },
+                ],
+              },
+            },
+          },
+        ],
+      });
+      const commandId = newId<CommandId>();
+
+      await pass(ai, second.passageEventId, commandId);
+
+      const written = (await readEvents(db.sql, campaignId)).filter(
+        (e) => e.commandId === commandId,
+      );
+      expect(written.find((e) => e.type === 'track.advanced')).toMatchObject({
+        payload: {
+          ticks: 1,
+          cause: { kind: 'ai_judgement', reason: 'Another bulkhead forced, more load shed.' },
+        },
+      });
+    });
+
+    it('offers no clocks after a strong hit, and writes none even if the plan sends one', async () => {
+      const { passageEventId } = await scanned();
+      const commandId = newId<CommandId>();
+      const ai = new StubProvider({ responses: [CLOCK] });
+
+      const result = await pass(ai, passageEventId, commandId);
+
+      expect(result.ok).toBe(true);
+      expect(ai.requests[0]?.user).not.toContain('Clocks:');
+      const written = (await readEvents(db.sql, campaignId)).filter(
+        (e) => e.commandId === commandId,
+      );
+      expect(written.some((e) => e.type === 'track.created')).toBe(false);
     });
   });
 });

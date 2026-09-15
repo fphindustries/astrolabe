@@ -11,6 +11,7 @@ import {
   buildWorldPlanRequest,
   checkWorldInterpretation,
   checkWorldPlan,
+  clockSection,
   describeAnswer,
   outcomeTexts,
   worldInterpretSchema,
@@ -222,6 +223,14 @@ describe('the world pass prompts and checks (task 8.1, D-138, D-140)', () => {
       worldPlanSchema([NPC_RECIPE]),
     );
     expect(result).toMatchObject({ ok: true, value: { recipes: [] } });
+    // A pressure beat's schema requires clock fields; the stub must satisfy it too (D-145).
+    const pressured = await createProviderFromEnv({
+      ASTROLABE_AI_PROVIDER: 'stub',
+    }).generateStructured(
+      buildWorldPlanRequest(project([]), { ...BEAT, pressure: true }, [NPC_RECIPE], { open: [] }),
+      worldPlanSchema([NPC_RECIPE], { open: [] }),
+    );
+    expect(pressured).toMatchObject({ ok: true, value: { clocks: { create: [] } } });
   });
 
   it('plans the scene frame on Sonnet 5 unless ASTROLABE_PLAN_MODEL says otherwise (D-141, amended)', () => {
@@ -287,17 +296,20 @@ describe('the world pass prompts and checks (task 8.1, D-138, D-140)', () => {
     const schema = worldPlanSchema([NPC_RECIPE]);
     const plan = (questions: unknown[]) => ({ review: 'r', recipes: [], questions });
     expect(
-      schema.safeParse(plan([{ question: 'Is anyone alive aboard?', odds: 'likely' }])).success,
+      schema.safeParse(plan([{ question: 'Is anyone alive aboard?', odds: 'likely', onYes: null }]))
+        .success,
     ).toBe(true);
     expect(
-      schema.safeParse(plan([{ question: 'Is anyone alive aboard?', odds: 'certain' }])).success,
+      schema.safeParse(
+        plan([{ question: 'Is anyone alive aboard?', odds: 'certain', onYes: null }]),
+      ).success,
     ).toBe(false);
     expect(
       checkWorldPlan(
         {
           review: 'r',
           recipes: [],
-          questions: [{ question: 'Does Rook hear it?', odds: 'likely' }],
+          questions: [{ question: 'Does Rook hear it?', odds: 'likely', onYes: null }],
         },
         CREW,
       ),
@@ -307,7 +319,7 @@ describe('the world pass prompts and checks (task 8.1, D-138, D-140)', () => {
         {
           review: 'r',
           recipes: [],
-          questions: [{ question: 'Is the reactor stable?', odds: 'unlikely' }],
+          questions: [{ question: 'Is the reactor stable?', odds: 'unlikely', onYes: null }],
         },
         CREW,
       ),
@@ -332,5 +344,88 @@ describe('the world pass prompts and checks (task 8.1, D-138, D-140)', () => {
         question: 'Is anyone alive aboard?',
       }),
     ).toContain('The roll is a match. On a match, envision an extreme result or twist.');
+  });
+
+  describe('clocks (8.6, D-145)', () => {
+    const offer = {
+      open: [
+        {
+          key: 'C1',
+          trackId: 't1' as never,
+          title: 'Station power failing',
+          ticks: 3,
+          maxTicks: 4,
+        },
+      ],
+    };
+    const plan = (clocks: object) => ({ review: 'r', recipes: [], questions: [], clocks }) as never;
+    const create = (over: object = {}) => ({
+      title: 'Hull breach spreading',
+      segments: 4,
+      filled: 1,
+      reason: 'Forcing the bulkhead cracked the seal.',
+      ...over,
+    });
+
+    it('offers clock fields only with an offer', () => {
+      const withClocks = {
+        review: 'r',
+        recipes: [],
+        questions: [],
+        clocks: { create: [create()], tick: [] },
+      };
+      expect(worldPlanSchema([NPC_RECIPE]).parse(withClocks)).not.toHaveProperty('clocks');
+      expect(worldPlanSchema([NPC_RECIPE], offer).parse(withClocks)).toHaveProperty('clocks');
+    });
+
+    it('refuses clocks outside a pressure beat', () => {
+      expect(checkWorldPlan(plan({ create: [create()] }), CREW)).toMatch(/only after a miss/);
+      expect(checkWorldPlan(plan({ create: [] }), CREW)).toBeUndefined();
+    });
+
+    it('holds a new clock to its sizes and start, and a tick to an open clock with room', () => {
+      expect(checkWorldPlan(plan({ create: [create()], tick: [] }), CREW, offer)).toBeUndefined();
+      expect(checkWorldPlan(plan({ create: [create({ segments: 5 })] }), CREW, offer)).toMatch(
+        /4, 6, 8 or 10 segments/,
+      );
+      expect(checkWorldPlan(plan({ create: [create({ filled: 4 })] }), CREW, offer)).toMatch(
+        /0 to 3 filled/,
+      );
+      expect(checkWorldPlan(plan({ create: [create(), create()] }), CREW, offer)).toMatch(
+        /at most one/,
+      );
+      const tick = (clock: string, segments: number) => ({
+        clock,
+        segments,
+        reason: 'It spreads.',
+      });
+      expect(
+        checkWorldPlan(plan({ create: [], tick: [tick('C1', 1)] }), CREW, offer),
+      ).toBeUndefined();
+      expect(checkWorldPlan(plan({ create: [], tick: [tick('C1', 2)] }), CREW, offer)).toMatch(
+        /1 segment left/,
+      );
+      expect(checkWorldPlan(plan({ create: [], tick: [tick('C9', 1)] }), CREW, offer)).toMatch(
+        /not an open clock/,
+      );
+      expect(
+        checkWorldPlan(plan({ create: [], tick: [tick('C1', 1), tick('C1', 1)] }), CREW, offer),
+      ).toMatch(/ticked twice/);
+    });
+
+    it('refuses a clock title or reason that names a player character (D-140)', () => {
+      expect(
+        checkWorldPlan(
+          plan({ create: [create({ reason: 'Rook forced the bulkhead.' })] }),
+          CREW,
+          offer,
+        ),
+      ).toMatch(/names Rook/);
+    });
+
+    it('lists the open clocks in the rules it sends', () => {
+      expect(clockSection(offer)).toContain('[C1] "Station power failing": 3 of 4 segments filled');
+      expect(clockSection({ open: [] })).toContain('There are no open clocks.');
+    });
   });
 });

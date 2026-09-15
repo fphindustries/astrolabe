@@ -366,6 +366,20 @@ export const SAMPLE_PAYLOADS: { [T in EventType]: PayloadFor<T> } = {
     reason: 'Kicking the drone away is acting against a threat, not preparing.',
     confidence: 'medium',
   },
+  'complication.offered': {
+    options: [
+      {
+        text: 'The station was abandoned, yet one life-support circuit is still drawing power.',
+        groundedIn: [testEventId(1), testEventId(2)],
+      },
+    ],
+  },
+  'complication.set': {
+    text: 'The station was abandoned, yet one life-support circuit is still drawing power.',
+    source: 'offered',
+    offeredEventId: testEventId(3),
+    optionIndex: 0,
+  },
 };
 
 /** Every sample as a complete, valid event, in catalogue order. */

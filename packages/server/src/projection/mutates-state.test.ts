@@ -73,6 +73,15 @@ const PROBES: { readonly [T in EventType]: Probe } = {
         actor: AI_ACTOR,
       }),
   },
+  'complication.offered': {
+    probe: (b) =>
+      b.add('complication.offered', SAMPLE_PAYLOADS['complication.offered'] as never, {
+        actor: AI_ACTOR,
+      }),
+  },
+  'complication.set': {
+    probe: (b) => b.add('complication.set', SAMPLE_PAYLOADS['complication.set'] as never),
+  },
   'session.began': {
     probe: (b) => b.add('session.began', { sessionId: SESSION_ID, number: 3 }),
   },

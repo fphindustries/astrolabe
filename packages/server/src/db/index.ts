@@ -45,6 +45,14 @@ export {
   type SuggestMoveRequest,
 } from './suggestion-commands.js';
 export {
+  OFFER_COMPLICATIONS_COMMAND_KIND,
+  SET_COMPLICATION_COMMAND_KIND,
+  offerComplications,
+  setComplication,
+  type OfferComplicationsRequest,
+  type SetComplicationRequest,
+} from './complication-commands.js';
+export {
   BEAT_RECIPES,
   SCENE_FRAME_COMMAND_KIND,
   SCENE_RECIPES,

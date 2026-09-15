@@ -21,6 +21,7 @@ export const gatherInformation: MoveAutomation = {
       ],
     },
     weak_hit: {
+      complication: { clause: 'but also complicates your quest' },
       effects: [
         {
           effect: { kind: 'momentum', delta: 1, target: 'actor' },

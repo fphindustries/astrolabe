@@ -11,6 +11,10 @@ import {
   SuggestMoveRequestBodySchema,
   CheckTriggerRequestBodySchema,
   WorldPassRequestBodySchema,
+  OfferComplicationsRequestBodySchema,
+  SetComplicationRequestBodySchema,
+  type OfferComplicationsResponse,
+  type SetComplicationResponse,
   SceneFrameRequestBodySchema,
   type AiStatusResponse,
   type NarrationFrame,
@@ -43,6 +47,8 @@ import {
   runCorrection,
   prepareWorldPass,
   runWorldPass,
+  offerComplications,
+  setComplication,
   prepareSceneFrame,
   runSceneFrame,
   type AiCommandResult,
@@ -147,6 +153,76 @@ export function registerAiRoutes(
             ? prepared.result
             : runWorldPass(sql, ai, checker, prepared, sink, status),
         );
+      } catch (error) {
+        return refusal(error, reply);
+      }
+    },
+  );
+
+  // D-143 (8.7): complication options on request, and the complication the player sets.
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/complication-options',
+    async (
+      request,
+      reply,
+    ): Promise<OfferComplicationsResponse | NarrationRefusalResponse | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
+        return undefined;
+      }
+      const parsedBody = OfferComplicationsRequestBodySchema.safeParse(request.body);
+      if (!parsedBody.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        const result = await offerComplications(
+          sql,
+          ai,
+          {
+            campaignId: id,
+            commandId: parsedBody.data.commandId,
+            actor: PLAYER,
+            moveCommandId: parsedBody.data.moveCommandId,
+          },
+          status,
+        );
+        reply.code(201);
+        return result;
+      } catch (error) {
+        return refusal(error, reply);
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/complications',
+    async (
+      request,
+      reply,
+    ): Promise<SetComplicationResponse | NarrationRefusalResponse | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
+        return undefined;
+      }
+      const parsedBody = SetComplicationRequestBodySchema.safeParse(request.body);
+      if (!parsedBody.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        const { commandId, moveCommandId, text, offeredEventId, optionIndex } = parsedBody.data;
+        const result = await setComplication(sql, {
+          campaignId: id,
+          commandId,
+          actor: PLAYER,
+          moveCommandId,
+          text,
+          ...(offeredEventId !== undefined ? { offeredEventId } : {}),
+          ...(optionIndex !== undefined ? { optionIndex } : {}),
+        });
+        reply.code(201);
+        return result;
       } catch (error) {
         return refusal(error, reply);
       }

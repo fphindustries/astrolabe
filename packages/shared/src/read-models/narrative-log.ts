@@ -67,7 +67,8 @@ export interface NarrativeEntry {
   readonly narration?: ResolvedNarration;
   /**
    * Present on `narration.written` with grounding: its chips, in the order
-   * cited. A roll outside the fetched events is left out.
+   * cited, and on `complication.offered`: every option's rolls (8.7). A roll
+   * outside the fetched events is left out.
    */
   readonly chips?: readonly OracleChip[];
   /**

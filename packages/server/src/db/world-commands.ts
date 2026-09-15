@@ -6,8 +6,10 @@ import {
   rerollResult,
   rollOracle,
   rollRecipe,
+  type MoveId,
   type OracleRecipe,
   type RandomSource,
+  type TrackId,
 } from '@astrolabe/rules';
 import type {
   Actor,
@@ -33,6 +35,8 @@ import {
   checkWorldInterpretation,
   checkWorldPlan,
   describeAnswer,
+  openClocks,
+  type ClockOffer,
   describeBeat,
   describeEstablished,
   describeScene,
@@ -102,6 +106,7 @@ export const BEAT_RECIPES: readonly OracleRecipe[] = [NPC_RECIPE];
 export const SCENE_RECIPES: readonly OracleRecipe[] = [DERELICT_RECIPE];
 
 const SYSTEM: Actor = { kind: 'system' };
+const PAY_THE_PRICE_ID = 'move:fate/pay-the-price' as MoveId;
 
 export interface WorldPassRequest {
   readonly campaignId: CampaignId;
@@ -177,15 +182,23 @@ export async function prepareWorldPass(
     throw new AiRequestRefusedError(scope.reason, scope.detail);
   }
 
+  const facts = describeBeat(scope.events, state, events);
   return {
     kind: 'run',
     mode: 'pass',
     request,
     state,
     beat: {
-      facts: describeBeat(scope.events, state, events),
+      facts,
       outcomes: outcomeTexts(scope.events),
       passage: passage.payload.text,
+      // D-145: a miss, a match or a Pay the Price chain lets the plan set clocks.
+      pressure:
+        facts.miss ||
+        facts.match ||
+        scope.events.some(
+          (event) => event.type === 'move.invoked' && event.payload.moveId === PAY_THE_PRICE_ID,
+        ),
     },
     causedBy: passage.id,
     envelope: envelopeOf(request.campaignId, state),
@@ -276,9 +289,14 @@ async function commitWorldPass(
   const { request, state, beat, envelope } = prepared;
 
   const characters = segmentContext(beat.facts, state, 'color').characters;
-  const planRequest = buildWorldPlanRequest(state, beat, BEAT_RECIPES);
-  const plan = await generateValidated(ai, planRequest, worldPlanSchema(BEAT_RECIPES), (value) =>
-    checkWorldPlan(value, characters),
+  const clocks: ClockOffer | undefined =
+    beat.pressure === true ? { open: openClocks(state) } : undefined;
+  const planRequest = buildWorldPlanRequest(state, beat, BEAT_RECIPES, clocks);
+  const plan = await generateValidated(
+    ai,
+    planRequest,
+    worldPlanSchema(BEAT_RECIPES, clocks),
+    (value) => checkWorldPlan(value, characters, clocks),
   );
 
   const events: NewEvent[] = [...accounting(ai, planRequest.purpose, plan, envelope)];
@@ -289,10 +307,15 @@ async function commitWorldPass(
   // answers reach the interpretation and the follow-up passage.
   const answers = plan.ok ? questionEvents(plan.value.questions, rng, envelope) : [];
   events.push(...answers);
+  // D-145: shown on the pressure rail with the reason, never narrated.
+  if (plan.ok && clocks !== undefined && plan.value.clocks !== undefined) {
+    events.push(...clockEvents(plan.value.clocks, clocks, envelope));
+  }
   const answered: WorldBeat = { ...beat, answers: answers.map((e) => describeAnswer(e.payload)) };
 
-  if (plan.ok && plan.value.recipes.length > 0) {
-    const rolled = rollPlanned(plan.value.recipes, BEAT_RECIPES, rng);
+  const planned = plan.ok ? [...plan.value.recipes, ...yesRecipes(plan.value, answers)] : [];
+  if (planned.length > 0) {
+    const rolled = rollPlanned(planned, BEAT_RECIPES, rng);
     events.push(...rollEvents(rolled, envelope));
 
     const cap = settingsOf(state).rerollCap;
@@ -571,9 +594,13 @@ export async function runSceneFrame(
 
   // A derelict grounds the frame's prose only: nothing to interpret into an entity (D-139).
   const rng = request.rng ?? cryptoRandomSource();
+  const answers = questionEvents(plan.value.questions, rng, envelope);
   const rolls = [
-    ...questionEvents(plan.value.questions, rng, envelope),
-    ...rollEvents(rollPlanned(plan.value.recipes, SCENE_RECIPES, rng), envelope),
+    ...answers,
+    ...rollEvents(
+      rollPlanned([...plan.value.recipes, ...yesRecipes(plan.value, answers)], SCENE_RECIPES, rng),
+      envelope,
+    ),
   ];
   const facts = describeScene(
     state,
@@ -742,6 +769,86 @@ function crewOf(state: CampaignState) {
     callsign: c.callsign,
     name: c.name,
   }));
+}
+
+/**
+ * D-138 (amended after 8.4): a question's `onYes` recipe joins the plan only
+ * when the oracle answered Yes, with the question as its reason.
+ */
+function yesRecipes(
+  plan: WorldPlan,
+  answers: readonly NewEvent<'oracle.rolled'>[],
+): readonly { readonly recipe: string; readonly reason: string }[] {
+  return plan.questions.flatMap((question, i) =>
+    question.onYes !== null && answers[i]?.payload.rowText === 'Yes'
+      ? [
+          {
+            recipe: question.onYes,
+            reason: `the oracle answered yes to "${question.question.trim()}"`,
+          },
+        ]
+      : [],
+  );
+}
+
+/**
+ * D-145: a new clock as `track.created`, advanced at once by its starting
+ * segments so the rail shows who filled them and why; each tick as
+ * `track.advanced`. Both caused by the Guide's judgement, with its reason.
+ */
+function clockEvents(
+  planned: NonNullable<WorldPlan['clocks']>,
+  offer: ClockOffer,
+  envelope: Envelope,
+): readonly NewEvent[] {
+  const events: NewEvent[] = [];
+  for (const clock of planned.create) {
+    const trackId = uuidv7() as TrackId;
+    const cause = { kind: 'ai_judgement', reason: clock.reason.trim() } as const;
+    events.push(
+      withEnvelope(
+        {
+          type: 'track.created',
+          payload: {
+            kind: 'clock',
+            trackId,
+            title: clock.title.trim(),
+            segments: clock.segments,
+            cause,
+          },
+        } satisfies NewEvent<'track.created'>,
+        envelope,
+      ),
+    );
+    if (clock.filled > 0) {
+      events.push(
+        withEnvelope(
+          {
+            type: 'track.advanced',
+            payload: { trackId, ticks: clock.filled, cause },
+          } satisfies NewEvent<'track.advanced'>,
+          envelope,
+        ),
+      );
+    }
+  }
+  for (const tick of planned.tick ?? []) {
+    const open = offer.open.find((c) => c.key === tick.clock)!;
+    events.push(
+      withEnvelope(
+        {
+          type: 'track.advanced',
+          payload: {
+            trackId: open.trackId,
+            ticks: tick.segments,
+            cause: { kind: 'ai_judgement', reason: tick.reason.trim() },
+          },
+        } satisfies NewEvent<'track.advanced'>,
+        envelope,
+      ),
+    );
+  }
+  return events;
 }
 
 /** D-28 (8.4): each question rolled on the Ask the Oracle table for its odds. */

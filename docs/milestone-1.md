@@ -171,8 +171,8 @@ narrative log is a second read model with its own paged query.
 - [x] 8.3 Visible reroll with the discarded chip struck through, capped per campaign settings (D-142). In the world pass's interpretation; verified live with a planted contradiction (see "Implementation notes (task 8.3)")
 - [x] 8.4 AI-set odds on yes/no world questions, minimal: a world-pass plan field (D-28, D-138). No golden-session beat exercises it. Verified live (see "Implementation notes (task 8.4)")
 - [x] 8.5 Entity creation from oracle results: NPCs. Locations and factions deferred (D-144). The drawer shows the NPC's fields and its grounding as chips (see "Implementation notes (task 8.5)")
-- [ ] 8.6 Clock creation and ticks by the AI, with a stated reason (D-138, D-140, D-145)
-- [ ] 8.7 Weak-hit complications with no menu: written by the player or picked from AI options on request (editable, re-askable), required before Done (D-15, D-143 as amended)
+- [x] 8.6 Clock creation and ticks by the AI, with a stated reason (D-138, D-140, D-145). Verified live (see "Implementation notes (task 8.6)")
+- [x] 8.7 Weak-hit complications with no menu: written by the player or picked from AI options on request (editable, re-askable), required before Done (D-15, D-143 as amended). Verified live and in the browser (see "Implementation notes (task 8.7)")
 
 ### 9. Session lifecycle
 
@@ -1995,7 +1995,7 @@ The pass ran 2026-09-14 on `session-2-open`, with Opus 5 narrating and planning 
   - "Is someone still alive aboard the relay, keeping the core warm?" at likely → Yes (20);
   - "Is the repeated call being actively sent by a living person aboard the station?" at unlikely → No (70).
 - **Passages** followed the answers. The No became "No hand has touched it… The beacon is only a machine". The Yes became a voice on the channel.
-- **Finding: a Yes about a person can't create the person.** `QUESTION_RULES` forbids a recipe that depends on an answer. So in run 1, the "someone is alive" Yes was narrated as an unnamed voice, with no tracked NPC. The next beat's world pass may establish one. Beat 6 made an NPC outright in 1 of 3 runs here. Letting a recipe depend on an answer (roll the question, then the recipe only on a yes) would be a change to D-138, for the user.
+- **Finding: a Yes about a person can't create the person.** `QUESTION_RULES` forbids a recipe that depends on an answer. So in run 1, the "someone is alive" Yes was narrated as an unnamed voice, with no tracked NPC. The next beat's world pass may establish one. Beat 6 made an NPC outright in 1 of 3 runs here. **Resolved: the user chose "recipe on a Yes"** (D-138, amended again). A question may name a recipe in `onYes`, which `yesRecipes` adds to the plan only when the answer is Yes, with the question as its reason. The scene frame applies it too. **Live** (4 Beat 6 runs, `ai/eval/live-onyes.json`): every plan asked whether someone was alive with `onYes: npc`. Both Yes answers established an NPC (Jihun Sutton, Ragnar Silva) with one interpret call, and both No answers rolled nothing more. Beat 6's survivor now comes from the oracle rather than the plan's judgement.
 
 ### Verification
 
@@ -2040,3 +2040,71 @@ A browser pass on the stub reset the dev database and appended one AI-establishe
 - The console was clean.
 
 With no passage citing that NPC, its rolls also showed as log rows, the fallback 8.2 chose so rolled dice stay visible.
+
+## Implementation notes (task 8.6, clocks)
+
+8.6 is done (A14, D-138, D-140, D-145). The user settled the open questions before building: clocks only after pressure, and shown rather than narrated.
+
+### Shape
+
+- **The gate** (`prepareWorldPass`). A beat has pressure when its facts include a miss or a match, or its scope includes a Pay the Price invocation (`WorldBeat.pressure`). Only then does `commitWorldPass` offer clocks: `openClocks(state)` lists the unfilled clocks under keys `C1`, `C2`, …, and the plan's schema gains `clocks: { create, tick }`. On any other beat the fields aren't in the schema, so clock values the model sends are dropped when the answer is parsed. The prompt says nothing about clocks, and `checkWorldPlan` refuses clocks without an offer. A scene frame never offers clocks.
+- **The limits** (`checkWorldPlan`, via `checkClocks`):
+  - at most one new clock, of 4, 6, 8 or 10 segments, starting with 0 to segments−1 filled;
+  - at most two ticks, each on an open clock, once, by 1 up to the segments left;
+  - D-140's name check on titles and reasons.
+- **The rules sent** (`clockSection`, in the user turn so the cached system blocks stay stable): a clock tracks a specific threat this beat set building that nothing established already tracks, and most pressure beats still need none. The section lists the open clocks with how full they are.
+- **Events** (`clockEvents`, in the world command, authored by the AI). A new clock is `track.created` (kind `clock`, cause `ai_judgement` with its reason). Its starting segments follow as `track.advanced` with the same reason, so the rail's hover shows who filled them and why (Beat 8). A tick is `track.advanced` with its own reason.
+- **Not narrated.** `isEstablished` leaves clocks out, so a pass that only sets clocks writes no follow-up passage, and an NPC's passage doesn't mention them. A full clock does nothing mechanical (D-145 (4)).
+- **Dev stub.** Its world plan now includes `clocks: { create: [], tick: [] }`. The stub browser pass found that the missing field failed a pressure beat's schema and paused play; the field is dropped on other beats.
+
+### Live pass
+
+The pass ran 2026-09-14 with Opus 5 and Sonnet 5 on `session-2-open`: 3 runs each of Beat 7's chain and Beat 6's scan, narrated, then a real world pass. Runs are in `ai/eval/live-8.6-8.7.json`.
+
+- **Beat 7** (pressure) created a clock in 1 of 3 runs: "Something in the dark closes in" (6 segments, 1 filled), with the reason "The forced bulkhead announced the crew's presence, and something metal stirred deeper in the station."
+- **Beat 6** (a strong hit, no pressure): no clocks in 3 of 3. The gate held; in the spike, a routine scan got a clock in 3 of 6 runs.
+- Beat 8's golden "Station power failing" did not appear. A clock stays the Guide's judgement within the gate.
+
+## Implementation notes (task 8.7, weak-hit complications)
+
+8.7 is done (A5, D-15, D-143 as amended). The player writes the complication, or asks for options, picks one and may edit it. Options can be asked for again, and the beat can't be narrated until a complication is set.
+
+### Shape
+
+- **Rules.** `OutcomeSpec` gained `complication: { clause }`. Gather Information's weak hit declares it ("but also complicates your quest"), and the traceability test checks the clause verbatim. `complicationFor(moveId, tier)` is what the server and the client both read, at the tier after any burn.
+- **Events** (`shared/src/events/complication.ts`). Both are caused by the `move.invoked` and are narrative and voidable.
+  - `complication.offered { options: [{ text, groundedIn }] }` is written by the AI.
+  - `complication.set { text, source, offeredEventId?, optionIndex? }` is written by the player.
+- **Offering** (`offerComplications`, `POST /campaigns/:id/complication-options`). It refuses a move with no roll, one voided, one whose outcome calls for no complication, and one already set. For each of three options it rolls `core/action` and `core/theme`. The AI answers three options, each citing its own pair (`checkComplicationOptions`: exactly three, own pair only, distinct, D-140's name check), with one re-ask, and no D-128 checker (D-134). One command writes the rolls, the accounting, and the offer or `ai.failed`. A failure is shown in the prompt and never pauses play: the player can still write their own.
+- **Setting** (`setComplication`, `POST /campaigns/:id/complications`). A pick names its offer and option. `source` is `offered` only when the words match the option exactly; an edited pick is `written`, still naming the offer. A second complication on the same move is refused.
+- **Narration.**
+  - `prepareBeatNarration` refuses a beat still owed a complication (`missingComplication`, reason `complication_required`).
+  - `resolveBeatScope` leaves out the commands that wrote an offer, so unused options and their rolls are never facts.
+  - `describeBeat` adds the set complication as a fact, grounded in the rolls of the option it started from. The passage's `groundedIn` then gives Beat 3 its chips (A2).
+- **Web.** The result card shows `ComplicationPrompt` whenever `complicationFor` says the current tier needs one, including after a burn changes the tier. It offers a box to write in, **Give me options** / **Other options**, each option's text with its chips and **Use this** (marked "(picked)" in words), and **Set complication**. Done is disabled, with "Set the complication to finish the move.", until one is set. The log shows each offer with its options and their chips, whose rolls then don't also appear as rows, and the set complication with where its words came from ("picked from the Guide's options", "edited from the Guide's option", "written by the player").
+- **Dev fixture.** `session-1`'s Gather Information weak hit (`juno-archive`) now sets a player-written complication before it is narrated, since narration refuses without one.
+
+### Live pass
+
+Same runs as 8.6, 3 of Beat 3's weak hit: options requested, the first option picked, and the beat narrated.
+
+- **Options:** 3 of 3 answered on the first attempt, in 8.2–8.7 s, each set three distinct directions built on its pair ("Withdraw + Survival", "Raid + Humanity", "Surrender + Cure", …).
+- **Passages:** all three narrated the picked complication, each with 2 chips.
+- **Borderline:** some options describe what the complication does to the crew's gear ("cooks half the diagnostic rig"), and one passage closes on "the weight of it sits in Juno's hands", which the checker passed.
+
+### Verification
+
+`npm run typecheck`, `npm run lint`, `npm test` and the web build pass. The new tests cover:
+
+- **Clocks:** the schema offering clock fields only with an offer; refusal outside a pressure beat; sizes, starting fill, one creation, open-clock ticks with room, and repeats; the name check; the open-clock list; a miss creating a filled clock that is logged but not narrated; ticking a clock later; a strong hit getting none even when the plan sends one; the stub satisfying a pressure beat's schema.
+- **Complications:** the traced clause; pair rolls and the offer's cause; narration refused until set, with the set complication then a fact grounded in its option and no offer rolls among the facts; an edited pick recorded as written; asking again; one written from scratch; a second complication refused; a naming option re-asked and then failed with its rolls kept; a strong hit and a burned weak hit owing none; `missingComplication`; the dev stub; the web draft helpers; offered options' chips hiding their rows.
+
+**Browser pass on the stub.** Vesna's Gather Information missed, and the burn offer lifted it to a weak hit.
+- The complication prompt appeared, with Done disabled.
+- **Give me options** showed three options with chips. **Use this** on the second, plus an edit, then **Set complication** enabled Done.
+- The passage committed, and the log read "Complication (edited from the Guide's option): …".
+- The same pass found the stub's missing clock fields: the earlier miss beat had paused play. Retry recovered it once fixed.
+
+**Existing issues seen, not in scope:**
+- The duplicate-key warning from 6.3's ability list (see 8.1's notes).
+- After a burn lifts a miss to a weak hit, the result card still offers Pay the Price from the original miss.

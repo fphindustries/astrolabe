@@ -19,6 +19,7 @@ import {
 } from '../db/campaign-commands.js';
 import { createCharacter } from '../db/character-commands.js';
 import { appendCommand } from '../db/event-store.js';
+import { setComplication } from '../db/complication-commands.js';
 import { applyMoveChoice, invokeMove } from '../db/move-commands.js';
 import { prepareBeatNarration, runBeatNarration } from '../db/narration-commands.js';
 
@@ -291,6 +292,13 @@ export async function playSessionOne(
     [2, [3, 8]],
     'weak_hit',
   );
+  // D-143: a Gather Information weak hit calls for a complication before it is narrated.
+  await setComplication(sql, {
+    ...base,
+    commandId: key('juno-archive:complication'),
+    moveCommandId: key('juno-archive:move'),
+    text: 'The beacon in the archive is not the original: something has been repeating it.',
+  });
   await narrate('juno-archive', [
     ['world', null, [], "The anchorage's archive is a landfill of half-corrupted captures."],
     ['character_does', 'Juno', ['F2'], 'Juno digs through it for the beacon.'],

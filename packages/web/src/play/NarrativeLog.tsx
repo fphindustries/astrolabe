@@ -212,6 +212,22 @@ function Entry({ campaignId, entry }: { readonly campaignId: string; readonly en
       </div>
     );
   }
+  if (body.kind === 'complication_offered') {
+    // D-143: the options as offered, each with its Action + Theme chips.
+    return (
+      <div className={styles.entry} data-voided={entry.voided}>
+        <span className={styles.text}>The Guide offers complications:</span>
+        <ol className={styles.offered}>
+          {body.options.map((option, index) => (
+            <li key={index}>
+              <span className={styles.text}>{option.text}</span>
+              <OracleChips chips={option.chips} />
+            </li>
+          ))}
+        </ol>
+      </div>
+    );
+  }
   if (body.kind === 'withdrawal') {
     // A record of what was refused, not a thing to correct or void on its
     // own: voiding its beat takes it with the rest (D-128).
@@ -277,6 +293,16 @@ function describeEntry(entry: EntryView): string {
       return `Committed ${body.amount >= 0 ? '+' : ''}${body.amount} ${body.meter}`;
     case 'track_created':
       return `Track created: ${body.title}`;
+    case 'complication_offered':
+      return `The Guide offers complications: ${body.options.map((o, i) => `(${i + 1}) ${o.text}`).join(' ')}`;
+    case 'complication_set':
+      return `Complication (${
+        body.source === 'offered'
+          ? 'picked from the Guide’s options'
+          : body.fromOffer
+            ? 'edited from the Guide’s option'
+            : 'written by the player'
+      }): ${body.text}`;
     case 'track_advanced':
       return `Track advanced by ${body.ticks}${body.reason === undefined ? '' : ` — ${body.reason}`}`;
     case 'entity_established':

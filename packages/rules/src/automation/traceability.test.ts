@@ -5,11 +5,11 @@ import type { Choice, MoveAutomation, OutcomeSpec, TracedEffect } from '../schem
 import { isVerbatimClause } from '../schema/traceability.js';
 import { MOVE_AUTOMATION_SPECS } from './specs/index.js';
 
-function tracedEffectsIn(spec: OutcomeSpec): readonly TracedEffect[] {
+function tracedEffectsIn(spec: OutcomeSpec): readonly Pick<TracedEffect, 'clause'>[] {
   const fromChoices = (spec.choices ?? []).flatMap((choice: Choice) =>
     choice.options.flatMap((option) => option.effects),
   );
-  return [...spec.effects, ...fromChoices];
+  return [...spec.effects, ...fromChoices, ...(spec.complication ? [spec.complication] : [])];
 }
 
 /**

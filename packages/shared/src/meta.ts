@@ -362,6 +362,26 @@ export const EVENT_TYPE_META: MetaTable = {
     introduces: none,
     references: none,
   },
+  'complication.offered': {
+    // D-143: the Guide's options, shown with the move until the player
+    // picks one or writes their own. Changes no state.
+    narrative: true,
+    significant: false,
+    mutatesState: false,
+    voidable: true,
+    introduces: none,
+    references: none,
+  },
+  'complication.set': {
+    // D-15, D-143: the player's complication, a fact the beat's passage
+    // narrates. Changes no mechanical state.
+    narrative: true,
+    significant: true,
+    mutatesState: false,
+    voidable: true,
+    introduces: none,
+    references: none,
+  },
 };
 
 /** The event types the narrative log renders (task 5.4's query). */

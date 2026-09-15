@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { STARFORGED, type CharacterId, type MoveId, type OutcomeTier } from '@astrolabe/rules';
+import {
+  STARFORGED,
+  complicationFor,
+  type CharacterId,
+  type MoveId,
+  type OutcomeTier,
+} from '@astrolabe/rules';
 import type { CheckTriggerResponse, CommandId, InvokeMoveResponse } from '@astrolabe/shared';
 
 import { useCheckTrigger } from '../../api/moves.js';
@@ -10,6 +16,7 @@ import type { CrewCardView } from '../crew/crew.js';
 
 import { BurnOfferPopover } from './BurnOfferPopover.js';
 import { ChoicePrompt } from './ChoicePrompt.js';
+import { ComplicationPrompt } from './ComplicationPrompt.js';
 import { DiceAnimation } from './DiceAnimation.js';
 import { TriggerNote } from './TriggerNote.js';
 import styles from './ResultCard.module.css';
@@ -54,6 +61,7 @@ export function ResultCard({
   const [choiceApplied, setChoiceApplied] = useState(false);
   const [burnedTo, setBurnedTo] = useState<OutcomeTier | null>(null);
   const [triggerCheck, setTriggerCheck] = useState<CheckTriggerResponse | undefined>(undefined);
+  const [complicationSet, setComplicationSet] = useState<string | null>(null);
   const check = useCheckTrigger(campaignId);
   const checkAsked = useRef(false);
 
@@ -70,6 +78,10 @@ export function ResultCard({
   const tier = burnedTo ?? invoked.roll.tier;
   const isHit = tier === 'strong_hit' || tier === 'weak_hit';
   const aidedAlly = crew.find((c) => c.characterId === aidingAllyId);
+  // D-143: read from the rules at the tier the roll now stands at, so a burn
+  // that lifts a weak hit to a strong hit lifts the requirement too.
+  const complication = complicationFor(moveId, tier);
+  const owesComplication = complication !== undefined && complicationSet === null;
 
   return (
     <div className={styles.card} data-tier={tier}>
@@ -130,6 +142,18 @@ export function ResultCard({
           />
         )}
 
+        {complication !== undefined &&
+          (complicationSet === null ? (
+            <ComplicationPrompt
+              campaignId={campaignId}
+              moveCommandId={commandId}
+              clause={complication.clause}
+              onSet={(_result, text) => setComplicationSet(text)}
+            />
+          ) : (
+            <p className={styles.aidNote}>Complication: {complicationSet}</p>
+          ))}
+
         {invoked.chain !== undefined && (
           <div className={styles.chain}>
             <p className={styles.chainReason}>{invoked.chain.reason}</p>
@@ -145,9 +169,18 @@ export function ResultCard({
           </div>
         )}
 
-        <button type="button" className={styles.done} onClick={onDone}>
+        <button
+          type="button"
+          className={styles.done}
+          onClick={onDone}
+          disabled={owesComplication}
+          title={owesComplication ? 'Set the complication first.' : undefined}
+        >
           Done
         </button>
+        {owesComplication && (
+          <p className={styles.aidNote}>Set the complication to finish the move.</p>
+        )}
       </DiceAnimation>
     </div>
   );

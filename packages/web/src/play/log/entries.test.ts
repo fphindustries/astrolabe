@@ -457,11 +457,11 @@ describe('toEntryView', () => {
     const view = toEntryView(
       entry({
         ...envelope(),
-        type: 'complication.offered',
+        type: 'scene.header_updated',
         payload: {},
       } as unknown as AstrolabeEvent),
     );
-    expect(view.body).toEqual({ kind: 'unknown', type: 'complication.offered' });
+    expect(view.body).toEqual({ kind: 'unknown', type: 'scene.header_updated' });
   });
 
   it('maps void marks through, kind and reason only', () => {
@@ -565,6 +565,50 @@ describe('oracle chips (8.2, D-17)', () => {
       { eventId: 'r1', label: 'first look', roll: 12, rowText: 'Wiry', struck: false },
       { eventId: 'r2', label: 'Character Role', roll: 41, rowText: 'Navigator', struck: true },
     ]);
+  });
+
+  it('shows each offered complication with its own chips, and hides those rolls as rows (8.7)', () => {
+    const offered = entry(
+      {
+        ...envelope({ id: 'off1' as never }),
+        type: 'complication.offered',
+        payload: {
+          options: [
+            { text: 'One circuit still draws power.', groundedIn: ['a1' as never, 't1' as never] },
+            { text: 'The logs were edited.', groundedIn: ['a2' as never, 't2' as never] },
+          ],
+        },
+      },
+      {
+        chips: ['a1', 't1', 'a2', 't2'].map((id, i) => ({
+          eventId: id as never,
+          oracleId: i % 2 === 0 ? 'oracle:core/action' : 'oracle:core/theme',
+          slot: i % 2 === 0 ? 'action' : 'theme',
+          roll: i + 1,
+          rowText: 'row',
+          voided: false,
+        })),
+      },
+    );
+    const view = toEntryView(offered);
+    expect(
+      view.body.kind === 'complication_offered' &&
+        view.body.options.map((o) => o.chips.map((c) => c.eventId)),
+    ).toEqual([
+      ['a1', 't1'],
+      ['a2', 't2'],
+    ]);
+    const beats = withoutChippedRolls([
+      toBeatView({
+        commandId: 'offer' as never,
+        seq: 1,
+        occurredAt: '2026-01-01T00:00:00.000Z' as never,
+        actorKind: 'system',
+        entries: [roll('a1'), roll('t1'), roll('a2'), roll('t2'), offered],
+        voided: false,
+      }),
+    ]);
+    expect(beats[0]?.entries.map((e) => e.body.kind)).toEqual(['complication_offered']);
   });
 
   it('labels a yes/no chip by its question (8.4)', () => {

@@ -110,8 +110,14 @@ export function resolveBeatScope(
     };
   }
 
+  // D-143: an offer's options and rolls were not what happened; the
+  // complication the player set is, and it stays in.
+  const offerCommands = new Set(
+    inScope.filter((event) => event.type === 'complication.offered').map((e) => e.commandId),
+  );
   const chain = inScope.filter(
     (event) =>
+      !offerCommands.has(event.commandId) &&
       event.type !== 'ai.completed' &&
       event.type !== 'ai.failed' &&
       event.type !== 'narration.written' &&

@@ -588,6 +588,43 @@ export type CheckTriggerResponse =
     }
   | { readonly ok: false; readonly errorKind: AiErrorKind; readonly message: string };
 
+/** 8.7 / D-143: ask the Guide for complication options for a move that calls for one. */
+export const OfferComplicationsRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  /** The command that invoked the move. */
+  moveCommandId: CommandIdSchema,
+});
+
+export type OfferComplicationsRequestBody = z.infer<typeof OfferComplicationsRequestBodySchema>;
+
+export type OfferComplicationsResponse =
+  | {
+      readonly ok: true;
+      readonly eventId: EventId;
+      /** Each option with the Action + Theme rolls it is grounded in, as chips. */
+      readonly options: readonly { readonly text: string; readonly chips: readonly OracleChip[] }[];
+    }
+  | { readonly ok: false; readonly errorKind: AiErrorKind; readonly message: string };
+
+/**
+ * 8.7 / D-143 (amended): the player sets the complication, written or
+ * picked. A pick names its offer and option, and may have been edited.
+ */
+export const SetComplicationRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  moveCommandId: CommandIdSchema,
+  text: z.string().trim().min(1).max(600),
+  offeredEventId: EventIdSchema.optional(),
+  optionIndex: z.int().nonnegative().optional(),
+});
+
+export type SetComplicationRequestBody = z.infer<typeof SetComplicationRequestBodySchema>;
+
+export interface SetComplicationResponse {
+  readonly eventId: EventId;
+  readonly source: 'written' | 'offered';
+}
+
 /** Task 4.6 / D-132: ask the Guide to propose inciting incidents. */
 export const ProposeIncidentsRequestBodySchema = z.object({
   commandId: CommandIdSchema,

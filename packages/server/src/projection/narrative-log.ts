@@ -148,6 +148,11 @@ function toEntry(
     voidedBy,
   };
 
+  if (event.type === 'complication.offered') {
+    // D-143: each option's Action + Theme rolls sit under it as chips.
+    const chips = chipsOf(event.payload.options.flatMap((option) => option.groundedIn));
+    return chips.length > 0 ? { ...entry, chips } : entry;
+  }
   if (event.type === 'narration.written') {
     // D-17: the rolls the passage was grounded in sit under it as chips.
     const chips = chipsOf(event.payload.groundedIn);

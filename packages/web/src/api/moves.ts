@@ -10,6 +10,9 @@ import type {
   SuggestMoveResponse,
   VoidEventResponse,
   VoidPreviewResult,
+  OfferComplicationsResponse,
+  SetComplicationRequestBody,
+  SetComplicationResponse,
 } from '@astrolabe/shared';
 
 import { useInvalidateCampaign } from './campaigns.js';
@@ -58,6 +61,40 @@ export function useCheckTrigger(campaignId: string) {
       invalidate();
       void queryClient.invalidateQueries({ queryKey: aiKeys.status });
     },
+  });
+}
+
+/**
+ * 8.7 / D-143: the Guide's complication options for a move whose outcome
+ * calls for one. On request, and as often as asked; a failure is shown,
+ * never a pause: the player can still write their own.
+ */
+export function useOfferComplications(campaignId: string) {
+  const invalidate = useInvalidateCampaign(campaignId);
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (moveCommandId: CommandId) =>
+      apiPost<OfferComplicationsResponse>(`/campaigns/${campaignId}/complication-options`, {
+        commandId: crypto.randomUUID(),
+        moveCommandId,
+      }),
+    onSettled: () => {
+      invalidate();
+      void queryClient.invalidateQueries({ queryKey: aiKeys.status });
+    },
+  });
+}
+
+/** 8.7 / D-143 (amended): set the complication, written or picked (and perhaps edited). */
+export function useSetComplication(campaignId: string) {
+  const invalidate = useInvalidateCampaign(campaignId);
+  return useMutation({
+    mutationFn: (input: Omit<SetComplicationRequestBody, 'commandId'>) =>
+      apiPost<SetComplicationResponse>(`/campaigns/${campaignId}/complications`, {
+        commandId: crypto.randomUUID(),
+        ...input,
+      }),
+    onSuccess: invalidate,
   });
 }
 

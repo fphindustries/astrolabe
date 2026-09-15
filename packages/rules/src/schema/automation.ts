@@ -46,6 +46,12 @@ export interface MethodOption {
 
 export interface OutcomeSpec {
   readonly effects: readonly TracedEffect[];
+  /**
+   * D-15, D-143 (8.7): the outcome calls for a complication and offers no
+   * menu, so the player writes one or picks from the Guide's options before
+   * the beat is done. The clause is the text that calls for it.
+   */
+  readonly complication?: { readonly clause: string };
   /** "Choose one…" — the player owns this (design record section 3). */
   readonly choices?: readonly Choice[];
   readonly chain?: ChainSpec;
