@@ -125,6 +125,7 @@ export function EndSession({
             </span>
             <textarea
               className={styles.summary}
+              data-focus-target
               value={draft.summary}
               onChange={(event) => setDraft((d) => ({ ...d, summary: event.target.value }))}
             />

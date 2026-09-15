@@ -11,6 +11,7 @@ import { useOfferComplications, useSetComplication } from '../../api/moves.js';
 import { ApiError } from '../../api/http.js';
 import { toChipView } from '../log/entries.js';
 import { OracleChips } from '../oracle/OracleChips.js';
+import { isSubmitChord } from '../../ui/keys.js';
 
 import { pickOption, submission, type ComplicationDraft } from './complication.js';
 import styles from './ComplicationPrompt.module.css';
@@ -78,9 +79,16 @@ export function ComplicationPrompt({
         Complication
         <textarea
           className={styles.text}
+          data-focus-target
           rows={2}
           value={draft.text}
           onChange={(event) => setDraft({ ...draft, text: event.target.value })}
+          onKeyDown={(event) => {
+            if (isSubmitChord(event) && draft.text.trim().length > 0 && !set.isPending) {
+              event.preventDefault();
+              confirm();
+            }
+          }}
           placeholder="Write what complicates things, or ask for options."
         />
       </label>

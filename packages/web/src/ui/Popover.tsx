@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
 
+import { focusTarget } from './focus.js';
 import styles from './Popover.module.css';
 
 /**
@@ -40,6 +41,8 @@ export function Popover({
         popover.style.left = `${rect.left}px`;
       }
       popover.showPopover();
+      // 10.3: keyboard focus follows the popover in; Escape and closing hand it back.
+      focusTarget(popover)?.focus();
     } else if (!open && isOpen) {
       popover.hidePopover();
     }
@@ -52,6 +55,11 @@ export function Popover({
       className={styles.popover}
       onToggle={(event) => {
         if (event.newState === 'closed') {
+          const popover = ref.current;
+          const active = document.activeElement;
+          if (popover !== null && (active === document.body || popover.contains(active))) {
+            anchorRef.current?.focus();
+          }
           onClose();
         }
       }}

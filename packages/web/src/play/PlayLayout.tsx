@@ -1,4 +1,6 @@
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
+
+import { useFocusHandoff } from '../ui/focus.js';
 
 import styles from './PlayLayout.module.css';
 
@@ -26,6 +28,10 @@ export function PlayLayout({
   readonly right: ReactNode;
   readonly composer: ReactNode;
 }) {
+  // 10.3: a move-flow step replacing the one a keyboard player was on keeps focus in the composer.
+  const composerRef = useRef<HTMLElement>(null);
+  useFocusHandoff(composerRef);
+
   return (
     <div className={styles.shell}>
       <header className={styles.top}>{top}</header>
@@ -41,7 +47,7 @@ export function PlayLayout({
       <aside className={styles.right} aria-label="Pressure">
         {right}
       </aside>
-      <section className={styles.composer} aria-label="Action composer">
+      <section ref={composerRef} className={styles.composer} aria-label="Action composer">
         {composer}
       </section>
     </div>

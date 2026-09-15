@@ -189,7 +189,7 @@ Worked in the order 10.4 · 10.5 · 10.1 · 10.2 · 10.3 (D-151).
 
 - [x] 10.1 Visual design pass: dark surfaces, amber accents, Starforged typographic rhythm. Oxanium for display, final tokens, shared control styles, the log as prose (D-151, D-153; see "Implementation notes (tasks 10.1, 10.2)")
 - [x] 10.2 Purpose-built treatments for progress tracks, clocks, meters, and momentum: ticked boxes, segmented clocks, pips and a momentum scale, each still readable without colour (D-151; see "Implementation notes (tasks 10.1, 10.2)")
-- [ ] 10.3 Keyboard navigation and focus states
+- [x] 10.3 Keyboard navigation and focus states: every control a button or field with a visible ring, focus kept in the composer across move-flow steps, popovers and drawers taking and returning focus, Ctrl+Enter to send (D-151; see "Implementation notes (task 10.3)")
 - [x] 10.4 Golden session as an automated end-to-end test with a stubbed AI provider, loaded dice rather than a seeded RNG, and the session-1 fixture event log (D-72), from the shared fixture mechanism (D-122). Played through the HTTP routes; `golden-beats.ts` retired (D-151, D-152; see "Implementation notes (task 10.4)")
 - [x] 10.5 Docker Compose packaging for the Linux home server: one app image serving the API and the built client, plus Postgres; production is not seeded (D-154). Built and smoke-tested with `docker compose` (see "Implementation notes (task 10.5)")
 
@@ -2454,3 +2454,45 @@ All four are pure SVG or CSS over pure geometry in `ui/tracks.ts`, which is unit
 
 - Checked in the browser on the stub at a 1280×720 layout, using CSS zoom, because the machine's screen is smaller than 1280×720: the golden-session campaign's log, rails and character drawer; Beat 1's Begin Session on `session-1`; a Gather Information roll through its result card and passage; What now?; and the End Session panel.
 - 130 web tests pass, including the new `tracks.test.ts` and `describe.test.ts`. Typecheck, lint and the web build are clean.
+
+---
+
+## Implementation notes (task 10.3)
+
+The golden session can be played from the keyboard (§10).
+
+### What was already true
+
+Every interactive element on the play screen is a real `<button>`, `<input>`, `<select>`, `<textarea>` or `<summary>`: an audit found no click handler on a `div`, `span` or `li`. `:focus-visible` draws a 2px amber ring, and no stylesheet removes an outline. The rails pad their cards, so the ring isn't clipped. The drawer's native `<dialog>` already traps focus and closes on Escape.
+
+### What 10.3 added
+
+- **Focus follows the move flow (`ui/focus.ts`, `useFocusHandoff`).** Each step replaces the last in the composer, so the control a keyboard player just used (a move, Roll, Done, a Pay the Price method) is removed from the page, and focus would otherwise drop to the top of the document. The play layout watches its composer region. Removing an element fires no blur, so a `MutationObserver` notices when the last-focused control is gone and focus has fallen to `body`, and moves focus to the new step's `data-focus-target`, or failing that its first control. Focus anywhere else is never moved. The targets:
+  - the action box when the composer is idle;
+  - a picked move's "What do you do?" box;
+  - the dice skip control while rolling;
+  - then, in page order: the burn offer, the first choice the character can pick, the complication box, Pay the Price, Done;
+  - the highlighted table method, then the chained move;
+  - Begin session;
+  - End Session's summary.
+- **Popovers take and return focus (`ui/Popover.tsx`).** Opening one focuses its first control. Closing it, by Escape, an outside click or its own action, hands focus back to the trigger when focus was inside it. The void preview arrives after its popover opens, so its reason field uses `autoFocus`, and Enter in that field confirms.
+- **Drawers return focus (`ui/Drawer.tsx`).** Drawers are unmounted rather than closed, and a removed `<dialog>` can't restore focus itself. So the drawer notes the opener before `showModal()` and focuses it again when the drawer goes away. Before this, closing the character drawer with Escape left focus on the page body.
+- **Ctrl+Enter (⌘+Enter) sends (`ui/keys.ts`).** In the action box it asks which move fits, in a move's "What do you do?" it rolls, and in the complication box it sets the complication. A plain Enter still makes a new line.
+- **The log's Flag and Void** are dimmed until their entry is hovered or holds focus (10.1), so a keyboard player sees them at full strength on reaching them.
+
+### Verification
+
+In the browser, on the stub:
+- Enter on a focused move chip opened the move with focus in its action box. Typing and Ctrl+Enter rolled, and once the dice settled, focus was on the burn offer.
+- Enter on Flag opened the correction popover with focus in its note, and Escape returned focus to Flag.
+- Enter on a crew card opened the character drawer on its Close button, and Escape returned focus to the card.
+
+`keys.test.ts` covers the chord. The handoff and the popover and drawer rules touch the DOM, which the web unit tests don't run, so they rest on these browser checks.
+
+---
+
+## Group 10 complete
+
+10.4, 10.5, 10.1, 10.2 and 10.3 are done, in that order (D-151). The golden session runs start to finish as an automated test through the HTTP routes (D-152), and `docker compose up` runs the app on a Linux host (D-154). The play screen has its finished look, with Oxanium, drawn tracks, clocks, meters and momentum (D-153), and it can be played from the keyboard.
+
+Every task in Milestone 1's list is now done or moved out (9.2, D-71). What the task list can't check is the milestone's own definition of done: the golden session played against a real campaign with real AI narration. That is a live play-through, and it remains to be done.

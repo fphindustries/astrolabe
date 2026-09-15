@@ -39,6 +39,7 @@ export function PayThePricePicker({
       <button
         type="button"
         className={styles.highlighted}
+        data-focus-target
         disabled={resolve.isPending}
         onClick={() => void pick('table')}
       >
@@ -91,6 +92,7 @@ export function PayThePriceResult({
         <button
           type="button"
           className={styles.chainButton}
+          data-focus-target
           onClick={() =>
             onInvokeChain(resolved.chain?.toMoveId as MoveId, actorCharacterId, commandId)
           }

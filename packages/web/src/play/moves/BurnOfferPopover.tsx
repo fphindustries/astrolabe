@@ -38,6 +38,7 @@ export function BurnOfferPopover({
       <button
         type="button"
         className={styles.accept}
+        data-focus-target
         disabled={burn.isPending}
         onClick={() => {
           burn.mutate(rollEventId, { onSuccess: onBurned });

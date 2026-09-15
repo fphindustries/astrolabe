@@ -101,6 +101,7 @@ export function BeginSession({
       <button
         type="button"
         className={styles.start}
+        data-focus-target
         disabled={begin.isPending || (view.kind === 'first' && title.trim().length === 0)}
         onClick={start}
       >

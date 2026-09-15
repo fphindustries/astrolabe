@@ -27,6 +27,8 @@ export function DiceAnimation({ children }: { readonly children: ReactNode }) {
     <button
       type="button"
       className={styles.rolling}
+      // 10.3: focus waits on the skip control, then moves on to the result once it settles.
+      data-focus-target
       onClick={() => setSettled(true)}
       aria-label="Skip dice animation"
     >

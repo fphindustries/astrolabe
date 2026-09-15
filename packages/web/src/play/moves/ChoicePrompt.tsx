@@ -49,6 +49,9 @@ export function ChoicePrompt({
     onApplied();
   }
 
+  // 10.3: a keyboard player lands on the first option they can pick.
+  const firstAvailable = choice.options.find((option) => option.available)?.id;
+
   return (
     <div className={styles.prompt}>
       <p className={styles.question}>{choice.prompt}</p>
@@ -56,6 +59,7 @@ export function ChoicePrompt({
         {choice.options.map((option) => (
           <label key={option.id} className={styles.option} data-unavailable={!option.available}>
             <input
+              {...(option.id === firstAvailable ? { 'data-focus-target': true } : {})}
               type={multi ? 'checkbox' : 'radio'}
               name="choice-option"
               disabled={!option.available || applyChoice.isPending}

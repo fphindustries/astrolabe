@@ -10,8 +10,7 @@ import styles from './Drawer.module.css';
  * Wraps native `<dialog>` via `showModal()` rather than a component
  * library (D-96): focus trapping, Esc-to-close, backdrop click, an inert
  * background, and top-layer stacking all come from the platform. Focus
- * returns to whatever opened it when the dialog closes, which is native
- * `<dialog>` behaviour too.
+ * returns to whatever opened it when the drawer goes away (10.3).
  */
 export function Drawer({
   open,
@@ -27,6 +26,18 @@ export function Drawer({
   readonly children: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+
+  // 10.3: drawers are unmounted rather than closed, and a removed dialog
+  // can't hand focus back itself, so the opener gets it back here. Declared
+  // first, so it reads the opener before `showModal()` moves focus.
+  useEffect(() => {
+    const opener = document.activeElement;
+    return () => {
+      if (opener instanceof HTMLElement && opener.isConnected) {
+        opener.focus();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const dialog = ref.current;

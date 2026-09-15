@@ -5,6 +5,7 @@ import type { EventId } from '@astrolabe/shared';
 
 import { useSuggestMove } from '../../api/moves.js';
 import { useAiStatus } from '../../api/narration.js';
+import { isSubmitChord } from '../../ui/keys.js';
 import { describeFailure } from '../narration/frames.js';
 
 import { RelevantMovesPanel } from './RelevantMovesPanel.js';
@@ -90,8 +91,21 @@ export function ActionPrompt({
         <span className={styles.label}>What do you do?</span>
         <textarea
           className={styles.actionText}
+          data-focus-target
           value={typed}
           onChange={(event) => setTyped(event.target.value)}
+          onKeyDown={(event) => {
+            // 10.3: Ctrl+Enter asks which move fits, as "Suggest a move" does.
+            if (
+              isSubmitChord(event) &&
+              typed.trim() !== '' &&
+              !suggest.isPending &&
+              !guideUnavailable
+            ) {
+              event.preventDefault();
+              ask();
+            }
+          }}
           placeholder="Describe the action, then pick a move — or ask which one fits."
         />
       </label>

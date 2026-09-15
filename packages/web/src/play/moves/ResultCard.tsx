@@ -161,6 +161,7 @@ export function ResultCard({
               <button
                 type="button"
                 className={styles.payThePrice}
+                data-focus-target
                 onClick={() => onOpenPayThePrice(commandId)}
               >
                 Pay the Price
@@ -172,6 +173,7 @@ export function ResultCard({
         <button
           type="button"
           className={styles.done}
+          data-focus-target
           onClick={onDone}
           disabled={owesComplication}
           title={owesComplication ? 'Set the complication first.' : undefined}

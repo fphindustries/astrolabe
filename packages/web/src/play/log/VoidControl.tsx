@@ -15,7 +15,13 @@ import styles from './VoidControl.module.css';
  * the composer, now that the mis-invoked roll is voided (D-27, confirmed by
  * the design record's own Beat 7 prose).
  */
-export function VoidControl({ campaignId, eventId }: { readonly campaignId: string; readonly eventId: string }) {
+export function VoidControl({
+  campaignId,
+  eventId,
+}: {
+  readonly campaignId: string;
+  readonly eventId: string;
+}) {
   const anchorRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [preview, setPreview] = useState<VoidPreviewResult | null>(null);
@@ -36,7 +42,12 @@ export function VoidControl({ campaignId, eventId }: { readonly campaignId: stri
 
   return (
     <>
-      <button ref={anchorRef} type="button" className={styles.trigger} onClick={() => void openPreview()}>
+      <button
+        ref={anchorRef}
+        type="button"
+        className={styles.trigger}
+        onClick={() => void openPreview()}
+      >
         Void
       </button>
       <Popover open={open} onClose={() => setOpen(false)} anchorRef={anchorRef}>
@@ -57,9 +68,17 @@ export function VoidControl({ campaignId, eventId }: { readonly campaignId: stri
               <input
                 type="text"
                 className={styles.reason}
+                // 10.3: the preview arrives after the popover opens, so its field takes focus itself.
+                autoFocus
                 placeholder="Why?"
                 value={reason}
                 onChange={(event) => setReason(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && reason.trim().length > 0 && !voidEvent.isPending) {
+                    event.preventDefault();
+                    void confirm();
+                  }
+                }}
               />
               <button
                 type="button"

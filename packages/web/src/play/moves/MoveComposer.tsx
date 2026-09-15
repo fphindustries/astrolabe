@@ -14,6 +14,7 @@ import type { CommandId, ProposeAmountResponse } from '@astrolabe/shared';
 import { useInvokeMove } from '../../api/moves.js';
 import { useCampaignState } from '../../api/campaigns.js';
 import { aiKeys, useProposeAmount } from '../../api/narration.js';
+import { isSubmitChord } from '../../ui/keys.js';
 import type { CrewCardView } from '../crew/crew.js';
 
 import { SuggestionWhy } from './ActionPrompt.js';
@@ -285,8 +286,16 @@ export function MoveComposer({
         <span className={styles.label}>What do you do?</span>
         <textarea
           className={styles.actionText}
+          data-focus-target
           value={actionText}
           onChange={(event) => setActionText(event.target.value)}
+          onKeyDown={(event) => {
+            // 10.3: Ctrl+Enter rolls, as the Roll button does.
+            if (isSubmitChord(event) && !invoke.isPending) {
+              event.preventDefault();
+              void submit();
+            }
+          }}
           placeholder="Describe the action…"
         />
       </label>
