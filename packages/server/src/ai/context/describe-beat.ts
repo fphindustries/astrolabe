@@ -50,7 +50,11 @@ export type FactKind =
   /** D-141: the scene a frame opens. */
   | 'scene'
   /** D-138: an entity a world pass established. */
-  | 'entity';
+  | 'entity'
+  /** D-147: a past session's summary, or one of its open threads. */
+  | 'summary'
+  /** D-147: a past session's committed passage, as it now reads. */
+  | 'passage';
 
 export interface BeatFact {
   /** `F1`, `F2`, … in log order: what a segment's `basis` cites. */

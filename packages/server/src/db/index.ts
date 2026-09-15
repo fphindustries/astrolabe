@@ -17,7 +17,7 @@ export {
   type NewEvent,
 } from './event-store.js';
 export { uuidv7 } from './uuid.js';
-export { readNarrativeEvents } from './event-store.js';
+export { latestSessionId, readNarrativeEvents } from './event-store.js';
 export { previewVoid, voidEvent, VoidRefusedError, type VoidRequest } from './void-command.js';
 export {
   overrideState,
@@ -111,11 +111,23 @@ export {
   type ResolvedPayThePrice,
 } from './move-commands.js';
 export {
+  beginSession,
+  prepareRecap,
+  runRecap,
+  RECAP_COMMAND_KIND,
+  SESSION_BEGIN_COMMAND_KIND,
+  SessionRejectedError,
+  type BeginSessionRequest,
+  type PreparedRecap,
+  type RecapRequest,
+} from './session-commands.js';
+export {
   prepareBeatNarration,
   runBeatNarration,
   prepareCorrection,
   runCorrection,
   proposeAmount,
+  requireOpenSession,
   AiRequestRefusedError,
   type AiCommandResult,
   type CorrectNarrationRequest,

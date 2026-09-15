@@ -32,9 +32,13 @@ export function NarrativeLog({ campaignId }: { readonly campaignId: string }) {
   const prevScrollHeight = useRef<number | null>(null);
   const scrolledToBottom = useRef(false);
   const { pending } = useNarrationStream();
-  // A scene frame streams like a beat's passage (D-141).
+  // A scene frame (D-141) and a recap (D-147) stream like a beat's passage.
   const pendingBeat =
-    pending?.target.kind === 'beat' || pending?.target.kind === 'scene_frame' ? pending : null;
+    pending?.target.kind === 'beat' ||
+    pending?.target.kind === 'scene_frame' ||
+    pending?.target.kind === 'recap'
+      ? pending
+      : null;
   const pendingRevision = pending?.target.kind === 'revision' ? pending : null;
   const pendingWorld = pending?.target.kind === 'world' ? pending : null;
 

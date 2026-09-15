@@ -16,6 +16,7 @@ import {
   type OfferComplicationsResponse,
   type SetComplicationResponse,
   SceneFrameRequestBodySchema,
+  RecapRequestBodySchema,
   type AiStatusResponse,
   type NarrationFrame,
   type NarrationRefusalResponse,
@@ -51,6 +52,8 @@ import {
   setComplication,
   prepareSceneFrame,
   runSceneFrame,
+  prepareRecap,
+  runRecap,
   type AiCommandResult,
 } from '../db/index.js';
 
@@ -259,6 +262,34 @@ export function registerAiRoutes(
       }
     },
   );
+
+  // D-147: the recap that opens a session, once. Streamed like narration.
+  app.post<{ Params: CampaignParams }>('/api/campaigns/:id/recaps', async (request, reply) => {
+    const id = parseCampaignId(request.params.id, reply);
+    if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
+      return undefined;
+    }
+    const parsedBody = RecapRequestBodySchema.safeParse(request.body);
+    if (!parsedBody.success) {
+      reply.code(400);
+      return undefined;
+    }
+
+    try {
+      const prepared = await prepareRecap(sql, {
+        campaignId: id,
+        commandId: parsedBody.data.commandId,
+        actor: PLAYER,
+      });
+      return streamFrames(reply, async (sink) =>
+        prepared.kind === 'replay'
+          ? prepared.result
+          : runRecap(sql, ai, checker, prepared, sink, status),
+      );
+    } catch (error) {
+      return refusal(error, reply);
+    }
+  });
 
   app.post<{ Params: EventParams }>(
     '/api/campaigns/:id/narrations/:eventId/corrections',

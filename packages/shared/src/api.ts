@@ -27,6 +27,8 @@ import {
   type CommandId,
   type EntityId,
   type EventId,
+  type SceneId,
+  type SessionId,
 } from './ids.js';
 import type { PayloadFor } from './events/index.js';
 import type { EntityRef } from './meta.js';
@@ -426,6 +428,38 @@ export const SceneFrameRequestBodySchema = z.object({
 });
 
 export type SceneFrameRequestBody = z.infer<typeof SceneFrameRequestBodySchema>;
+
+/**
+ * D-146: Begin a Session. The scene carries forward from the previous
+ * session, so `scene` is given only for a campaign's first session, which
+ * has nothing to carry.
+ */
+export const BeginSessionRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  scene: z
+    .object({
+      title: z.string().trim().min(1),
+      locationId: EntityIdSchema.optional(),
+    })
+    .optional(),
+});
+
+export type BeginSessionRequestBody = z.infer<typeof BeginSessionRequestBodySchema>;
+
+export interface BeginSessionResponse {
+  readonly sessionId: SessionId;
+  readonly sceneId: SceneId;
+  readonly number: number;
+  /** D-147: whether there is a previous session for the recap to retell. */
+  readonly recap: boolean;
+}
+
+/** D-147: the recap of the previous session. The server knows which session; the client only asks. */
+export const RecapRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+});
+
+export type RecapRequestBody = z.infer<typeof RecapRequestBodySchema>;
 
 /**
  * Narration correction (task 7.9, A15). One action: the note is written and

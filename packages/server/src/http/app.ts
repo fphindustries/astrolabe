@@ -1,6 +1,7 @@
 import {
   AddSectorLocationRequestBodySchema,
   AddSectorRouteRequestBodySchema,
+  BeginSessionRequestBodySchema,
   ApplyMoveChoiceRequestBodySchema,
   BurnMomentumRequestBodySchema,
   CreateCampaignRequestBodySchema,
@@ -12,6 +13,7 @@ import {
   SwearIncitingVowRequestBodySchema,
   VoidEventRequestBodySchema,
   type AddSectorLocationResponse,
+  type BeginSessionResponse,
   type BurnMomentumResponse,
   type CampaignListResponse,
   type CampaignStateResponse,
@@ -42,6 +44,8 @@ import {
   addSectorLocation,
   addSectorRoute,
   applyMoveChoice,
+  beginSession,
+  SessionRejectedError,
   burnMomentum,
   CharacterRejectedError,
   UnknownProposalError,
@@ -49,6 +53,7 @@ import {
   createCharacter,
   IncitingVowRejectedError,
   invokeMove,
+  latestSessionId,
   listCampaigns,
   MoveRejectedError,
   previewVoid,
@@ -189,7 +194,12 @@ export function buildApp({ sql, ai, checker, planner = ai }: BuildAppOptions): F
         ...(before !== undefined ? { before } : {}),
         ...(limit !== undefined ? { limit } : {}),
       };
-      const events = await readNarrativeEvents(sql, id, options);
+      // D-146: the log is per session — the open one, or the latest that ended.
+      const sessionId = await latestSessionId(sql, id);
+      const events = await readNarrativeEvents(sql, id, {
+        ...options,
+        ...(sessionId !== undefined ? { sessionId } : {}),
+      });
       return buildNarrativeLog(events, options);
     },
   );
@@ -213,6 +223,50 @@ export function buildApp({ sql, ai, checker, planner = ai }: BuildAppOptions): F
         return undefined;
       }
       return { chips: oracleChips(events)(established.payload.provenance.groundedIn) };
+    },
+  );
+
+  // D-146: Begin a Session. Commits at once; the recap is its own request.
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/sessions',
+    async (
+      request,
+      reply,
+    ): Promise<BeginSessionResponse | { problem: string; reason: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
+        return undefined;
+      }
+      const parsedBody = BeginSessionRequestBodySchema.safeParse(request.body);
+      if (!parsedBody.success) {
+        reply.code(400);
+        return undefined;
+      }
+      const { commandId, scene } = parsedBody.data;
+
+      try {
+        const result = await beginSession(sql, {
+          campaignId: id,
+          commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          ...(scene !== undefined
+            ? {
+                scene: {
+                  title: scene.title,
+                  ...(scene.locationId !== undefined ? { locationId: scene.locationId } : {}),
+                },
+              }
+            : {}),
+        });
+        reply.code(201);
+        return result;
+      } catch (error) {
+        if (error instanceof SessionRejectedError) {
+          reply.code(422);
+          return { problem: error.message, reason: error.reason };
+        }
+        throw error;
+      }
     },
   );
 

@@ -9,8 +9,8 @@ import styles from './SceneHeader.module.css';
  * 5.3). Bound to `state.scene`, resolving `locationId` against
  * `state.entities` — see `scene.ts` for why it goes no further than that.
  *
- * Until 9.1 asks for it after the recap, an open scene with no frame offers
- * "Frame the scene" here (D-141).
+ * An open scene with no frame offers "Frame the scene" here (D-141). A new
+ * session's scene is carried forward unframed (D-146), so it offers it too.
  */
 export function SceneHeader({ campaignId }: { readonly campaignId: string }) {
   const { data } = useCampaignState(campaignId, (state) =>

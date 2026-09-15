@@ -2,7 +2,9 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import type { CharacterId, MoveId } from '@astrolabe/rules';
 import type {
   AiStatusResponse,
+  BeginSessionResponse,
   CommandId,
+  EntityId,
   NarrationFrame,
   OverrideRequestBody,
   OverrideResponse,
@@ -78,6 +80,10 @@ export function sceneFramePath(campaignId: string) {
   return `/campaigns/${campaignId}/scene-frames`;
 }
 
+export function recapPath(campaignId: string) {
+  return `/campaigns/${campaignId}/recaps`;
+}
+
 export function worldPassPath(campaignId: string) {
   return `/campaigns/${campaignId}/world-passes`;
 }
@@ -109,6 +115,24 @@ export function useOverride(campaignId: string) {
   return useMutation({
     mutationFn: (input: Omit<OverrideRequestBody, 'commandId'>) =>
       apiPost<OverrideResponse>(`/campaigns/${campaignId}/overrides`, {
+        commandId: crypto.randomUUID(),
+        ...input,
+      }),
+    onSuccess: invalidate,
+  });
+}
+
+export interface BeginSessionInput {
+  /** Only for a campaign's first session (D-146). */
+  readonly scene?: { readonly title: string; readonly locationId?: EntityId };
+}
+
+/** D-146: Begin a Session. It commits at once; the recap is asked for after (D-147). */
+export function useBeginSession(campaignId: string) {
+  const invalidate = useInvalidateCampaign(campaignId);
+  return useMutation({
+    mutationFn: (input: BeginSessionInput) =>
+      apiPost<BeginSessionResponse>(`/campaigns/${campaignId}/sessions`, {
         commandId: crypto.randomUUID(),
         ...input,
       }),

@@ -15,6 +15,7 @@ import {
   aiKeys,
   correctNarrationPath,
   narrateBeatPath,
+  recapPath,
   streamNarration,
   sceneFramePath,
   useAiStatus,
@@ -59,6 +60,8 @@ export interface NarrationStream {
   narrateAfter(afterCommandId: string): void;
   /** D-141: frame the open scene. */
   frameScene(): void;
+  /** D-147: recap the last session, once a new one has begun. */
+  recap(): void;
   correct(targetEventId: string, note: string): void;
   retry(): void;
   dismissNotice(): void;
@@ -96,10 +99,12 @@ export function NarrationStreamProvider({
             ? [worldPassPath(campaignId), { commandId, passageEventId: target.passageEventId }]
             : target.kind === 'scene_frame'
               ? [sceneFramePath(campaignId), { commandId }]
-              : [
-                  correctNarrationPath(campaignId, target.targetEventId),
-                  { commandId, note: target.note },
-                ];
+              : target.kind === 'recap'
+                ? [recapPath(campaignId), { commandId }]
+                : [
+                    correctNarrationPath(campaignId, target.targetEventId),
+                    { commandId, note: target.note },
+                  ];
 
       try {
         await streamNarration(path, body, (frame) => {
@@ -196,6 +201,7 @@ export function NarrationStreamProvider({
       notice,
       narrateAfter: (afterCommandId) => enqueue({ kind: 'beat', afterCommandId }),
       frameScene: () => enqueue({ kind: 'scene_frame' }),
+      recap: () => enqueue({ kind: 'recap' }),
       correct: (targetEventId, note) => enqueue({ kind: 'revision', targetEventId, note }),
       retry: () => {
         if (failure !== null) {

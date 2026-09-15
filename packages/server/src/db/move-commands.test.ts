@@ -67,6 +67,8 @@ describe.skipIf(!hasTestDatabase)('resolving a move (task 6.x)', () => {
         },
       ],
     });
+    // D-146: moves are made inside a session.
+    await beginSession(campaignId);
     return campaignId;
   }
 
@@ -433,7 +435,6 @@ describe.skipIf(!hasTestDatabase)('resolving a move (task 6.x)', () => {
       it('refuses a voided proposal (D-130)', async () => {
         const campaignId = await newCampaign();
         const characterId = await newCharacter(campaignId);
-        await beginSession(campaignId); // a void reaches only the current session (D-84)
         const proposal = await propose(campaignId, characterId);
         await voidEvent(db.sql, {
           campaignId,
@@ -777,7 +778,6 @@ describe.skipIf(!hasTestDatabase)('resolving a move (task 6.x)', () => {
     it('cascades a voided miss through the chain it started, three commands deep', async () => {
       const campaignId = await newCampaign();
       const characterId = await newCharacter(campaignId);
-      await beginSession(campaignId); // D-84: void reaches only the current session
 
       const faceDangerCommandId = newId<CommandId>();
       const faceDanger = await invokeMove(db.sql, {

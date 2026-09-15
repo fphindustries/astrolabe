@@ -176,11 +176,11 @@ narrative log is a second read model with its own paged query.
 
 ### 9. Session lifecycle
 
-- [ ] 9.1 Begin a session, with a recap generated from the event log
+- [x] 9.1 Begin a session, with a recap generated from the event log. A command, not a move; the scene carries forward; the log is per session; no moves outside a session (D-146, D-147). Verified live at all three latitudes and in the browser on the stub (see "Implementation notes (task 9.1)")
 - [ ] ~~9.2 Scene proposals: inline, one click to accept, editable title~~ — moved out of M1 (D-71). The scene model and header binding stay, under 5.3
-- [ ] 9.3 "What now?" suggested actions
-- [ ] 9.4 End a session: summary and open threads
-- [ ] 9.5 Resume a campaign from committed state
+- [ ] 9.3 "What now?" suggested actions: three, anchored in state, any move including Reference ones (D-148)
+- [ ] 9.4 End a session: summary and open threads, proposed, reviewed and committed; Reach a Milestone as a reminder only (D-149)
+- [ ] 9.5 Resume a campaign from committed state: Begin Session after an ended session, resume in place, Narrate for a chain owed a passage (D-150)
 
 ### 10. Polish and packaging
 
@@ -2108,3 +2108,76 @@ Same runs as 8.6, 3 of Beat 3's weak hit: options requested, the first option pi
 **Existing issues seen, not in scope:**
 - The duplicate-key warning from 6.3's ability list (see 8.1's notes).
 - After a burn lifts a miss to a weak hit, the result card still offers Pay the Price from the original miss.
+
+## Implementation notes (task 9.1, Begin a Session and the recap)
+
+9.1 is done (A1, D-12, D-72, D-146, D-147). Before building, the user settled D-146 to D-150 for the whole group. Beginning a session is a command, not a move. The scene carries forward, and the recap streams after the session has begun.
+
+### Shape
+
+- **Command** (`db/session-commands.ts`, `beginSession`). One `session.begin` command writes `session.began` and `scene.started`, both with the new session in their envelope, and commits at once.
+  - A campaign's first session needs `scene: { title, locationId? }`. Any later session refuses it (`scene_carried`) and copies the last scene's title and location into a new, unframed scene, so **Frame the scene** applies (D-141).
+  - Refusals: `session_open`, `scene_required`, `unknown_location`, `no_scene`. A replay answers the same session.
+  - Route: `POST /api/campaigns/:id/sessions`, answering `{ sessionId, sceneId, number, recap }`. `recap` says whether there is an earlier session to retell.
+- **No play outside a session** (D-146). `invokeMove` refuses with `MoveRejectedError`. `proposeAmount` and `suggestMove` refuse with `no_session`, through `requireOpenSession` in `narration-commands.ts`. The scene frame now also refuses an ended session. `resolvePayThePriceMethod`, choices, burns, complications and trigger checks aren't guarded: each follows a move already made in the session.
+- **The log is per session.** The log route passes `latestSessionId` (the last `session.began`, open or ended) to `readNarrativeEvents`, as §10 always specified. Before any session it reads the whole campaign.
+- **Recap facts** (`ai/context/recap.ts`, pure).
+  - `previousSession` finds the latest ended session other than the current one.
+  - `describeRecap` keys, in order: the summary; each open thread; then that session's significant, non-voided events.
+    - A scene is a `scene` fact.
+    - A move is a `move` fact, plus a `declared_action` fact when an action was declared.
+    - Also: a set complication, an entity other than a location, a track created or advanced, and each passage as it now reads (`livePassages`, so a corrected passage reads corrected).
+  - Two fact kinds are new: `summary` and `passage`. Rolls aren't significant, so what came of them reaches the recap through the summary and the passages.
+- **Segments.** The recap uses beat segmentation, not world-only. `checkSegmentTags` already requires a `character_does` segment to cite that character's `declared_action`, and a `declared_action` fact now comes only from the retold session. So the rule D-147 set needed no new check. D-128's checker runs as on a beat.
+- **Command** (`prepareRecap`, `runRecap`). One `narration.recap` command, caused by `session.began`, writes the accounting, any withdrawals and `narration.written { role: 'recap' }`.
+  - Refusals: `no_session`, `already_recapped`, `no_recap` (a first session).
+  - Beat narration's stream-check-commit moved into `commitSegmentedPassage`, which both use.
+  - Length: routine (D-115's recap weight).
+  - Route: `POST /api/campaigns/:id/recaps`, streamed.
+- **Web.**
+  - `play/session/session.ts`'s `toSessionView` gives `open`, `first` (with the sector's locations) or `next` (the number, and the scene carried forward).
+  - While no session is open, `BeginSession` replaces the composer, ahead of the pause banner, because beginning needs no Guide.
+  - A `recap` response enqueues the new `recap` target, which streams into the log like a beat.
+- **Fixtures.**
+  - `session-1` begins through `beginSession`. When the crew reaches the relay (after `vesna-drift`), it appends a second scene, "The derelict relay station". That is D-146's fixture exception to D-71. Its end is still appended directly, until 9.4.
+  - `session-2-open` opens session 2 through `beginSession`, carrying the relay scene forward, with no recap. It is kept rather than retired, because the world, complication and suggestion tests seed it for an open session. Browser play of Beat 1 starts from `session-1`.
+- **Dev stub.** It answers `recap` with a world segment.
+
+### Live pass
+
+The pass ran 2026-09-14 with claude-opus-5 narrating and claude-sonnet-5 checking: `session-1`, Begin Session, then the recap, twice at each latitude. Runs are in `ai/eval/live-recap-9.1.json`.
+
+- **6 of 6 committed, with no withdrawals.**
+- **First text at 2.0–2.5 s** (A18). Commit took 10.6–25.1 s, most of it the check.
+- **Length:** 112–124 words. Two runs went slightly over the 120 asked for.
+- **Content.** Every recap retold the four declared actions and ended on the open threads or the lit windows. None invented a thought or a feeling. Minimal stayed plain, and no latitude quoted speech.
+- **Borderline, passed by the checker.** Some `character_does` segments carry the outcome of the declared action as well as the action:
+  - "Vesna ran the clipped signal against the Lantern Wake's star charts, and the drift pointed not to the colony ship but to Varga Relay";
+  - "Vesna threaded the Lantern Wake through the ice of Kessel Drift, and the ship came out clean".
+
+  The outcomes are committed facts, so nothing is invented, but they are labelled as the character's.
+
+### Verification
+
+`npm run typecheck`, `npm run lint`, `npm test` (1008 tests, 1 skipped) and the web build pass. The new tests cover:
+
+- beginning a first session: the scene is required, the envelope, replay, and `session_open`;
+- carrying the relay scene forward into a new, unframed scene, and refusing a scene of its own;
+- a move and a recap refused with no open session;
+- the recap's facts from `session-1`;
+- the committed recap: its cause, session, role and text, replay and `already_recapped`;
+- a `character_does` citing the summary, withdrawn and re-asked;
+- `no_recap` in a first session;
+- over HTTP: the log showing only the latest session, the begin and recap routes, and their refusals;
+- `toSessionView`.
+
+`move-commands.test.ts` and `app.test.ts` now begin a session before rolling. The void test in `app.test.ts` used to rely on having no session; it now applies the void and checks `already_voided`.
+
+**Browser pass on the stub,** on a freshly reset `session-1`:
+- the composer read "Session 2 opens on The derelict relay station, at Varga Relay";
+- **Begin session** switched the top bar to Session 2, and the log to session 2 alone;
+- the recap streamed in and committed;
+- the header offered **Frame the scene**, and the composer opened;
+- a reload showed the same;
+- the console was clean.
+

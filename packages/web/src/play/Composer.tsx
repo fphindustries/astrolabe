@@ -1,6 +1,8 @@
 import type { CharacterId, MoveId } from '@astrolabe/rules';
 import type { CommandId } from '@astrolabe/shared';
 
+import { useCampaignState } from '../api/campaigns.js';
+
 import type { CrewCardView } from './crew/crew.js';
 import { MoveComposer } from './moves/MoveComposer.js';
 import { useMoveFlow, useMoveFlowActions } from './moves/move-flow.js';
@@ -8,6 +10,8 @@ import { useNarrationStream } from './narration/narration-stream.js';
 import { ActionPrompt } from './moves/ActionPrompt.js';
 import { PayThePricePicker, PayThePriceResult } from './moves/PayThePriceFlow.js';
 import { ResultCard } from './moves/ResultCard.js';
+import { BeginSession } from './session/BeginSession.js';
+import { toSessionView } from './session/session.js';
 import styles from './Composer.module.css';
 
 /**
@@ -19,7 +23,8 @@ import styles from './Composer.module.css';
  * Finishing a flow ("Done") is what asks the Guide to narrate it (D-110):
  * the flow's own commandId names the chain. While the Guide is unavailable
  * the composer is replaced by the pause banner (D-116) — state is intact,
- * but play does not go on without its narrator.
+ * but play does not go on without its narrator. While no session is open it
+ * is replaced by Begin Session (D-146).
  */
 export function Composer({
   campaignId,
@@ -37,9 +42,20 @@ export function Composer({
   const flow = useMoveFlow();
   const { selectMove, openPayThePrice, payThePriceResolved, reset } = useMoveFlowActions();
   const narration = useNarrationStream();
+  const session = useCampaignState(campaignId, toSessionView);
 
   if (crew.length === 0) {
     return <div className={styles.composer}>No one to act yet.</div>;
+  }
+
+  // D-146: play happens inside a session. Beginning one needs no Guide, so
+  // it comes ahead of the pause banner.
+  if (session.data !== undefined && session.data.kind !== 'open') {
+    return (
+      <div className={styles.composer}>
+        <BeginSession campaignId={campaignId} view={session.data} />
+      </div>
+    );
   }
 
   if (narration.paused && flow.step === 'idle') {

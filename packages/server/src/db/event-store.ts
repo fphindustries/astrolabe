@@ -302,6 +302,23 @@ export async function readEventsByCommand(
 }
 
 /**
+ * The campaign's latest session, open or ended: the one the narrative log
+ * shows (D-146). Undefined before the first session begins.
+ */
+export async function latestSessionId(
+  sql: Sql,
+  campaignId: CampaignId,
+): Promise<SessionId | undefined> {
+  const rows = await sql<{ session_id: string }[]>`
+    select payload->>'sessionId' as session_id from events
+     where campaign_id = ${campaignId} and type = 'session.began'
+     order by seq desc
+     limit 1
+  `;
+  return rows[0]?.session_id as SessionId | undefined;
+}
+
+/**
  * The events the narrative log needs for one session's page.
  *
  * Two queries rather than one, and the split is the design's:

@@ -107,6 +107,13 @@ export function settingsOf(state: CampaignState) {
   return state.campaign.settings;
 }
 
+/** D-146: play happens inside a session. The refusal the AI's play commands share. */
+export function requireOpenSession(state: CampaignState): void {
+  if (state.session === null || state.session.endedAt !== undefined) {
+    throw new AiRequestRefusedError('no_session', 'Begin a session first.');
+  }
+}
+
 export function withEnvelope<T extends NewEvent>(event: T, envelope: Envelope): T {
   return {
     ...event,
@@ -182,7 +189,7 @@ export function recordStatus(status: AiStatus | undefined, outcome: Outcome<unkn
 }
 
 /** What an AI command already wrote, read back as its result. */
-function resultFrom(
+export function resultFrom(
   events: readonly AstrolabeEvent[],
   contentType: AstrolabeEvent['type'],
 ): AiCommandResult | undefined {
@@ -266,31 +273,62 @@ export async function runBeatNarration(
   sink: TextSink,
   status?: AiStatus,
 ): Promise<AiCommandResult> {
+  return commitSegmentedPassage(
+    sql,
+    ai,
+    checker,
+    { ...prepared, kind: 'narration.beat', role: 'beat' },
+    sink,
+    status,
+  );
+}
+
+/** A segmented passage ready to stream, check and commit as one command (D-127, D-128). */
+export interface SegmentedPassageCommand {
+  readonly request: Pick<NarrateBeatRequest, 'campaignId' | 'commandId' | 'actor'>;
+  readonly kind: string;
+  readonly role: 'beat' | 'recap';
+  readonly aiRequest: AiRequest;
+  readonly segments: SegmentContext;
+  readonly check: CheckContext;
+  readonly causedBy: EventId;
+  readonly envelope: Envelope;
+}
+
+/** Beat narration's stream-check-commit, shared with the recap (D-147). */
+export async function commitSegmentedPassage(
+  sql: Sql,
+  ai: AiProvider,
+  checker: AiProvider,
+  passage: SegmentedPassageCommand,
+  sink: TextSink,
+  status?: AiStatus,
+): Promise<AiCommandResult> {
   const checked = await streamCheckedSegments(
     ai,
-    prepared.aiRequest,
-    beatNarrationSchema(prepared.segments),
-    prepared.segments,
-    { provider: checker, context: prepared.check },
+    passage.aiRequest,
+    beatNarrationSchema(passage.segments),
+    passage.segments,
+    { provider: checker, context: passage.check },
     sink,
   );
   recordEnding(status, checked);
   const outcome = checked.ending;
 
   const result = await appendCommand(sql, {
-    campaignId: prepared.request.campaignId,
-    commandId: prepared.request.commandId,
-    kind: 'narration.beat',
-    actor: prepared.request.actor,
-    causedBy: prepared.causedBy,
+    campaignId: passage.request.campaignId,
+    commandId: passage.request.commandId,
+    kind: passage.kind,
+    actor: passage.request.actor,
+    causedBy: passage.causedBy,
     events: [
       ...checkedAccounting(
         ai,
-        prepared.aiRequest.purpose,
+        passage.aiRequest.purpose,
         checker,
         checked,
-        { role: 'beat', latitude: prepared.check.latitude },
-        prepared.envelope,
+        { role: 'beat', latitude: passage.check.latitude },
+        passage.envelope,
       ),
       ...(outcome.ok
         ? [
@@ -298,13 +336,13 @@ export async function runBeatNarration(
               {
                 type: 'narration.written',
                 payload: {
-                  role: 'beat',
+                  role: passage.role,
                   text: outcome.value.text,
-                  groundedIn: groundedInOf(outcome.value.segments, prepared.segments),
-                  segments: resolveSegments(outcome.value.segments, prepared.segments),
+                  groundedIn: groundedInOf(outcome.value.segments, passage.segments),
+                  segments: resolveSegments(outcome.value.segments, passage.segments),
                 },
               } as NewEvent<'narration.written'>,
-              prepared.envelope,
+              passage.envelope,
             ),
           ]
         : []),
@@ -499,6 +537,7 @@ export async function proposeAmount(
   const events = await readEvents(sql, request.campaignId);
   const state = project(events);
   const settings = settingsOf(state);
+  requireOpenSession(state);
 
   const intake = MOVE_AUTOMATION_SPECS.get(request.moveId)?.preRoll?.effects.find(
     (traced) => traced.effect.kind === 'proposed_amount',
@@ -615,7 +654,7 @@ function proposalResultFrom(events: readonly AstrolabeEvent[]): ProposedAmountRe
 }
 
 /** A command that exists but recorded neither content nor failure — a crash mid-write cannot produce this, so it is a bug. */
-function interrupted(): { ok: false; errorKind: AiErrorKind; message: string } {
+export function interrupted(): { ok: false; errorKind: AiErrorKind; message: string } {
   return {
     ok: false,
     errorKind: 'unavailable',

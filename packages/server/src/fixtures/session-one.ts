@@ -19,6 +19,7 @@ import {
 } from '../db/campaign-commands.js';
 import { createCharacter } from '../db/character-commands.js';
 import { appendCommand } from '../db/event-store.js';
+import { beginSession } from '../db/session-commands.js';
 import { setComplication } from '../db/complication-commands.js';
 import { applyMoveChoice, invokeMove } from '../db/move-commands.js';
 import { prepareBeatNarration, runBeatNarration } from '../db/narration-commands.js';
@@ -39,9 +40,11 @@ import { actionRoll } from './loaded-dice.js';
  *
  * Everything that has a command goes through it: creation validates the
  * characters, moves resolve through the rules engine with loaded dice, and
- * passages go through beat narration with a scripted stub. Only session
- * begin and end are appended directly, because 9.1 and 9.4 have not built
- * their commands yet. When they land, those two steps should switch over.
+ * passages go through beat narration with a scripted stub, and the session
+ * begins through Begin a Session (D-146). Two steps are appended directly:
+ * the second scene, when the crew reaches Varga Relay, which is D-146's
+ * fixture exception to D-71 so that session 2 carries the relay scene
+ * forward; and the session's end, until 9.4 builds its command.
  */
 
 export const SESSION_ONE = 'session-1';
@@ -186,19 +189,11 @@ export async function playSessionOne(
 
   // --- Session 1 ------------------------------------------------------------
   const sessionId = key<SessionId>('session:1');
-  const sceneId = key<SceneId>('scene:anchorage');
-  await appendCommand(sql, {
+  await beginSession(sql, {
     ...base,
     commandId: key('session:1:begin'),
-    kind: 'session.begin',
-    events: [
-      { type: 'session.began', payload: { sessionId, number: 1 } },
-      {
-        type: 'scene.started',
-        payload: { sceneId, title: 'A beacon at Deepwater Anchorage', locationId: anchorage },
-        sessionId,
-      },
-    ],
+    scene: { title: 'A beacon at Deepwater Anchorage', locationId: anchorage },
+    ids: { sessionId, sceneId: key<SceneId>('scene:anchorage') },
   });
 
   const ai = new StubProvider({
@@ -360,6 +355,23 @@ export async function playSessionOne(
         'clean, with Varga Relay a cold smudge on the forward scopes.',
     ],
   ]);
+
+  // D-146's fixture exception: the crew reaches the relay, and the scene
+  // follows them there, so session 2 carries it forward.
+  const relaySceneId = key<SceneId>('scene:relay');
+  await appendCommand(sql, {
+    ...base,
+    commandId: key('scene:relay'),
+    kind: 'scene.start',
+    events: [
+      {
+        type: 'scene.started',
+        payload: { sceneId: relaySceneId, title: 'The derelict relay station', locationId: relay },
+        sessionId,
+        sceneId: relaySceneId,
+      },
+    ],
+  });
 
   const advantage = await move(
     'vesna-approach',

@@ -535,7 +535,7 @@ export async function prepareSceneFrame(
   const events = await readEvents(sql, request.campaignId);
   const state = project(events);
   settingsOf(state);
-  if (state.session === null) {
+  if (state.session === null || state.session.endedAt !== undefined) {
     throw new AiRequestRefusedError('no_session', 'A scene is framed during a session.');
   }
   if (state.scene === null) {

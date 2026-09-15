@@ -102,7 +102,8 @@ function devStubResponse(
     mode === 'structured' &&
     (request.purpose === 'beat' ||
       request.purpose === 'world_passage' ||
-      request.purpose === 'scene_frame')
+      request.purpose === 'scene_frame' ||
+      request.purpose === 'recap')
   ) {
     // One world segment citing nothing: it passes D-127's checks for any beat.
     return {

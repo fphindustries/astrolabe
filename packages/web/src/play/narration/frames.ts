@@ -13,7 +13,9 @@ export type NarrationTarget =
   /** D-138 (amended): the world pass that follows a beat's committed passage, and its own passage. */
   | { readonly kind: 'world'; readonly passageEventId: string }
   /** D-141: the open scene's framing passage. */
-  | { readonly kind: 'scene_frame' };
+  | { readonly kind: 'scene_frame' }
+  /** D-147: the recap that opens a session. */
+  | { readonly kind: 'recap' };
 
 /** A passage struck while it streamed (D-128): never quietly replaced. */
 export interface WithdrawnPassage {

@@ -2,7 +2,7 @@ import type { CampaignId, SceneId, SessionId } from '@astrolabe/shared';
 import { LOCAL_PLAYER_ID } from '@astrolabe/shared';
 import type { Sql } from 'postgres';
 
-import { appendCommand } from '../db/event-store.js';
+import { beginSession } from '../db/session-commands.js';
 
 import { fixtureUuid } from './ids.js';
 import { playSessionOne, type SessionOneRun } from './session-one.js';
@@ -10,13 +10,10 @@ import { playSessionOne, type SessionOneRun } from './session-one.js';
 /**
  * `session-2-open`: the golden session's Setup, playable in the browser (D-122).
  *
- * `session-1` ends its session, which is right for D-72 and 10.4, but it
- * leaves nothing a person can play: Begin a Session (9.1) isn't built, so
- * the app can't open session 2. This is the same session 1 under its own
- * campaign id, plus session 2 already open at Varga Relay.
- *
- * The session-2 opening is a stand-in for Beat 1. Once 9.1 lands, this
- * fixture should end at session 1, and play should begin with Begin Session.
+ * The same session 1 under its own campaign id, plus session 2 opened
+ * through Begin a Session at Varga Relay, with no recap. Server tests seed
+ * it when they need an open session; browser play of Beat 1 starts from
+ * `session-1` instead, with Begin Session and its recap (D-146).
  */
 
 export const SESSION_TWO_OPEN = 'session-2-open';
@@ -35,23 +32,13 @@ export async function playSessionTwoOpen(sql: Sql): Promise<SessionTwoOpenRun> {
   });
 
   const sessionTwoId = key<SessionId>('session:2');
-  await appendCommand(sql, {
+  // Begin a Session carries the relay scene forward (D-146). No recap: the
+  // tests that seed this want an open session, not a Guide call.
+  await beginSession(sql, {
     campaignId: run.campaignId,
     commandId: key('session:2:begin'),
-    kind: 'session.begin',
     actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
-    events: [
-      { type: 'session.began', payload: { sessionId: sessionTwoId, number: 2 } },
-      {
-        type: 'scene.started',
-        payload: {
-          sceneId: key<SceneId>('scene:relay'),
-          title: 'The derelict relay station',
-          locationId: run.locations.relay,
-        },
-        sessionId: sessionTwoId,
-      },
-    ],
+    ids: { sessionId: sessionTwoId, sceneId: key<SceneId>('scene:2') },
   });
 
   return { ...run, sessionTwoId };

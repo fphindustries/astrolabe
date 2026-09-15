@@ -116,6 +116,8 @@ const KIND_WORDS: Readonly<Record<FactKind, string>> = {
   injury: 'injury',
   scene: 'scene',
   entity: 'established',
+  summary: 'last session',
+  passage: 'passage',
 };
 
 /** `[F2] (declared action, Rook) The player declared: "…"` */

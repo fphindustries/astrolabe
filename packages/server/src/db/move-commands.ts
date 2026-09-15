@@ -330,6 +330,10 @@ export async function invokeMove(sql: Sql, request: InvokeMoveRequest): Promise<
 
   const events = await readEvents(sql, request.campaignId);
   const state = project(events);
+  // D-146: play happens inside a session.
+  if (state.session === null || state.session.endedAt !== undefined) {
+    throw new MoveRejectedError('Begin a session first.');
+  }
   const actorCharacter = requireCharacter(state, request.actorCharacterId, 'actorCharacterId');
   if (request.aidingAllyId !== undefined) {
     requireCharacter(state, request.aidingAllyId, 'aidingAllyId');

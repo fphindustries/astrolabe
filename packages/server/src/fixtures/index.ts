@@ -26,13 +26,14 @@ export const FIXTURES: ReadonlyMap<string, Fixture> = new Map(
   [
     {
       name: SESSION_ONE,
-      description: 'Lantern Wake after session 1 — where the golden session begins (D-72)',
+      description:
+        'Lantern Wake after session 1 — where the golden session begins with Begin Session (D-72, D-146)',
       campaignId: SESSION_ONE_CAMPAIGN_ID,
       play: (sql: Sql) => playSessionOne(sql),
     },
     {
       name: SESSION_TWO_OPEN,
-      description: 'the same campaign with session 2 open at Varga Relay — playable until 9.1',
+      description: 'the same campaign with session 2 open at Varga Relay, no recap (D-146)',
       campaignId: SESSION_TWO_OPEN_CAMPAIGN_ID,
       play: playSessionTwoOpen,
     },

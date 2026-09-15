@@ -30,6 +30,7 @@ import {
   accounting,
   envelopeOf,
   recordStatus,
+  requireOpenSession,
   withEnvelope,
 } from './narration-commands.js';
 
@@ -75,6 +76,7 @@ export async function suggestMove(
   if (state.campaign === null) {
     throw new AiRequestRefusedError('no_campaign', 'That campaign has not been created.');
   }
+  requireOpenSession(state);
   const character = state.characters[request.actorCharacterId];
   if (character === undefined) {
     throw new AiRequestRefusedError(

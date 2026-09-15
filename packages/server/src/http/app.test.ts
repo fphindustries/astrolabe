@@ -366,6 +366,18 @@ describe.skipIf(!hasTestDatabase)('the HTTP read API', () => {
     return response.json<CreateCampaignResponse>().campaignId;
   }
 
+  /** A campaign with its first session open, so moves can be made (D-146). */
+  async function freshSessionCampaignId(): Promise<string> {
+    const campaignId = await freshCampaignId();
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/campaigns/${campaignId}/sessions`,
+      payload: { commandId: crypto.randomUUID(), scene: { title: 'Somewhere' } },
+    });
+    expect(response.statusCode).toBe(201);
+    return campaignId;
+  }
+
   async function freshCharacterId(campaignId: string): Promise<string> {
     const response = await app.inject({
       method: 'POST',
@@ -547,7 +559,7 @@ describe.skipIf(!hasTestDatabase)('the HTTP read API', () => {
    */
   describe('resolving a move (task 6.x)', () => {
     it('invokes a rolled move and returns a result with a real tier', async () => {
-      const campaignId = await freshCampaignId();
+      const campaignId = await freshSessionCampaignId();
       const characterId = await freshCharacterId(campaignId);
 
       const response = await app.inject({
@@ -611,7 +623,7 @@ describe.skipIf(!hasTestDatabase)('the HTTP read API', () => {
     });
 
     it('422s a move choice on a roll that offered none', async () => {
-      const campaignId = await freshCampaignId();
+      const campaignId = await freshSessionCampaignId();
       const characterId = await freshCharacterId(campaignId);
       const invoke = await app.inject({
         method: 'POST',
@@ -639,7 +651,7 @@ describe.skipIf(!hasTestDatabase)('the HTTP read API', () => {
     });
 
     it('422s a burn attempt against something that is not an action roll', async () => {
-      const campaignId = await freshCampaignId();
+      const campaignId = await freshSessionCampaignId();
       const characterId = await freshCharacterId(campaignId);
       const invoke = await app.inject({
         method: 'POST',
@@ -709,7 +721,7 @@ describe.skipIf(!hasTestDatabase)('the HTTP read API', () => {
   /** Void-and-redo (task 6.10, A11). */
   describe('voiding an event', () => {
     it('previews a void, then applies it, then finds nothing left to void twice', async () => {
-      const campaignId = await freshCampaignId();
+      const campaignId = await freshSessionCampaignId();
       const characterId = await freshCharacterId(campaignId);
 
       const invoke = await app.inject({
@@ -729,10 +741,23 @@ describe.skipIf(!hasTestDatabase)('the HTTP read API', () => {
         url: `/api/campaigns/${campaignId}/events/${rollEventId}/void-preview`,
       });
       expect(preview.statusCode).toBe(200);
-      const plan = preview.json<VoidPreviewResult>();
-      expect(plan.ok).toBe(false); // no session has begun over this HTTP-only campaign (D-84)
+      expect(preview.json<VoidPreviewResult>().ok).toBe(true);
+
+      const voided = await app.inject({
+        method: 'POST',
+        url: `/api/campaigns/${campaignId}/events/${rollEventId}/void`,
+        payload: { commandId: crypto.randomUUID(), reason: 'Wrong move.' },
+      });
+      expect(voided.statusCode).toBe(201);
+
+      const again = await app.inject({
+        method: 'GET',
+        url: `/api/campaigns/${campaignId}/events/${rollEventId}/void-preview`,
+      });
+      const plan = again.json<VoidPreviewResult>();
+      expect(plan.ok).toBe(false);
       if (!plan.ok) {
-        expect(plan.reason).toBe('outside_current_session');
+        expect(plan.reason).toBe('already_voided');
       }
     });
 
