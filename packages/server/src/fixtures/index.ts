@@ -71,6 +71,27 @@ export async function seedFixture(sql: Sql, name: string): Promise<SeedOutcome> 
   return 'seeded';
 }
 
+export interface FixtureSeedResult {
+  readonly name: string;
+  readonly description: string;
+  readonly outcome: SeedOutcome;
+}
+
+/**
+ * Seed every registered fixture whose campaign isn't there yet — what
+ * `db:seed` does with no names given. Used by the CLI and, until campaign
+ * and character creation are further along, by the server's own startup
+ * seed under `NODE_ENV=production` (D-158, amending D-154). Each call is a
+ * no-op past the first: `seedFixture` skips a fixture already present.
+ */
+export async function seedAllFixtures(sql: Sql): Promise<readonly FixtureSeedResult[]> {
+  const results: FixtureSeedResult[] = [];
+  for (const [name, fixture] of FIXTURES) {
+    results.push({ name, description: fixture.description, outcome: await seedFixture(sql, name) });
+  }
+  return results;
+}
+
 export { fixtureUuid } from './ids.js';
 export {
   GOLDEN_SESSION,

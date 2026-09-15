@@ -17,6 +17,8 @@ import { uuidv7 } from '../db/uuid.js';
 
 import { fixtureUuid } from './ids.js';
 import {
+  FIXTURES,
+  seedAllFixtures,
   seedFixture,
   SESSION_ONE,
   SESSION_ONE_CAMPAIGN_ID,
@@ -226,4 +228,28 @@ describe.skipIf(!hasTestDatabase)('the session-2-open fixture (D-122)', () => {
     const move = events.find((e) => e.id === invoked.invocationEventId);
     expect(move?.sessionId).toBe(state.session?.id);
   });
+});
+
+describe.skipIf(!hasTestDatabase)('seedAllFixtures (D-158)', () => {
+  let db: TestDatabase;
+
+  beforeAll(async () => {
+    db = await createTestDatabase('fixture_seed_all');
+  }, 60_000);
+
+  afterAll(async () => {
+    await db?.close();
+  });
+
+  it('seeds every registered fixture on an empty database, then is a no-op', async () => {
+    const first = await seedAllFixtures(db.sql);
+    expect(first.map((r) => r.name).sort()).toEqual([...FIXTURES.keys()].sort());
+    expect(first.every((r) => r.outcome === 'seeded')).toBe(true);
+    expect((await summariseCampaigns(db.sql)).map((c) => c.id).sort()).toEqual(
+      [...FIXTURES.values()].map((f) => f.campaignId).sort(),
+    );
+
+    const second = await seedAllFixtures(db.sql);
+    expect(second.every((r) => r.outcome === 'already_present')).toBe(true);
+  }, 60_000);
 });

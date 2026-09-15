@@ -87,7 +87,7 @@ docker compose pull
 docker compose up -d
 ```
 
-This pulls the published image, starts Postgres, migrates, and serves the app at `http://localhost:3000` (or `http://<host>:3000` from another machine on a Linux server; change the port with `ASTROLABE_PORT`). The database starts empty: create a campaign in the app. Fixtures are for development, and `db:seed` and `db:reset` refuse under `NODE_ENV=production`. Postgres is published on `127.0.0.1` only. There is no authentication in Milestone 1, so keep the app on a trusted network. Campaign data lives in the `astrolabe-pgdata` volume; back it up with `docker compose exec db pg_dump -U astrolabe astrolabe`.
+This pulls the published image, starts Postgres, migrates, and serves the app at `http://localhost:3000` (or `http://<host>:3000` from another machine on a Linux server; change the port with `ASTROLABE_PORT`). **A fresh database seeds itself on first start** (D-158) with the same example campaigns local development uses — "Lantern Wake" (ready for Begin Session), "Lantern Wake (session 2 open)", and "Lantern Wake (golden session)" (played through to the end) — so there's something to open right away. This is a stopgap for as long as campaign and character creation are still catching up; it runs once and does nothing on later restarts. The manual `db:seed` and `db:reset` commands remain refused under `NODE_ENV=production`, unchanged — that's a different, destructive command, not the automatic seed. Postgres is published on `127.0.0.1` only. There is no authentication in Milestone 1, so keep the app on a trusted network. Campaign data lives in the `astrolabe-pgdata` volume; back it up with `docker compose exec db pg_dump -U astrolabe astrolabe`.
 
 ### Updating
 
