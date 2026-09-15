@@ -178,7 +178,7 @@ narrative log is a second read model with its own paged query.
 
 - [x] 9.1 Begin a session, with a recap generated from the event log. A command, not a move; the scene carries forward; the log is per session; no moves outside a session (D-146, D-147). Verified live at all three latitudes and in the browser on the stub (see "Implementation notes (task 9.1)")
 - [ ] ~~9.2 Scene proposals: inline, one click to accept, editable title~~ — moved out of M1 (D-71). The scene model and header binding stay, under 5.3
-- [ ] 9.3 "What now?" suggested actions: three, anchored in state, any move including Reference ones (D-148)
+- [x] 9.3 "What now?" suggested actions: three, anchored in state, any move including Reference ones (D-148). Verified live and in the browser on the stub (see "Implementation notes (task 9.3)")
 - [ ] 9.4 End a session: summary and open threads, proposed, reviewed and committed; Reach a Milestone as a reminder only (D-149)
 - [ ] 9.5 Resume a campaign from committed state: Begin Session after an ended session, resume in place, Narrate for a chain owed a passage (D-150)
 
@@ -2180,4 +2180,62 @@ The pass ran 2026-09-14 with claude-opus-5 narrating and claude-sonnet-5 checkin
 - the header offered **Frame the scene**, and the composer opened;
 - a reload showed the same;
 - the console was clean.
+
+## Implementation notes (task 9.3, "What now?")
+
+9.3 is done (A6, D-10, D-148).
+
+### Shape
+
+- **Anchors** (`ai/context/what-now.ts`, pure). "Anchored in current state" is made checkable. `whatNowAnchors` lists the state a suggestion may build on, keyed `A1`, `A2`, …:
+  - the scene;
+  - each crew member's meters and impacts;
+  - each vow and expedition, and each clock not yet full;
+  - each NPC and faction;
+  - the last session's open threads;
+  - the open session's set complications and its last four passages.
+
+  Every suggestion must cite at least one anchor, and `actions.suggested` records the anchors' text rather than their keys, so the record stands on its own.
+- **Answer.** Exactly three suggestions, each with `character` (a callsign), `actionText`, `moveId` (any Starforged move, or null), `reason` and `anchors`.
+  - The prompt lists every move with its trigger, because D-148 allows Reference moves.
+  - It carries D-129's player-interior rule, and says a suggested action is the player's to declare.
+- **Check** (`checkWhatNow`). Every character is in the crew and every move exists. Neither is left to zod alone, because the SDK doesn't enforce enums (8.1's notes). Each suggestion cites a real anchor, and no two actions repeat. One re-ask, then `ai.failed`.
+- **Event.** `actions.suggested { suggestions }` is not narrative, changes no state, and is voidable. It references each suggestion's character. The event catalogue has 36 types.
+- **Command** (`suggestActions`, `POST /api/campaigns/:id/action-suggestions`). One `actions.suggest` command writes the accounting and the suggestions, or `ai.failed`, in the open session. It refuses `no_session` and `no_crew`. A failure returns 201 with `ok: false` and doesn't pause play. There is no D-128 checker (D-134's reasoning).
+- **Web** (`moves/WhatNow.tsx`, `moves/what-now.ts`).
+  - **What now?** sits above the relevant-moves panel on the idle composer, which stays usable throughout. It shows three cards: the action, who and which move, the reason, **Why?** (the anchors) and **Use this**.
+  - **Use this** sets the acting character. For a move the composer can play, it opens the composer with the action text and never rolls. `isComposerPlayable` applies the same test as `invokeMove`.
+  - For any other move (Undertake an Expedition at Reference; Reach a Milestone, which has no outcome automation), it puts the action text in the prompt and opens that move in the moves drawer. `DrawerState.moves` gained an optional `moveId`.
+  - The cards stay until dismissed or asked again, so they can be combined (Beat 4).
+- **Dev stub.** It answers `what_now` with three suggestions for the first callsign.
+
+### Live pass
+
+The pass ran 2026-09-14 with claude-opus-5 on `session-2-open`, after Beat 3's shape: Juno's Gather Information weak hit, its complication, and a scripted passage. There were 3 runs, recorded in `ai/eval/live-what-now-9.3.json`.
+
+- **3 of 3 valid on the first attempt,** in 6.4–7.6 s.
+- **Anchoring.** Every run gave one suggestion each to Juno, Vesna and Rook, and every one cited real anchors: the humming circuit, the lit windows, the scrubbed coordinates and the vow. None invented a person or a place.
+- **Close to Beat 4's script:**
+  - Vesna "sweeps the relay's transmitter array with the Sensor Array" (Gather Information);
+  - Rook "moves ahead into the dark corridor… weapon up" (Secure an Advantage in run 1, Face Danger in runs 2 and 3);
+  - Juno traces the live circuit.
+- **What differed.** No run named Undertake an Expedition or a crew action, and no action gave anyone a thought or feeling. Two reasons lean on a character's traits ("Rook is armored for meeting it"), which the Armored asset supports.
+
+### Verification
+
+`npm run typecheck`, `npm run lint`, `npm test` (1016 tests, 1 skipped) and the web build pass. The new tests cover:
+
+- the anchors from `session-2-open`;
+- three suggestions recorded with their characters, a Reference move, anchors recorded once as text, the open session, and replay;
+- a re-ask for an answer that cites no anchor and repeats itself, then the failure;
+- the `no_session` refusal;
+- the event's sample, its meta and its projection probe;
+- which moves the composer can play, and the suggestion card's view.
+
+**Browser pass on the stub** (`session-2-open`, freshly reset):
+1. **What now?** showed three cards, the third reading "Undertake an Expedition (rules reference)".
+2. **Use this** on that card opened the Undertake an Expedition drawer, set Vesna acting, and left "Vesna pushes on toward the goal." in the prompt.
+3. **Use this** on the Gather Information card opened the composer on that move with its action text.
+
+The console showed only the duplicate-key warning from 6.3's ability list, recorded in 8.1's notes.
 

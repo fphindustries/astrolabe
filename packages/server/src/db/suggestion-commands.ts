@@ -5,11 +5,16 @@ import type {
   CampaignId,
   CheckTriggerResponse,
   CommandId,
+  SuggestActionsResponse,
   SuggestMoveResponse,
 } from '@astrolabe/shared';
 import type { Sql } from 'postgres';
 
 import {
+  buildWhatNowRequest,
+  checkWhatNow,
+  whatNowAnchors,
+  whatNowSchema,
   buildMoveSuggestionRequest,
   buildTriggerCheckRequest,
   checkMoveSuggestion,
@@ -147,6 +152,105 @@ function resultFrom(events: readonly AstrolabeEvent[]): SuggestMoveResponse {
         ok: false,
         errorKind: 'unavailable',
         message: 'The Guide’s suggestion was not recorded. Try again.',
+      };
+}
+
+// ---------------------------------------------------------------------------
+// "What now?" (task 9.3, A6, D-10, D-148)
+// ---------------------------------------------------------------------------
+
+export interface SuggestActionsRequest {
+  readonly campaignId: CampaignId;
+  readonly commandId: CommandId;
+  readonly actor: Actor;
+}
+
+/**
+ * Three suggested actions, on request only. One command writes the
+ * accounting and `actions.suggested`, or `ai.failed`, in the open session.
+ * It changes nothing, and a failure is shown where it was asked for without
+ * pausing play: the players can still act without it.
+ */
+export async function suggestActions(
+  sql: Sql,
+  ai: AiProvider,
+  request: SuggestActionsRequest,
+  status?: AiStatus,
+): Promise<SuggestActionsResponse> {
+  const already = await readEventsByCommand(sql, request.campaignId, request.commandId);
+  if (already.length > 0) {
+    return actionsResultFrom(already);
+  }
+
+  const events = await readEvents(sql, request.campaignId);
+  const state = project(events);
+  if (state.campaign === null) {
+    throw new AiRequestRefusedError('no_campaign', 'That campaign has not been created.');
+  }
+  requireOpenSession(state);
+  const crew = Object.values(state.characters);
+  if (crew.length === 0) {
+    throw new AiRequestRefusedError('no_crew', 'There is no one to suggest actions for.');
+  }
+
+  const anchors = whatNowAnchors(state, events);
+  const callsigns = crew.map((c) => c.callsign);
+  const aiRequest = buildWhatNowRequest(state, anchors);
+  const outcome = await generateValidated(
+    ai,
+    aiRequest,
+    whatNowSchema(anchors, callsigns),
+    (value) => checkWhatNow(value, anchors, callsigns),
+  );
+  recordStatus(status, outcome);
+
+  const envelope = envelopeOf(request.campaignId, state);
+  const result = await appendCommand(sql, {
+    campaignId: request.campaignId,
+    commandId: request.commandId,
+    kind: 'actions.suggest',
+    actor: request.actor,
+    events: [
+      ...accounting(ai, aiRequest.purpose, outcome, envelope),
+      ...(outcome.ok
+        ? [
+            withEnvelope(
+              {
+                type: 'actions.suggested',
+                payload: {
+                  suggestions: outcome.value.suggestions.map((s) => ({
+                    characterId: crew.find((c) => c.callsign === s.character)!.id,
+                    actionText: s.actionText.trim(),
+                    moveId: s.moveId,
+                    reason: s.reason.trim(),
+                    anchors: [
+                      ...new Set(s.anchors.map((key) => anchors.find((a) => a.key === key)!.text)),
+                    ],
+                  })),
+                },
+              } as NewEvent<'actions.suggested'>,
+              envelope,
+            ),
+          ]
+        : []),
+    ],
+  });
+
+  return actionsResultFrom(result.events);
+}
+
+function actionsResultFrom(events: readonly AstrolabeEvent[]): SuggestActionsResponse {
+  const suggested = events.find((event) => event.type === 'actions.suggested');
+  if (suggested?.type === 'actions.suggested') {
+    return { ok: true, eventId: suggested.id, suggestions: suggested.payload.suggestions };
+  }
+  const failed = events.find((event) => event.type === 'ai.failed');
+  return failed?.type === 'ai.failed'
+    ? { ok: false, errorKind: failed.payload.errorKind, message: failed.payload.message }
+    : {
+        ok: false,
+        errorKind: 'unavailable',
+        message: 'The Guide’s suggestions were not recorded. Try again.',
       };
 }
 

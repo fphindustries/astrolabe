@@ -16,6 +16,7 @@ export * from './recap.js';
 export * from './render-state.js';
 export * from './segments.js';
 export * from './suggestion.js';
+export * from './what-now.js';
 export * from './world.js';
 export * from './world-narration.js';
 export * from './complication.js';

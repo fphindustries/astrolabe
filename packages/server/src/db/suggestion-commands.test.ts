@@ -3,8 +3,11 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { CharacterId } from '@astrolabe/rules';
 import { LOCAL_PLAYER_ID, type Actor, type CommandId, type EventId } from '@astrolabe/shared';
 
-import { StubProvider } from '../ai/stub.js';
+import { whatNowAnchors } from '../ai/context/index.js';
+import { StubProvider, type StubResponse } from '../ai/stub.js';
 import {
+  SESSION_ONE,
+  SESSION_ONE_CAMPAIGN_ID,
   SESSION_TWO_OPEN,
   SESSION_TWO_OPEN_CAMPAIGN_ID,
   actionRoll,
@@ -15,7 +18,7 @@ import { project } from '../projection/project.js';
 import { readEvents } from './event-store.js';
 import { MoveRejectedError, invokeMove } from './move-commands.js';
 import { AiRequestRefusedError } from './narration-commands.js';
-import { checkTrigger, suggestMove } from './suggestion-commands.js';
+import { checkTrigger, suggestActions, suggestMove } from './suggestion-commands.js';
 import { createTestDatabase, hasTestDatabase, type TestDatabase } from './testing.js';
 import { uuidv7 } from './uuid.js';
 import { voidEvent } from './void-command.js';
@@ -37,12 +40,13 @@ describe.skipIf(!hasTestDatabase)('move suggestions (task 7.12, D-120, D-135)', 
   let db: TestDatabase;
   let juno: CharacterId;
   let rook: CharacterId;
+  let byCallsign: (callsign: string) => CharacterId;
 
   beforeAll(async () => {
     db = await createTestDatabase('suggestions');
     await seedFixture(db.sql, SESSION_TWO_OPEN);
     const state = project(await readEvents(db.sql, campaignId));
-    const byCallsign = (callsign: string) =>
+    byCallsign = (callsign: string) =>
       Object.values(state.characters).find((c) => c.callsign === callsign)?.id as CharacterId;
     juno = byCallsign('Juno');
     rook = byCallsign('Rook');
@@ -375,6 +379,132 @@ describe.skipIf(!hasTestDatabase)('move suggestions (task 7.12, D-120, D-135)', 
       await expect(check(new StubProvider(), newId<CommandId>())).rejects.toBeInstanceOf(
         AiRequestRefusedError,
       );
+    });
+  });
+
+  describe('"What now?" (9.3, D-148)', () => {
+    const suggestion = (
+      character: string,
+      actionText: string,
+      moveId: string | null,
+      anchors: string[],
+    ) => ({
+      character,
+      actionText,
+      moveId,
+      reason: 'It matters now.',
+      anchors,
+    });
+    const THREE: StubResponse = {
+      kind: 'structured',
+      value: {
+        suggestions: [
+          suggestion(
+            'Vesna',
+            "Vesna traces the power draw with the Lantern Wake's sensors.",
+            'move:adventure/gather-information',
+            ['A1'],
+          ),
+          suggestion(
+            'Rook',
+            'Rook secures the airlock before anyone goes deeper.',
+            'move:adventure/secure-an-advantage',
+            ['A1', 'A1'],
+          ),
+          suggestion(
+            'Juno',
+            'The crew pushes toward the station core.',
+            'move:exploration/undertake-an-expedition',
+            ['A5'],
+          ),
+        ],
+      },
+    };
+
+    it('anchors the Guide in current state: the scene, the crew, the vow and the open threads', async () => {
+      const events = await readEvents(db.sql, campaignId);
+      const anchors = whatNowAnchors(project(events), events).map((a) => `${a.key} ${a.text}`);
+      expect(anchors[0]).toBe('A1 The scene: The derelict relay station, at Varga Relay.');
+      expect(anchors.some((a) => /^A\d+ Rook: health 5/.test(a))).toBe(true);
+      expect(anchors.some((a) => a.includes('Vow (formidable) "Recover the flight recorder'))).toBe(
+        true,
+      );
+      expect(anchors).toContain(
+        `A${anchors.length} Left open last session: One row of windows on Varga Relay is lit.`,
+      );
+    });
+
+    it('records three suggestions with their characters, any move, and the anchors they cite', async () => {
+      const ai = new StubProvider({ responses: [THREE] });
+      const commandId = newId<CommandId>();
+      const result = await suggestActions(db.sql, ai, { campaignId, commandId, actor: PLAYER });
+
+      expect(ai.requests.map((r) => r.purpose)).toEqual(['what_now']);
+      expect(ai.requests[0]?.user).toMatch(/\[A1\] The scene: The derelict relay station/);
+      if (!result.ok) throw new Error(result.message);
+      expect(result.suggestions.map((s) => s.characterId)).toEqual([
+        byCallsign('Vesna'),
+        rook,
+        juno,
+      ]);
+      // A Reference move may be named (D-148).
+      expect(result.suggestions[2]?.moveId).toBe('move:exploration/undertake-an-expedition');
+      // Anchors are recorded as text, each once.
+      expect(result.suggestions[1]?.anchors).toEqual([
+        'The scene: The derelict relay station, at Varga Relay.',
+      ]);
+
+      const events = await readEvents(db.sql, campaignId);
+      const written = events.filter((e) => e.commandId === commandId);
+      expect(written.map((e) => e.type)).toEqual(['ai.completed', 'actions.suggested']);
+      expect(written[1]?.sessionId).toBe(project(events).session?.id);
+
+      const replay = await suggestActions(db.sql, new StubProvider(), {
+        campaignId,
+        commandId,
+        actor: PLAYER,
+      });
+      expect(replay).toEqual(result);
+    });
+
+    it('re-asks an answer that cites no anchor or repeats itself, then records the failure', async () => {
+      const bad: StubResponse = {
+        kind: 'structured',
+        value: {
+          suggestions: [
+            suggestion('Vesna', 'Vesna scans.', null, []),
+            suggestion('Vesna', 'Vesna scans.', null, ['A1']),
+            suggestion('Rook', 'Rook waits.', null, ['A1']),
+          ],
+        },
+      };
+      const ai = new StubProvider({ responses: [bad, bad] });
+      const result = await suggestActions(db.sql, ai, {
+        campaignId,
+        commandId: newId(),
+        actor: PLAYER,
+      });
+
+      expect(result.ok).toBe(false);
+      expect(ai.requests).toHaveLength(2);
+      expect(ai.requests[1]?.user).toMatch(/cites no anchor/);
+      expect(ai.requests[1]?.user).toMatch(/repeats another suggestion/);
+    });
+
+    it('refuses outside an open session', async () => {
+      const db2 = await createTestDatabase('what_now_no_session');
+      try {
+        await seedFixture(db2.sql, SESSION_ONE);
+        await expect(
+          suggestActions(db2.sql, new StubProvider(), {
+            campaignId: SESSION_ONE_CAMPAIGN_ID,
+            commandId: newId(),
+            actor: PLAYER,
+          }),
+        ).rejects.toMatchObject({ reason: 'no_session' });
+      } finally {
+        await db2.close();
+      }
     });
   });
 });

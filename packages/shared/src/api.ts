@@ -603,6 +603,21 @@ export type SuggestMoveResponse =
     }
   | { readonly ok: false; readonly errorKind: AiErrorKind; readonly message: string };
 
+/** Task 9.3 / D-148: "What now?" — three suggested actions, on request. */
+export const SuggestActionsRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+});
+
+export type SuggestActionsRequestBody = z.infer<typeof SuggestActionsRequestBodySchema>;
+
+export type SuggestActionsResponse =
+  | {
+      readonly ok: true;
+      readonly eventId: EventId;
+      readonly suggestions: PayloadFor<'actions.suggested'>['suggestions'];
+    }
+  | { readonly ok: false; readonly errorKind: AiErrorKind; readonly message: string };
+
 /** Task 7.13 / D-136: after the roll, ask whether the move's trigger fits the described action. */
 export const CheckTriggerRequestBodySchema = z.object({
   commandId: CommandIdSchema,

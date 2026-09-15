@@ -352,6 +352,27 @@ export const EVENT_TYPE_META: MetaTable = {
     introduces: none,
     references: (p) => [character(p.actorCharacterId)],
   },
+  'actions.suggested': {
+    // D-148: "What now?", asked for. It changes nothing and is not a beat;
+    // using a suggestion only fills the composer. Each names a character
+    // who exists before it.
+    narrative: false,
+    significant: false,
+    mutatesState: false,
+    voidable: true,
+    introduces: none,
+    references: (p) => p.suggestions.map((s) => character(s.characterId)),
+  },
+  'session.summary_proposed': {
+    // D-149: End a Session's proposal, reviewed in the composer. Nothing
+    // until the player commits `session.ended`.
+    narrative: false,
+    significant: false,
+    mutatesState: false,
+    voidable: true,
+    introduces: none,
+    references: none,
+  },
   'move.trigger_noted': {
     // D-136: a remark on the beat, shown with its move. It changes nothing,
     // and voiding the move takes it along through `causedBy`.

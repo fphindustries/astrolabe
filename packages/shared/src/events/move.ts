@@ -93,6 +93,28 @@ export const MoveSuggestedSchema = z.object({
 });
 
 /**
+ * "What now?" (task 9.3, A6, D-10, D-148): three suggested actions, asked
+ * for and never offered unasked. Each names the character best placed, what
+ * they might do, the likely move — any move, a Reference one included — and
+ * why it matters now. `anchors` are the state facts it builds on, as the
+ * Guide was shown them, so an answer can be traced to current state.
+ *
+ * Like `move.suggested`, it changes nothing and is not narrative: using one
+ * only fills the composer.
+ */
+export const SuggestedActionSchema = z.object({
+  characterId: CharacterIdSchema,
+  actionText: z.string().min(1),
+  moveId: MoveIdSchema.nullable(),
+  reason: z.string().min(1),
+  anchors: z.array(z.string().min(1)).min(1),
+});
+
+export const ActionsSuggestedSchema = z.object({
+  suggestions: z.array(SuggestedActionSchema).length(3),
+});
+
+/**
  * The Guide's note that a move's trigger may not fit the action the player
  * described (task 7.13, D-37, D-121, D-136). Written after the roll, in a
  * command caused by the `move.invoked` it remarks on, so voiding the move

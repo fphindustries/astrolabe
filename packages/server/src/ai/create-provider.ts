@@ -1,4 +1,5 @@
 import { stubComplicationOptions } from './context/complication.js';
+import { stubWhatNow } from './context/what-now.js';
 import { ClaudeProvider, DEFAULT_CLAUDE_MODEL } from './claude.js';
 import type { AiProvider } from './provider.js';
 import { StubProvider, type StubResponse } from './stub.js';
@@ -157,6 +158,9 @@ function devStubResponse(
         clocks: { create: [], tick: [] },
       },
     };
+  }
+  if (mode === 'structured' && request.purpose === 'what_now') {
+    return { kind: 'structured', value: stubWhatNow(request.user) };
   }
   if (mode === 'structured' && request.purpose === 'complication_options') {
     return { kind: 'structured', value: stubComplicationOptions() };

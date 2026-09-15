@@ -14,8 +14,15 @@ import styles from './MoveDrawer.module.css';
  * click away") instead of rebuilding it — this session's entry point is a
  * small button in the top bar.
  */
-export function MoveDrawer({ onClose }: { readonly onClose: () => void }) {
-  const [selectedId, setSelectedId] = useState<MoveId | null>(null);
+export function MoveDrawer({
+  onClose,
+  moveId,
+}: {
+  readonly onClose: () => void;
+  /** D-148: open on this move rather than the list. */
+  readonly moveId?: MoveId;
+}) {
+  const [selectedId, setSelectedId] = useState<MoveId | null>(moveId ?? null);
   const groups = movesByCategory(STARFORGED.moves);
   const selected = STARFORGED.moves.find((move) => move.id === selectedId);
   const detail = selected === undefined ? undefined : moveDetail(selected, STARFORGED.oracles);

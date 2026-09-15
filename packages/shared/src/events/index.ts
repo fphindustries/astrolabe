@@ -18,6 +18,7 @@ import {
   MoveInvokedSchema,
   MoveMethodChosenSchema,
   MoveSuggestedSchema,
+  ActionsSuggestedSchema,
   MoveTriggerNotedSchema,
 } from './move.js';
 import {
@@ -29,7 +30,7 @@ import {
 import { OracleRolledSchema } from './oracle.js';
 import { SceneStartedSchema } from './scene.js';
 import { SectorRouteAddedSchema } from './sector.js';
-import { SessionBeganSchema, SessionEndedSchema } from './session.js';
+import { SessionBeganSchema, SessionEndedSchema, SessionSummaryProposedSchema } from './session.js';
 import { StateChangedSchema, StateOverriddenSchema } from './state.js';
 import { TrackAdvancedSchema, TrackCreatedSchema } from './track.js';
 import { TruthSetSchema } from './truth.js';
@@ -91,6 +92,8 @@ export const PAYLOAD_SCHEMAS = {
   'incident.proposed': IncidentProposedSchema,
   'move.suggested': MoveSuggestedSchema,
   'move.trigger_noted': MoveTriggerNotedSchema,
+  'actions.suggested': ActionsSuggestedSchema,
+  'session.summary_proposed': SessionSummaryProposedSchema,
   'complication.offered': ComplicationOfferedSchema,
   'complication.set': ComplicationSetSchema,
 } as const;
@@ -158,6 +161,8 @@ export const EventSchema = z.discriminatedUnion('type', [
   eventMember('incident.proposed'),
   eventMember('move.suggested'),
   eventMember('move.trigger_noted'),
+  eventMember('actions.suggested'),
+  eventMember('session.summary_proposed'),
   eventMember('complication.offered'),
   eventMember('complication.set'),
 ]);

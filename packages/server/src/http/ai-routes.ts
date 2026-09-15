@@ -9,6 +9,8 @@ import {
   ProposeCharacterRequestBodySchema,
   ProposeIncidentsRequestBodySchema,
   SuggestMoveRequestBodySchema,
+  SuggestActionsRequestBodySchema,
+  type SuggestActionsResponse,
   CheckTriggerRequestBodySchema,
   WorldPassRequestBodySchema,
   OfferComplicationsRequestBodySchema,
@@ -43,6 +45,7 @@ import {
   proposeCharacter,
   proposeIncidents,
   suggestMove,
+  suggestActions,
   checkTrigger,
   runBeatNarration,
   runCorrection,
@@ -466,6 +469,38 @@ export function registerAiRoutes(
           status,
         );
         // D-135: an outage is a recorded outcome, as for every proposal (D-116).
+        reply.code(201);
+        return result;
+      } catch (error) {
+        return refusal(error, reply);
+      }
+    },
+  );
+
+  // D-148: "What now?" — three suggested actions, on request.
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/action-suggestions',
+    async (
+      request,
+      reply,
+    ): Promise<SuggestActionsResponse | NarrationRefusalResponse | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
+        return undefined;
+      }
+      const parsedBody = SuggestActionsRequestBodySchema.safeParse(request.body);
+      if (!parsedBody.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        const result = await suggestActions(
+          sql,
+          ai,
+          { campaignId: id, commandId: parsedBody.data.commandId, actor: PLAYER },
+          status,
+        );
+        // An outage is a recorded outcome, as for every suggestion (D-116).
         reply.code(201);
         return result;
       } catch (error) {

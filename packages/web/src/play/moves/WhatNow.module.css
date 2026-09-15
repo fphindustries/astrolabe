@@ -1,0 +1,98 @@
+.whatNow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ask,
+.use,
+.dismiss {
+  background: var(--surface-2);
+  color: var(--text-primary);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.ask:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.hint {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.failure {
+  font-size: var(--text-sm);
+  color: var(--outcome-miss);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+/* The Guide's suggestions: the AI provenance colour, as on every proposal. */
+.card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--provenance-ai);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+}
+
+.badge {
+  flex: none;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-1);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.action {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.meta,
+.reason {
+  color: var(--text-secondary);
+}
+
+.why {
+  color: var(--text-secondary);
+}
+
+.why summary {
+  cursor: pointer;
+  color: var(--provenance-ai);
+}
+
+.anchors {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-3);
+}

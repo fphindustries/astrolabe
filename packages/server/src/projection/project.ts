@@ -171,6 +171,8 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
     case 'character.proposed':
     case 'incident.proposed':
     case 'move.suggested':
+    case 'actions.suggested':
+    case 'session.summary_proposed':
     case 'move.trigger_noted':
     case 'complication.offered':
     case 'complication.set':

@@ -91,7 +91,7 @@ function PlayScreenContent({ campaignId }: { readonly campaignId: string }) {
             guideAvailable={guide.data?.available}
             tokens={header.data?.tokens}
             campaignTokens={header.data?.campaignTokens}
-            onOpenMoves={openMovesDrawer}
+            onOpenMoves={() => openMovesDrawer()}
           />
         }
         left={
@@ -133,14 +133,16 @@ function PlayScreenContent({ campaignId }: { readonly campaignId: string }) {
         <EntityDrawer campaignId={campaignId} entityId={drawer.entityId} onClose={closeDrawer} />
       )}
       {drawer?.kind === 'track' && (
-        <TrackerDrawer
-          campaignId={campaignId}
-          trackKind={drawer.trackKind}
-          onClose={closeDrawer}
-        />
+        <TrackerDrawer campaignId={campaignId} trackKind={drawer.trackKind} onClose={closeDrawer} />
       )}
       {drawer?.kind === 'asset' && <AssetDrawer assetId={drawer.assetId} onClose={closeDrawer} />}
-      {drawer?.kind === 'moves' && <MoveDrawer onClose={closeDrawer} />}
+      {drawer?.kind === 'moves' && (
+        <MoveDrawer
+          key={drawer.moveId ?? 'all'}
+          onClose={closeDrawer}
+          {...(drawer.moveId !== undefined ? { moveId: drawer.moveId } : {})}
+        />
+      )}
     </>
   );
 }

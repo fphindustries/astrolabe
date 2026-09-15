@@ -359,6 +359,37 @@ export const SAMPLE_PAYLOADS: { [T in EventType]: PayloadFor<T> } = {
     reason: 'Pulling the logs is an investigation.',
     confidence: 'high',
   },
+  'actions.suggested': {
+    suggestions: [
+      {
+        characterId: VESNA,
+        actionText: "Vesna traces the power draw with the Lantern Wake's sensors.",
+        moveId: 'move:adventure/gather-information',
+        reason: 'The live circuit is the only sign anyone is aboard.',
+        anchors: [
+          'The player set a complication: one life-support circuit is still drawing power.',
+        ],
+      },
+      {
+        characterId: ROOK,
+        actionText: 'Rook secures the airlock before anyone goes deeper.',
+        moveId: 'move:adventure/secure-an-advantage',
+        reason: 'The crew is about to split up inside a derelict.',
+        anchors: ['The scene: The derelict relay station, at Varga Relay.'],
+      },
+      {
+        characterId: JUNO,
+        actionText: 'The crew pushes toward the station core.',
+        moveId: 'move:exploration/undertake-an-expedition',
+        reason: 'The flight recorder is somewhere past the core.',
+        anchors: ['Vow (formidable) "Recover the flight recorder": 0 of 10 progress boxes.'],
+      },
+    ],
+  },
+  'session.summary_proposed': {
+    summary: 'The crew boarded the relay station and found it was not empty.',
+    openThreads: ["the survivor's intent", 'the failing power'],
+  },
   'move.trigger_noted': {
     moveId: 'move:adventure/secure-an-advantage',
     actionText: 'Rook kicks the drone off the ledge.',

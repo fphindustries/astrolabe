@@ -1,6 +1,6 @@
 import { createContext, useContext, useReducer, type Dispatch, type ReactNode } from 'react';
 
-import type { AssetId, CharacterId } from '@astrolabe/rules';
+import type { AssetId, CharacterId, MoveId } from '@astrolabe/rules';
 import type { EntityId, TrackKind } from '@astrolabe/shared';
 
 /**
@@ -18,7 +18,8 @@ export type DrawerState =
   | { readonly kind: 'entity'; readonly entityId: EntityId }
   | { readonly kind: 'track'; readonly trackKind: TrackKind }
   | { readonly kind: 'asset'; readonly assetId: AssetId }
-  | { readonly kind: 'moves' }
+  /** D-148: opened on one move when a suggestion names a move the composer can't play. */
+  | { readonly kind: 'moves'; readonly moveId?: MoveId }
   | null;
 
 type PlayUiAction =
@@ -26,7 +27,7 @@ type PlayUiAction =
   | { readonly type: 'open-entity-drawer'; readonly entityId: EntityId }
   | { readonly type: 'open-track-drawer'; readonly trackKind: TrackKind }
   | { readonly type: 'open-asset-drawer'; readonly assetId: AssetId }
-  | { readonly type: 'open-moves-drawer' }
+  | { readonly type: 'open-moves-drawer'; readonly moveId?: MoveId }
   | { readonly type: 'close-drawer' };
 
 interface PlayUiState {
@@ -44,7 +45,12 @@ function playUiReducer(state: PlayUiState, action: PlayUiAction): PlayUiState {
     case 'open-asset-drawer':
       return { drawer: { kind: 'asset', assetId: action.assetId } };
     case 'open-moves-drawer':
-      return { drawer: { kind: 'moves' } };
+      return {
+        drawer: {
+          kind: 'moves',
+          ...(action.moveId !== undefined ? { moveId: action.moveId } : {}),
+        },
+      };
     case 'close-drawer':
       return { drawer: null };
   }
@@ -87,7 +93,7 @@ export function useDrawerActions(): {
   openEntityDrawer: (entityId: EntityId) => void;
   openTrackDrawer: (trackKind: TrackKind) => void;
   openAssetDrawer: (assetId: AssetId) => void;
-  openMovesDrawer: () => void;
+  openMovesDrawer: (moveId?: MoveId) => void;
   closeDrawer: () => void;
 } {
   const dispatch = usePlayUiDispatch();
@@ -97,7 +103,8 @@ export function useDrawerActions(): {
     openEntityDrawer: (entityId: EntityId) => dispatch({ type: 'open-entity-drawer', entityId }),
     openTrackDrawer: (trackKind: TrackKind) => dispatch({ type: 'open-track-drawer', trackKind }),
     openAssetDrawer: (assetId: AssetId) => dispatch({ type: 'open-asset-drawer', assetId }),
-    openMovesDrawer: () => dispatch({ type: 'open-moves-drawer' }),
+    openMovesDrawer: (moveId?: MoveId) =>
+      dispatch({ type: 'open-moves-drawer', ...(moveId !== undefined ? { moveId } : {}) }),
     closeDrawer: () => dispatch({ type: 'close-drawer' }),
   };
 }

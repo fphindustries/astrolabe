@@ -40,13 +40,16 @@ export function ActionPrompt({
   actorCharacterId,
   onSelect,
   onOpenFullList,
+  initialText = '',
 }: {
   readonly campaignId: string;
   readonly actorCharacterId: CharacterId;
+  /** D-148: words carried in from a "What now?" suggestion. */
+  readonly initialText?: string;
   readonly onSelect: (moveId: MoveId, prefill: ComposerPrefill) => void;
   readonly onOpenFullList: () => void;
 }) {
-  const [typed, setTyped] = useState('');
+  const [typed, setTyped] = useState(initialText);
   const [answer, setAnswer] = useState<Answer | undefined>(undefined);
   const [failure, setFailure] = useState<string | undefined>(undefined);
   const suggest = useSuggestMove(campaignId);

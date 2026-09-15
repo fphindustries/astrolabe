@@ -40,8 +40,10 @@ export {
 export { listCampaigns } from './campaign-queries.js';
 export {
   checkTrigger,
+  suggestActions,
   suggestMove,
   type CheckTriggerRequest,
+  type SuggestActionsRequest,
   type SuggestMoveRequest,
 } from './suggestion-commands.js';
 export {

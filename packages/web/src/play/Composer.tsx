@@ -1,5 +1,6 @@
 import type { CharacterId, MoveId } from '@astrolabe/rules';
 import type { CommandId } from '@astrolabe/shared';
+import { useState } from 'react';
 
 import { useCampaignState } from '../api/campaigns.js';
 
@@ -10,6 +11,7 @@ import { useNarrationStream } from './narration/narration-stream.js';
 import { ActionPrompt } from './moves/ActionPrompt.js';
 import { PayThePricePicker, PayThePriceResult } from './moves/PayThePriceFlow.js';
 import { ResultCard } from './moves/ResultCard.js';
+import { WhatNow } from './moves/WhatNow.js';
 import { BeginSession } from './session/BeginSession.js';
 import { toSessionView } from './session/session.js';
 import styles from './Composer.module.css';
@@ -37,12 +39,15 @@ export function Composer({
   readonly crew: readonly CrewCardView[];
   readonly actingCharacterId: CharacterId | undefined;
   readonly onSetActing: (characterId: CharacterId) => void;
-  readonly onOpenMovesDrawer: () => void;
+  readonly onOpenMovesDrawer: (moveId?: MoveId) => void;
 }) {
   const flow = useMoveFlow();
   const { selectMove, openPayThePrice, payThePriceResolved, reset } = useMoveFlowActions();
   const narration = useNarrationStream();
   const session = useCampaignState(campaignId, toSessionView);
+  // D-148: a suggestion the composer can't play still carries its words into
+  // the prompt; bumping `version` remounts the prompt with them.
+  const [draft, setDraft] = useState({ text: '', version: 0 });
 
   if (crew.length === 0) {
     return <div className={styles.composer}>No one to act yet.</div>;
@@ -112,13 +117,35 @@ export function Composer({
       </div>
 
       {flow.step === 'idle' && actor !== undefined && (
+        <WhatNow
+          campaignId={campaignId}
+          crew={crew}
+          onUse={(suggestion, playable) => {
+            const characterId = suggestion.characterId as CharacterId;
+            onSetActing(characterId);
+            if (playable && suggestion.moveId !== null) {
+              selectMove(suggestion.moveId as MoveId, characterId, undefined, {
+                actionText: suggestion.actionText,
+              });
+              return;
+            }
+            setDraft((d) => ({ text: suggestion.actionText, version: d.version + 1 }));
+            if (suggestion.moveId !== null) {
+              onOpenMovesDrawer(suggestion.moveId as MoveId);
+            }
+          }}
+        />
+      )}
+
+      {flow.step === 'idle' && actor !== undefined && (
         // Keyed by the actor: a suggestion answers for one character (D-135).
         <ActionPrompt
-          key={actor}
+          key={`${actor}:${draft.version}`}
           campaignId={campaignId}
           actorCharacterId={actor}
+          initialText={draft.text}
           onSelect={(moveId: MoveId, prefill) => selectMove(moveId, actor, undefined, prefill)}
-          onOpenFullList={onOpenMovesDrawer}
+          onOpenFullList={() => onOpenMovesDrawer()}
         />
       )}
 

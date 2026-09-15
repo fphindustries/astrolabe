@@ -1,6 +1,6 @@
 import * as z from 'zod';
 
-import { SessionIdSchema } from '../ids.js';
+import { EventIdSchema, SessionIdSchema } from '../ids.js';
 
 export const SessionBeganSchema = z.object({
   sessionId: SessionIdSchema,
@@ -18,4 +18,16 @@ export const SessionBeganSchema = z.object({
 export const SessionEndedSchema = z.object({
   summary: z.string().min(1),
   openThreads: z.array(z.string().min(1)),
+  /** D-149: the Guide's proposal the player committed, edited or not. */
+  proposalEventId: EventIdSchema.optional(),
+});
+
+/**
+ * D-149: End a Session's first step. The Guide proposes a summary and open
+ * threads from the session's significant events; the player reviews them,
+ * may edit either, and commits `session.ended`. It changes nothing itself.
+ */
+export const SessionSummaryProposedSchema = z.object({
+  summary: z.string().min(1),
+  openThreads: z.array(z.string().min(1)).min(2).max(5),
 });

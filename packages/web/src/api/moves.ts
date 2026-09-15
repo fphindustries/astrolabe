@@ -7,6 +7,7 @@ import type {
   InvokeMoveResponse,
   CheckTriggerResponse,
   ResolvePayThePriceResponse,
+  SuggestActionsResponse,
   SuggestMoveResponse,
   VoidEventResponse,
   VoidPreviewResult,
@@ -107,6 +108,22 @@ export interface SuggestMoveInput {
  * Task 7.12 / D-135: ask the Guide which move fits a described action. An
  * outage is an answer, not a thrown error; nothing waits on it.
  */
+/** D-148: "What now?" — three suggested actions, only when asked. */
+export function useSuggestActions(campaignId: string) {
+  const invalidate = useInvalidateCampaign(campaignId);
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiPost<SuggestActionsResponse>(`/campaigns/${campaignId}/action-suggestions`, {
+        commandId: crypto.randomUUID(),
+      }),
+    onSettled: () => {
+      invalidate();
+      void queryClient.invalidateQueries({ queryKey: aiKeys.status });
+    },
+  });
+}
+
 export function useSuggestMove(campaignId: string) {
   const invalidate = useInvalidateCampaign(campaignId);
   const queryClient = useQueryClient();

@@ -27,8 +27,9 @@ describe('the catalogue', () => {
     // character.proposed (3.3, D-124), narration.withdrawn (7.15, D-128) and
     // incident.proposed (4.6, D-132), move.suggested (7.12, D-135) and
     // move.trigger_noted (7.13, D-136) one each, and complication.offered and
-    // complication.set (8.7, D-143).
-    expect(EVENT_TYPES).toHaveLength(34);
+    // complication.set (8.7, D-143), and actions.suggested (9.3, D-148) and
+    // session.summary_proposed (9.4, D-149).
+    expect(EVENT_TYPES).toHaveLength(36);
   });
 
   it('exposes every type through isEventType, and rejects anything else', () => {
