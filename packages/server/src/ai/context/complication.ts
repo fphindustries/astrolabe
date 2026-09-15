@@ -1,5 +1,5 @@
 import { complicationFor, type OracleId } from '@astrolabe/rules';
-import type { AstrolabeEvent, CampaignState, EventId } from '@astrolabe/shared';
+import type { AstrolabeEvent, CampaignState, CommandId, EventId } from '@astrolabe/shared';
 import * as z from 'zod';
 
 import type { AiRequest } from '../provider.js';
@@ -138,23 +138,34 @@ export function stubComplicationOptions(): ComplicationOptions {
  * set. Beat narration refuses until it does.
  */
 export function missingComplication(scopeEvents: readonly AstrolabeEvent[]): boolean {
-  return scopeEvents.some((event) => {
+  return owedComplication(scopeEvents) !== undefined;
+}
+
+/** Which move is still owed its complication, with the clause that calls for it (D-150). */
+export function owedComplication(
+  scopeEvents: readonly AstrolabeEvent[],
+): { readonly moveCommandId: CommandId; readonly clause: string } | undefined {
+  for (const event of scopeEvents) {
     if (event.type !== 'move.invoked') {
-      return false;
+      continue;
     }
     const roll = scopeEvents.find(
       (e) => e.commandId === event.commandId && e.type === 'dice.rolled',
     );
     if (roll?.type !== 'dice.rolled') {
-      return false;
+      continue;
     }
     const burned = scopeEvents.find(
       (e) => e.type === 'momentum.burned' && e.payload.rollEventId === roll.id,
     );
     const tier = burned?.type === 'momentum.burned' ? burned.payload.tierAfter : roll.payload.tier;
-    return (
-      complicationFor(event.payload.moveId, tier) !== undefined &&
+    const complication = complicationFor(event.payload.moveId, tier);
+    if (
+      complication !== undefined &&
       !scopeEvents.some((e) => e.type === 'complication.set' && e.causedBy === event.id)
-    );
-  });
+    ) {
+      return { moveCommandId: event.commandId, clause: complication.clause };
+    }
+  }
+  return undefined;
 }

@@ -38,6 +38,7 @@ import type { CharacterProblem } from '@astrolabe/rules';
 
 import type { AiProvider } from '../ai/provider.js';
 import { AiStatus } from '../ai/status.js';
+import { owedPassages } from '../ai/context/index.js';
 import { buildNarrativeLog, oracleChips } from '../projection/narrative-log.js';
 import { registerAiRoutes } from './ai-routes.js';
 import { parseCampaignId, parseEntityId, parseEventId, requireCampaignExists } from './params.js';
@@ -174,7 +175,15 @@ export function buildApp({ sql, ai, checker, planner = ai }: BuildAppOptions): F
         return undefined;
       }
 
-      return { headSeq: lastEvent.seq, state: project(events) };
+      const state = project(events);
+      return {
+        headSeq: lastEvent.seq,
+        state,
+        owedPassages:
+          state.session === null || state.session.endedAt !== undefined
+            ? []
+            : owedPassages(events, state.session.id),
+      };
     },
   );
 

@@ -73,6 +73,15 @@ export function useCampaignState<T = CampaignState>(
   });
 }
 
+/** D-150: the open session's chains still owed a passage, from the same state read. */
+export function useOwedPassages(campaignId: string) {
+  return useQuery({
+    queryKey: campaignKeys.state(campaignId),
+    queryFn: () => apiGet<CampaignStateResponse>(`/campaigns/${campaignId}/state`),
+    select: (response) => response.owedPassages,
+  });
+}
+
 /** Invalidates a campaign's state and log — call after a command writes. */
 export function useInvalidateCampaign(campaignId: string) {
   const queryClient = useQueryClient();

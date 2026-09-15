@@ -60,6 +60,18 @@ export type CampaignListResponse = readonly CampaignSummary[];
 export interface CampaignStateResponse {
   readonly headSeq: number;
   readonly state: CampaignState;
+  /** D-150: the open session's move chains that no passage covers yet. */
+  readonly owedPassages: readonly OwedPassage[];
+}
+
+/** D-150: a move chain committed without its passage, as the log offers to narrate it. */
+export interface OwedPassage {
+  readonly rootCommandId: CommandId;
+  readonly moveId: MoveId;
+  readonly actorCharacterId: CharacterId;
+  readonly actionText?: string;
+  /** D-143: set this first; narration refuses without it. */
+  readonly complication?: { readonly moveCommandId: CommandId; readonly clause: string };
 }
 
 export type NarrativeLogResponse = NarrativeLog;

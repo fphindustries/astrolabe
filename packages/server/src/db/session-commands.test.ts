@@ -8,7 +8,7 @@ import {
   type NarrativeLogResponse,
 } from '@astrolabe/shared';
 
-import { describeRecap, previousSession } from '../ai/context/index.js';
+import { describeRecap, owedPassages, previousSession } from '../ai/context/index.js';
 import type { TextSink } from '../ai/respond.js';
 import { StubProvider, type StubResponse } from '../ai/stub.js';
 import {
@@ -24,7 +24,9 @@ import { project } from '../projection/project.js';
 
 import { createCampaign } from './campaign-commands.js';
 import { readEvents } from './event-store.js';
-import { invokeMove, MoveRejectedError } from './move-commands.js';
+import { setComplication } from './complication-commands.js';
+import { invokeMove, MoveRejectedError, resolvePayThePriceMethod } from './move-commands.js';
+import { prepareBeatNarration, runBeatNarration } from './narration-commands.js';
 import {
   beginSession,
   endSession,
@@ -34,6 +36,7 @@ import {
 } from './session-commands.js';
 import { createTestDatabase, hasTestDatabase, type TestDatabase } from './testing.js';
 import { uuidv7 } from './uuid.js';
+import { voidEvent } from './void-command.js';
 
 const PLAYER: Actor = { kind: 'player', playerId: LOCAL_PLAYER_ID };
 const newId = <T>(): T => uuidv7() as T;
@@ -537,6 +540,138 @@ describe.skipIf(!hasTestDatabase)('End a Session (9.4, D-149)', () => {
         (e) => e.type === 'narration.withdrawn',
       );
       expect(withdrawn).toMatchObject([{ payload: { role: 'summary', rejectedText: feeling } }]);
+    } finally {
+      await db.close();
+    }
+  });
+});
+
+describe.skipIf(!hasTestDatabase)('resuming a campaign (9.5, D-150)', () => {
+  const campaignId = SESSION_TWO_OPEN_CAMPAIGN_ID;
+
+  it('reports each chain a passage has yet to cover, once, with any complication still owed', async () => {
+    const db = await createTestDatabase('owed_passages');
+    try {
+      await seedFixture(db.sql, SESSION_TWO_OPEN);
+      const state = project(await readEvents(db.sql, campaignId));
+      const who = (callsign: string) =>
+        Object.values(state.characters).find((c) => c.callsign === callsign)!.id;
+      const owed = async () => {
+        const events = await readEvents(db.sql, campaignId);
+        return owedPassages(events, project(events).session!.id);
+      };
+      expect(await owed()).toEqual([]);
+
+      // Beat 7's chain: a miss, Pay the Price, Endure Harm — one passage owed.
+      const faceDanger = newId<CommandId>();
+      await invokeMove(db.sql, {
+        campaignId,
+        commandId: faceDanger,
+        actor: PLAYER,
+        moveId: 'move:adventure/face-danger',
+        actorCharacterId: who('Rook'),
+        using: { using: 'stat', stat: 'iron' },
+        adds: [],
+        actionText: 'Rook forces the sealed bulkhead.',
+        rng: actionRoll(1, [8, 9]),
+      });
+      const payThePrice = newId<CommandId>();
+      await resolvePayThePriceMethod(db.sql, {
+        campaignId,
+        commandId: payThePrice,
+        actor: PLAYER,
+        actorCharacterId: who('Rook'),
+        optionId: 'obvious',
+        chainedFromCommandId: faceDanger,
+      });
+      // Beat 3's weak hit, with its complication not yet set.
+      const gather = newId<CommandId>();
+      await invokeMove(db.sql, {
+        campaignId,
+        commandId: gather,
+        actor: PLAYER,
+        moveId: 'move:adventure/gather-information',
+        actorCharacterId: who('Juno'),
+        using: { using: 'stat', stat: 'wits' },
+        adds: [],
+        actionText: 'Juno pulls the station logs.',
+        rng: actionRoll(3, [4, 7]),
+      });
+      // A move voided before it was narrated is owed nothing.
+      const voided = await invokeMove(db.sql, {
+        campaignId,
+        commandId: newId(),
+        actor: PLAYER,
+        moveId: 'move:adventure/face-danger',
+        actorCharacterId: who('Vesna'),
+        using: { using: 'stat', stat: 'edge' },
+        adds: [],
+        rng: actionRoll(6, [1, 1]),
+      });
+      await voidEvent(db.sql, {
+        campaignId,
+        commandId: newId(),
+        actor: PLAYER,
+        targetEventId: voided.rollEventId,
+        reason: 'Wrong move.',
+        kind: 'player_void',
+      });
+
+      expect(await owed()).toEqual([
+        {
+          rootCommandId: faceDanger,
+          moveId: 'move:adventure/face-danger',
+          actorCharacterId: who('Rook'),
+          actionText: 'Rook forces the sealed bulkhead.',
+        },
+        {
+          rootCommandId: gather,
+          moveId: 'move:adventure/gather-information',
+          actorCharacterId: who('Juno'),
+          actionText: 'Juno pulls the station logs.',
+          complication: { moveCommandId: gather, clause: 'but also complicates your quest' },
+        },
+      ]);
+
+      // Narrating the chain from its root settles it.
+      const prepared = await prepareBeatNarration(db.sql, {
+        campaignId,
+        commandId: newId(),
+        actor: PLAYER,
+        afterCommandId: faceDanger,
+      });
+      if (prepared.kind !== 'run') throw new Error('expected a run');
+      await runBeatNarration(
+        db.sql,
+        new StubProvider({
+          responses: [segments(['world', null, [], 'The bulkhead holds, and sparks fly.'])],
+        }),
+        new StubProvider(),
+        prepared,
+        SINK,
+      );
+      await setComplication(db.sql, {
+        campaignId,
+        commandId: newId(),
+        actor: PLAYER,
+        moveCommandId: gather,
+        text: 'One circuit still draws power.',
+      });
+      expect(await owed()).toEqual([
+        {
+          rootCommandId: gather,
+          moveId: 'move:adventure/gather-information',
+          actorCharacterId: who('Juno'),
+          actionText: 'Juno pulls the station logs.',
+        },
+      ]);
+
+      const app = buildApp({ sql: db.sql, ai: new StubProvider(), checker: new StubProvider() });
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/campaigns/${campaignId}/state`,
+      });
+      expect(response.json()).toMatchObject({ owedPassages: [{ rootCommandId: gather }] });
     } finally {
       await db.close();
     }

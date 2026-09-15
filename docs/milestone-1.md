@@ -180,7 +180,7 @@ narrative log is a second read model with its own paged query.
 - [ ] ~~9.2 Scene proposals: inline, one click to accept, editable title~~ — moved out of M1 (D-71). The scene model and header binding stay, under 5.3
 - [x] 9.3 "What now?" suggested actions: three, anchored in state, any move including Reference ones (D-148). Verified live and in the browser on the stub (see "Implementation notes (task 9.3)")
 - [x] 9.4 End a session: summary and open threads, proposed, reviewed and committed; Reach a Milestone as a reminder only (D-149). Verified live and in the browser on the stub (see "Implementation notes (task 9.4)")
-- [ ] 9.5 Resume a campaign from committed state: Begin Session after an ended session, resume in place, Narrate for a chain owed a passage (D-150)
+- [x] 9.5 Resume a campaign from committed state: Begin Session after an ended session, resume in place, Narrate for a chain owed a passage (D-150). Verified in the browser on the stub (see "Implementation notes (task 9.5)")
 
 ### 10. Polish and packaging
 
@@ -2301,4 +2301,58 @@ There were 3 runs, recorded in `ai/eval/live-summary-9.4.json`.
 The console was clean.
 
 A scripted click that awaited inside the page froze the tab once. It didn't reproduce with real clicks, and no request had reached the server.
+
+## Implementation notes (task 9.5, resuming a campaign)
+
+9.5 is done (D-150), with the three cases D-150 named and nothing more.
+
+### Shape
+
+- **An ended session** opens the play screen on Begin Session. That is 9.1's `toSessionView` (D-146), and needs nothing new.
+- **An open session** resumes in place. The projection, the per-session log (9.1), the header, the rails and the token counter already come from committed events.
+- **A chain owed a passage** (`owedPassages` in `ai/context/beat-scope.ts`, pure). The narration queue lives in the browser, so a reload between a move and its passage used to strand the move.
+  - A chain is owed when it has a root move in the open session (a `move.invoked` with no `causedBy`) that `resolveBeatScope` still resolves: not voided, and with no live passage.
+  - `owedComplication`, which `missingComplication` now wraps, adds the move and clause when a complication is still owed (D-143).
+  - The state route returns `owedPassages` beside `state`. It is computed from the events the route already reads, and kept out of `CampaignState`, which is projection-only.
+- **Web** (`log/OwedPassages.tsx`, at the foot of the log).
+  - Each owed chain reads "Not yet narrated: Rook, Face Danger — "…"".
+  - Its **Narrate** button queues the chain as Done would. A chain still owed a complication shows 8.7's `ComplicationPrompt` first, and Narrate appears once the refetch drops the complication.
+  - The offer shows only while no move flow is open and nothing is being narrated or paused, so a chain the player is still resolving, or one already queued, is never offered.
+
+### Limits
+
+- **A half-finished flow isn't restored** (D-150). A miss whose Pay the Price was never chosen is narrated as the miss alone, and a pending choice as the roll without it. The player can void and redo instead.
+- **A world pass that didn't follow its passage** before a reload isn't offered again. D-150 doesn't name that case.
+- **Owed chains can flash briefly.** Between a committed passage and its world pass, the offer can appear for as long as the state refetch takes. Narrate in that window is refused as `already_narrated`, silently.
+
+### Verification
+
+`npm run typecheck`, `npm run lint`, `npm test` (1024 tests, 1 skipped) and the web build pass. The new test builds, on `session-2-open`:
+- Beat 7's miss, chained into Pay the Price;
+- Beat 3's weak hit, with no complication set;
+- a voided move.
+
+It checks that:
+- one entry is owed per chain, at its root;
+- the weak hit owes its complication, with Gather Information's clause;
+- the voided move is owed nothing;
+- narrating the chain and setting the complication settle both;
+- the state route carries the list.
+
+**Browser pass on the stub** (`session-2-open`, freshly reset).
+1. A Face Danger was rolled over HTTP and not narrated, standing in for a reload.
+2. The play screen showed "Not yet narrated: Rook, Face Danger — "Rook forces the sealed bulkhead."" with **Narrate**.
+3. Narrate streamed and committed the passage, and the offer went away.
+
+The console was clean.
+
+## Group 9 complete
+
+9.1, 9.3, 9.4 and 9.5 are done. 9.2 moved out of Milestone 1 (D-71). The session lifecycle now runs through the app:
+- Begin Session with a recap;
+- "What now?" on request;
+- End Session with a reviewed summary and open threads;
+- the next session's recap built from them.
+
+`session-1` begins and ends through the real commands.
 

@@ -1,7 +1,9 @@
-import type { AstrolabeEvent, CommandId, EventId } from '@astrolabe/shared';
+import type { AstrolabeEvent, CommandId, EventId, OwedPassage, SessionId } from '@astrolabe/shared';
 
 import { causalCommands } from '../../projection/cascade.js';
 import { computeVoidState, isSuppressed } from '../../projection/void-state.js';
+
+import { owedComplication } from './complication.js';
 
 /**
  * Which events one passage of narration covers (D-110).
@@ -132,4 +134,35 @@ export function resolveBeatScope(
   }
 
   return { ok: true, rootCommandId, events: chain, causedBy: latest.id };
+}
+
+/**
+ * D-150: the open session's move chains that no live passage covers. The
+ * client's narration queue is memory only, so a reload between a move and
+ * its passage leaves a chain here, and the log offers to narrate it. A chain
+ * still owed a complication (D-143) says which move and why.
+ */
+export function owedPassages(
+  events: readonly AstrolabeEvent[],
+  sessionId: SessionId,
+): readonly OwedPassage[] {
+  const owed: OwedPassage[] = [];
+  for (const event of events) {
+    if (event.type !== 'move.invoked' || event.sessionId !== sessionId || event.causedBy !== null) {
+      continue;
+    }
+    const scope = resolveBeatScope(events, event.commandId);
+    if (!scope.ok || scope.rootCommandId !== event.commandId) {
+      continue;
+    }
+    const complication = owedComplication(scope.events);
+    owed.push({
+      rootCommandId: event.commandId,
+      moveId: event.payload.moveId,
+      actorCharacterId: event.payload.actorCharacterId,
+      ...(event.payload.actionText !== undefined ? { actionText: event.payload.actionText } : {}),
+      ...(complication !== undefined ? { complication } : {}),
+    });
+  }
+  return owed;
 }

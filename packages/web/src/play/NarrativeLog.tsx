@@ -5,6 +5,7 @@ import { withoutLinks } from '@astrolabe/rules';
 import { useCampaignLog } from '../api/campaigns.js';
 
 import { CorrectionControl } from './log/CorrectionControl.js';
+import { OwedPassages } from './log/OwedPassages.js';
 import {
   orderedBeats,
   toBeatView,
@@ -112,6 +113,8 @@ export function NarrativeLog({ campaignId }: { readonly campaignId: string }) {
           />
         ))
       )}
+      {/* D-150: chains a reload left without their passage. */}
+      <OwedPassages campaignId={campaignId} />
       {pendingBeat !== null && (
         <div className={styles.beat}>
           <PendingText passage={pendingBeat} />
