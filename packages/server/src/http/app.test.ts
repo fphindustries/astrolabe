@@ -19,7 +19,7 @@ import type {
   EventId,
 } from '@astrolabe/shared';
 
-import { playGoldenBeats, type GoldenRun } from '../harness/golden-beats.js';
+import { playSessionTwoOpen, type SessionTwoOpenRun } from '../fixtures/index.js';
 import { StubProvider } from '../ai/stub.js';
 import { appendCommand } from '../db/event-store.js';
 import { createTestDatabase, hasTestDatabase, type TestDatabase } from '../db/testing.js';
@@ -52,18 +52,17 @@ function validDraftBody(overrides: Partial<Record<string, unknown>> = {}) {
 /**
  * The HTTP read API against a real, migrated database (task 5.0).
  *
- * Seeded with the same golden-session beats the harness and section 2's own
- * tests use, so the numbers asserted here are the numbers a person reading
- * the golden session or the harness output would expect.
+ * Seeded with `session-2-open` (D-122): the golden session's campaign with
+ * session 2 open, as the play screen finds it before Beat 1's recap.
  */
 describe.skipIf(!hasTestDatabase)('the HTTP read API', () => {
   let db: TestDatabase;
-  let run: GoldenRun;
+  let run: SessionTwoOpenRun;
   let app: FastifyInstance;
 
   beforeAll(async () => {
     db = await createTestDatabase('http-app');
-    run = await playGoldenBeats(db.sql);
+    run = await playSessionTwoOpen(db.sql);
     app = buildApp({ sql: db.sql, ai: new StubProvider(), checker: new StubProvider() });
     await app.ready();
   }, 60_000);
@@ -77,7 +76,7 @@ describe.skipIf(!hasTestDatabase)('the HTTP read API', () => {
     const response = await app.inject({ method: 'GET', url: '/api/campaigns' });
     expect(response.statusCode).toBe(200);
     const body = response.json<CampaignListResponse>();
-    expect(body).toContainEqual({ id: run.campaignId, name: 'Lantern Wake' });
+    expect(body).toContainEqual({ id: run.campaignId, name: 'Lantern Wake (session 2 open)' });
   });
 
   it('projects a campaign’s state', async () => {
@@ -87,7 +86,7 @@ describe.skipIf(!hasTestDatabase)('the HTTP read API', () => {
     });
     expect(response.statusCode).toBe(200);
     const body = response.json<CampaignStateResponse>();
-    expect(body.state.campaign?.name).toBe('Lantern Wake');
+    expect(body.state.campaign?.name).toBe('Lantern Wake (session 2 open)');
     expect(body.state.session?.number).toBe(2);
     expect(body.headSeq).toBeGreaterThan(0);
     expect(Object.keys(body.state.characters)).toHaveLength(3);
@@ -769,11 +768,9 @@ describe.skipIf(!hasTestDatabase)('the HTTP read API', () => {
       expect(bad.statusCode).toBe(400);
     });
 
-    it('voids a real roll end to end, against the golden run’s own session (D-84)', async () => {
-      // No HTTP route begins a session yet (task 9.1) — the golden run's
-      // session, written by the harness, is the only one an HTTP-only test
-      // can reach. `invokeMove` picks it up automatically from projected
-      // state, so a fresh roll made against this campaign inherits it.
+    it('voids a real roll end to end, in the seeded open session (D-84)', async () => {
+      // `invokeMove` picks the open session up from projected state, so a
+      // fresh roll made against this campaign inherits it.
       const invoke = await app.inject({
         method: 'POST',
         url: `/api/campaigns/${run.campaignId}/moves`,

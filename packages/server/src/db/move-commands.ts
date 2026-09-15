@@ -48,9 +48,8 @@ import { appendCommand, readEvents, type AppendResult, type NewEvent } from './e
  * choice-dependent effects for a follow-up `applyMoveChoice` command — the
  * player has not decided yet, so there is nothing to write for them.
  *
- * `causedBy` links a command to the roll or chain that produced it,
- * exactly as `golden-beats.ts`'s hand-written momentum-burn command already
- * does; it is always set here, never accepted from the client (section 2's
+ * `causedBy` links a command to the roll or chain that produced it. It is
+ * always set here, never accepted from the client (section 2's
  * rule) — see `resolveChainedFrom` below for how a chained invocation's
  * `causedBy` is derived and checked instead of trusted outright.
  */
@@ -718,8 +717,7 @@ export async function applyMoveChoice(
 }
 
 /**
- * Accepting a momentum-burn offer (task 6.7, A8, Beat 5). Mirrors
- * `golden-beats.ts`'s hand-written momentum-burn command exactly:
+ * Accepting a momentum-burn offer (task 6.7, A8, Beat 5).
  * `momentum.burned` records the fact, `state.changed`'s `momentum_reset`
  * delta does the actual mutation, derived at projection time rather than
  * stored (it depends on marked impacts, which can change under a void).

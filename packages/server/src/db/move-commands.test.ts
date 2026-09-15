@@ -85,7 +85,7 @@ describe.skipIf(!hasTestDatabase)('resolving a move (task 6.x)', () => {
     return characterId;
   }
 
-  /** Test-only shortcut past the normal write paths, mirroring golden-beats.ts's own use of appendCommand directly for setup. */
+  /** Test-only shortcut past the normal write paths, appending directly for setup. */
   async function grantMomentum(
     campaignId: CampaignId,
     characterId: CharacterId,

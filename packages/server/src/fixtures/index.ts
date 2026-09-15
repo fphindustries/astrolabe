@@ -1,6 +1,7 @@
 import type { CampaignId } from '@astrolabe/shared';
 import type { Sql } from 'postgres';
 
+import { GOLDEN_SESSION, GOLDEN_SESSION_CAMPAIGN_ID, playGoldenSession } from './golden-session.js';
 import { playSessionOne, SESSION_ONE, SESSION_ONE_CAMPAIGN_ID } from './session-one.js';
 import {
   playSessionTwoOpen,
@@ -37,6 +38,13 @@ export const FIXTURES: ReadonlyMap<string, Fixture> = new Map(
       campaignId: SESSION_TWO_OPEN_CAMPAIGN_ID,
       play: playSessionTwoOpen,
     },
+    {
+      name: GOLDEN_SESSION,
+      description:
+        'the same campaign with session 2 played through all ten beats of the golden session and ended (D-152)',
+      campaignId: GOLDEN_SESSION_CAMPAIGN_ID,
+      play: playGoldenSession,
+    },
   ].map((fixture) => [fixture.name, fixture]),
 );
 
@@ -64,6 +72,12 @@ export async function seedFixture(sql: Sql, name: string): Promise<SeedOutcome> 
 }
 
 export { fixtureUuid } from './ids.js';
+export {
+  GOLDEN_SESSION,
+  GOLDEN_SESSION_CAMPAIGN_ID,
+  playGoldenSession,
+  type GoldenSessionRun,
+} from './golden-session.js';
 export { actionRoll, loadedDice, type Face, type LoadedDice } from './loaded-dice.js';
 export {
   playSessionOne,

@@ -6,15 +6,15 @@ import { databaseUrlFromEnv } from '../db/client.js';
 import { readEvents, readNarrativeEvents } from '../db/event-store.js';
 import { createTestDatabase } from '../db/testing.js';
 
-import { playGoldenBeats } from './golden-beats.js';
+import { playGoldenSession } from '../fixtures/golden-session.js';
 
 /**
- * `npm run harness` — play the golden session's mechanical beats through
- * the real store and print what they projected to.
+ * `npm run harness` — play the golden session (the `golden-session` fixture,
+ * D-152) and print what it projected to.
  *
- * Section 2 has no UI, so this is how a person checks that a session's worth
- * of events adds up: the numbers below should match the golden session's,
- * and the log below should read like the beats it describes.
+ * The end-to-end test asserts the same run; this is for a person to read:
+ * the numbers below should match the golden session's (D-61 aside), and the
+ * log below should read like the beats it describes.
  *
  * It plays into a throwaway schema that is dropped afterwards (D-122).
  * Writing into the dev database left one more "Lantern Wake" behind on every
@@ -25,31 +25,27 @@ async function main(): Promise<void> {
   const db = await createTestDatabase('harness');
   const { sql } = db;
   try {
-    const run = await playGoldenBeats(sql);
+    const run = await playGoldenSession(sql);
 
     const events = await readEvents(sql, run.campaignId);
     const state = project(events);
     const page = buildNarrativeLog(
-      await readNarrativeEvents(sql, run.campaignId, { sessionId: run.sessionId, limit: 100 }),
+      await readNarrativeEvents(sql, run.campaignId, { sessionId: run.sessionTwoId, limit: 200 }),
     );
 
-    print(run.notes, state, events.length);
+    print(state, events.length);
     printLog(page.beats);
   } finally {
     await db.close();
   }
 }
 
-function print(notes: readonly string[], state: CampaignState, eventCount: number): void {
+function print(state: CampaignState, eventCount: number): void {
   const out: string[] = [];
   out.push('');
   out.push(
     heading(`${state.campaign?.name ?? 'Campaign'} — session ${state.session?.number ?? '?'}`),
   );
-  out.push('');
-  for (const note of notes) {
-    out.push(`  ${note}`);
-  }
 
   out.push('');
   out.push(heading('Crew'));

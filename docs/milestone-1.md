@@ -184,10 +184,13 @@ narrative log is a second read model with its own paged query.
 
 ### 10. Polish and packaging
 
+Worked in the order 10.4 · 10.5 · 10.1 · 10.2 · 10.3 (D-151).
+
+
 - [ ] 10.1 Visual design pass: dark surfaces, amber accents, Starforged typographic rhythm
 - [ ] 10.2 Purpose-built treatments for progress tracks, clocks, meters, and momentum
 - [ ] 10.3 Keyboard navigation and focus states
-- [ ] 10.4 Golden session as an automated end-to-end test with a stubbed AI provider, a seeded RNG, and the session-1 fixture event log (D-72), from the shared fixture mechanism (D-122)
+- [x] 10.4 Golden session as an automated end-to-end test with a stubbed AI provider, loaded dice rather than a seeded RNG, and the session-1 fixture event log (D-72), from the shared fixture mechanism (D-122). Played through the HTTP routes; `golden-beats.ts` retired (D-151, D-152; see "Implementation notes (task 10.4)")
 - [ ] 10.5 Docker Compose packaging for the Linux home server
 
 ---
@@ -2356,3 +2359,34 @@ The console was clean.
 
 `session-1` begins and ends through the real commands.
 
+---
+
+## Implementation notes (task 10.4)
+
+The golden session now runs start to finish as an automated test (§10, D-152). It is the `golden-session` fixture plus `fixtures/golden-session.test.ts`.
+
+### Shape
+
+- **The fixture plays; the test reads back.** `playGoldenSession` seeds session 1 under its own campaign ID, then plays session 2's ten beats through `app.inject`, making every call the play screen makes, in the order it makes them. That includes the world pass after each beat passage, the trigger check after a typed action, and "What now?". It throws on a non-2xx answer, an `ok: false` body, a stream that withdraws or fails, an outcome the rules score differently, a die left over, or an AI call nobody scripted. The test then asserts each beat against its acceptance criteria (A1–A17, A19, A21), from the responses, the stored events, the projection and `GET /log`. Its last Beat 10 check begins session 3 and confirms the recap request carries session 2's summary and threads (A17 feeding A1).
+- **The scripted Guide answers by purpose.** One queue per AI purpose, filled by each beat just before its call, so a beat reads as what it expects to be asked. An unscripted call throws with the beat name and the whole prompt, which is how the fact keys the passages cite were found. The checker is a default `StubProvider`, which passes every check. The scripted passages are written to pass D-127's segment checks for real.
+- **Loaded dice, step by step.** `buildApp` gained an optional `rng`, which the rolling routes (moves, Pay the Price, complication options, world passes, scene frames, truths, character and incident proposals) pass to their commands. The fixture's `rng` delegates to a `loadedDice` queue it reloads before each step and checks empty after it.
+- **`db:reset` seeds it**, so the finished session opens in the browser as the third Lantern Wake campaign.
+- **`golden-beats.ts` is retired.** Its cold-rebuild and second-read checks moved into the new test. `npm run harness` plays the new fixture in a throwaway schema and prints it. `app.test.ts`, which seeded from it, now seeds `session-2-open`.
+
+### Where the script departs from the golden session's text
+
+- **Juno's momentum (D-61).** The weak hit takes her from +3 to +4, so Beat 9's "one too low" override goes from +4 to +5, not +3 to +4.
+- **Vesna's burn.** Rook's aid adds +2 before her scan, so the burn is offered at +9, not +7, and resets her to +2.
+- **Beat 9's correction is about a fact, not a feeling.** The golden session has the passage call Rook "shaken". D-129 withdraws a passage that gives a player character an emotion before it reaches the log, so a fixture passage that did so would be scripting a withdrawal. The scripted passage overstates the burn instead ("a thin burn opens"), and the player's note corrects that.
+- **Beat 3's move suggestion is asked for and not used.** A19 is part of Beat 3, so the fixture asks the Guide which move fits Juno's typed action, then invokes Gather Information directly, as the beat describes.
+- **The NPC is Valda Thorn**, from the loaded name rolls, and the reroll discards a first look of "Accompanied" against the evacuation logs.
+
+### Not covered
+
+- **A18.** The stub answers instantly, so time to first text stays a live measurement (the `ai/eval/live-*.json` runs).
+- **The browser.** The test drives the routes, not the React client (D-152's choice). The client's own logic keeps its unit tests, and the browser passes recorded for each task stand.
+- **AI quality**, as §10 says.
+
+### Verification
+
+1035 tests passed and 1 skipped against the real database (the golden session adds 24), and typecheck and lint are clean. `npm run harness` prints the session, and `db:reset` seeds all three fixtures.

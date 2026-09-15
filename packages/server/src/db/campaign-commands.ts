@@ -334,7 +334,7 @@ export class IncitingVowRejectedError extends Error {
  * `character-commands.ts`'s background vow already writes. No
  * `characterId` by default — the golden session's own inciting vow
  * ("recover the flight recorder of Meridian's Hope") belongs to the crew,
- * not to one character (`harness/golden-beats.ts` writes it the same way).
+ * not to one character.
  *
  * The title and rank are always the player's to send. When they started
  * from the Guide's proposed incidents (task 4.6, D-132), `proposalCommandId`

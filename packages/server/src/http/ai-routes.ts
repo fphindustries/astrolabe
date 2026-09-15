@@ -31,6 +31,7 @@ import {
   type SuggestMoveResponse,
   type CheckTriggerResponse,
 } from '@astrolabe/shared';
+import type { RandomSource } from '@astrolabe/rules';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { Sql } from 'postgres';
 
@@ -95,6 +96,7 @@ export function registerAiRoutes(
     checker,
     planner,
     status,
+    dice = {},
   }: {
     readonly sql: Sql;
     readonly ai: AiProvider;
@@ -103,6 +105,8 @@ export function registerAiRoutes(
     /** Plans the scene frame's rolls ahead of any text (D-141, amended). */
     readonly planner: AiProvider;
     readonly status: AiStatus;
+    /** Loaded dice for the golden-session test (D-152); empty in production. */
+    readonly dice?: { readonly rng?: RandomSource };
   },
 ): void {
   app.get('/api/ai/status', async (): Promise<AiStatusResponse> => status.snapshot());
@@ -152,6 +156,7 @@ export function registerAiRoutes(
 
       try {
         const prepared = await prepareWorldPass(sql, {
+          ...dice,
           campaignId: id,
           commandId: parsedBody.data.commandId,
           actor: PLAYER,
@@ -189,6 +194,7 @@ export function registerAiRoutes(
           sql,
           ai,
           {
+            ...dice,
             campaignId: id,
             commandId: parsedBody.data.commandId,
             actor: PLAYER,
@@ -254,6 +260,7 @@ export function registerAiRoutes(
 
       try {
         const prepared = await prepareSceneFrame(sql, {
+          ...dice,
           campaignId: id,
           commandId: parsedBody.data.commandId,
           actor: PLAYER,
@@ -429,6 +436,7 @@ export function registerAiRoutes(
           sql,
           ai,
           {
+            ...dice,
             campaignId: id,
             commandId: parsedBody.data.commandId,
             actor: PLAYER,
@@ -465,7 +473,7 @@ export function registerAiRoutes(
         const result = await proposeIncidents(
           sql,
           ai,
-          { campaignId: id, commandId: parsedBody.data.commandId, actor: PLAYER },
+          { ...dice, campaignId: id, commandId: parsedBody.data.commandId, actor: PLAYER },
           status,
         );
         // D-132: the same contract as a character proposal (D-116).

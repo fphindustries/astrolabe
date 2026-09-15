@@ -34,7 +34,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import type { Sql } from 'postgres';
 import * as z from 'zod';
 
-import type { CharacterProblem } from '@astrolabe/rules';
+import type { CharacterProblem, RandomSource } from '@astrolabe/rules';
 
 import type { AiProvider } from '../ai/provider.js';
 import { AiStatus } from '../ai/status.js';
@@ -109,6 +109,12 @@ export interface BuildAppOptions {
    * `ai` writes before it commits. A stub in tests, Claude in `serve.ts`.
    */
   readonly checker: AiProvider;
+  /**
+   * The dice every route rolls with. Omitted in production, where each
+   * command uses `cryptoRandomSource()`; the golden-session test loads them
+   * (D-152).
+   */
+  readonly rng?: RandomSource;
 }
 
 interface CampaignParams {
@@ -130,9 +136,16 @@ const LogQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(200).optional(),
 });
 
-export function buildApp({ sql, ai, checker, planner = ai }: BuildAppOptions): FastifyInstance {
+export function buildApp({
+  sql,
+  ai,
+  checker,
+  planner = ai,
+  rng,
+}: BuildAppOptions): FastifyInstance {
   const app = Fastify({ logger: false });
-  registerAiRoutes(app, { sql, ai, checker, planner, status: new AiStatus(ai) });
+  const dice = rng !== undefined ? { rng } : {};
+  registerAiRoutes(app, { sql, ai, checker, planner, status: new AiStatus(ai), dice });
 
   app.get('/api/campaigns', async (): Promise<CampaignListResponse> => {
     return listCampaigns(sql);
@@ -394,6 +407,7 @@ export function buildApp({ sql, ai, checker, planner = ai }: BuildAppOptions): F
 
       try {
         const answered = await setTruth(sql, {
+          ...dice,
           campaignId: id,
           commandId,
           actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
@@ -544,6 +558,7 @@ export function buildApp({ sql, ai, checker, planner = ai }: BuildAppOptions): F
 
       try {
         const invoked = await invokeMove(sql, {
+          ...dice,
           campaignId: id,
           commandId,
           actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
@@ -666,6 +681,7 @@ export function buildApp({ sql, ai, checker, planner = ai }: BuildAppOptions): F
 
       try {
         const resolved = await resolvePayThePriceMethod(sql, {
+          ...dice,
           campaignId: id,
           commandId,
           actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
