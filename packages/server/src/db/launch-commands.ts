@@ -1,9 +1,12 @@
 import {
+  materializeLaunchRecipe,
   rollOracle,
+  rollRecipe,
   REGION_BASELINES,
   STARFORGED,
   validateSharedStarship,
   type CharacterId,
+  type LaunchRecipeSelector,
   type OracleId,
   type RandomSource,
   type TrackId,
@@ -200,6 +203,63 @@ export async function proposeLaunchCreation(
       },
     ],
     response: { targetKind: request.proposal.targetKind, targetId: request.targetId },
+  });
+}
+
+export interface RollLaunchRecipeRequest {
+  readonly campaignId: CampaignId;
+  readonly commandId: CommandId;
+  readonly actor: Actor;
+  readonly selector: LaunchRecipeSelector;
+  readonly rng?: RandomSource;
+}
+
+/**
+ * Roll a *declared* recipe, server-side, before the Guide interprets it
+ * (D-65, D-166).
+ *
+ * The caller names the recipe by its parameters, never by an oracle id, so it
+ * cannot reach a table the rules did not put in a recipe. Every slot result
+ * becomes its own `oracle.rolled`, which is what a proposal then cites as its
+ * grounding (A41) and what the chips under an accepted fact are drawn from.
+ */
+export async function rollLaunchRecipe(
+  sql: Sql,
+  request: RollLaunchRecipeRequest,
+): Promise<AppendResult> {
+  const state = project(await readEvents(sql, request.campaignId));
+  if (state.launch.phase === 'active')
+    throw new LaunchRejectedError(
+      'campaign_active',
+      'Launch oracle rolls are closed after activation.',
+    );
+  const recipe = materializeLaunchRecipe(request.selector);
+  const rolled = rollRecipe(request.rng ?? cryptoRandomSource(), recipe, (oracle) =>
+    STARFORGED.oracles.find((candidate) => candidate.id === oracle),
+  );
+  // One event per result, not per slot: a "roll twice" row yields two, and
+  // each is a chip the player can see and the Guide can cite.
+  const results = rolled.flatMap(({ slot, results: slotResults }) =>
+    slotResults.map((result) => ({
+      eventId: uuidv7() as EventId,
+      slot: slot.slot,
+      oracleId: result.oracleId,
+      roll: result.roll,
+      text: result.rowText,
+    })),
+  );
+  return appendCommand(sql, {
+    campaignId: request.campaignId,
+    commandId: request.commandId,
+    kind: `launch.recipe.roll.${request.selector.kind}`,
+    actor: request.actor,
+    events: results.map((result) => ({
+      id: result.eventId,
+      type: 'oracle.rolled' as const,
+      actor: { kind: 'system' as const },
+      payload: { oracleId: result.oracleId, roll: result.roll, rowText: result.text },
+    })),
+    response: { recipeId: recipe.id, results },
   });
 }
 

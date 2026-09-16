@@ -71,6 +71,22 @@ export function buildSettlementRecipe(region: LaunchRegion, projectCount: 1 | 2)
     ],
   };
 }
+/** The eleven planet classes Chapter 2's tables cover. */
+export const PLANET_CLASSES = [
+  'desert',
+  'furnace',
+  'grave',
+  'ice',
+  'jovian',
+  'jungle',
+  'ocean',
+  'rocky',
+  'shattered',
+  'tainted',
+  'vital',
+] as const;
+export type PlanetClass = (typeof PLANET_CLASSES)[number];
+
 export type PlanetDepth = 'shallow' | 'starting_detail';
 export function buildPlanetRecipe(planetClass: string, depth: PlanetDepth): OracleRecipe {
   const base = `oracle:planets/${planetClass}` as const;
@@ -113,21 +129,7 @@ export const CAMPAIGN_LAUNCH_RECIPE_MATERIALIZATIONS: readonly OracleRecipe[] = 
   ...(['terminus', 'outlands', 'expanse'] as const).flatMap((region) =>
     ([1, 2] as const).map((count) => buildSettlementRecipe(region, count)),
   ),
-  ...(
-    [
-      'desert',
-      'furnace',
-      'grave',
-      'ice',
-      'jovian',
-      'jungle',
-      'ocean',
-      'rocky',
-      'shattered',
-      'tainted',
-      'vital',
-    ] as const
-  ).flatMap((planetClass) =>
+  ...PLANET_CLASSES.flatMap((planetClass) =>
     (['shallow', 'starting_detail'] as const).map((depth) => buildPlanetRecipe(planetClass, depth)),
   ),
   STARTING_CONNECTION_RECIPE,
@@ -138,3 +140,38 @@ export const CAMPAIGN_LAUNCH_RECIPE_MATERIALIZATIONS: readonly OracleRecipe[] = 
 export const ORACLE_RECIPES: ReadonlyMap<RecipeId, OracleRecipe> = new Map(
   [NPC_RECIPE, DERELICT_RECIPE].map((recipe) => [recipe.id, recipe]),
 );
+
+/**
+ * What a caller asks for when it wants a launch recipe rolled.
+ *
+ * D-65 and D-166 put the server in charge of rolling a *declared* recipe
+ * before the Guide interprets it, and D-173 keeps materialization concrete.
+ * Naming the recipe by its parameters rather than by an oracle id is what
+ * enforces both: a caller cannot name a table that is not in a recipe, and
+ * cannot roll a materialization the rules do not declare.
+ */
+export type LaunchRecipeSelector =
+  | { readonly kind: 'starship'; readonly quirkCount: 1 | 2 }
+  | { readonly kind: 'settlement'; readonly region: LaunchRegion; readonly projectCount: 1 | 2 }
+  | { readonly kind: 'planet'; readonly planetClass: PlanetClass; readonly depth: PlanetDepth }
+  | { readonly kind: 'starting_connection' }
+  | { readonly kind: 'sector_trouble' }
+  | { readonly kind: 'inciting_incident' };
+
+/** Resolve a selector to the concrete recipe it names. Total over the union. */
+export function materializeLaunchRecipe(selector: LaunchRecipeSelector): OracleRecipe {
+  switch (selector.kind) {
+    case 'starship':
+      return buildStarshipRecipe(selector.quirkCount);
+    case 'settlement':
+      return buildSettlementRecipe(selector.region, selector.projectCount);
+    case 'planet':
+      return buildPlanetRecipe(selector.planetClass, selector.depth);
+    case 'starting_connection':
+      return STARTING_CONNECTION_RECIPE;
+    case 'sector_trouble':
+      return SECTOR_TROUBLE_RECIPE;
+    case 'inciting_incident':
+      return INCITING_INCIDENT_RECIPE;
+  }
+}

@@ -27,6 +27,7 @@ import {
   SetSectorLayoutRequestBodySchema,
   SaveLaunchTroubleRequestBodySchema,
   RollLaunchOracleRequestBodySchema,
+  RollLaunchRecipeRequestBodySchema,
   ProposeLaunchCreationRequestBodySchema,
   SwearIncitingVowRequestBodySchema,
   VoidEventRequestBodySchema,
@@ -57,6 +58,7 @@ import {
   type SaveLaunchRouteResponse,
   type SaveLaunchTroubleResponse,
   type RollLaunchOracleResponse,
+  type RollLaunchRecipeResponse,
   type SwearIncitingVowResponse,
   type VoidEventResponse,
   type VoidPreviewResult,
@@ -115,6 +117,7 @@ import {
   setSectorLayout,
   saveLaunchTrouble,
   rollLaunchOracle,
+  rollLaunchRecipe,
   proposeLaunchCreation,
   LaunchRejectedError,
   swearIncitingVow,
@@ -467,6 +470,39 @@ export function buildApp({
         });
         reply.code(201);
         return result.response as { targetKind: string; targetId: string };
+      } catch (error) {
+        if (error instanceof LaunchRejectedError) {
+          reply.code(422);
+          return { problem: error.message, reason: error.reason };
+        }
+        throw error;
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/launch/recipe-rolls',
+    async (
+      request,
+      reply,
+    ): Promise<RollLaunchRecipeResponse | { problem: string; reason: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = RollLaunchRecipeRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        const result = await rollLaunchRecipe(sql, {
+          ...dice,
+          campaignId: id,
+          commandId: parsed.data.commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          selector: parsed.data.selector,
+        });
+        reply.code(201);
+        return result.response as RollLaunchRecipeResponse;
       } catch (error) {
         if (error instanceof LaunchRejectedError) {
           reply.code(422);

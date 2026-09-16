@@ -33,6 +33,7 @@ export {
   setSectorLayout,
   saveLaunchTrouble,
   rollLaunchOracle,
+  rollLaunchRecipe,
   proposeLaunchCreation,
   setLaunchFoundation,
   LaunchRejectedError,

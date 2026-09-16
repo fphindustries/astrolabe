@@ -12,6 +12,8 @@ import type { LaunchReadiness } from '@astrolabe/rules';
 
 import type { AiErrorKind } from './events/ai.js';
 import { CampaignSettingsSchema } from './events/campaign.js';
+import { PLANET_CLASSES } from '@astrolabe/rules';
+
 import { CharacterStatsSchema } from './events/character.js';
 import { RollAdjustmentSchema, RollUsingSchema } from './events/move.js';
 import { ChallengeRankSchema } from './events/track.js';
@@ -363,6 +365,43 @@ export interface RollLaunchOracleResponse {
   readonly oracleId: OracleId;
   readonly roll: number;
   readonly text: string;
+}
+
+/**
+ * A recipe is named by its parameters, never by an oracle id (D-65, D-173):
+ * the caller cannot reach a table the rules did not declare in a recipe.
+ */
+export const LaunchRecipeSelectorSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('starship'), quirkCount: z.union([z.literal(1), z.literal(2)]) }),
+  z.object({
+    kind: z.literal('settlement'),
+    region: z.enum(['terminus', 'outlands', 'expanse']),
+    projectCount: z.union([z.literal(1), z.literal(2)]),
+  }),
+  z.object({
+    kind: z.literal('planet'),
+    planetClass: z.enum(PLANET_CLASSES),
+    depth: z.enum(['shallow', 'starting_detail']),
+  }),
+  z.object({ kind: z.literal('starting_connection') }),
+  z.object({ kind: z.literal('sector_trouble') }),
+  z.object({ kind: z.literal('inciting_incident') }),
+]);
+export const RollLaunchRecipeRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  selector: LaunchRecipeSelectorSchema,
+});
+export type RollLaunchRecipeRequestBody = z.infer<typeof RollLaunchRecipeRequestBodySchema>;
+export interface RollLaunchRecipeResponse {
+  readonly recipeId: string;
+  /** One entry per rolled result — a "roll twice" row yields two. */
+  readonly results: readonly {
+    readonly eventId: EventId;
+    readonly slot: string;
+    readonly oracleId: OracleId;
+    readonly roll: number;
+    readonly text: string;
+  }[];
 }
 
 export const ProposeLaunchCreationRequestBodySchema = z.intersection(
