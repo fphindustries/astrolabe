@@ -9,6 +9,24 @@ import {
 import type { ChallengeRank } from '../characters/launch-creation.js';
 
 export type LaunchRegion = 'terminus' | 'outlands' | 'expanse';
+/**
+ * The starting sector's settlement and passage counts, by region (D-174).
+ *
+ * The numbers are the rulebook's and are verified against it. Their *status*
+ * here is Astrolabe's own (D-180): Chapter 2 offers them as a recommendation
+ * for its own exercise rather than a standard, and this enforces them as a
+ * readiness gate anyway, so a new campaign launches into a sector with enough
+ * in it to play. A thinner sector is legal at the table; it is refused here on
+ * purpose.
+ *
+ * Scoped to Campaign Launch. The same passage that gives these numbers says
+ * they are not how sectors are populated in general, so exploration must not
+ * inherit them.
+ *
+ * `citation` records where the numbers come from: those pages are outside the
+ * CC-BY subset, so they are cited and never quoted, and no test can check the
+ * values themselves.
+ */
 export const REGION_BASELINES: Readonly<
   Record<
     LaunchRegion,

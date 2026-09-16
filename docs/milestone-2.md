@@ -75,7 +75,7 @@ Criteria continue Milestone 1's numbering.
 | A28 | A complete character records identity, appearance, legal starting assets and stats, starting meters and momentum, backstory or an explicit mystery, a background vow, and optional signature gear. | 3–5 |
 | A29 | Concept-first and step-by-step creation edit the same draft. A proposal never becomes a character until the player reviews and accepts it. | 3–5 |
 | A30 | The campaign has one shared command starship with integrity 5; its shared abilities are available to the crew, while an attached non-shared module retains its owning character. | 6 |
-| A31 | The chosen sector region determines the required settlement and passage baseline. Readiness enforces the baseline and permits additional custom content. | 7 |
+| A31 | The chosen sector region determines the required settlement and passage baseline. Readiness enforces the baseline as a floor and permits additional custom content. Enforcing it is Astrolabe's deliberate choice, stricter than the rulebook, which offers the counts as a recommendation for the Chapter 2 exercise (D-180). | 7 |
 | A32 | Every required settlement has a name, location type, population, authority, and one or two projects, created manually, by server rolls, or from a reviewed Guide proposal. | 7 |
 | A33 | Planets are generated only to the depth Chapter 2 calls for: shallow details for associated settlements and fuller detail for the starting settlement's planet. Stars are optional. | 7–8 |
 | A34 | The sector map displays repositionable settlement/location nodes, passages, and off-map exits. Layout has no mechanical distance meaning. | 8 |

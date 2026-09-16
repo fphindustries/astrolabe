@@ -114,8 +114,9 @@ describe('launch readiness can be satisfied', () => {
   });
 
   it('enforces each region baseline as a hard gate (A31, D-174, D-179)', () => {
-    // The six numbers come from the reference guide and are not in Datasworn,
-    // so they are asserted here explicitly rather than only cited.
+    // Verified against the rulebook (D-179) and absent from Datasworn, so they
+    // are pinned here rather than only cited. Enforcing them is Astrolabe's
+    // own stricter-than-the-rules choice, made deliberately (D-180).
     expect(REGION_BASELINES.terminus).toMatchObject({ settlements: 4, passages: 3 });
     expect(REGION_BASELINES.outlands).toMatchObject({ settlements: 3, passages: 2 });
     expect(REGION_BASELINES.expanse).toMatchObject({ settlements: 2, passages: 1 });
