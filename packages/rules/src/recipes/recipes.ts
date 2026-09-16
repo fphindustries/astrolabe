@@ -1,5 +1,6 @@
 import type { RecipeId } from '../schema/ids.js';
 import type { OracleRecipe } from '../schema/oracles.js';
+import type { LaunchRegion } from '../launch/rules.js';
 
 /**
  * D-65's declared recipes, hand-authored because Datasworn ships none
@@ -37,6 +38,102 @@ export const DERELICT_RECIPE: OracleRecipe = {
     { slot: 'inner_first_look', oracle: 'oracle:derelicts/inner-first-look' },
   ],
 };
+
+export function buildStarshipRecipe(quirkCount: 1 | 2): OracleRecipe {
+  return {
+    id: `recipe:campaign-launch/starship/${quirkCount}`,
+    label: 'a shared starship',
+    entityKind: 'starship',
+    rolls: [
+      { slot: 'name', oracle: 'oracle:starships/starship-name', name: true },
+      { slot: 'history', oracle: 'oracle:campaign-launch/starship-history' },
+      ...Array.from({ length: quirkCount }, (_, index) => ({
+        slot: `quirk_${index + 1}`,
+        oracle: 'oracle:campaign-launch/starship-quirks' as const,
+      })),
+    ],
+  };
+}
+export function buildSettlementRecipe(region: LaunchRegion, projectCount: 1 | 2): OracleRecipe {
+  return {
+    id: `recipe:campaign-launch/settlement/${region}/${projectCount}`,
+    label: 'a settlement',
+    entityKind: 'settlement',
+    rolls: [
+      { slot: 'name', oracle: 'oracle:settlements/name', name: true },
+      { slot: 'location', oracle: 'oracle:settlements/location' },
+      { slot: 'population', oracle: `oracle:settlements/population/${region}` as const },
+      { slot: 'authority', oracle: 'oracle:settlements/authority' },
+      ...Array.from({ length: projectCount }, (_, index) => ({
+        slot: `project_${index + 1}`,
+        oracle: 'oracle:settlements/projects' as const,
+      })),
+    ],
+  };
+}
+export type PlanetDepth = 'shallow' | 'starting_detail';
+export function buildPlanetRecipe(planetClass: string, depth: PlanetDepth): OracleRecipe {
+  const base = `oracle:planets/${planetClass}` as const;
+  return {
+    id: `recipe:campaign-launch/planet/${planetClass}/${depth}`,
+    label: depth === 'shallow' ? 'a shallow planet' : 'a detailed starting planet',
+    entityKind: 'planet',
+    rolls:
+      depth === 'shallow'
+        ? [{ slot: 'name', oracle: `${base}/name` as const, name: true }]
+        : [
+            { slot: 'atmosphere', oracle: `${base}/atmosphere` as const },
+            { slot: 'observed_from_space', oracle: `${base}/observed-from-space` as const },
+            { slot: 'feature', oracle: `${base}/feature` as const },
+          ],
+  };
+}
+export const STARTING_CONNECTION_RECIPE: OracleRecipe = {
+  id: 'recipe:campaign-launch/connection',
+  label: 'a local connection',
+  entityKind: 'connection',
+  rolls: NPC_RECIPE.rolls,
+};
+export const SECTOR_TROUBLE_RECIPE: OracleRecipe = {
+  id: 'recipe:campaign-launch/sector-trouble',
+  label: 'sector trouble',
+  entityKind: 'trouble',
+  rolls: [{ slot: 'trouble', oracle: 'oracle:campaign-launch/sector-trouble' }],
+};
+export const INCITING_INCIDENT_RECIPE: OracleRecipe = {
+  id: 'recipe:campaign-launch/inciting-incident',
+  label: 'an inciting incident',
+  entityKind: 'incident',
+  rolls: [{ slot: 'incident', oracle: 'oracle:campaign-launch/inciting-incident' }],
+};
+
+/** Enumerates legal contextual recipes for completeness tests and tooling. */
+export const CAMPAIGN_LAUNCH_RECIPE_MATERIALIZATIONS: readonly OracleRecipe[] = [
+  ...([1, 2] as const).map(buildStarshipRecipe),
+  ...(['terminus', 'outlands', 'expanse'] as const).flatMap((region) =>
+    ([1, 2] as const).map((count) => buildSettlementRecipe(region, count)),
+  ),
+  ...(
+    [
+      'desert',
+      'furnace',
+      'grave',
+      'ice',
+      'jovian',
+      'jungle',
+      'ocean',
+      'rocky',
+      'shattered',
+      'tainted',
+      'vital',
+    ] as const
+  ).flatMap((planetClass) =>
+    (['shallow', 'starting_detail'] as const).map((depth) => buildPlanetRecipe(planetClass, depth)),
+  ),
+  STARTING_CONNECTION_RECIPE,
+  SECTOR_TROUBLE_RECIPE,
+  INCITING_INCIDENT_RECIPE,
+];
 
 export const ORACLE_RECIPES: ReadonlyMap<RecipeId, OracleRecipe> = new Map(
   [NPC_RECIPE, DERELICT_RECIPE].map((recipe) => [recipe.id, recipe]),

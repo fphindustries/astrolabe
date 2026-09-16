@@ -1,4 +1,5 @@
 import * as z from 'zod';
+import { CHALLENGE_RANKS } from '@astrolabe/rules';
 
 import { ChangeCauseSchema } from '../cause.js';
 import { CharacterIdSchema, TrackIdSchema } from '../ids.js';
@@ -14,13 +15,7 @@ import { CharacterIdSchema, TrackIdSchema } from '../ids.js';
  * count is resolved at write time and stored, so projection does no rank
  * arithmetic at all.
  */
-export const ChallengeRankSchema = z.enum([
-  'troublesome',
-  'dangerous',
-  'formidable',
-  'extreme',
-  'epic',
-]);
+export const ChallengeRankSchema = z.enum(CHALLENGE_RANKS);
 
 export type ChallengeRank = z.infer<typeof ChallengeRankSchema>;
 

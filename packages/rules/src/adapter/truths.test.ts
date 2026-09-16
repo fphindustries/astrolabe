@@ -31,18 +31,18 @@ describe('mapTruths against the real Starforged data', () => {
     }
   });
 
-  it('strips the embedded elaboration-table markup rather than showing it verbatim', () => {
+  it('retains nested choices and strips their display markup', () => {
     const cataclysm = truths.find((t) => t.name === 'Cataclysm');
     for (const row of cataclysm?.rows ?? []) {
       expect(row.text).not.toContain('{{table:');
+      expect(row.questStarter).toBeTruthy();
+      expect(row.subchoice?.rows.length).toBeGreaterThan(0);
     }
   });
 
-  it('does not populate embeddedOracles, since the elaboration tables are not imported', () => {
-    for (const truth of truths) {
-      for (const row of truth.rows) {
-        expect(row.embeddedOracles).toBeUndefined();
-      }
-    }
+  it('keeps source order, character prompts, and stable nested IDs', () => {
+    expect(truths.map((truth) => truth.order)).toEqual([...truths.keys()]);
+    expect(truths[0]?.characterPrompt).toBeTruthy();
+    expect(truths[0]?.rows[0]?.subchoice?.id).toBe('oracle:cataclysm/0');
   });
 });
