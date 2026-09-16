@@ -37,6 +37,7 @@ import {
   TroubleRevisedSchema,
   TruthDecidedSchema,
 } from './launch.js';
+import * as launchSchemas from './launch.js';
 import {
   DiceRolledSchema,
   MomentumBurnedSchema,
@@ -155,6 +156,17 @@ export type EventType = keyof typeof PAYLOAD_SCHEMAS;
 export const EVENT_TYPES = Object.keys(PAYLOAD_SCHEMAS) as readonly EventType[];
 
 /**
+ * Every payload schema declared in `launch.ts`, by identity.
+ *
+ * Deriving the launch set from the module rather than restating its members
+ * means a new launch event joins the set the moment it is registered above.
+ * A hand-written list would let a twenty-sixth type default to
+ * `voidable: true` (D-177) and escape context stripping (D-161) with nothing
+ * failing — the exact drift this catalogue has already suffered once.
+ */
+const LAUNCH_PAYLOAD_SCHEMAS: ReadonlySet<unknown> = new Set(Object.values(launchSchemas));
+
+/**
  * The Campaign Launch catalogue: every type appended before Session 1 exists,
  * plus the post-activation amendment that corrects one.
  *
@@ -169,35 +181,11 @@ export const EVENT_TYPES = Object.keys(PAYLOAD_SCHEMAS) as readonly EventType[];
  * - **Drafts and proposals among them are not canon** (D-161), so AI context
  *   assembly strips them rather than filtering by name at each call site.
  */
-export const LAUNCH_EVENT_TYPES = [
-  'launch.draft_saved',
-  'creation.proposed',
-  'campaign.foundation_set',
-  'truth.decided',
-  'character.revised',
-  'character.removed',
-  'starship.established',
-  'starship.revised',
-  'sector.configured',
-  'location.added',
-  'location.revised',
-  'location.removed',
-  'route.added',
-  'route.revised',
-  'route.removed',
-  'sector.layout_changed',
-  'starting_settlement.selected',
-  'trouble.established',
-  'trouble.revised',
-  'connection.established',
-  'connection.revised',
-  'incident.accepted',
-  'incident.revised',
-  'campaign.activated',
-  'launch.fact_amended',
-] as const satisfies readonly EventType[];
+export const LAUNCH_EVENT_TYPES = EVENT_TYPES.filter((type) =>
+  LAUNCH_PAYLOAD_SCHEMAS.has(PAYLOAD_SCHEMAS[type] as unknown),
+);
 
-export type LaunchEventType = (typeof LAUNCH_EVENT_TYPES)[number];
+export type LaunchEventType = EventType;
 
 /** Non-canonical launch events: resumable setup and unaccepted proposals (D-161). */
 export const NON_CANONICAL_LAUNCH_EVENT_TYPES = [
