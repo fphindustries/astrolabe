@@ -154,6 +154,57 @@ export type EventType = keyof typeof PAYLOAD_SCHEMAS;
 
 export const EVENT_TYPES = Object.keys(PAYLOAD_SCHEMAS) as readonly EventType[];
 
+/**
+ * The Campaign Launch catalogue: every type appended before Session 1 exists,
+ * plus the post-activation amendment that corrects one.
+ *
+ * These are campaign-scoped, so their events carry no `sessionId`. That has
+ * two consequences the rest of the code depends on, and both are asserted
+ * rather than assumed:
+ *
+ * - **None is voidable** (D-177). `planVoid` refuses any target outside the
+ *   current session (D-84), and "outside" includes belonging to no session at
+ *   all. A launch fact is corrected by revision before activation and by
+ *   `launch.fact_amended` after it.
+ * - **Drafts and proposals among them are not canon** (D-161), so AI context
+ *   assembly strips them rather than filtering by name at each call site.
+ */
+export const LAUNCH_EVENT_TYPES = [
+  'launch.draft_saved',
+  'creation.proposed',
+  'campaign.foundation_set',
+  'truth.decided',
+  'character.revised',
+  'character.removed',
+  'starship.established',
+  'starship.revised',
+  'sector.configured',
+  'location.added',
+  'location.revised',
+  'location.removed',
+  'route.added',
+  'route.revised',
+  'route.removed',
+  'sector.layout_changed',
+  'starting_settlement.selected',
+  'trouble.established',
+  'trouble.revised',
+  'connection.established',
+  'connection.revised',
+  'incident.accepted',
+  'incident.revised',
+  'campaign.activated',
+  'launch.fact_amended',
+] as const satisfies readonly EventType[];
+
+export type LaunchEventType = (typeof LAUNCH_EVENT_TYPES)[number];
+
+/** Non-canonical launch events: resumable setup and unaccepted proposals (D-161). */
+export const NON_CANONICAL_LAUNCH_EVENT_TYPES = [
+  'launch.draft_saved',
+  'creation.proposed',
+] as const satisfies readonly EventType[];
+
 /** The payload type for one event type, readonly all the way down. */
 export type PayloadFor<T extends EventType> = DeepReadonly<z.infer<(typeof PAYLOAD_SCHEMAS)[T]>>;
 

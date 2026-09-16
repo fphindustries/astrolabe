@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { EVENT_TYPES, parseEvent, type EventType } from './events/index.js';
+import { EVENT_TYPES, LAUNCH_EVENT_TYPES, parseEvent, type EventType } from './events/index.js';
 import {
   EVENT_TYPE_META,
   NARRATIVE_EVENT_TYPES,
@@ -39,14 +39,19 @@ describe('the metadata table', () => {
     expect(Object.keys(EVENT_TYPE_META).sort()).toEqual([...EVENT_TYPES].sort());
   });
 
-  it('exempts exactly token accounting and voids from being voided (D-85)', () => {
+  it('exempts token accounting, voids, and the launch catalogue (D-85, D-177)', () => {
     const exempt = EVENT_TYPES.filter((type) => !EVENT_TYPE_META[type].voidable);
-    expect(exempt.sort()).toEqual([
-      'ai.completed',
-      'ai.failed',
-      'campaign.activated',
-      'event.voided',
-    ]);
+    expect(exempt.sort()).toEqual(
+      ['ai.completed', 'ai.failed', 'event.voided', ...LAUNCH_EVENT_TYPES].sort(),
+    );
+  });
+
+  it('never claims voidability an event of that type could not be granted (D-84, D-177)', () => {
+    // A launch event is campaign-scoped and carries no `sessionId`, and
+    // `planVoid` refuses anything outside the current session. A `voidable:
+    // true` here would be unreachable rather than permissive — which is what
+    // the launch catalogue originally claimed.
+    for (const type of LAUNCH_EVENT_TYPES) expect(EVENT_TYPE_META[type].voidable).toBe(false);
   });
 
   it('treats every significant type as narrative too, except session boundaries', () => {

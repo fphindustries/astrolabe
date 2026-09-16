@@ -39,8 +39,20 @@ export interface EventTypeMeta<T extends EventType> {
    */
   readonly mutatesState: boolean;
   /**
-   * Exempt from void (D-85). Only token accounting is: the tokens were
-   * spent whatever the fiction now says.
+   * Whether `planVoid` may void an event of this type at all.
+   *
+   * Three things are exempt, for three different reasons:
+   *
+   * - **Token accounting** (D-85): the tokens were spent whatever the
+   *   fiction now says.
+   * - **`event.voided` itself**: un-voiding is reinstatement, not a void.
+   * - **The Campaign Launch catalogue** (D-177): a launch fact is corrected
+   *   by revision before activation and by `launch.fact_amended` after it.
+   *   These events are campaign-scoped and carry no `sessionId`, and D-84
+   *   limits void to the current session — so claiming otherwise here would
+   *   describe a capability `planVoid` denies. `meta.test.ts` asserts the
+   *   flag and `cascade.test.ts` asserts the refusal, so the two cannot
+   *   drift apart.
    */
   readonly voidable: boolean;
   /**
@@ -407,7 +419,7 @@ export const EVENT_TYPE_META: MetaTable = {
     narrative: false,
     significant: false,
     mutatesState: true,
-    voidable: true,
+    voidable: false,
     introduces: none,
     references: none,
   },
@@ -415,7 +427,7 @@ export const EVENT_TYPE_META: MetaTable = {
     narrative: false,
     significant: false,
     mutatesState: false,
-    voidable: true,
+    voidable: false,
     introduces: none,
     references: none,
   },
@@ -423,7 +435,7 @@ export const EVENT_TYPE_META: MetaTable = {
     narrative: false,
     significant: true,
     mutatesState: true,
-    voidable: true,
+    voidable: false,
     introduces: none,
     references: none,
   },
@@ -431,7 +443,7 @@ export const EVENT_TYPE_META: MetaTable = {
     narrative: false,
     significant: true,
     mutatesState: true,
-    voidable: true,
+    voidable: false,
     introduces: none,
     references: none,
   },
@@ -439,7 +451,7 @@ export const EVENT_TYPE_META: MetaTable = {
     narrative: false,
     significant: true,
     mutatesState: true,
-    voidable: true,
+    voidable: false,
     introduces: none,
     references: (p) => [character(p.characterId)],
   },
@@ -447,7 +459,7 @@ export const EVENT_TYPE_META: MetaTable = {
     narrative: false,
     significant: true,
     mutatesState: true,
-    voidable: true,
+    voidable: false,
     introduces: none,
     references: (p) => [character(p.characterId)],
   },
@@ -455,7 +467,7 @@ export const EVENT_TYPE_META: MetaTable = {
     narrative: false,
     significant: true,
     mutatesState: true,
-    voidable: true,
+    voidable: false,
     introduces: (p) => [entity(p.starshipId)],
     references: (p) => p.modules.map((m) => character(m.ownerCharacterId)),
   },
@@ -463,7 +475,7 @@ export const EVENT_TYPE_META: MetaTable = {
     narrative: false,
     significant: true,
     mutatesState: true,
-    voidable: true,
+    voidable: false,
     introduces: none,
     references: (p) => [
       entity(p.starship.starshipId),
@@ -474,7 +486,7 @@ export const EVENT_TYPE_META: MetaTable = {
     narrative: false,
     significant: true,
     mutatesState: true,
-    voidable: true,
+    voidable: false,
     introduces: (p) => [entity(p.sectorId)],
     references: none,
   },
@@ -482,7 +494,7 @@ export const EVENT_TYPE_META: MetaTable = {
     narrative: false,
     significant: true,
     mutatesState: true,
-    voidable: true,
+    voidable: false,
     introduces: (p) => [entity(p.id)],
     references: (p) =>
       p.kind === 'settlement' && p.planetId !== undefined ? [entity(p.planetId)] : [],
@@ -491,7 +503,7 @@ export const EVENT_TYPE_META: MetaTable = {
     narrative: false,
     significant: true,
     mutatesState: true,
-    voidable: true,
+    voidable: false,
     introduces: none,
     references: (p) => [
       entity(p.id),
@@ -502,7 +514,7 @@ export const EVENT_TYPE_META: MetaTable = {
     narrative: false,
     significant: true,
     mutatesState: true,
-    voidable: true,
+    voidable: false,
     introduces: none,
     references: (p) => [entity(p.locationId)],
   },
@@ -510,7 +522,7 @@ export const EVENT_TYPE_META: MetaTable = {
     narrative: false,
     significant: true,
     mutatesState: true,
-    voidable: true,
+    voidable: false,
     introduces: none,
     references: (p) => [entity(p.from), ...(typeof p.to === 'string' ? [entity(p.to)] : [])],
   },
@@ -518,7 +530,7 @@ export const EVENT_TYPE_META: MetaTable = {
     narrative: false,
     significant: true,
     mutatesState: true,
-    voidable: true,
+    voidable: false,
     introduces: none,
     references: (p) => [entity(p.from), ...(typeof p.to === 'string' ? [entity(p.to)] : [])],
   },
@@ -526,7 +538,7 @@ export const EVENT_TYPE_META: MetaTable = {
     narrative: false,
     significant: true,
     mutatesState: true,
-    voidable: true,
+    voidable: false,
     introduces: none,
     references: none,
   },
@@ -534,7 +546,7 @@ export const EVENT_TYPE_META: MetaTable = {
     narrative: false,
     significant: false,
     mutatesState: true,
-    voidable: true,
+    voidable: false,
     introduces: none,
     references: (p) => Object.keys(p.coordinates).map((id) => entity(id as EntityId)),
   },
@@ -542,7 +554,7 @@ export const EVENT_TYPE_META: MetaTable = {
     narrative: false,
     significant: true,
     mutatesState: true,
-    voidable: true,
+    voidable: false,
     introduces: none,
     references: (p) => [entity(p.settlementId)],
   },
@@ -550,7 +562,7 @@ export const EVENT_TYPE_META: MetaTable = {
     narrative: false,
     significant: true,
     mutatesState: true,
-    voidable: true,
+    voidable: false,
     introduces: (p) => [entity(p.troubleId)],
     references: (p) => (p.kind === 'settlement' ? [entity(p.ownerId)] : []),
   },
@@ -558,7 +570,7 @@ export const EVENT_TYPE_META: MetaTable = {
     narrative: false,
     significant: true,
     mutatesState: true,
-    voidable: true,
+    voidable: false,
     introduces: none,
     references: (p) => [
       entity(p.troubleId),
@@ -569,7 +581,7 @@ export const EVENT_TYPE_META: MetaTable = {
     narrative: false,
     significant: true,
     mutatesState: true,
-    voidable: true,
+    voidable: false,
     introduces: (p) => [entity(p.connectionId), entity(p.npcId), track(p.trackId)],
     references: (p) => p.participants.map(character),
   },
@@ -577,7 +589,7 @@ export const EVENT_TYPE_META: MetaTable = {
     narrative: false,
     significant: true,
     mutatesState: true,
-    voidable: true,
+    voidable: false,
     introduces: none,
     references: (p) => [
       entity(p.connectionId),
@@ -590,7 +602,7 @@ export const EVENT_TYPE_META: MetaTable = {
     narrative: false,
     significant: true,
     mutatesState: true,
-    voidable: true,
+    voidable: false,
     introduces: (p) => [entity(p.incidentId)],
     references: (p) => [
       character(p.rollerId),
@@ -602,7 +614,7 @@ export const EVENT_TYPE_META: MetaTable = {
     narrative: false,
     significant: true,
     mutatesState: true,
-    voidable: true,
+    voidable: false,
     introduces: none,
     references: (p) => [
       entity(p.incidentId),
@@ -626,7 +638,7 @@ export const EVENT_TYPE_META: MetaTable = {
     narrative: false,
     significant: true,
     mutatesState: true,
-    voidable: true,
+    voidable: false,
     introduces: none,
     references: none,
   },

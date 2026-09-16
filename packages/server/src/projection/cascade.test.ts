@@ -315,6 +315,24 @@ describe('the session bound (D-84)', () => {
     if (plan.ok) throw new Error('expected a refusal');
     expect(plan.reason).toBe('outside_current_session');
   });
+
+  it('refuses a launch fact, and says so as a rule rather than as scope (D-177)', () => {
+    // The metadata and the planner have to agree. The launch catalogue used
+    // to claim `voidable: true`, which the session bound below would have
+    // refused anyway — a permission that could never be exercised. Now the
+    // refusal is stated as the rule it is: use a revision or an amendment.
+    const builder = goldenSessionPrelude().add('trouble.established', {
+      troubleId: SURVIVOR,
+      kind: 'sector',
+      text: 'The relay grid is failing.',
+      provenance: 'player_written',
+      groundedIn: [],
+    });
+
+    const plan = planFor(builder.build(), builder.last().id);
+    if (plan.ok) throw new Error('expected a refusal');
+    expect(plan.reason).toBe('not_voidable');
+  });
 });
 
 describe('refusals that are not about the cascade', () => {
