@@ -429,7 +429,15 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
         ...state,
         launch: {
           ...state.launch,
-          routes: [...state.launch.routes, { ...event.payload, eventId: event.id }],
+          // A revision replaces the route it supersedes. Appending it left two
+          // entries for one passage, which counted twice against the region's
+          // baseline (A31).
+          routes: [
+            ...state.launch.routes.filter(
+              (route) => route.eventId !== event.payload.supersedesEventId,
+            ),
+            { ...event.payload, eventId: event.id },
+          ],
         },
       };
     case 'route.removed':

@@ -76,13 +76,28 @@ export const LaunchLocationSchema = z.discriminatedUnion('kind', [
     id: EntityIdSchema,
     name: z.string().min(1),
     planetClass: z.string().min(1),
-    details: z.record(z.string(), z.string()),
+    /**
+     * The three fields Chapter 2's starting-planet depth calls for (A33,
+     * D-174). Named rather than an open string map, because readiness reads
+     * exactly these keys: while `details` was a `Record<string, string>`, a
+     * starting planet passed or failed on whether the client happened to
+     * spell them the way the validator did.
+     *
+     * All optional: a shallow planet has none of them, and gains them only if
+     * it becomes the starting settlement's planet.
+     */
+    details: z.object({
+      atmosphere: z.string().min(1).optional(),
+      observedFromSpace: z.string().min(1).optional(),
+      feature: z.string().min(1).optional(),
+    }),
   }),
   z.object({
     kind: z.literal('star'),
     id: EntityIdSchema,
     name: z.string().min(1),
-    details: z.record(z.string(), z.string()),
+    /** A star's detail is a single rolled description; stars are optional (A33). */
+    details: z.object({ description: z.string().min(1).optional() }),
   }),
   z.object({
     kind: z.literal('other'),
@@ -95,6 +110,7 @@ export const LaunchRouteEndpointSchema = z.union([
   EntityIdSchema,
   z.object({ kind: z.literal('off_map'), label: z.string().min(1) }),
 ]);
+export type LaunchRouteEndpoint = z.infer<typeof LaunchRouteEndpointSchema>;
 export const LaunchRouteSchema = z.object({ from: EntityIdSchema, to: LaunchRouteEndpointSchema });
 // A settlement trouble belongs to a settlement and a sector trouble belongs to
 // no one; leaving `ownerId` optional on both let an unattributable trouble into

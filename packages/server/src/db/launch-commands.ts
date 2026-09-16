@@ -14,10 +14,12 @@ import {
 import type {
   Actor,
   CampaignId,
+  CampaignState,
   CreationProposal,
   EventType,
   LaunchAmendment,
   LaunchAmendmentSubject,
+  LaunchRouteEndpoint,
   CampaignSettings,
   CommandId,
   EntityId,
@@ -42,6 +44,24 @@ import { uuidv7 } from './uuid.js';
  */
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 
+/**
+ * A launch command is closed two ways.
+ *
+ * `campaign.activated` is the obvious one. The other is D-178: a campaign that
+ * has begun a session is in play, whatever its phase says. Every Milestone 1
+ * campaign is in exactly that position — it has sessions and no
+ * `campaign.activated`, so a phase-only guard left the built-in fixtures open
+ * to launch writes.
+ */
+function requireLaunchOpen(state: CampaignState, whenActive: string): void {
+  if (state.launch.phase === 'active') throw new LaunchRejectedError('campaign_active', whenActive);
+  if (state.session !== null)
+    throw new LaunchRejectedError(
+      'campaign_in_play',
+      'This campaign is already in play; Campaign Launch is closed for it.',
+    );
+}
+
 export class LaunchRejectedError extends Error {
   constructor(
     readonly reason: string,
@@ -64,12 +84,7 @@ export async function saveLaunchDraft(
   request: SaveLaunchDraftRequest,
 ): Promise<AppendResult> {
   const state = project(await readEvents(sql, request.campaignId));
-  if (state.launch.phase === 'active') {
-    throw new LaunchRejectedError(
-      'campaign_active',
-      'Launch drafts cannot change after activation.',
-    );
-  }
+  requireLaunchOpen(state, 'Launch drafts cannot change after activation.');
   return appendCommand(sql, {
     campaignId: request.campaignId,
     commandId: request.commandId,
@@ -94,12 +109,7 @@ export async function setLaunchFoundation(
   request: SetLaunchFoundationRequest,
 ): Promise<AppendResult> {
   const state = project(await readEvents(sql, request.campaignId));
-  if (state.launch.phase === 'active') {
-    throw new LaunchRejectedError(
-      'campaign_active',
-      'Campaign foundation changes by amendment after activation.',
-    );
-  }
+  requireLaunchOpen(state, 'Campaign foundation changes by amendment after activation.');
   const premise = request.premise.trim();
   if (premise === '')
     throw new LaunchRejectedError('premise_required', 'A campaign premise is required.');
@@ -170,8 +180,7 @@ export async function proposeLaunchCreation(
 ): Promise<AppendResult> {
   const events = await readEvents(sql, request.campaignId);
   const state = project(events);
-  if (state.launch.phase === 'active')
-    throw new LaunchRejectedError('campaign_active', 'Launch proposals close after activation.');
+  requireLaunchOpen(state, 'Launch proposals close after activation.');
   const rollIds = new Set(
     events.filter((event) => event.type === 'oracle.rolled').map((event) => event.id),
   );
@@ -228,11 +237,7 @@ export async function rollLaunchRecipe(
   request: RollLaunchRecipeRequest,
 ): Promise<AppendResult> {
   const state = project(await readEvents(sql, request.campaignId));
-  if (state.launch.phase === 'active')
-    throw new LaunchRejectedError(
-      'campaign_active',
-      'Launch oracle rolls are closed after activation.',
-    );
+  requireLaunchOpen(state, 'Launch oracle rolls are closed after activation.');
   const recipe = materializeLaunchRecipe(request.selector);
   const rolled = rollRecipe(request.rng ?? cryptoRandomSource(), recipe, (oracle) =>
     STARFORGED.oracles.find((candidate) => candidate.id === oracle),
@@ -269,11 +274,7 @@ export async function rollLaunchOracle(
   request: RollLaunchOracleRequest,
 ): Promise<AppendResult> {
   const state = project(await readEvents(sql, request.campaignId));
-  if (state.launch.phase === 'active')
-    throw new LaunchRejectedError(
-      'campaign_active',
-      'Launch oracle rolls are closed after activation.',
-    );
+  requireLaunchOpen(state, 'Launch oracle rolls are closed after activation.');
   const oracle = STARFORGED.oracles.find((candidate) => candidate.id === request.oracleId);
   if (oracle === undefined)
     throw new LaunchRejectedError('unknown_oracle', 'That oracle is not in the frozen rules data.');
@@ -367,8 +368,7 @@ export async function saveLaunchTrouble(
   request: SaveLaunchTroubleRequest,
 ): Promise<AppendResult> {
   const state = project(await readEvents(sql, request.campaignId));
-  if (state.launch.phase === 'active')
-    throw new LaunchRejectedError('campaign_active', 'Troubles change by amendment after launch.');
+  requireLaunchOpen(state, 'Troubles change by amendment after launch.');
   // The schema now carries the shape rule — a settlement trouble has an owner
   // and a sector trouble cannot — so only the owner's *existence* is checked
   // here, which is campaign state and not something a schema can know.
@@ -413,11 +413,7 @@ export async function setStartingSettlement(
   request: SetStartingSettlementRequest,
 ): Promise<AppendResult> {
   const state = project(await readEvents(sql, request.campaignId));
-  if (state.launch.phase === 'active')
-    throw new LaunchRejectedError(
-      'campaign_active',
-      'The starting settlement changes by amendment after launch.',
-    );
+  requireLaunchOpen(state, 'The starting settlement changes by amendment after launch.');
   const settlement = state.launch.locations[request.settlementId] as
     { readonly kind?: string } | undefined;
   if (settlement?.kind !== 'settlement')
@@ -449,11 +445,7 @@ export async function setSectorLayout(
   request: SetSectorLayoutRequest,
 ): Promise<AppendResult> {
   const state = project(await readEvents(sql, request.campaignId));
-  if (state.launch.phase === 'active')
-    throw new LaunchRejectedError(
-      'campaign_active',
-      'Map layout changes by amendment after launch.',
-    );
+  requireLaunchOpen(state, 'Map layout changes by amendment after launch.');
   const placed = Object.keys(request.coordinates) as EntityId[];
   if (placed.some((id) => state.launch.locations[id] === undefined)) {
     throw new LaunchRejectedError(
@@ -476,8 +468,7 @@ export async function saveLaunchRoute(
   request: SaveLaunchRouteRequest,
 ): Promise<AppendResult> {
   const state = project(await readEvents(sql, request.campaignId));
-  if (state.launch.phase === 'active')
-    throw new LaunchRejectedError('campaign_active', 'Routes change by amendment after launch.');
+  requireLaunchOpen(state, 'Routes change by amendment after launch.');
   if (state.launch.locations[request.route.from] === undefined) {
     throw new LaunchRejectedError(
       'unknown_route_origin',
@@ -493,17 +484,12 @@ export async function saveLaunchRoute(
       'A route must end at an accepted location or exit.',
     );
   }
-  const current = state.launch.routes as readonly {
-    readonly eventId?: EventId;
-    readonly from: EntityId;
-    readonly to: PayloadFor<'route.added'>['to'];
-  }[];
-  const previous = current.find(
-    (route) =>
-      route.eventId !== undefined &&
-      route.from === request.route.from &&
-      route.to === request.route.to,
-  );
+  // D-174: a passage is undirected, and two passages are the same passage
+  // whichever way round they are stated. Comparing `to` with `===` missed an
+  // off-map exit entirely, because that endpoint is an object and no two are
+  // ever the same reference.
+  const key = routeKey(request.route);
+  const previous = state.launch.routes.find((route) => routeKey(route) === key);
   const payload = {
     ...request.route,
     provenance: 'player_written' as const,
@@ -522,6 +508,12 @@ export async function saveLaunchRoute(
     ],
     response: { from: request.route.from },
   });
+}
+
+/** An undirected, structural identity for a passage. */
+function routeKey(route: { readonly from: EntityId; readonly to: LaunchRouteEndpoint }): string {
+  const to = typeof route.to === 'string' ? route.to : `off:${route.to.label}`;
+  return [route.from, to].sort().join('|');
 }
 
 type LaunchLocationInput =
@@ -548,8 +540,7 @@ export async function saveLaunchLocation(
   request: SaveLaunchLocationRequest,
 ): Promise<AppendResult> {
   const state = project(await readEvents(sql, request.campaignId));
-  if (state.launch.phase === 'active')
-    throw new LaunchRejectedError('campaign_active', 'Locations change by amendment after launch.');
+  requireLaunchOpen(state, 'Locations change by amendment after launch.');
   if (state.launch.sector === undefined)
     throw new LaunchRejectedError(
       'sector_required',
@@ -665,11 +656,7 @@ export async function acceptLaunchIncident(
 ): Promise<AppendResult> {
   const events = await readEvents(sql, request.campaignId);
   const state = project(events);
-  if (state.launch.phase === 'active')
-    throw new LaunchRejectedError(
-      'campaign_active',
-      'The incident changes by amendment after launch.',
-    );
+  requireLaunchOpen(state, 'The incident changes by amendment after launch.');
   const crew = state.characters;
   if (
     crew[request.incident.rollerId] === undefined ||
@@ -729,11 +716,7 @@ export async function establishLaunchConnection(
   request: EstablishLaunchConnectionRequest,
 ): Promise<AppendResult> {
   const state = project(await readEvents(sql, request.campaignId));
-  if (state.launch.phase === 'active')
-    throw new LaunchRejectedError(
-      'campaign_active',
-      'The connection changes by amendment after launch.',
-    );
+  requireLaunchOpen(state, 'The connection changes by amendment after launch.');
   if (state.launch.connection !== undefined)
     throw new LaunchRejectedError(
       'connection_exists',
@@ -810,11 +793,7 @@ export async function configureLaunchSector(
   request: ConfigureLaunchSectorRequest,
 ): Promise<AppendResult> {
   const state = project(await readEvents(sql, request.campaignId));
-  if (state.launch.phase === 'active')
-    throw new LaunchRejectedError(
-      'campaign_active',
-      'The sector changes by amendment after launch.',
-    );
+  requireLaunchOpen(state, 'The sector changes by amendment after launch.');
   const expected = REGION_BASELINES[request.sector.region];
   if (
     request.sector.baseline.settlements !== expected.settlements ||
@@ -852,11 +831,7 @@ export async function saveSharedStarship(
   request: SaveSharedStarshipRequest,
 ): Promise<AppendResult> {
   const state = project(await readEvents(sql, request.campaignId));
-  if (state.launch.phase === 'active')
-    throw new LaunchRejectedError(
-      'campaign_active',
-      'The starship changes by amendment after launch.',
-    );
+  requireLaunchOpen(state, 'The starship changes by amendment after launch.');
   const problems = validateSharedStarship(
     {
       name: request.starship.name,
@@ -904,6 +879,29 @@ export async function saveSharedStarship(
   });
 }
 
+/**
+ * Which event types state an accepted launch fact, as opposed to grounding it
+ * (`oracle.rolled`), proposing it (`creation.proposed`) or saving a draft of
+ * it. `campaign.activated` cites these, and `AMENDABLE_SUBJECTS` names the
+ * same set — an accepted fact is exactly what an amendment can supersede.
+ */
+const ACCEPTED_LAUNCH_FACTS: ReadonlySet<EventType> = new Set([
+  ...(Object.keys(AMENDABLE_SUBJECTS) as EventType[]),
+  'starting_settlement.selected',
+  'sector.layout_changed',
+]);
+
+/**
+ * The readiness contract `campaign.activated` was validated against.
+ *
+ * It is stamped on the activation so a later change to the launch rules can
+ * tell which campaigns were admitted under which version, rather than being
+ * re-derived from a log that no longer matches today's rules. Bump it when a
+ * change to `validateLaunchReadiness` would admit or refuse a campaign the
+ * previous version would not.
+ */
+const READINESS_VERSION = 1;
+
 export interface ActivateLaunchRequest {
   readonly campaignId: CampaignId;
   readonly commandId: CommandId;
@@ -921,8 +919,7 @@ export async function activateLaunch(
 ): Promise<AppendResult> {
   const eventsSoFar = await readEvents(sql, request.campaignId);
   const { state, readiness } = buildLaunchWorkspace(eventsSoFar);
-  if (state.launch.phase === 'active')
-    throw new LaunchRejectedError('campaign_active', 'This campaign has already launched.');
+  requireLaunchOpen(state, 'This campaign has already launched.');
   if (!readiness.ready) {
     throw new LaunchRejectedError(
       'not_ready',
@@ -935,8 +932,11 @@ export async function activateLaunch(
   const sessionId = uuidv7() as SessionId;
   const sceneId = uuidv7() as SceneId;
   const activationId = uuidv7() as EventId;
+  // The accepted launch facts, not every event that is not a draft: an
+  // `oracle.rolled` or an `ai.completed` is grounding or accounting, and the
+  // design record asks for "complete accepted launch-fact event ids".
   const launchFactEventIds = eventsSoFar
-    .filter((event) => event.type !== 'launch.draft_saved' && event.type !== 'creation.proposed')
+    .filter((event) => ACCEPTED_LAUNCH_FACTS.has(event.type))
     .map((event) => event.id);
   return appendCommand(sql, {
     campaignId: request.campaignId,
@@ -948,8 +948,7 @@ export async function activateLaunch(
     // readiness or produce a second activation (D-168, A40).
     precondition: async (tx) => {
       const current = buildLaunchWorkspace(await readEvents(tx, request.campaignId));
-      if (current.state.launch.phase === 'active')
-        throw new LaunchRejectedError('campaign_active', 'This campaign has already launched.');
+      requireLaunchOpen(current.state, 'This campaign has already launched.');
       if (!current.readiness.ready)
         throw new LaunchRejectedError(
           'not_ready',
@@ -970,7 +969,7 @@ export async function activateLaunch(
             rollerId: incident.rollerId,
             participants: incident.participants,
           },
-          readinessVersion: 1,
+          readinessVersion: READINESS_VERSION,
         },
       },
       {
@@ -999,12 +998,7 @@ export async function activateLaunch(
 
 export async function decideTruth(sql: Sql, request: DecideTruthRequest): Promise<AppendResult> {
   const state = project(await readEvents(sql, request.campaignId));
-  if (state.launch.phase === 'active') {
-    throw new LaunchRejectedError(
-      'campaign_active',
-      'Truths change by amendment after activation.',
-    );
-  }
+  requireLaunchOpen(state, 'Truths change by amendment after activation.');
   const truth = STARFORGED.truths.find((candidate) => candidate.id === request.truthId);
   if (truth === undefined)
     throw new LaunchRejectedError('unknown_truth', 'That is not a setting truth.');

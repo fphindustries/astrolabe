@@ -293,10 +293,9 @@ task leaves the build working and the applicable tests passing.
 - [x] 3.4 Add shared-starship proposal, roll, save, accept, and revision commands, rolling the
   declared starship recipe rather than a client-named oracle. *(Re-closed: recipe path in
   3R.5, save/accept/revision covered by 3R.7d.)*
-- [ ] 3.5 Add sector and settlement commands, including authoritative oracle rolls **of the
+- [x] 3.5 Add sector and settlement commands, including authoritative oracle rolls **of the
   declared settlement, planet and trouble recipes**, planet/star relationships, node placement,
-  passages, exits, and troubles. *(Recipes wired in 3R.5, graph covered by 3R.7e; remaining:
-  3R.9b's off-map duplicate dedupe and 3R.9d's planet detail typing.)*
+  passages, exits, and troubles. *(Re-closed by 3R.5, 3R.7e, 3R.9b and 3R.9d.)*
 - [x] 3.6 Add the automatic-strong-hit starting connection command. *(Implemented; untested
   until 3R.7c.)*
 - [x] 3.7 Extend incident proposals to the complete accepted launch context. *(Re-closed by
@@ -402,7 +401,7 @@ which is why the declared recipes are dead code.
 - [x] 3R.8b Route rules: self-link, undirected duplicate, unknown endpoint, off-map exit.
 - [x] 3R.8c Planet depth — shallow for associated settlements, full for the starting planet.
 - [x] 3R.8d Crew bounds, allowed deferrals (`leave_open`, `discover_in_play`), section statuses.
-- [ ] 3R.8e Traceability: every region baseline carries its citation. **This asserts the
+- [x] 3R.8e Traceability: every region baseline carries its citation. **This asserts the
   citation is present, not that the numbers are right** — pp. 116–120 are outside the CC-BY
   subset, so D-179 leaves the six numbers open for the user to confirm against the book.
 
@@ -411,22 +410,22 @@ which is why the declared recipes are dead code.
 - [x] 3R.9a `route.removed` filters on `supersedesEventId`, which is the acceptance field and
   undefined for a fresh route: nothing is removed and the tombstone inflates the passage count.
   Fix the identity and add the missing command, or drop the event type until one needs it.
-- [ ] 3R.9b Route dedupe compares `to` by identity, so an off-map endpoint object never matches.
+- [x] 3R.9b Route dedupe compares `to` by identity, so an off-map endpoint object never matches.
   Compare structurally and undirected.
 - [x] 3R.9c Model `location.removed` explicitly instead of leaving a tombstone in `locations`.
-- [ ] 3R.9d Type planet details; readiness requires `atmosphere`, `observedFromSpace` and
+- [x] 3R.9d Type planet details; readiness requires `atmosphere`, `observedFromSpace` and
   `feature` from what is currently an open string map.
-- [ ] 3R.9e Record the single-user assumption as a note rather than locking every launch
+- [x] 3R.9e Record the single-user assumption as a note rather than locking every launch
   command. Activation locks because it alone must revalidate then append atomically; the rest
   serve one local user (D-02, D-52). Revisit at Milestone 4.
-- [ ] 3R.9f Narrow activation's `launchFactEventIds` to accepted launch facts; it currently
+- [x] 3R.9f Narrow activation's `launchFactEventIds` to accepted launch facts; it currently
   sweeps in `oracle.rolled` and `ai.completed`. Assert the contents in 3R.7a.
-- [ ] 3R.9g Define `readinessVersion` or remove it; it is hardcoded to 1 and means nothing.
+- [x] 3R.9g Define `readinessVersion` or remove it; it is hardcoded to 1 and means nothing.
 
 **3R.10 Legacy-campaign guard (D-178).**
 
-- [ ] 3R.10a Refuse every launch command on a campaign that has begun a session.
-- [ ] 3R.10b Test that a Milestone 1 fixture campaign rejects them.
+- [x] 3R.10a Refuse every launch command on a campaign that has begun a session.
+- [x] 3R.10b Test that a Milestone 1 fixture campaign rejects them.
 
 ### 4. Campaign Launch workspace
 
@@ -662,3 +661,31 @@ implementation note.
   lives, so the suite now asserts each at its own layer and adds a schema-valid,
   rules-invalid asset set for the 422 path.
   Verified with Postgres: 106 files, 1162 tests, zero skipped files.
+- **Group 3R complete.** The remaining correctness fixes and the legacy guard:
+  - **Passage identity (3R.9b).** The command compared `to` with `===`, so two off-map exits
+    were never the same passage — an endpoint is an object and no two are the same reference —
+    and a passage stated the other way round was a second passage. Both inflated the count
+    against A31's baseline. Identity is now structural and undirected, per D-174.
+  - **A revised route appended a second entry** rather than replacing the one it supersedes,
+    which is the same double-count from the projection side. Found while fixing 3R.9b.
+  - **Planet detail (3R.9d)** is three named optional fields instead of an open string map.
+    Readiness reads exactly those keys, so a starting planet used to pass or fail on whether
+    the client happened to spell them the way the validator did.
+  - **Activation's citation (3R.9f)** now lists accepted launch facts rather than every event
+    that is not a draft; it was sweeping in `oracle.rolled` and `ai.completed`. The set is
+    derived from `AMENDABLE_SUBJECTS`, so what activation cites and what an amendment can
+    supersede cannot drift apart.
+  - **`readinessVersion` (3R.9g)** is a named constant with a documented meaning and a rule for
+    bumping it, rather than a bare `1`.
+  - **Launch commands stay single-writer (3R.9e).** Only activation locks, because only it must
+    revalidate then append atomically; the rest serve one local user (D-02, D-52). Recorded
+    rather than changed, and revisited at Milestone 4.
+  - **The legacy guard (3R.10, D-178).** A campaign with a `session.began` refuses every launch
+    command whatever its phase says. Seventeen near-copies of the phase check became one
+    `requireLaunchOpen`, so the second condition could not be added to some and not others.
+    The test asserts the phase is still `draft` when the refusal fires — otherwise it would not
+    be testing D-178's condition at all.
+  Verified with Postgres: 106 files, 1165 tests, zero skipped files. typecheck, lint and
+  format:check clean.
+  **Group 4 is unblocked.** Readiness reaches `ready`, activation works, `LaunchState` is
+  typed, and every task group 3 claimed has a test behind it.

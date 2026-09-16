@@ -120,6 +120,12 @@ describe('launch readiness can be satisfied', () => {
     expect(REGION_BASELINES.outlands).toMatchObject({ settlements: 3, passages: 2 });
     expect(REGION_BASELINES.expanse).toMatchObject({ settlements: 2, passages: 1 });
 
+    // Each carries the citation it is traced to (task 1.2). That is all a test
+    // can check here: pp. 116-120 are outside the CC-BY subset, so the numbers
+    // themselves are not in Datasworn and D-179 leaves them to the user.
+    for (const baseline of Object.values(REGION_BASELINES))
+      expect(baseline.citation).toMatch(/Rulebook/);
+
     // The ready sector satisfies Expanse exactly; it is short for the others.
     const ready = readyInput();
     for (const region of ['terminus', 'outlands'] as const) {

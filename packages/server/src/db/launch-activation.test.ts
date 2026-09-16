@@ -268,6 +268,18 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
     const events = await readEvents(db.sql, campaignId);
     expect(events.some((event) => event.type === 'move.invoked')).toBe(false);
     const activated = events.find((event) => event.type === 'campaign.activated');
+    // 3R.9f: the cited ids are accepted launch facts, not every event that is
+    // not a draft. A roll grounds a fact; it is not one.
+    const cited = new Set(
+      (activated?.payload as { readonly launchFactEventIds: readonly string[] }).launchFactEventIds,
+    );
+    const citedTypes = new Set(
+      events.filter((event) => cited.has(event.id)).map((event) => event.type),
+    );
+    expect(citedTypes).not.toContain('oracle.rolled');
+    expect(citedTypes).not.toContain('campaign.created');
+    expect(citedTypes).toContain('trouble.established');
+    expect(citedTypes).toContain('incident.accepted');
     expect(activated?.payload).toMatchObject({
       pendingVow: { rank: 'formidable', rollerId: characterId, participants: [characterId] },
     });

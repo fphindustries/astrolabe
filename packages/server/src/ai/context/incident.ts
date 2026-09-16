@@ -296,10 +296,15 @@ function launchLocationDetail(state: CampaignState, id: EntityId): string {
     case 'planet':
       return [
         `planet, class ${location.planetClass}`,
-        ...Object.entries(location.details).map(([field, value]) => `${field}: ${value}`),
+        ...Object.entries(location.details).flatMap(([field, value]) =>
+          value === undefined ? [] : [`${field}: ${value}`],
+        ),
       ].join('; ');
     case 'star':
-      return ['star', ...Object.entries(location.details).map(([f, v]) => `${f}: ${v}`)].join('; ');
+      return [
+        'star',
+        ...(location.details.description === undefined ? [] : [location.details.description]),
+      ].join('; ');
     case 'other':
       return location.description;
   }

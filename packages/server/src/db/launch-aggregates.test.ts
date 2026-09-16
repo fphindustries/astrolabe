@@ -12,6 +12,7 @@ import {
 import { project } from '../projection/project.js';
 
 import { createCampaign } from './campaign-commands.js';
+import { beginSession } from './session-commands.js';
 import { createCharacter, LaunchCharacterRejectedError } from './character-commands.js';
 import { readEvents } from './event-store.js';
 import {
@@ -423,6 +424,105 @@ describe.skipIf(!hasTestDatabase)('the launch aggregates', () => {
           settlementId: planet,
         }),
       ).rejects.toThrow(LaunchRejectedError);
+    });
+  });
+
+  // 3R.9b — passage identity (D-174)
+  describe('passage identity', () => {
+    async function sectorWith(campaignId: CampaignId, ids: readonly EntityId[]) {
+      await configureLaunchSector(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        sector: {
+          sectorId: newId<EntityId>(),
+          name: 'Lantern Reach',
+          region: 'expanse',
+          baseline: { settlements: 2, passages: 1 },
+        },
+      });
+      for (const [index, id] of ids.entries())
+        await saveLaunchLocation(db.sql, {
+          campaignId,
+          commandId: newId<CommandId>(),
+          actor: PLAYER,
+          location: settlement(id, `Settlement ${index}`),
+        });
+    }
+
+    it('treats a passage stated the other way round as the same passage', async () => {
+      const campaignId = await campaign();
+      const a = newId<EntityId>();
+      const b = newId<EntityId>();
+      await sectorWith(campaignId, [a, b]);
+
+      await saveLaunchRoute(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        route: { from: a, to: b },
+      });
+      await saveLaunchRoute(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        route: { from: b, to: a },
+      });
+
+      // One passage, revised — not two counting twice against the baseline.
+      expect(project(await readEvents(db.sql, campaignId)).launch.routes).toHaveLength(1);
+    });
+
+    it('recognises a repeated off-map exit, which object identity never could', async () => {
+      const campaignId = await campaign();
+      const a = newId<EntityId>();
+      await sectorWith(campaignId, [a]);
+      const drift = { from: a, to: { kind: 'off_map', label: 'The Drift' } } as const;
+
+      await saveLaunchRoute(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        route: drift,
+      });
+      await saveLaunchRoute(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        route: drift,
+      });
+
+      expect(project(await readEvents(db.sql, campaignId)).launch.routes).toHaveLength(1);
+    });
+  });
+
+  // 3R.10 — the legacy-campaign guard (D-178)
+  describe('a campaign already in play', () => {
+    it('refuses every launch command once a session has begun', async () => {
+      const campaignId = await campaign();
+      await beginSession(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        scene: { title: 'The dock at Ember Hold' },
+      });
+
+      // Phase is still `draft` — a Milestone 1 campaign has no
+      // `campaign.activated` — so only D-178's second condition refuses this.
+      expect(project(await readEvents(db.sql, campaignId)).launch.phase).toBe('draft');
+      await expect(
+        configureLaunchSector(db.sql, {
+          campaignId,
+          commandId: newId<CommandId>(),
+          actor: PLAYER,
+          sector: {
+            sectorId: newId<EntityId>(),
+            name: 'Too late',
+            region: 'expanse',
+            baseline: { settlements: 2, passages: 1 },
+          },
+        }),
+      ).rejects.toThrow(/already in play/i);
     });
   });
 

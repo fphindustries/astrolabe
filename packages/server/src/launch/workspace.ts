@@ -94,14 +94,28 @@ function readinessInput(state: CampaignState): LaunchReadinessInput {
       ...(location.firstLooks !== undefined ? { firstLooks: location.firstLooks } : {}),
       ...troubleOf(settlementTrouble, location.id),
     }));
-  const planets = locations
-    .filter((location) => location.kind === 'planet')
-    .map((location) => ({
-      id: location.id,
-      name: location.name,
-      class: location.planetClass,
-      ...location.details,
-    }));
+  const planets = locations.flatMap((location) =>
+    location.kind === 'planet'
+      ? [
+          {
+            id: location.id,
+            name: location.name,
+            class: location.planetClass,
+            // Named fields on both sides now (D-174), so the depth rule reads
+            // what the command wrote rather than what it happened to key.
+            ...(location.details.atmosphere === undefined
+              ? {}
+              : { atmosphere: location.details.atmosphere }),
+            ...(location.details.observedFromSpace === undefined
+              ? {}
+              : { observedFromSpace: location.details.observedFromSpace }),
+            ...(location.details.feature === undefined
+              ? {}
+              : { feature: location.details.feature }),
+          },
+        ]
+      : [],
+  );
   return {
     campaignName: state.campaign?.name ?? '',
     truths: decisions,
