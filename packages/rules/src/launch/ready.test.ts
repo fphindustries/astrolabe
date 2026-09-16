@@ -1,0 +1,243 @@
+import { describe, expect, it } from 'vitest';
+
+import { STARFORGED } from '../generated/index.js';
+
+import { REGION_BASELINES, validateLaunchReadiness, type LaunchReadinessInput } from './rules.js';
+
+/**
+ * Readiness reaching `ready` is the gate every other Campaign Launch promise
+ * hangs off: activation revalidates through this function, so a validator that
+ * can only ever say no makes A38 unreachable. It shipped that way once, because
+ * every existing test asserted a *blocker* and none asserted the absence of all
+ * of them.
+ */
+
+const paths = STARFORGED.assets
+  .filter((asset) => asset.categoryId === 'path')
+  .slice(0, 3)
+  .map((asset) => asset.id);
+const starshipAsset =
+  STARFORGED.assets.find((asset) => asset.categoryId === 'command_vehicle')?.id ??
+  ('asset:command-vehicle/starship' as never);
+
+const VESNA = 'vesna';
+
+/** Every truth answered the cheapest legal way: explicitly left open (D-162). */
+const allTruthsLeftOpen = STARFORGED.truths.map((truth) => ({
+  truthId: truth.id,
+  kind: 'leave_open' as const,
+}));
+
+/** A complete Expanse launch: the smallest baseline, 2 settlements and 1 passage. */
+function readyInput(): LaunchReadinessInput {
+  return {
+    campaignName: 'Lantern Wake',
+    truths: allTruthsLeftOpen,
+    characters: [
+      {
+        id: VESNA,
+        draft: {
+          name: 'Vesna Kade',
+          callsign: 'Map',
+          stats: { edge: 3, heart: 2, iron: 2, shadow: 1, wits: 1 },
+          assets: paths,
+          appearance: 'Weathered flight jacket',
+          backstory: { kind: 'discover_in_play' },
+          backgroundVow: { title: 'Find the lost colony', rank: 'formidable' },
+        },
+      },
+    ],
+    starship: {
+      name: 'Lantern Wake',
+      appearance: 'Old freighter',
+      history: 'Won in a wager',
+      quirks: ['Slow clocks'],
+      integrity: 5,
+      assetId: starshipAsset,
+      modules: [],
+    },
+    sector: {
+      region: 'expanse',
+      settlements: [
+        {
+          id: 'ember-hold',
+          name: 'Ember Hold',
+          location: 'deep_space',
+          population: 'Hundreds',
+          authority: 'Corporate',
+          projects: ['Rebuilding the relay'],
+          firstLooks: ['Cold corridors'],
+          trouble: 'The dock crews have not been paid.',
+        },
+        {
+          id: 'still-harbor',
+          name: 'Still Harbor',
+          location: 'deep_space',
+          population: 'Dozens',
+          authority: 'Ineffectual',
+          projects: ['Salvage'],
+        },
+      ],
+      locations: [],
+      planets: [],
+      routes: [{ from: 'ember-hold', to: 'still-harbor' }],
+      startingSettlementId: 'ember-hold',
+      sectorTrouble: 'The relay grid is failing.',
+    },
+    connection: {
+      npcName: 'Juno Marr',
+      role: 'Dockmaster',
+      rank: 'dangerous',
+      participants: [VESNA],
+    },
+    incident: {
+      text: 'A distress beacon from the lost colony.',
+      rank: 'formidable',
+      rollerId: VESNA,
+      participants: [VESNA],
+      openingScene: 'The dock at Ember Hold',
+    },
+  };
+}
+
+const check = (input: LaunchReadinessInput) =>
+  validateLaunchReadiness(input, STARFORGED.truths, STARFORGED);
+
+describe('launch readiness can be satisfied', () => {
+  it('reports ready with no problems for a complete launch', () => {
+    const readiness = check(readyInput());
+
+    expect(readiness.problems).toEqual([]);
+    expect(readiness.ready).toBe(true);
+    for (const section of Object.values(readiness.sections))
+      expect(section.status).toBe('complete');
+  });
+
+  it('enforces each region baseline as a hard gate (A31, D-174, D-179)', () => {
+    // The six numbers come from the reference guide and are not in Datasworn,
+    // so they are asserted here explicitly rather than only cited.
+    expect(REGION_BASELINES.terminus).toMatchObject({ settlements: 4, passages: 3 });
+    expect(REGION_BASELINES.outlands).toMatchObject({ settlements: 3, passages: 2 });
+    expect(REGION_BASELINES.expanse).toMatchObject({ settlements: 2, passages: 1 });
+
+    // The ready sector satisfies Expanse exactly; it is short for the others.
+    const ready = readyInput();
+    for (const region of ['terminus', 'outlands'] as const) {
+      const codes = check({
+        ...ready,
+        sector: { ...ready.sector!, region },
+      }).problems.map((problem) => problem.code);
+      expect(codes).toContain('settlements_insufficient');
+      expect(codes).toContain('passages_insufficient');
+    }
+  });
+
+  it('permits content beyond the baseline (A31)', () => {
+    const ready = readyInput();
+    const extra = {
+      ...ready,
+      sector: {
+        ...ready.sector!,
+        settlements: [
+          ...ready.sector!.settlements,
+          {
+            id: 'far-watch',
+            name: 'Far Watch',
+            location: 'deep_space' as const,
+            population: 'A few',
+            authority: 'None',
+            projects: ['Listening'],
+          },
+        ],
+        routes: [
+          ...ready.sector!.routes,
+          { from: 'still-harbor', to: 'far-watch' },
+          { from: 'far-watch', to: { kind: 'off_map' as const, label: 'The Drift' } },
+        ],
+      },
+    };
+
+    expect(check(extra).ready).toBe(true);
+  });
+
+  it('rejects a self-linked, duplicated, or unknown passage (D-174)', () => {
+    const ready = readyInput();
+    const codesFor = (routes: NonNullable<LaunchReadinessInput['sector']>['routes']) =>
+      check({ ...ready, sector: { ...ready.sector!, routes } }).problems.map((p) => p.code);
+
+    expect(codesFor([{ from: 'ember-hold', to: 'ember-hold' }])).toContain('route_self_link');
+    expect(
+      codesFor([
+        { from: 'ember-hold', to: 'still-harbor' },
+        // Undirected: the same passage stated the other way round.
+        { from: 'still-harbor', to: 'ember-hold' },
+      ]),
+    ).toContain('route_duplicate');
+    expect(codesFor([{ from: 'ember-hold', to: 'nowhere' }])).toContain('route_endpoint_unknown');
+  });
+
+  it('requires one to six characters (A27)', () => {
+    const ready = readyInput();
+    const crewOf = (count: number) =>
+      Array.from({ length: count }, (_, index) => ({
+        ...ready.characters[0]!,
+        id: `crew-${index}`,
+      }));
+
+    expect(check({ ...ready, characters: [] }).problems.map((p) => p.code)).toContain(
+      'crew_count_invalid',
+    );
+    expect(
+      check({
+        ...ready,
+        characters: crewOf(7),
+        connection: { ...ready.connection!, participants: ['crew-0'] },
+        incident: { ...ready.incident!, rollerId: 'crew-0', participants: ['crew-0'] },
+      }).problems.map((p) => p.code),
+    ).toContain('crew_count_invalid');
+    expect(
+      check({
+        ...ready,
+        characters: crewOf(6),
+        connection: { ...ready.connection!, participants: ['crew-0'] },
+        incident: { ...ready.incident!, rollerId: 'crew-0', participants: ['crew-0'] },
+      }).ready,
+    ).toBe(true);
+  });
+
+  it('treats an unanswered truth as a blocker and an open one as decided (D-162)', () => {
+    const ready = readyInput();
+
+    expect(check({ ...ready, truths: [] }).problems.map((p) => p.code)).toContain('truth_missing');
+    expect(check(ready).ready).toBe(true);
+  });
+
+  it('requires the starting settlement to have first looks and its own trouble (A35)', () => {
+    const ready = readyInput();
+    const [start, ...rest] = ready.sector!.settlements;
+    const { trouble: _dropped, ...withoutTrouble } = start!;
+
+    const codes = check({
+      ...ready,
+      sector: { ...ready.sector!, settlements: [withoutTrouble, ...rest] },
+    }).problems.map((p) => p.code);
+
+    expect(codes).toContain('starting_settlement_detail_missing');
+  });
+
+  it('requires the starting settlement’s planet to carry the deeper detail (A33)', () => {
+    const ready = readyInput();
+    const [start, ...rest] = ready.sector!.settlements;
+
+    const codes = check({
+      ...ready,
+      sector: {
+        ...ready.sector!,
+        settlements: [{ ...start!, location: 'planetside', planetId: 'ember' }, ...rest],
+        planets: [{ id: 'ember', name: 'Ember', class: 'Furnace', atmosphere: 'Toxic' }],
+      },
+    }).problems.map((p) => p.code);
+
+    expect(codes).toContain('starting_planet_detail_missing');
+  });
+});
