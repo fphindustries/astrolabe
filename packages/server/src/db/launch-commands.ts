@@ -28,6 +28,13 @@ import { buildLaunchWorkspace } from '../launch/workspace.js';
 import { appendCommand, readEvents, type AppendResult } from './event-store.js';
 import { uuidv7 } from './uuid.js';
 
+/**
+ * A plain `Omit` over a discriminated union collapses it into one object and
+ * loses the discriminant, which is how a settlement trouble's required
+ * `ownerId` went missing from the command's own request type.
+ */
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+
 export class LaunchRejectedError extends Error {
   constructor(
     readonly reason: string,
@@ -288,7 +295,10 @@ export interface SaveLaunchTroubleRequest {
   readonly campaignId: CampaignId;
   readonly commandId: CommandId;
   readonly actor: Actor;
-  readonly trouble: Omit<PayloadFor<'trouble.established'>, 'provenance' | 'groundedIn'>;
+  readonly trouble: DistributiveOmit<
+    PayloadFor<'trouble.established'>,
+    'provenance' | 'groundedIn'
+  >;
 }
 
 export async function saveLaunchTrouble(
@@ -298,32 +308,31 @@ export async function saveLaunchTrouble(
   const state = project(await readEvents(sql, request.campaignId));
   if (state.launch.phase === 'active')
     throw new LaunchRejectedError('campaign_active', 'Troubles change by amendment after launch.');
-  if (request.trouble.kind === 'settlement') {
-    const owner = request.trouble.ownerId;
-    if (
-      owner === undefined ||
-      (state.launch.locations[owner] as { readonly kind?: string } | undefined)?.kind !==
-        'settlement'
-    ) {
-      throw new LaunchRejectedError(
-        'invalid_trouble_owner',
-        'A settlement trouble needs an accepted settlement.',
-      );
-    }
-  } else if (request.trouble.ownerId !== undefined) {
+  // The schema now carries the shape rule — a settlement trouble has an owner
+  // and a sector trouble cannot — so only the owner's *existence* is checked
+  // here, which is campaign state and not something a schema can know.
+  if (
+    request.trouble.kind === 'settlement' &&
+    (state.launch.locations[request.trouble.ownerId] as { readonly kind?: string } | undefined)
+      ?.kind !== 'settlement'
+  ) {
     throw new LaunchRejectedError(
       'invalid_trouble_owner',
-      'A sector trouble has no location owner.',
+      'A settlement trouble needs an accepted settlement.',
     );
   }
   const previous = state.launch.troubles[request.trouble.troubleId] as
     { readonly eventId?: EventId } | undefined;
-  const payload = {
-    ...request.trouble,
+  const acceptance = {
     provenance: 'player_written' as const,
     groundedIn: [] as EventId[],
     ...(previous?.eventId === undefined ? {} : { supersedesEventId: previous.eventId }),
   };
+  // Rebuilt per branch rather than spread, so the discriminant stays narrow.
+  const payload =
+    request.trouble.kind === 'settlement'
+      ? { ...request.trouble, ...acceptance }
+      : { ...request.trouble, ...acceptance };
   return appendCommand(sql, {
     campaignId: request.campaignId,
     commandId: request.commandId,

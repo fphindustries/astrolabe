@@ -95,13 +95,26 @@ export const LaunchRouteEndpointSchema = z.union([
   z.object({ kind: z.literal('off_map'), label: z.string().min(1) }),
 ]);
 export const LaunchRouteSchema = z.object({ from: EntityIdSchema, to: LaunchRouteEndpointSchema });
-export const LaunchTroubleSchema = z.object({
+// A settlement trouble belongs to a settlement and a sector trouble belongs to
+// no one; leaving `ownerId` optional on both let an unattributable trouble into
+// the log, which the read layer then could not map back to its settlement.
+const SettlementTroubleSchema = z.object({
+  kind: z.literal('settlement'),
   troubleId: EntityIdSchema,
-  kind: z.enum(['settlement', 'sector']),
-  ownerId: EntityIdSchema.optional(),
+  ownerId: EntityIdSchema,
   text: z.string().min(1),
   fields: z.record(z.string(), z.string()).optional(),
 });
+const SectorTroubleSchema = z.object({
+  kind: z.literal('sector'),
+  troubleId: EntityIdSchema,
+  text: z.string().min(1),
+  fields: z.record(z.string(), z.string()).optional(),
+});
+export const LaunchTroubleSchema = z.discriminatedUnion('kind', [
+  SettlementTroubleSchema,
+  SectorTroubleSchema,
+]);
 const ConnectionSchema = z.object({
   connectionId: EntityIdSchema,
   npcId: EntityIdSchema,
@@ -147,7 +160,16 @@ const DraftSnapshotSchema = z.discriminatedUnion('section', [
     section: z.literal('connection_troubles'),
     snapshot: z.object({
       connection: ConnectionSchema.partial().optional(),
-      troubles: z.array(LaunchTroubleSchema.partial()),
+      // A draft trouble is incomplete by nature (D-161), so it keeps the loose
+      // shape; the accepted event is where the discriminator's rule binds.
+      troubles: z.array(
+        z.object({
+          kind: z.enum(['settlement', 'sector']).optional(),
+          troubleId: EntityIdSchema.optional(),
+          ownerId: EntityIdSchema.optional(),
+          text: z.string().optional(),
+        }),
+      ),
     }),
   }),
   z.object({
@@ -230,8 +252,12 @@ export const StartingSettlementSelectedSchema = z.object({
   settlementId: EntityIdSchema,
   supersedesEventId: EventIdSchema.optional(),
 });
-export const TroubleEstablishedSchema = LaunchTroubleSchema.extend(AcceptanceSchema.shape);
-export const TroubleRevisedSchema = LaunchTroubleSchema.extend(AcceptanceSchema.shape);
+const AcceptedTroubleSchema = z.discriminatedUnion('kind', [
+  SettlementTroubleSchema.extend(AcceptanceSchema.shape),
+  SectorTroubleSchema.extend(AcceptanceSchema.shape),
+]);
+export const TroubleEstablishedSchema = AcceptedTroubleSchema;
+export const TroubleRevisedSchema = AcceptedTroubleSchema;
 export const ConnectionEstablishedSchema = ConnectionSchema.extend(AcceptanceSchema.shape);
 export const ConnectionRevisedSchema = ConnectionSchema.extend(AcceptanceSchema.shape);
 export const IncidentAcceptedSchema = IncidentSchema.extend(AcceptanceSchema.shape);

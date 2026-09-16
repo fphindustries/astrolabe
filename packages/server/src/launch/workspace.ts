@@ -72,6 +72,16 @@ function readinessInput(state: CampaignState): LaunchReadinessInput {
   const connection = state.launch.connection as PayloadFor<'connection.established'> | undefined;
   const incident = state.launch.incident as PayloadFor<'incident.accepted'> | undefined;
   const locations = Object.values(state.launch.locations) as PayloadFor<'location.added'>[];
+  // Trouble is a fact of its own aggregate, so readiness only sees it if this
+  // layer carries it across. Forgetting to made `sector_trouble_missing`
+  // permanent and activation unreachable; `workspace.test.ts` guards it.
+  const troubles = Object.values(state.launch.troubles) as PayloadFor<'trouble.established'>[];
+  const sectorTrouble = troubles.find((trouble) => trouble.kind === 'sector');
+  const settlementTrouble = new Map<string, string>(
+    troubles.flatMap((trouble) =>
+      trouble.kind === 'settlement' ? [[trouble.ownerId, trouble.text] as const] : [],
+    ),
+  );
   const settlements = locations
     .filter((location) => location.kind === 'settlement')
     .map((location) => ({
@@ -83,6 +93,7 @@ function readinessInput(state: CampaignState): LaunchReadinessInput {
       projects: location.projects,
       ...(location.planetId !== undefined ? { planetId: location.planetId } : {}),
       ...(location.firstLooks !== undefined ? { firstLooks: location.firstLooks } : {}),
+      ...troubleOf(settlementTrouble, location.id),
     }));
   const planets = locations
     .filter((location) => location.kind === 'planet')
@@ -123,6 +134,8 @@ function readinessInput(state: CampaignState): LaunchReadinessInput {
             ...(state.launch.startingSettlementId !== undefined
               ? { startingSettlementId: state.launch.startingSettlementId }
               : {}),
+            ...(sectorTrouble !== undefined ? { sectorTrouble: sectorTrouble.text } : {}),
+            ...(sector.starId !== undefined ? { star: sector.starId } : {}),
           },
         }),
     ...(connection === undefined
@@ -147,4 +160,13 @@ function readinessInput(state: CampaignState): LaunchReadinessInput {
           },
         }),
   };
+}
+
+/** `exactOptionalPropertyTypes` wants the key absent, not set to undefined. */
+function troubleOf(
+  troubles: ReadonlyMap<string, string>,
+  settlementId: string,
+): { trouble?: string } {
+  const trouble = troubles.get(settlementId);
+  return trouble === undefined ? {} : { trouble };
 }

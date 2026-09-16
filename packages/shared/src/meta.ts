@@ -552,7 +552,7 @@ export const EVENT_TYPE_META: MetaTable = {
     mutatesState: true,
     voidable: true,
     introduces: (p) => [entity(p.troubleId)],
-    references: (p) => (p.ownerId === undefined ? [] : [entity(p.ownerId)]),
+    references: (p) => (p.kind === 'settlement' ? [entity(p.ownerId)] : []),
   },
   'trouble.revised': {
     narrative: false,
@@ -562,7 +562,7 @@ export const EVENT_TYPE_META: MetaTable = {
     introduces: none,
     references: (p) => [
       entity(p.troubleId),
-      ...(p.ownerId === undefined ? [] : [entity(p.ownerId)]),
+      ...(p.kind === 'settlement' ? [entity(p.ownerId)] : []),
     ],
   },
   'connection.established': {
