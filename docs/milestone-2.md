@@ -249,8 +249,10 @@ task leaves the build working and the applicable tests passing.
 
 ### 1. Rules and imported launch data
 
-- [x] 1.1 Replace the truth-as-plain-oracle adapter shape with a truth schema that retains
+- [x] 1.1 Extend the truth-as-plain-oracle adapter shape into a truth schema that retains
   nested choices, quest starters, order, and provenance; regenerate the frozen artifact.
+  (Wording corrected by D-179: D-172 keeps the oracle id/dice/rows contract for Milestone 1
+  callers rather than replacing it. The `row.text` transition is owned by group 5's cutover.)
 - [x] 1.2 Add pure launch rules for campaign regions, required settlement/passage counts,
   allowed deferrals, one-to-six crew, and launch readiness, each traced to imported text
   or cited to the rulebook where the procedure is not in Datasworn.
@@ -259,8 +261,9 @@ task leaves the build working and the applicable tests passing.
 - [x] 1.4 Extend character-creation validation for appearance, backstory state, background
   vow, and optional gear without moving campaign-aware checks into `rules`.
 - [x] 1.5 Add the shared-starship/module ownership model and pure validation.
-- [x] 1.6 Unit-test real imported data, traceability, recipe completeness, region baselines,
-  character validity, and launch readiness.
+- [ ] 1.6 Unit-test real imported data, traceability, recipe completeness, region baselines,
+  character validity, and launch readiness. *(Reopened: the readiness validator has three
+  tests, all on the empty case. Completed by 3R.8.)*
 
 ### 2. Event catalogue and projections
 
@@ -286,14 +289,138 @@ task leaves the build working and the applicable tests passing.
 - [x] 3.2 Generalize truth commands to pick, roll, write, defer, resolve nested choices,
   and revise before launch.
 - [x] 3.3 Extend character proposal/creation commands and support one-to-six launch crew.
-- [x] 3.4 Add shared-starship proposal, roll, save, accept, and revision commands.
-- [x] 3.5 Add sector and settlement commands, including authoritative oracle rolls,
-  planet/star relationships, node placement, passages, exits, and troubles.
-- [x] 3.6 Add the automatic-strong-hit starting connection command.
-- [x] 3.7 Extend incident proposals to the complete accepted launch context.
-- [x] 3.8 Add the atomic activation command: validate readiness, mark active, begin Session
-  1, start the scene, and return the pending `Swear an Iron Vow` flow.
-- [x] 3.9 Add explicit post-launch amendment commands for launch facts.
+  *(Implemented; untested until 3R.7f.)*
+- [ ] 3.4 Add shared-starship proposal, roll, save, accept, and revision commands, rolling the
+  declared starship recipe rather than a client-named oracle. *(Reopened: the roll path is a
+  generic single-oracle endpoint and D-173's recipes are unreachable. 3R.5, 3R.7d.)*
+- [ ] 3.5 Add sector and settlement commands, including authoritative oracle rolls **of the
+  declared settlement, planet and trouble recipes**, planet/star relationships, node placement,
+  passages, exits, and troubles. *(Reopened: recipes unwired, route identity and off-map
+  duplicate defects. 3R.5, 3R.9, 3R.7e.)*
+- [x] 3.6 Add the automatic-strong-hit starting connection command. *(Implemented; untested
+  until 3R.7c.)*
+- [ ] 3.7 Extend incident proposals to the complete accepted launch context. *(Reopened:
+  supplies truths and location names only, not crew backgrounds and background vows, starship,
+  troubles, the connection, or quest starters. 3R.6.)*
+- [ ] 3.8 Add the atomic activation command: validate readiness, mark active, begin Session
+  1, start the scene, and return the pending `Swear an Iron Vow` flow. *(Reopened: readiness
+  is unreachable, so the command always refuses. 3R.1, 3R.7a.)*
+- [ ] 3.9 Add explicit post-launch amendment commands for launch facts. *(Reopened:
+  `launch.fact_amended` cannot name its target. 3R.4a, 3R.7b.)*
+
+### 3R. Launch foundation remediation
+
+Corrective work on groups 1–3, added round 29. Task numbers 1–10 stay stable (D-151's
+convention). **Group 4 does not start until 3R.1, 3R.2, 3R.3 and 3R.7 are green**: 4.1's
+section dashboard and 4.3's ready review and Launch confirmation cannot be built or tested
+against a readiness that can never reach `ready`.
+
+Decisions behind this group: D-176 (statuses beside state), D-177 (revision, not void),
+D-178 (a campaign with a session is not in launch), D-179 (ratification of D-171–D-175).
+
+**3R.1 Unblock readiness — blocking, do first.**
+
+- [ ] 3R.1a Add the failing test first: `buildLaunchWorkspace` over `sector.configured` plus
+  `trouble.established` must not report `sector_trouble_missing`. It fails today.
+- [ ] 3R.1b Map `state.launch.troubles` into the readiness input — `sector.sectorTrouble` from
+  the `kind: 'sector'` trouble, each settlement's `trouble` from its `kind: 'settlement'`
+  trouble by `ownerId`. The facts are projected today and read by nothing.
+- [ ] 3R.1c Map `sector.starId` into `LaunchSector.star`.
+- [ ] 3R.1d A readiness test that reaches `ready === true`, and a command test that drives
+  `activateLaunch` to success. 3.8 stays reopened until both exist.
+
+**3R.2 Task 2.7 — type the launch read model (D-176).**
+
+- [ ] 3R.2a Replace every `unknown` and `Record<string, unknown>` in `LaunchState` with the
+  accepted-fact types `design-event-log.md` §8 names.
+- [ ] 3R.2b Delete every cast in the launch read and command layers (`as PayloadFor<…>`,
+  `as never`, `rank as never`). A cast that cannot be deleted marks a real contract gap — fix
+  the type, not the call site.
+- [ ] 3R.2c Return section statuses and blockers beside `CampaignState`, per D-176.
+- [ ] 3R.2d Project `campaign.activated.pendingVow`, currently dropped.
+- [ ] 3R.2e Record an `eventId` on `connection.established` like every other launch fact.
+
+**3R.3 Task 2.8 — void, revision, and rebuild coverage (D-177).**
+
+- [ ] 3R.3a Mark launch event types `voidable: false` and assert it: no event type may claim
+  voidability that `planVoid` would refuse on session scope.
+- [ ] 3R.3b Revision fallback — voiding or superseding a revision reveals the previous value.
+- [ ] 3R.3c Cold rebuild and incremental projection over a complete launch log.
+- [ ] 3R.3d Assert `launch.draft_saved` and `creation.proposed` reach neither narration, recap,
+  nor world context (D-161).
+
+**3R.4 Typed payloads.** Cheapest now: these shapes exist only in the shared sample-payload
+table, not in any seeded fixture campaign, so no upcaster is owed under 2.2.
+
+- [ ] 3R.4a `launch.fact_amended`: a discriminated union carrying the target id and a typed
+  replacement per subject, replacing `subject` enum plus `replacement: string`.
+- [ ] 3R.4b `creation.proposed`: a typed object discriminated on `targetKind`, so a proposal is
+  field-editable per D-166.
+- [ ] 3R.4c Project `creation.proposed` so acceptance can resolve its causality (A41).
+- [ ] 3R.4d Replace the placeholder truths and crew draft snapshots — `{decisions: string[]}`
+  and `{characters: string[]}` restore nothing (A23).
+- [ ] 3R.4e Update the sample payloads in the shared test fixtures to match.
+
+**3R.5 Recipe-driven oracle rolls (D-65, D-166, D-173).** No task in groups 3–9 owned this,
+which is why the declared recipes are dead code.
+
+- [ ] 3R.5a Add a recipe roll command: the server materializes the recipe, rolls every slot,
+  appends one `oracle.rolled` per slot, and returns them as grounding. Threaded `rng`.
+- [ ] 3R.5b Wire the declared recipes — starship, settlement, shallow and detailed planet,
+  starting-connection NPC, sector trouble, inciting incident.
+- [ ] 3R.5c Keep the single-oracle roll for field-level Roll actions; state which interaction
+  uses which.
+
+**3R.6 Full incident context — completes 3.7.**
+
+- [ ] 3R.6a `decideTruth` records `questStarter`; the schema field exists and is never written,
+  leaving A25's inspiration half unimplemented.
+- [ ] 3R.6b Supply crew backgrounds and background vows, starship details, settlement and sector
+  trouble, the local connection, and quest starters — D-168's complete list. Accepted facts only.
+- [ ] 3R.6c Test that no draft snapshot reaches incident context.
+
+**3R.7 Command and route test backfill for 3.3–3.9**, highest risk first.
+
+- [ ] 3R.7a Activation: atomicity, readiness refusal, Session 1 and scene created, `pendingVow`
+  returned, a second activation refused (A38, A40).
+- [ ] 3R.7b Post-activation amendments with reason and visible history (A40).
+- [ ] 3R.7c The connection's automatic strong hit — no die rolled or fabricated (A36, D-167).
+- [ ] 3R.7d Shared starship: integrity 5, module owners retained, no per-character grant (A30).
+- [ ] 3R.7e Sector, locations, routes, off-map exits, layout, starting settlement (A31–A35).
+- [ ] 3R.7f Crew: one-to-six bounds, launch-validator rejection, no command-vehicle grant (A27).
+- [ ] 3R.7g HTTP coverage for the launch routes; none are exercised today.
+
+**3R.8 Readiness test matrix — completes 1.6.**
+
+- [ ] 3R.8a The `ready` case, and each region's baseline enforced while permitting extra content.
+- [ ] 3R.8b Route rules: self-link, undirected duplicate, unknown endpoint, off-map exit.
+- [ ] 3R.8c Planet depth — shallow for associated settlements, full for the starting planet.
+- [ ] 3R.8d Crew bounds, allowed deferrals (`leave_open`, `discover_in_play`), section statuses.
+- [ ] 3R.8e Traceability: every region baseline carries its citation. **This asserts the
+  citation is present, not that the numbers are right** — pp. 116–120 are outside the CC-BY
+  subset, so D-179 leaves the six numbers open for the user to confirm against the book.
+
+**3R.9 Correctness fixes.**
+
+- [ ] 3R.9a `route.removed` filters on `supersedesEventId`, which is the acceptance field and
+  undefined for a fresh route: nothing is removed and the tombstone inflates the passage count.
+  Fix the identity and add the missing command, or drop the event type until one needs it.
+- [ ] 3R.9b Route dedupe compares `to` by identity, so an off-map endpoint object never matches.
+  Compare structurally and undirected.
+- [ ] 3R.9c Model `location.removed` explicitly instead of leaving a tombstone in `locations`.
+- [ ] 3R.9d Type planet details; readiness requires `atmosphere`, `observedFromSpace` and
+  `feature` from what is currently an open string map.
+- [ ] 3R.9e Record the single-user assumption as a note rather than locking every launch
+  command. Activation locks because it alone must revalidate then append atomically; the rest
+  serve one local user (D-02, D-52). Revisit at Milestone 4.
+- [ ] 3R.9f Narrow activation's `launchFactEventIds` to accepted launch facts; it currently
+  sweeps in `oracle.rolled` and `ai.completed`. Assert the contents in 3R.7a.
+- [ ] 3R.9g Define `readinessVersion` or remove it; it is hardcoded to 1 and means nothing.
+
+**3R.10 Legacy-campaign guard (D-178).**
+
+- [ ] 3R.10a Refuse every launch command on a campaign that has begun a session.
+- [ ] 3R.10b Test that a Milestone 1 fixture campaign rejects them.
 
 ### 4. Campaign Launch workspace
 
@@ -382,7 +509,17 @@ npm run format:check
 ```
 
 Database-backed groups require the real Postgres suite; a run that skipped those tests
-does not verify the group. The final sign-off also requires:
+does not verify the group. **A bare `npm test` skips them silently and still exits 0** — it
+reports 83 files passed and 15 skipped, which is 305 tests, the whole launch command and
+projection surface. A run only counts when `DATABASE_URL` is set and vitest reports **zero
+skipped files**:
+
+```bash
+docker compose up -d db
+DATABASE_URL=postgres://astrolabe:astrolabe@localhost:5433/astrolabe npm test
+```
+
+The final sign-off also requires:
 
 - the golden launch through HTTP with stub providers and loaded dice;
 - the existing golden session unchanged after its fixture is rebuilt on the launch;
@@ -421,3 +558,21 @@ implementation note.
   connection, incident context, atomic activation, and amendments. `launch-commands.test.ts`
   covers the principal command boundaries against Postgres; the full suite, typecheck, and
   lint passed. Group 2's projection/void suite (2.7–2.8) remains independently open.
+- **Groups 1–3 reviewed, round 29. Group 3R added; 1.6 and 3.4–3.5, 3.7–3.9 reopened.**
+  The review found one blocking defect and several contract drifts. Corrections to the two
+  notes above, so the record is accurate:
+  - Both claim the suite passed "with Postgres-backed suites enabled". That is true only of a
+    run with `DATABASE_URL` set. The default `npm test` skips 305 tests and exits 0, so the
+    claim as written does not distinguish a real run from a vacuous one. See Verification.
+  - **Campaign Launch could not launch.** The workspace read layer never mapped the projected
+    trouble facts into the readiness input, so `sector_trouble_missing` was permanent,
+    `readiness.ready` was unreachable, and the activation command marked complete in 3.8 always
+    refused. Root cause is the untyped `LaunchState` that task 2.7 exists to fix: every reader
+    cast, so nothing failed to compile. Group 3 should not have completed over an open 2.7,
+    and 3R sequences that correctly.
+  - Group 1's declared recipes (1.3) are imported only by their own test. No task in groups 3–9
+    owned wiring them into a command, so the "authoritative oracle roll" shipped as a
+    client-names-the-oracle endpoint, against D-65 and D-166. 3R.5 adds the missing task.
+  - D-171–D-175 were authored and marked Approved in the implementer's own commit rather than
+    asked. They are ratified by D-179, with 1.1's wording corrected and D-174's six sector
+    baselines left open for verification against the rulebook.

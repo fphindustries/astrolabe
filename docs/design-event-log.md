@@ -511,9 +511,10 @@ interface CharacterState {
 
 interface Provenance { eventId; actorKind: 'player' | 'ai' | 'system'; reason?; at; }
 
+// D-176: the fold only. Section statuses and blockers are rules output and are
+// returned beside this by the launch workspace read layer, never folded into it.
 interface LaunchState {
   phase: 'draft' | 'ready' | 'active';
-  sections: Record<LaunchSection, { status: 'not_started' | 'in_progress' | 'complete'; blockers: LaunchProblem[] }>;
   drafts: Partial<Record<LaunchSection, TypedLaunchDraft>>;
   foundation?: CampaignFoundation;
   starship?: SharedStarshipState;
@@ -562,8 +563,19 @@ independent mechanical assets.
 `launch.phase` is partly derived: before activation it is `ready` exactly when the
 server's current launch-readiness function finds no blockers, otherwise `draft`.
 `campaign.activated` permanently makes it `active`. Section statuses and blockers are
-read-model output, not writable facts. Draft snapshots are present only for Campaign
-Launch resumption endpoints; context assembly explicitly strips `launch.drafts`.
+read-model output, not writable facts — **and under D-176 they are returned beside
+`CampaignState`, not inside `LaunchState`**, because deriving them means applying the
+launch-readiness rules and projection reads no rules content (task 2.7, D-174). The
+launch workspace layer folds the log, feeds the projected facts to the validator, and
+returns both. Every other `LaunchState` member is typed to its accepted-fact payload;
+an `unknown` or a cast at the read site is the defect D-176 exists to prevent. Draft
+snapshots are present only for Campaign Launch resumption endpoints; context assembly
+explicitly strips `launch.drafts`.
+
+**Void does not apply to launch facts** (D-177). They are corrected by revision before
+activation and by `launch.fact_amended` after it. Every launch event type is
+`voidable: false`, which matches what `planVoid` already enforces: a target with a null
+`sessionId` is refused under D-84.
 
 ---
 
