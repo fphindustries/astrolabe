@@ -324,7 +324,11 @@ D-178 (a campaign with a session is not in launch), D-179 (ratification of D-171
   `trouble.established` must not report `sector_trouble_missing`. It fails today.
 - [ ] 3R.1b Map `state.launch.troubles` into the readiness input — `sector.sectorTrouble` from
   the `kind: 'sector'` trouble, each settlement's `trouble` from its `kind: 'settlement'`
-  trouble by `ownerId`. The facts are projected today and read by nothing.
+  trouble by `ownerId`. The facts are projected today and read by nothing. **Decide here, not
+  mid-implementation:** `ownerId` is optional in the trouble schema and nothing requires a
+  settlement trouble to carry one, so an unattributed trouble cannot be mapped. Either require
+  `ownerId` when `kind` is `'settlement'`, or add a readiness blocker for an unattributed
+  settlement trouble.
 - [ ] 3R.1c Map `sector.starId` into `LaunchSector.star`.
 - [ ] 3R.1d A readiness test that reaches `ready === true`, and a command test that drives
   `activateLaunch` to success. 3.8 stays reopened until both exist.
@@ -343,7 +347,10 @@ D-178 (a campaign with a session is not in launch), D-179 (ratification of D-171
 **3R.3 Task 2.8 — void, revision, and rebuild coverage (D-177).**
 
 - [ ] 3R.3a Mark launch event types `voidable: false` and assert it: no event type may claim
-  voidability that `planVoid` would refuse on session scope.
+  voidability that `planVoid` would refuse on session scope. **This is a test rewrite, not a
+  flag flip:** `meta.test.ts` asserts the exempt set is *exactly* `ai.completed`, `ai.failed`,
+  `campaign.activated`, `event.voided`, and its title names only D-85's token accounting. Both
+  the list and the reason it states have to grow to cover D-177.
 - [ ] 3R.3b Revision fallback — voiding or superseding a revision reveals the previous value.
 - [ ] 3R.3c Cold rebuild and incremental projection over a complete launch log.
 - [ ] 3R.3d Assert `launch.draft_saved` and `creation.proposed` reach neither narration, recap,
@@ -439,6 +446,9 @@ which is why the declared recipes are dead code.
   rolls, and revisions with complete provenance.
 - [ ] 5.3 Add field help and full truth proposals without allowing the Guide to commit.
 - [ ] 5.4 Verify keyboard navigation, screen-reader grouping, and no-color-only status.
+- [ ] 5.5 Complete D-172's `row.text` transition: cut the legacy truth flow over to the
+  richer schema's summary/description fields, so `row.text` stops doubling as the cleaned
+  description. Owns the obligation D-179 left open; drop the task only by amending D-172.
 
 ### 6. Crew
 

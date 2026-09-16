@@ -511,8 +511,19 @@ interface CharacterState {
 
 interface Provenance { eventId; actorKind: 'player' | 'ai' | 'system'; reason?; at; }
 
-// D-176: the fold only. Section statuses and blockers are rules output and are
-// returned beside this by the launch workspace read layer, never folded into it.
+// D-176: the launch read layer folds the log, applies the readiness rules to the
+// projected facts, and returns both. Section statuses and blockers live here, beside
+// the state, never folded into it.
+interface LaunchWorkspace {
+  state: CampaignState;
+  readiness: {
+    ready: boolean;
+    problems: LaunchProblem[];
+    sections: Record<LaunchSection, { status: 'not_started' | 'in_progress' | 'complete'; blockers: LaunchProblem[] }>;
+  };
+}
+
+// The fold only. Every member is typed to its accepted-fact payload.
 interface LaunchState {
   phase: 'draft' | 'ready' | 'active';
   drafts: Partial<Record<LaunchSection, TypedLaunchDraft>>;
