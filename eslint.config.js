@@ -150,15 +150,24 @@ export default tseslint.config(
         'error',
         {
           paths: [
-            { name: 'postgres', message: 'Context assembly does no I/O; the command layer reads the log.' },
+            {
+              name: 'postgres',
+              message: 'Context assembly does no I/O; the command layer reads the log.',
+            },
             {
               name: '@anthropic-ai/sdk',
               message: 'Context assembly builds a request; only a provider sends one.',
             },
           ],
           patterns: [
-            { group: ['node:*', 'fs', 'path', 'crypto'], message: 'Context assembly is pure: no I/O.' },
-            { group: ['**/db/**'], message: 'Context assembly does no I/O; the command layer reads the log.' },
+            {
+              group: ['node:*', 'fs', 'path', 'crypto'],
+              message: 'Context assembly is pure: no I/O.',
+            },
+            {
+              group: ['**/db/**'],
+              message: 'Context assembly does no I/O; the command layer reads the log.',
+            },
             {
               group: ['../claude.js', '../stub.js', '../create-provider.js'],
               message: 'Context assembly is provider-independent; import only the request types.',
