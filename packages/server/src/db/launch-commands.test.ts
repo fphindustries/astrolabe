@@ -172,9 +172,8 @@ describe.skipIf(!hasTestDatabase)('Campaign Launch workspace commands (3.1–3.2
       campaignId,
       commandId: newId<CommandId>(),
       actor: PLAYER,
-      targetKind: 'starship',
+      proposal: { targetKind: 'starship', proposal: { name: 'Lantern Wake' } },
       targetId: 'shared-starship',
-      proposal: 'Use the recorded ship name.',
       rationale: 'The oracle result fits the campaign premise.',
       groundedIn: [roll.id],
     });

@@ -253,6 +253,14 @@ export interface LaunchState {
   readonly startingSettlementId?: EntityId;
   readonly troubles: Readonly<Record<EntityId, Accepted<'trouble.established'>>>;
   readonly amendments: readonly PayloadFor<'launch.fact_amended'>[];
+  /**
+   * Guide and player proposals by target, newest wins. Not canon (D-161):
+   * held so acceptance can resolve causality back to the proposal, and so A41
+   * can link an accepted fact to the grounding it came from.
+   */
+  readonly proposals: Readonly<
+    Record<string, PayloadFor<'creation.proposed'> & { readonly eventId: EventId }>
+  >;
   readonly connection?: Accepted<'connection.established'>;
   readonly incident?: Accepted<'incident.accepted'>;
   readonly activation?: {

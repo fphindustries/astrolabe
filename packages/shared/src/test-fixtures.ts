@@ -415,7 +415,7 @@ export const SAMPLE_PAYLOADS: { [T in EventType]: PayloadFor<T> } = {
   'creation.proposed': {
     targetKind: 'truth',
     targetId: 'oracle:cataclysm',
-    proposal: 'A proposal',
+    proposal: { truthId: 'oracle:cataclysm', text: 'A slow collapse, not one blast.' },
     rationale: 'Grounded.',
     groundedIn: [],
   },
@@ -522,6 +522,9 @@ export const SAMPLE_PAYLOADS: { [T in EventType]: PayloadFor<T> } = {
     provenance: 'player_written',
     groundedIn: [],
   },
+  // `supersedesEventId` names the event that *added* the route. `testEventId(1)`
+  // is not arbitrary: mutates-state.test.ts appends its `route.added` setup
+  // under exactly this id so the removal has something to match.
   'route.removed': { supersedesEventId: testEventId(1), reason: 'Duplicate.' },
   'sector.layout_changed': { coordinates: { [STATION]: { x: 1, y: 2 } } },
   'starting_settlement.selected': { settlementId: STATION },
@@ -598,8 +601,12 @@ export const SAMPLE_PAYLOADS: { [T in EventType]: PayloadFor<T> } = {
     readinessVersion: 1,
   },
   'launch.fact_amended': {
-    subject: 'incident',
-    replacement: 'Corrected wording.',
+    subject: 'trouble',
+    replacement: {
+      kind: 'sector',
+      troubleId: SURVIVOR,
+      text: 'The relay grid is being jammed, not failing.',
+    },
     reason: 'Correction.',
     supersedesEventId: testEventId(1),
   },

@@ -136,6 +136,32 @@ const IncidentSchema = z.object({
   openingScene: z.object({ title: z.string().min(1), locationId: EntityIdSchema.optional() }),
 });
 
+const TruthProposalSchema = z.object({
+  truthId: OracleIdSchema.optional(),
+  text: z.string().optional(),
+  questStarter: z.string().optional(),
+});
+/** A settlement is one member of the location union, so it gets its own shape. */
+const SettlementProposalSchema = z.object({
+  id: EntityIdSchema.optional(),
+  name: z.string().optional(),
+  location: z.enum(['planetside', 'orbital', 'deep_space']).optional(),
+  population: z.string().optional(),
+  authority: z.string().optional(),
+  projects: z.array(z.string()).max(2).optional(),
+  firstLooks: z.array(z.string()).max(2).optional(),
+});
+const SectorProposalSchema = z.object({
+  name: z.string().optional(),
+  region: RegionSchema.optional(),
+  settlements: z.array(SettlementProposalSchema).optional(),
+});
+const TroubleProposalSchema = z.object({
+  kind: z.enum(['settlement', 'sector']).optional(),
+  ownerId: EntityIdSchema.optional(),
+  text: z.string().optional(),
+});
+
 const DraftSnapshotSchema = z.discriminatedUnion('section', [
   z.object({
     section: z.literal('foundation'),
@@ -146,9 +172,25 @@ const DraftSnapshotSchema = z.discriminatedUnion('section', [
   }),
   z.object({
     section: z.literal('truths'),
-    snapshot: z.object({ decisions: z.array(z.string()) }),
+    // A23 restores what the player had in front of them, so a draft decision
+    // carries the same shape the accepted one will. `string[]` restored nothing.
+    snapshot: z.object({
+      decisions: z.array(
+        z.object({
+          truthId: OracleIdSchema,
+          resolution: z.enum(['selected', 'rolled', 'custom', 'leave_open']).optional(),
+          optionIndex: z.int().nonnegative().optional(),
+          subchoiceId: z.string().optional(),
+          subchoiceOptionIndex: z.int().nonnegative().optional(),
+          text: z.string().optional(),
+        }),
+      ),
+    }),
   }),
-  z.object({ section: z.literal('crew'), snapshot: z.object({ characters: z.array(z.string()) }) }),
+  z.object({
+    section: z.literal('crew'),
+    snapshot: z.object({ characters: z.array(LaunchCharacterSchema.partial()) }),
+  }),
   z.object({
     section: z.literal('starship'),
     snapshot: z.object({ starship: SharedStarshipSchema.partial().optional() }),
@@ -179,22 +221,40 @@ const DraftSnapshotSchema = z.discriminatedUnion('section', [
   }),
 ]);
 export const LaunchDraftSavedSchema = DraftSnapshotSchema;
-export const CreationProposedSchema = z.object({
-  targetKind: z.enum([
-    'truth',
-    'character',
-    'starship',
-    'settlement',
-    'sector',
-    'connection',
-    'trouble',
-    'incident',
-  ]),
-  targetId: z.string().min(1),
-  proposal: z.string().min(1),
-  rationale: z.string().min(1),
-  groundedIn: z.array(EventIdSchema),
-});
+/**
+ * A Guide or player proposal, not yet canon (D-161, D-166).
+ *
+ * `proposal` is the object under review, typed to the fact it would become,
+ * because D-166 requires every field to stay editable before acceptance — a
+ * single string is not something a review screen can edit field by field, and
+ * acceptance would have to re-parse it to write the canonical event.
+ *
+ * Fields are individually optional: a proposal may be partial, and the
+ * accepted event is where completeness binds.
+ */
+export const CreationProposalSchema = z.discriminatedUnion('targetKind', [
+  z.object({ targetKind: z.literal('truth'), proposal: TruthProposalSchema }),
+  z.object({ targetKind: z.literal('character'), proposal: LaunchCharacterSchema.partial() }),
+  z.object({ targetKind: z.literal('starship'), proposal: SharedStarshipSchema.partial() }),
+  z.object({ targetKind: z.literal('settlement'), proposal: SettlementProposalSchema }),
+  z.object({ targetKind: z.literal('sector'), proposal: SectorProposalSchema }),
+  z.object({ targetKind: z.literal('connection'), proposal: ConnectionSchema.partial() }),
+  z.object({ targetKind: z.literal('trouble'), proposal: TroubleProposalSchema }),
+  z.object({ targetKind: z.literal('incident'), proposal: IncidentSchema.partial() }),
+]);
+
+export type CreationProposal = z.infer<typeof CreationProposalSchema>;
+export type CreationTargetKind = CreationProposal['targetKind'];
+
+export const CreationProposedSchema = z.intersection(
+  CreationProposalSchema,
+  z.object({
+    targetId: z.string().min(1),
+    rationale: z.string().min(1),
+    /** The `oracle.rolled` events this proposal was built from (A41). */
+    groundedIn: z.array(EventIdSchema),
+  }),
+);
 export const CampaignFoundationSetSchema = z.object({
   premise: z.string().min(1),
   settings: CampaignSettingsSchema,
@@ -275,20 +335,46 @@ export const CampaignActivatedSchema = z.object({
   }),
   readinessVersion: z.int().positive(),
 });
-export const LaunchFactAmendedSchema = z.object({
-  subject: z.enum([
-    'foundation',
-    'truth',
-    'character',
-    'starship',
-    'sector',
-    'location',
-    'route',
-    'trouble',
-    'connection',
-    'incident',
-  ]),
-  replacement: z.string().min(1),
-  reason: z.string().min(1),
-  supersedesEventId: EventIdSchema,
-});
+/**
+ * What an amendment replaces a launch fact with (D-161, A40).
+ *
+ * The replacement is the same shape as the fact it supersedes, so an amended
+ * location is still a location and an amended trouble still satisfies the
+ * settlement/sector rule. A free-text `replacement` could not do that, and
+ * the `subject` enum beside it could disagree with the event actually being
+ * amended.
+ *
+ * `subject` is **derived by the server** from the superseded event's type,
+ * never taken from the caller: `supersedesEventId` already identifies the
+ * fact, so a second, independently-supplied label could only ever contradict
+ * it.
+ */
+export const LaunchAmendmentSchema = z.discriminatedUnion('subject', [
+  z.object({
+    subject: z.literal('foundation'),
+    replacement: z.object({ premise: z.string().min(1), settings: CampaignSettingsSchema }),
+  }),
+  z.object({
+    subject: z.literal('truth'),
+    replacement: z.object({ truthId: OracleIdSchema, text: z.string().min(1) }),
+  }),
+  z.object({ subject: z.literal('character'), replacement: LaunchCharacterSchema }),
+  z.object({ subject: z.literal('starship'), replacement: SharedStarshipSchema }),
+  z.object({
+    subject: z.literal('sector'),
+    replacement: z.object({ sectorId: EntityIdSchema, name: z.string().min(1) }),
+  }),
+  z.object({ subject: z.literal('location'), replacement: LaunchLocationSchema }),
+  z.object({ subject: z.literal('route'), replacement: LaunchRouteSchema }),
+  z.object({ subject: z.literal('trouble'), replacement: LaunchTroubleSchema }),
+  z.object({ subject: z.literal('connection'), replacement: ConnectionSchema }),
+  z.object({ subject: z.literal('incident'), replacement: IncidentSchema }),
+]);
+
+export type LaunchAmendment = z.infer<typeof LaunchAmendmentSchema>;
+export type LaunchAmendmentSubject = LaunchAmendment['subject'];
+
+export const LaunchFactAmendedSchema = z.intersection(
+  LaunchAmendmentSchema,
+  z.object({ reason: z.string().min(1), supersedesEventId: EventIdSchema }),
+);

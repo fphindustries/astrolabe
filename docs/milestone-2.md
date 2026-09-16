@@ -279,7 +279,7 @@ task leaves the build working and the applicable tests passing.
 - [x] 2.6 Add the connection aggregate/track participants and shared-vow participants.
 - [x] 2.7 Project launch status, drafts, ship, complete sector, connection, and
   participants without reading rules content inside projection. *(Closed by 3R.2.)*
-- [ ] 2.8 Cover void containment, revision fallback, cold rebuild, incremental projection,
+- [x] 2.8 Cover void containment, revision fallback, cold rebuild, incremental projection,
   narrative-log visibility, and per-type `mutatesState` metadata.
 
 ### 3. Launch commands and API
@@ -305,8 +305,8 @@ task leaves the build working and the applicable tests passing.
 - [x] 3.8 Add the atomic activation command: validate readiness, mark active, begin Session
   1, start the scene, and return the pending `Swear an Iron Vow` flow. *(Re-closed by 3R.1d:
   two blocking defects fixed and covered by `launch-activation.test.ts`.)*
-- [ ] 3.9 Add explicit post-launch amendment commands for launch facts. *(Reopened:
-  `launch.fact_amended` cannot name its target. 3R.4a, 3R.7b.)*
+- [x] 3.9 Add explicit post-launch amendment commands for launch facts. *(Re-closed by
+  3R.4a and 3R.7b: typed replacement, server-derived subject, covered.)*
 
 ### 3R. Launch foundation remediation
 
@@ -346,27 +346,27 @@ D-178 (a campaign with a session is not in launch), D-179 (ratification of D-171
 
 **3R.3 Task 2.8 — void, revision, and rebuild coverage (D-177).**
 
-- [ ] 3R.3a Mark launch event types `voidable: false` and assert it: no event type may claim
+- [x] 3R.3a Mark launch event types `voidable: false` and assert it: no event type may claim
   voidability that `planVoid` would refuse on session scope. **This is a test rewrite, not a
   flag flip:** `meta.test.ts` asserts the exempt set is *exactly* `ai.completed`, `ai.failed`,
   `campaign.activated`, `event.voided`, and its title names only D-85's token accounting. Both
   the list and the reason it states have to grow to cover D-177.
-- [ ] 3R.3b Revision fallback — voiding or superseding a revision reveals the previous value.
-- [ ] 3R.3c Cold rebuild and incremental projection over a complete launch log.
-- [ ] 3R.3d Assert `launch.draft_saved` and `creation.proposed` reach neither narration, recap,
+- [x] 3R.3b Revision fallback — voiding or superseding a revision reveals the previous value.
+- [x] 3R.3c Cold rebuild and incremental projection over a complete launch log.
+- [x] 3R.3d Assert `launch.draft_saved` and `creation.proposed` reach neither narration, recap,
   nor world context (D-161).
 
 **3R.4 Typed payloads.** Cheapest now: these shapes exist only in the shared sample-payload
 table, not in any seeded fixture campaign, so no upcaster is owed under 2.2.
 
-- [ ] 3R.4a `launch.fact_amended`: a discriminated union carrying the target id and a typed
+- [x] 3R.4a `launch.fact_amended`: a discriminated union carrying the target id and a typed
   replacement per subject, replacing `subject` enum plus `replacement: string`.
-- [ ] 3R.4b `creation.proposed`: a typed object discriminated on `targetKind`, so a proposal is
+- [x] 3R.4b `creation.proposed`: a typed object discriminated on `targetKind`, so a proposal is
   field-editable per D-166.
-- [ ] 3R.4c Project `creation.proposed` so acceptance can resolve its causality (A41).
-- [ ] 3R.4d Replace the placeholder truths and crew draft snapshots — `{decisions: string[]}`
+- [x] 3R.4c Project `creation.proposed` so acceptance can resolve its causality (A41).
+- [x] 3R.4d Replace the placeholder truths and crew draft snapshots — `{decisions: string[]}`
   and `{characters: string[]}` restore nothing (A23).
-- [ ] 3R.4e Update the sample payloads in the shared test fixtures to match.
+- [x] 3R.4e Update the sample payloads in the shared test fixtures to match.
 
 **3R.5 Recipe-driven oracle rolls (D-65, D-166, D-173).** No task in groups 3–9 owned this,
 which is why the declared recipes are dead code.
@@ -390,7 +390,7 @@ which is why the declared recipes are dead code.
 
 - [x] 3R.7a Activation: atomicity, readiness refusal, Session 1 and scene created, `pendingVow`
   returned, a second activation refused (A38, A40).
-- [ ] 3R.7b Post-activation amendments with reason and visible history (A40).
+- [x] 3R.7b Post-activation amendments with reason and visible history (A40).
 - [ ] 3R.7c The connection's automatic strong hit — no die rolled or fabricated (A36, D-167).
 - [ ] 3R.7d Shared starship: integrity 5, module owners retained, no per-character grant (A30).
 - [ ] 3R.7e Sector, locations, routes, off-map exits, layout, starting settlement (A31–A35).
@@ -610,3 +610,18 @@ implementation note.
   same change. Removing the tombstones made `mutates-state.test.ts` fail honestly for both
   removal types — they had only ever "mutated" by leaving the tombstone behind — so both got a
   real setup. `format:check` now passes; the `eslint.config.js` violation is fixed.
+- **3R.3 and 3R.4 complete; 2.8 closed, 3.9 re-closed.** The launch catalogue's
+  `voidable: true` described a capability `planVoid` denies, so all 25 types are now
+  `voidable: false` (D-177) and `cascade.test.ts` asserts the planner agrees with the
+  metadata. `launch.fact_amended` carries a typed replacement shaped like the fact it
+  supersedes, and **`subject` is derived from the superseded event rather than accepted from
+  the caller** — `supersedesEventId` already names the fact, so a second label could only
+  contradict it, and a mismatch is now refused. `creation.proposed` carries a typed object
+  per `targetKind` so D-166's field-level review has something to edit, and is projected into
+  `launch.proposals` for A41's causality link — which made `mutates-state.test.ts` correctly
+  demand its `mutatesState` flag flip. Truth and crew draft snapshots hold real shapes
+  instead of `string[]`.
+  The D-161 context assertions carry a positive control where one is possible; the
+  `renderState` assertion says plainly that it is a regression guard, because `renderState`
+  reads no launch state at all today.
+  Verified with Postgres: 102 files, 1118 tests, zero skipped files.

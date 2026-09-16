@@ -16,12 +16,15 @@ import { CharacterStatsSchema } from './events/character.js';
 import { RollAdjustmentSchema, RollUsingSchema } from './events/move.js';
 import { ChallengeRankSchema } from './events/track.js';
 import {
+  CreationProposalSchema,
   IncidentAcceptedSchema,
+  LaunchAmendmentSchema,
   LaunchDraftSavedSchema,
   LaunchLocationSchema,
   LaunchRouteSchema,
   LaunchTroubleSchema,
   SharedStarshipSchema,
+  type LaunchAmendmentSubject,
 } from './events/launch.js';
 import {
   AssetIdSchema,
@@ -297,24 +300,15 @@ export interface AcceptLaunchIncidentResponse {
 
 export const AmendLaunchFactRequestBodySchema = z.object({
   commandId: CommandIdSchema,
-  subject: z.enum([
-    'foundation',
-    'truth',
-    'character',
-    'starship',
-    'sector',
-    'location',
-    'route',
-    'trouble',
-    'connection',
-    'incident',
-  ]),
-  replacement: z.string().trim().min(1),
+  /** The typed replacement and the subject it claims. The server checks that
+   * claim against the superseded event rather than trusting it. */
+  amendment: LaunchAmendmentSchema,
   reason: z.string().trim().min(1),
   supersedesEventId: EventIdSchema,
 });
 export type AmendLaunchFactRequestBody = z.infer<typeof AmendLaunchFactRequestBodySchema>;
 export interface AmendLaunchFactResponse {
+  readonly subject: LaunchAmendmentSubject;
   readonly supersedesEventId: EventId;
 }
 
@@ -371,23 +365,15 @@ export interface RollLaunchOracleResponse {
   readonly text: string;
 }
 
-export const ProposeLaunchCreationRequestBodySchema = z.object({
-  commandId: CommandIdSchema,
-  targetKind: z.enum([
-    'truth',
-    'character',
-    'starship',
-    'settlement',
-    'sector',
-    'connection',
-    'trouble',
-    'incident',
-  ]),
-  targetId: z.string().trim().min(1),
-  proposal: z.string().trim().min(1),
-  rationale: z.string().trim().min(1),
-  groundedIn: z.array(EventIdSchema),
-});
+export const ProposeLaunchCreationRequestBodySchema = z.intersection(
+  CreationProposalSchema,
+  z.object({
+    commandId: CommandIdSchema,
+    targetId: z.string().trim().min(1),
+    rationale: z.string().trim().min(1),
+    groundedIn: z.array(EventIdSchema),
+  }),
+);
 export type ProposeLaunchCreationRequestBody = z.infer<
   typeof ProposeLaunchCreationRequestBodySchema
 >;

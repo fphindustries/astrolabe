@@ -35,6 +35,7 @@ function emptyState(): CampaignState {
       layout: {},
       troubles: {},
       amendments: [],
+      proposals: {},
     },
     tokenUsage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
   };

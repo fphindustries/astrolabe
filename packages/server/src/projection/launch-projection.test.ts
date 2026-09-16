@@ -42,7 +42,7 @@ function launchLog(): LogBuilder {
     .add('creation.proposed', {
       targetKind: 'trouble',
       targetId: TROUBLE,
-      proposal: 'An unaccepted Guide proposal.',
+      proposal: { kind: 'sector', text: 'An unaccepted Guide proposal.' },
       rationale: 'Because.',
       groundedIn: [],
     })
@@ -177,6 +177,10 @@ describe('non-canonical launch events stay out of AI context (D-161)', () => {
   });
 
   it('keeps both out of the play-screen state context', () => {
+    // `renderState` reads no launch state at all today — it is bounded to
+    // projected play structure by design (D-156). So this is a regression
+    // guard against it starting to, not a filter being exercised: there is
+    // no positive control to pair it with, and that is the point.
     const rendered = renderState(state);
 
     expect(rendered).not.toContain('A draft nobody accepted');

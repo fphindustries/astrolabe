@@ -11,6 +11,10 @@ import {
 import type {
   Actor,
   CampaignId,
+  CreationProposal,
+  EventType,
+  LaunchAmendment,
+  LaunchAmendmentSubject,
   CampaignSettings,
   CommandId,
   EntityId,
@@ -150,9 +154,8 @@ export interface ProposeLaunchCreationRequest {
   readonly campaignId: CampaignId;
   readonly commandId: CommandId;
   readonly actor: Actor;
-  readonly targetKind: PayloadFor<'creation.proposed'>['targetKind'];
+  readonly proposal: CreationProposal;
   readonly targetId: string;
-  readonly proposal: string;
   readonly rationale: string;
   readonly groundedIn: readonly EventId[];
 }
@@ -175,31 +178,28 @@ export async function proposeLaunchCreation(
       'Proposals may cite only recorded oracle rolls.',
     );
   }
-  const proposal = request.proposal.trim();
   const rationale = request.rationale.trim();
-  if (proposal === '' || rationale === '')
-    throw new LaunchRejectedError(
-      'proposal_fields_required',
-      'A proposal needs content and a rationale.',
-    );
+  if (rationale === '')
+    throw new LaunchRejectedError('proposal_fields_required', 'A proposal needs a rationale.');
+  if (Object.values(request.proposal.proposal).every((value) => value === undefined))
+    throw new LaunchRejectedError('proposal_fields_required', 'A proposal needs content.');
   return appendCommand(sql, {
     campaignId: request.campaignId,
     commandId: request.commandId,
-    kind: `launch.propose.${request.targetKind}`,
+    kind: `launch.propose.${request.proposal.targetKind}`,
     actor: request.actor,
     events: [
       {
         type: 'creation.proposed',
         payload: {
-          targetKind: request.targetKind,
+          ...request.proposal,
           targetId: request.targetId,
-          proposal,
           rationale,
           groundedIn: request.groundedIn,
         },
       },
     ],
-    response: { targetKind: request.targetKind, targetId: request.targetId },
+    response: { targetKind: request.proposal.targetKind, targetId: request.targetId },
   });
 }
 
@@ -264,8 +264,9 @@ export interface AmendLaunchFactRequest {
   readonly campaignId: CampaignId;
   readonly commandId: CommandId;
   readonly actor: Actor;
-  readonly subject: PayloadFor<'launch.fact_amended'>['subject'];
-  readonly replacement: string;
+  /** The typed replacement and the subject it claims; the subject is checked
+   * against the superseded event rather than trusted. */
+  readonly amendment: LaunchAmendment;
   readonly reason: string;
   readonly supersedesEventId: EventId;
 }
@@ -540,55 +541,62 @@ export async function amendLaunchFact(
       'Launch facts can be amended only after activation.',
     );
   const target = events.find((event) => event.id === request.supersedesEventId);
-  if (target === undefined || !isLaunchFact(target.type)) {
+  const subject = target === undefined ? undefined : AMENDABLE_SUBJECTS[target.type];
+  if (subject === undefined) {
     throw new LaunchRejectedError(
       'invalid_amendment_target',
       'Choose an accepted launch fact to amend.',
     );
   }
-  const replacement = request.replacement.trim();
-  const reason = request.reason.trim();
-  if (replacement === '' || reason === '')
+  if (subject !== request.amendment.subject) {
     throw new LaunchRejectedError(
-      'amendment_fields_required',
-      'An amendment needs replacement text and a reason.',
+      'amendment_subject_mismatch',
+      `That event states a ${subject}, not a ${request.amendment.subject}.`,
     );
+  }
+  const reason = request.reason.trim();
+  if (reason === '')
+    throw new LaunchRejectedError('amendment_reason_required', 'An amendment needs a reason.');
   return appendCommand(sql, {
     campaignId: request.campaignId,
     commandId: request.commandId,
-    kind: 'launch.fact.amend',
+    kind: `launch.fact.amend.${subject}`,
     actor: request.actor,
     events: [
       {
         type: 'launch.fact_amended',
-        payload: { subject: request.subject, replacement, reason, supersedesEventId: target.id },
+        payload: { ...request.amendment, reason, supersedesEventId: target!.id },
       },
     ],
-    response: { supersedesEventId: target.id },
+    response: { subject, supersedesEventId: target!.id },
   });
 }
 
-function isLaunchFact(type: string): boolean {
-  return [
-    'campaign.foundation_set',
-    'truth.decided',
-    'character.created',
-    'character.revised',
-    'starship.established',
-    'starship.revised',
-    'sector.configured',
-    'location.added',
-    'location.revised',
-    'route.added',
-    'route.revised',
-    'trouble.established',
-    'trouble.revised',
-    'connection.established',
-    'connection.revised',
-    'incident.accepted',
-    'incident.revised',
-  ].includes(type);
-}
+/**
+ * Which launch fact an event states, and therefore what an amendment to it
+ * replaces. The amendment's `subject` is read from here rather than accepted
+ * from the caller: `supersedesEventId` already names the fact, so a
+ * separately-supplied label could only ever contradict it.
+ */
+const AMENDABLE_SUBJECTS: Partial<Record<EventType, LaunchAmendmentSubject>> = {
+  'campaign.foundation_set': 'foundation',
+  'truth.decided': 'truth',
+  'character.created': 'character',
+  'character.revised': 'character',
+  'starship.established': 'starship',
+  'starship.revised': 'starship',
+  'sector.configured': 'sector',
+  'location.added': 'location',
+  'location.revised': 'location',
+  'route.added': 'route',
+  'route.revised': 'route',
+  'trouble.established': 'trouble',
+  'trouble.revised': 'trouble',
+  'connection.established': 'connection',
+  'connection.revised': 'connection',
+  'incident.accepted': 'incident',
+  'incident.revised': 'incident',
+};
 
 /** Accept or revise the incident only after checking the cited accepted facts. */
 export async function acceptLaunchIncident(

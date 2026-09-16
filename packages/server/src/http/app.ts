@@ -454,12 +454,16 @@ export function buildApp({
         return undefined;
       }
       try {
-        const { commandId, ...proposal } = parsed.data;
+        const { commandId, targetId, rationale, groundedIn, ...proposal } = parsed.data;
         const result = await proposeLaunchCreation(sql, {
           campaignId: id,
           commandId,
           actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
-          ...proposal,
+          // The discriminated pair travels together, so the union stays narrow.
+          proposal,
+          targetId,
+          rationale,
+          groundedIn,
         });
         reply.code(201);
         return result.response as { targetKind: string; targetId: string };
@@ -684,8 +688,7 @@ export function buildApp({
           campaignId: id,
           commandId: parsed.data.commandId,
           actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
-          subject: parsed.data.subject,
-          replacement: parsed.data.replacement,
+          amendment: parsed.data.amendment,
           reason: parsed.data.reason,
           supersedesEventId: parsed.data.supersedesEventId,
         });

@@ -426,7 +426,10 @@ export const EVENT_TYPE_META: MetaTable = {
   'creation.proposed': {
     narrative: false,
     significant: false,
-    mutatesState: false,
+    // Held in `launch.proposals` so acceptance can resolve causality back to
+    // it (A41). Projected is not the same as canon: nothing reads a proposal
+    // as an established fact, and context assembly strips it (D-161).
+    mutatesState: true,
     voidable: false,
     introduces: none,
     references: none,

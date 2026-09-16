@@ -326,7 +326,19 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
         },
       };
     case 'creation.proposed':
-      return state;
+      // Projected so acceptance can resolve a proposal's causality and A41 can
+      // link an accepted fact back to the proposal it came from. Still not
+      // canon: nothing reads it as an established fact (D-161).
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          proposals: {
+            ...state.launch.proposals,
+            [event.payload.targetId]: { ...event.payload, eventId: event.id },
+          },
+        },
+      };
     case 'campaign.foundation_set':
       return {
         ...state,

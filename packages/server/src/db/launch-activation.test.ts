@@ -15,9 +15,11 @@ import { buildLaunchWorkspace } from '../launch/workspace.js';
 import { createCampaign } from './campaign-commands.js';
 import { createCharacter } from './character-commands.js';
 import { readEvents } from './event-store.js';
+import { project } from '../projection/project.js';
 import {
   acceptLaunchIncident,
   activateLaunch,
+  amendLaunchFact,
   configureLaunchSector,
   decideTruth,
   establishLaunchConnection,
@@ -303,6 +305,84 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
         actor: PLAYER,
       }),
     ).rejects.toThrow(/Complete every launch requirement/);
+  });
+
+  it('amends a launch fact after activation, deriving the subject (3.9, A40)', async () => {
+    const { campaignId } = await readyCampaign();
+    await activateLaunch(db.sql, { campaignId, commandId: newId<CommandId>(), actor: PLAYER });
+
+    const events = await readEvents(db.sql, campaignId);
+    const sectorTrouble = events.find(
+      (event) => event.type === 'trouble.established' && event.payload.kind === 'sector',
+    )!;
+
+    const result = await amendLaunchFact(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      amendment: {
+        subject: 'trouble',
+        replacement: {
+          kind: 'sector',
+          troubleId: (sectorTrouble.payload as { troubleId: EntityId }).troubleId,
+          text: 'The relay grid is being jammed, not failing.',
+        },
+      },
+      reason: 'The crew learned it was deliberate.',
+      supersedesEventId: sectorTrouble.id,
+    });
+
+    // The subject is read off the superseded event, not taken on trust.
+    expect(result.response).toMatchObject({ subject: 'trouble' });
+    const amendments = project(await readEvents(db.sql, campaignId)).launch.amendments;
+    expect(amendments).toHaveLength(1);
+    expect(amendments[0]).toMatchObject({
+      subject: 'trouble',
+      reason: 'The crew learned it was deliberate.',
+      supersedesEventId: sectorTrouble.id,
+    });
+  });
+
+  it('refuses an amendment whose subject contradicts the event it supersedes', async () => {
+    const { campaignId } = await readyCampaign();
+    await activateLaunch(db.sql, { campaignId, commandId: newId<CommandId>(), actor: PLAYER });
+
+    const events = await readEvents(db.sql, campaignId);
+    const sectorTrouble = events.find((event) => event.type === 'trouble.established')!;
+
+    await expect(
+      amendLaunchFact(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        amendment: {
+          subject: 'sector',
+          replacement: { sectorId: newId<EntityId>(), name: 'Somewhere else' },
+        },
+        reason: 'Wrong subject on purpose.',
+        supersedesEventId: sectorTrouble.id,
+      }),
+    ).rejects.toThrow(/states a trouble, not a sector/);
+  });
+
+  it('refuses to amend before activation (A40)', async () => {
+    const { campaignId } = await readyCampaign();
+    const events = await readEvents(db.sql, campaignId);
+    const trouble = events.find((event) => event.type === 'trouble.established')!;
+
+    await expect(
+      amendLaunchFact(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        amendment: {
+          subject: 'trouble',
+          replacement: { kind: 'sector', troubleId: newId<EntityId>(), text: 'Too early.' },
+        },
+        reason: 'Before launch this is a revision, not an amendment.',
+        supersedesEventId: trouble.id,
+      }),
+    ).rejects.toThrow(/only after activation/);
   });
 
   it('closes launch commands once active (A40)', async () => {
