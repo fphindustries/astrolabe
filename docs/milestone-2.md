@@ -277,8 +277,8 @@ task leaves the build working and the applicable tests passing.
 - [x] 2.5 Add structured sector, settlement, planet/star relationship, map placement,
   off-map passage, starting-location, and trouble facts.
 - [x] 2.6 Add the connection aggregate/track participants and shared-vow participants.
-- [ ] 2.7 Project launch status, drafts, ship, complete sector, connection, and
-  participants without reading rules content inside projection.
+- [x] 2.7 Project launch status, drafts, ship, complete sector, connection, and
+  participants without reading rules content inside projection. *(Closed by 3R.2.)*
 - [ ] 2.8 Cover void containment, revision fallback, cold rebuild, incremental projection,
   narrative-log visibility, and per-type `mutatesState` metadata.
 
@@ -335,14 +335,14 @@ D-178 (a campaign with a session is not in launch), D-179 (ratification of D-171
 
 **3R.2 Task 2.7 — type the launch read model (D-176).**
 
-- [ ] 3R.2a Replace every `unknown` and `Record<string, unknown>` in `LaunchState` with the
+- [x] 3R.2a Replace every `unknown` and `Record<string, unknown>` in `LaunchState` with the
   accepted-fact types `design-event-log.md` §8 names.
-- [ ] 3R.2b Delete every cast in the launch read and command layers (`as PayloadFor<…>`,
+- [x] 3R.2b Delete every cast in the launch read and command layers (`as PayloadFor<…>`,
   `as never`, `rank as never`). A cast that cannot be deleted marks a real contract gap — fix
   the type, not the call site.
-- [ ] 3R.2c Return section statuses and blockers beside `CampaignState`, per D-176.
-- [ ] 3R.2d Project `campaign.activated.pendingVow`, currently dropped.
-- [ ] 3R.2e Record an `eventId` on `connection.established` like every other launch fact.
+- [x] 3R.2c Return section statuses and blockers beside `CampaignState`, per D-176.
+- [x] 3R.2d Project `campaign.activated.pendingVow`, currently dropped.
+- [x] 3R.2e Record an `eventId` on `connection.established` like every other launch fact.
 
 **3R.3 Task 2.8 — void, revision, and rebuild coverage (D-177).**
 
@@ -409,12 +409,12 @@ which is why the declared recipes are dead code.
 
 **3R.9 Correctness fixes.**
 
-- [ ] 3R.9a `route.removed` filters on `supersedesEventId`, which is the acceptance field and
+- [x] 3R.9a `route.removed` filters on `supersedesEventId`, which is the acceptance field and
   undefined for a fresh route: nothing is removed and the tombstone inflates the passage count.
   Fix the identity and add the missing command, or drop the event type until one needs it.
 - [ ] 3R.9b Route dedupe compares `to` by identity, so an off-map endpoint object never matches.
   Compare structurally and undirected.
-- [ ] 3R.9c Model `location.removed` explicitly instead of leaving a tombstone in `locations`.
+- [x] 3R.9c Model `location.removed` explicitly instead of leaving a tombstone in `locations`.
 - [ ] 3R.9d Type planet details; readiness requires `atmosphere`, `observedFromSpace` and
   `feature` from what is currently an open string map.
 - [ ] 3R.9e Record the single-user assumption as a note rather than locking every launch
@@ -601,3 +601,12 @@ implementation note.
   Verified with Postgres: 101 files, 1102 tests, zero skipped files.
 - `npm run format:check` fails on `eslint.config.js`, which predates this work and is
   untouched by it. Until that is fixed the fourth verification gate cannot pass cleanly.
+- **3R.2 complete; 2.7 closed.** Typing `LaunchState` found five more defects, each one
+  invisible while every reader cast: `starship.revised` projected a differently shaped ship
+  from `starship.established`; `route.removed` matched the wrong id, so it removed nothing and
+  its tombstone inflated the passage count against A31's baseline; `location.removed` left a
+  tombstone shaped like nothing else in the record; `connection.established` recorded no
+  `eventId`; `campaign.activated` dropped `pendingVow`. 3R.9a and 3R.9c are closed by the
+  same change. Removing the tombstones made `mutates-state.test.ts` fail honestly for both
+  removal types — they had only ever "mutated" by leaving the tombstone behind — so both got a
+  real setup. `format:check` now passes; the `eslint.config.js` violation is fixed.
