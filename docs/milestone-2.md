@@ -291,8 +291,8 @@ task leaves the build working and the applicable tests passing.
 - [x] 3.3 Extend character proposal/creation commands and support one-to-six launch crew.
   *(Implemented; untested until 3R.7f.)*
 - [ ] 3.4 Add shared-starship proposal, roll, save, accept, and revision commands, rolling the
-  declared starship recipe rather than a client-named oracle. *(Reopened: the roll path is a
-  generic single-oracle endpoint and D-173's recipes are unreachable. 3R.5, 3R.7d.)*
+  declared starship recipe rather than a client-named oracle. *(Recipe path landed in 3R.5;
+  remaining: 3R.7d's coverage of the save/accept/revision half.)*
 - [ ] 3.5 Add sector and settlement commands, including authoritative oracle rolls **of the
   declared settlement, planet and trouble recipes**, planet/star relationships, node placement,
   passages, exits, and troubles. *(Reopened: recipes unwired, route identity and off-map
@@ -371,11 +371,11 @@ table, not in any seeded fixture campaign, so no upcaster is owed under 2.2.
 **3R.5 Recipe-driven oracle rolls (D-65, D-166, D-173).** No task in groups 3–9 owned this,
 which is why the declared recipes are dead code.
 
-- [ ] 3R.5a Add a recipe roll command: the server materializes the recipe, rolls every slot,
+- [x] 3R.5a Add a recipe roll command: the server materializes the recipe, rolls every slot,
   appends one `oracle.rolled` per slot, and returns them as grounding. Threaded `rng`.
-- [ ] 3R.5b Wire the declared recipes — starship, settlement, shallow and detailed planet,
+- [x] 3R.5b Wire the declared recipes — starship, settlement, shallow and detailed planet,
   starting-connection NPC, sector trouble, inciting incident.
-- [ ] 3R.5c Keep the single-oracle roll for field-level Roll actions; state which interaction
+- [x] 3R.5c Keep the single-oracle roll for field-level Roll actions; state which interaction
   uses which.
 
 **3R.6 Full incident context — completes 3.7.**
@@ -625,3 +625,13 @@ implementation note.
   `renderState` assertion says plainly that it is a regression guard, because `renderState`
   reads no launch state at all today.
   Verified with Postgres: 102 files, 1118 tests, zero skipped files.
+- **3R.5 complete; the declared recipes are wired in.** Group 1.3 declared them and nothing
+  imported them but their own test, because no task in groups 3–9 owned the wiring — the plan
+  permitted the gap, which is why 3R.5 exists. `rollLaunchRecipe` materializes a recipe from a
+  **typed selector rather than an oracle id**, so a caller cannot reach a table the rules did
+  not declare in a recipe; that is the half of D-65 the previous endpoint had inverted. Each
+  slot result becomes its own `oracle.rolled`, which is what a proposal cites (A41). The
+  single-oracle roll stays for field-level Roll actions. `LAUNCH_EVENT_TYPES` is now derived
+  from the launch schema module by identity, so a twenty-sixth launch event joins the set
+  automatically instead of silently defaulting to voidable.
+  Verified with Postgres: 103 files, 1125 tests, zero skipped files.
