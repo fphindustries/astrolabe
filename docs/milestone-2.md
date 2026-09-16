@@ -299,9 +299,8 @@ task leaves the build working and the applicable tests passing.
   duplicate defects. 3R.5, 3R.9, 3R.7e.)*
 - [x] 3.6 Add the automatic-strong-hit starting connection command. *(Implemented; untested
   until 3R.7c.)*
-- [ ] 3.7 Extend incident proposals to the complete accepted launch context. *(Reopened:
-  supplies truths and location names only, not crew backgrounds and background vows, starship,
-  troubles, the connection, or quest starters. 3R.6.)*
+- [x] 3.7 Extend incident proposals to the complete accepted launch context. *(Re-closed by
+  3R.6: the full D-168 list, each part asserted as arriving.)*
 - [x] 3.8 Add the atomic activation command: validate readiness, mark active, begin Session
   1, start the scene, and return the pending `Swear an Iron Vow` flow. *(Re-closed by 3R.1d:
   two blocking defects fixed and covered by `launch-activation.test.ts`.)*
@@ -380,11 +379,11 @@ which is why the declared recipes are dead code.
 
 **3R.6 Full incident context — completes 3.7.**
 
-- [ ] 3R.6a `decideTruth` records `questStarter`; the schema field exists and is never written,
+- [x] 3R.6a `decideTruth` records `questStarter`; the schema field exists and is never written,
   leaving A25's inspiration half unimplemented.
-- [ ] 3R.6b Supply crew backgrounds and background vows, starship details, settlement and sector
+- [x] 3R.6b Supply crew backgrounds and background vows, starship details, settlement and sector
   trouble, the local connection, and quest starters — D-168's complete list. Accepted facts only.
-- [ ] 3R.6c Test that no draft snapshot reaches incident context.
+- [x] 3R.6c Test that no draft snapshot reaches incident context.
 
 **3R.7 Command and route test backfill for 3.3–3.9**, highest risk first.
 
@@ -635,3 +634,17 @@ implementation note.
   from the launch schema module by identity, so a twenty-sixth launch event joins the set
   automatically instead of silently defaulting to voidable.
   Verified with Postgres: 103 files, 1125 tests, zero skipped files.
+- **3R.6 complete; 3.7 re-closed.** `decideTruth` now records the option's `questStarter` —
+  the schema field had existed since group 2 and was never written, leaving A25's inspiration
+  half unimplemented. `renderSetup` carries the complete D-168 list: quest starters labelled
+  as inspiration, an open truth stated as deliberately open rather than rendered blank, crew
+  appearance/background vow/backstory from the launch fields rather than Milestone 1 hooks,
+  typed settlement and planet detail, launch passages and off-map exits, the starting
+  settlement, the shared starship, both troubles against what they trouble, and the local
+  connection with who shares it. Launch locations previously rendered as bare names, because
+  the renderer read `state.entities` and launch locations are not there.
+  An option can now cite those facts: `drawsOn` gains a `launchFacts` category, omitted when
+  empty so a proposal that cites none looks the same as one written before they existed.
+  Each assertion names the specific fact it checks arrives, rather than testing the renderer
+  in general — 3.7 was marked done while the context supplied truths and bare names.
+  Verified with Postgres: 104 files, 1135 tests, zero skipped files.

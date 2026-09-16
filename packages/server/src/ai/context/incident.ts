@@ -38,6 +38,14 @@ export interface IncidentContext {
   readonly truths: ReadonlyMap<string, OracleId>;
   readonly locations: ReadonlyMap<string, EntityId>;
   readonly crew: ReadonlyMap<string, CharacterId>;
+  /**
+   * The remaining accepted launch facts an incident may cite (D-168): the
+   * shared starship, settlement and sector trouble, and the local connection.
+   * One category rather than three near-identical enums — they are all
+   * entities, and what matters to A37 is that the option names the fact it
+   * drew on.
+   */
+  readonly launchFacts: ReadonlyMap<string, EntityId>;
 }
 
 export function incidentContext(state: CampaignState): IncidentContext {
@@ -58,7 +66,33 @@ export function incidentContext(state: CampaignState): IncidentContext {
       ...launchLocations.map((location) => [location.name, location.id] as const),
     ]),
     crew: keyed(Object.values(state.characters).map((c) => [c.callsign, c.id])),
+    launchFacts: keyed(launchFactEntries(state)),
   };
+}
+
+/** Accepted launch facts, labelled the way the answer will name them. */
+function launchFactEntries(state: CampaignState): (readonly [string, EntityId])[] {
+  const entries: (readonly [string, EntityId])[] = [];
+  const ship = state.launch.starship;
+  if (ship !== undefined) entries.push([`Starship: ${ship.name}`, ship.starshipId]);
+  for (const trouble of Object.values(state.launch.troubles))
+    entries.push([troubleLabel(state, trouble), trouble.troubleId]);
+  const connection = state.launch.connection;
+  if (connection !== undefined)
+    entries.push([`Connection: ${connection.npcName}`, connection.connectionId]);
+  return entries;
+}
+
+/** One label per trouble, so the citation key and the rendered line agree. */
+function troubleLabel(
+  state: CampaignState,
+  trouble: CampaignState['launch']['troubles'][EntityId],
+): string {
+  const owner =
+    trouble.kind === 'settlement'
+      ? (state.launch.locations[trouble.ownerId]?.name ?? 'a settlement')
+      : 'the sector';
+  return `Trouble in ${owner}`;
 }
 
 function keyed<T>(entries: readonly (readonly [string, T])[]): ReadonlyMap<string, T> {
@@ -81,9 +115,9 @@ Each option:
 - situation: one or two sentences on what has happened and what is at stake as the campaign opens. It describes the world and the situation. It never says what a crew member feels, wants, decides or does about it: whether and how they answer is the players' choice.
 - reason: one short sentence tying the option to its roll and to what it draws on.
 - groundedIn: the keys of the oracle rolls the option builds on, at least one. The server rolled one per option. Prefer a different roll for each option; if two options build on the same roll, take it in clearly different directions.
-- drawsOn: the setting truths (by key), sector locations (by name) and crew members (by callsign) the option builds from. List only what the option really uses.
+- drawsOn: the setting truths (by key), sector locations (by name), crew members (by callsign) and other launch facts - the starship, a trouble, the local connection - the option builds from. List only what the option really uses.
 
-Tie the options to this campaign. Across the options, draw on the setting truths when there are any, the sector's locations when there are any, and, when there is a crew, on at least one crew member's recorded backstory. A crew member's backstory can say why the situation touches them, using only what their record says; never add to a character's past.
+Tie the options to this campaign. Across the options, draw on the setting truths when there are any, the sector's locations when there are any, the established troubles and local connection when there are any, and, when there is a crew, on at least one crew member's recorded backstory. A quest starter is inspiration offered by a truth, never something the campaign has already decided; a truth marked deliberately left open stays open. A crew member's backstory can say why the situation touches them, using only what their record says; never add to a character's past.
 
 Do not invent named people, places, ships or factions. Use names the campaign already has, or describe ("a colony ship", "two feuding settlements"). The players can add names when they edit.
 
@@ -125,7 +159,16 @@ export function renderSetup(state: CampaignState): string {
   const truths = [...context.truths].map(([key, id]) => {
     const question = STARFORGED.truths.find((t) => t.id === id)?.name ?? id;
     const launch = state.launch.truthDecisions[id];
-    return `- ${key} (${question}): ${state.truths[id]?.text ?? launch?.text ?? ''}`;
+    const answer =
+      launch?.resolution === 'leave_open'
+        ? 'deliberately left open - do not settle it'
+        : (state.truths[id]?.text ?? launch?.text ?? '');
+    // D-162: a quest starter is inspiration for the incident, never canon.
+    const starter =
+      launch?.questStarter === undefined
+        ? ''
+        : `; quest starter (inspiration only): ${launch.questStarter}`;
+    return `- ${key} (${question}): ${answer}${starter}`;
   });
   sections.push(
     truths.length > 0
@@ -135,16 +178,32 @@ export function renderSetup(state: CampaignState): string {
 
   const nameOf = new Map([...context.locations].map(([key, id]) => [id, key]));
   const locations = [...context.locations].map(([key, id]) => {
+    // A Milestone 1 location carries loose `fields`; a launch location is a
+    // typed settlement, planet or star. Both render, so a campaign built
+    // either way reads the same to the Guide.
     const fields = Object.entries(state.entities[id]?.fields ?? {})
       .map(([field, value]) => `${field}: ${value}`)
       .join('; ');
-    const routes = state.sector.routes
-      .filter((route) => route.from === id || route.to === id)
-      .map((route) => nameOf.get(route.from === id ? route.to : route.from))
-      .filter((name) => name !== undefined);
+    const detail = launchLocationDetail(state, id);
+    const routes = [
+      ...state.sector.routes
+        .filter((route) => route.from === id || route.to === id)
+        .map((route) => nameOf.get(route.from === id ? route.to : route.from)),
+      ...state.launch.routes
+        .filter((route) => route.from === id || route.to === id)
+        .map((route) =>
+          route.from === id
+            ? typeof route.to === 'string'
+              ? nameOf.get(route.to)
+              : `off-map: ${route.to.label}`
+            : nameOf.get(route.from),
+        ),
+    ].filter((name) => name !== undefined);
+    const start = state.launch.startingSettlementId === id ? ' [starting settlement]' : '';
     return (
-      `- ${key}` +
+      `- ${key}${start}` +
       (fields.length > 0 ? ` (${fields})` : '') +
+      (detail.length > 0 ? ` (${detail})` : '') +
       (routes.length > 0 ? `; routes to ${routes.join(', ')}` : '')
     );
   });
@@ -159,14 +218,30 @@ export function renderSetup(state: CampaignState): string {
     if (c === undefined) {
       return `- ${key}`;
     }
-    const vows = c.vowTrackIds
-      .map((trackId) => state.tracks[trackId])
-      .filter((track) => track !== undefined)
-      .map((track) => `"${track.title}" (${track.rank ?? 'unranked'})`);
+    // A launch character records its background vow and backstory directly
+    // (D-163); a Milestone 1 one carries hooks and a sworn vow track.
+    const vows = [
+      ...(c.backgroundVow === undefined
+        ? []
+        : [`"${c.backgroundVow.title}" (${c.backgroundVow.rank})`]),
+      ...c.vowTrackIds
+        .map((trackId) => state.tracks[trackId])
+        .filter((track) => track !== undefined)
+        .map((track) => `"${track.title}" (${track.rank ?? 'unranked'})`),
+    ];
+    const backstory =
+      c.backstory?.kind === 'discover_in_play'
+        ? '; backstory: deliberately undecided, to discover in play'
+        : c.backstory?.kind === 'written'
+          ? `; backstory: ${c.backstory.text}`
+          : c.hooks.length > 0
+            ? `; backstory: ${c.hooks.join(' / ')}`
+            : '; no backstory recorded';
     return (
       `- ${key}: ${c.name} (${c.pronouns ?? 'pronouns not recorded'})` +
+      (c.appearance === undefined ? '' : `; appearance: ${c.appearance}`) +
       (vows.length > 0 ? `; background vow: ${vows.join(', ')}` : '') +
-      (c.hooks.length > 0 ? `; backstory: ${c.hooks.join(' / ')}` : '; no backstory recorded')
+      backstory
     );
   });
   sections.push(
@@ -175,7 +250,59 @@ export function renderSetup(state: CampaignState): string {
       : 'The crew: no characters have been created yet, so draw on the truths and the sector only.',
   );
 
+  // D-168's remaining accepted facts. Each says plainly when it is absent,
+  // for the same reason the sections above do (D-133).
+  const ship = state.launch.starship;
+  sections.push(
+    ship === undefined
+      ? 'The starship: not established yet.'
+      : `The starship: ${ship.name} - ${ship.appearance}; history: ${ship.history}; quirks: ${ship.quirks.join(' / ')}`,
+  );
+
+  const troubles = Object.values(state.launch.troubles).map(
+    (trouble) => `- ${troubleLabel(state, trouble)}: ${trouble.text}`,
+  );
+  sections.push(
+    troubles.length > 0 ? `Troubles:\n${troubles.join('\n')}` : 'Troubles: none established yet.',
+  );
+
+  const connection = state.launch.connection;
+  sections.push(
+    connection === undefined
+      ? 'The local connection: not established yet.'
+      : `The local connection: ${connection.npcName}, ${connection.role} (${connection.rank}), shared with ${connection.participants
+          .map((characterId) => state.characters[characterId]?.callsign ?? characterId)
+          .join(', ')}`,
+  );
+
   return sections.join('\n\n');
+}
+
+/** Typed launch-location detail, to the depth the launch actually recorded. */
+function launchLocationDetail(state: CampaignState, id: EntityId): string {
+  const location = state.launch.locations[id];
+  if (location === undefined) return '';
+  switch (location.kind) {
+    case 'settlement':
+      return [
+        location.location,
+        `population: ${location.population}`,
+        `authority: ${location.authority}`,
+        `projects: ${location.projects.join(', ')}`,
+        ...(location.firstLooks === undefined
+          ? []
+          : [`first looks: ${location.firstLooks.join(', ')}`]),
+      ].join('; ');
+    case 'planet':
+      return [
+        `planet, class ${location.planetClass}`,
+        ...Object.entries(location.details).map(([field, value]) => `${field}: ${value}`),
+      ].join('; ');
+    case 'star':
+      return ['star', ...Object.entries(location.details).map(([f, v]) => `${f}: ${v}`)].join('; ');
+    case 'other':
+      return location.description;
+  }
 }
 
 export interface IncidentOptionOutput {
@@ -188,6 +315,7 @@ export interface IncidentOptionOutput {
     readonly truths?: readonly string[];
     readonly locations?: readonly string[];
     readonly crew?: readonly string[];
+    readonly launchFacts?: readonly string[];
   };
 }
 
@@ -215,6 +343,7 @@ export function incidentProposalSchema(
         ['truths', oneOf(context.truths.keys())],
         ['locations', oneOf(context.locations.keys())],
         ['crew', oneOf(context.crew.keys())],
+        ['launchFacts', oneOf(context.launchFacts.keys())],
       ] as const
     ).filter(([, schema]) => schema !== undefined),
   );
@@ -268,13 +397,22 @@ export function checkIncidentProposal(
 export function resolveDrawsOn(
   drawsOn: IncidentOptionOutput['drawsOn'],
   context: IncidentContext,
-): { truths: OracleId[]; locations: EntityId[]; characters: CharacterId[] } {
+): {
+  truths: OracleId[];
+  locations: EntityId[];
+  characters: CharacterId[];
+  launchFacts?: EntityId[];
+} {
   const resolve = <T>(keys: readonly string[] | undefined, map: ReadonlyMap<string, T>) => [
     ...new Set((keys ?? []).flatMap((key) => (map.has(key) ? [map.get(key) as T] : []))),
   ];
+  const launchFacts = resolve(drawsOn.launchFacts, context.launchFacts);
   return {
     truths: resolve(drawsOn.truths, context.truths),
     locations: resolve(drawsOn.locations, context.locations),
     characters: resolve(drawsOn.crew, context.crew),
+    // Omitted when empty rather than stored as [], so a proposal that cited no
+    // launch fact looks the same as one written before they existed.
+    ...(launchFacts.length > 0 ? { launchFacts } : {}),
   };
 }

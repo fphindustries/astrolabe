@@ -1011,6 +1011,7 @@ export async function decideTruth(sql: Sql, request: DecideTruthRequest): Promis
 
   let optionIndex = request.optionIndex;
   let text: string | undefined;
+  let questStarter: string | undefined;
   let groundedIn: EventId[] = [];
   const events: Parameters<typeof appendCommand>[1]['events'][number][] = [];
   if (request.resolution === 'selected' || request.resolution === 'rolled') {
@@ -1067,6 +1068,10 @@ export async function decideTruth(sql: Sql, request: DecideTruthRequest): Promis
       }
     }
     text = option.text;
+    // D-162: the option's quest starter is inspiration for the incident, not
+    // canon by itself. Recorded on the decision so incident generation can
+    // read it (A25); nothing treats it as an accepted fact.
+    questStarter = option.questStarter;
   } else if (request.resolution === 'custom') {
     text = request.text?.trim();
     if (text === undefined || text === '')
@@ -1085,6 +1090,7 @@ export async function decideTruth(sql: Sql, request: DecideTruthRequest): Promis
         ? { subchoiceOptionIndex: request.subchoiceOptionIndex }
         : {}),
       ...(text !== undefined ? { text } : {}),
+      ...(questStarter !== undefined ? { questStarter } : {}),
       provenance:
         request.resolution === 'rolled'
           ? 'oracle_roll'
