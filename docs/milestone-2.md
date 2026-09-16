@@ -290,13 +290,13 @@ task leaves the build working and the applicable tests passing.
   and revise before launch.
 - [x] 3.3 Extend character proposal/creation commands and support one-to-six launch crew.
   *(Implemented; untested until 3R.7f.)*
-- [ ] 3.4 Add shared-starship proposal, roll, save, accept, and revision commands, rolling the
-  declared starship recipe rather than a client-named oracle. *(Recipe path landed in 3R.5;
-  remaining: 3R.7d's coverage of the save/accept/revision half.)*
+- [x] 3.4 Add shared-starship proposal, roll, save, accept, and revision commands, rolling the
+  declared starship recipe rather than a client-named oracle. *(Re-closed: recipe path in
+  3R.5, save/accept/revision covered by 3R.7d.)*
 - [ ] 3.5 Add sector and settlement commands, including authoritative oracle rolls **of the
   declared settlement, planet and trouble recipes**, planet/star relationships, node placement,
-  passages, exits, and troubles. *(Reopened: recipes unwired, route identity and off-map
-  duplicate defects. 3R.5, 3R.9, 3R.7e.)*
+  passages, exits, and troubles. *(Recipes wired in 3R.5, graph covered by 3R.7e; remaining:
+  3R.9b's off-map duplicate dedupe and 3R.9d's planet detail typing.)*
 - [x] 3.6 Add the automatic-strong-hit starting connection command. *(Implemented; untested
   until 3R.7c.)*
 - [x] 3.7 Extend incident proposals to the complete accepted launch context. *(Re-closed by
@@ -390,11 +390,11 @@ which is why the declared recipes are dead code.
 - [x] 3R.7a Activation: atomicity, readiness refusal, Session 1 and scene created, `pendingVow`
   returned, a second activation refused (A38, A40).
 - [x] 3R.7b Post-activation amendments with reason and visible history (A40).
-- [ ] 3R.7c The connection's automatic strong hit — no die rolled or fabricated (A36, D-167).
-- [ ] 3R.7d Shared starship: integrity 5, module owners retained, no per-character grant (A30).
-- [ ] 3R.7e Sector, locations, routes, off-map exits, layout, starting settlement (A31–A35).
-- [ ] 3R.7f Crew: one-to-six bounds, launch-validator rejection, no command-vehicle grant (A27).
-- [ ] 3R.7g HTTP coverage for the launch routes; none are exercised today.
+- [x] 3R.7c The connection's automatic strong hit — no die rolled or fabricated (A36, D-167).
+- [x] 3R.7d Shared starship: integrity 5, module owners retained, no per-character grant (A30).
+- [x] 3R.7e Sector, locations, routes, off-map exits, layout, starting settlement (A31–A35).
+- [x] 3R.7f Crew: one-to-six bounds, launch-validator rejection, no command-vehicle grant (A27).
+- [x] 3R.7g HTTP coverage for the launch routes; none are exercised today.
 
 **3R.8 Readiness test matrix — completes 1.6.**
 
@@ -648,3 +648,17 @@ implementation note.
   Each assertion names the specific fact it checks arrives, rather than testing the renderer
   in general — 3.7 was marked done while the context supplied truths and bare names.
   Verified with Postgres: 104 files, 1135 tests, zero skipped files.
+- **3R.7c–g complete; 3.4 re-closed.** Two suites for the commands and routes group 3
+  shipped without: `launch-aggregates.test.ts` covers the connection, the shared starship, the
+  sector graph and the crew bounds; `launch-routes.test.ts` covers the launch routes over HTTP,
+  which nothing had exercised.
+  The connection test asserts the *absence* of `dice.rolled`, `oracle.rolled` and
+  `move.invoked` — D-167 says the automatic strong hit neither rolls nor fabricates a roll it
+  then calls automatic, and only an absence assertion can check that. It also pins one track
+  with a participant list rather than one per character.
+  Writing the route tests found that `drafts` and `sector-layout` are `PUT` while the rest are
+  `POST`, and that a launch character with no background vow is refused by the **body schema**
+  (400), not the command (422). Both are refusals; which one fires tells you where the rule
+  lives, so the suite now asserts each at its own layer and adds a schema-valid,
+  rules-invalid asset set for the 422 path.
+  Verified with Postgres: 106 files, 1162 tests, zero skipped files.
