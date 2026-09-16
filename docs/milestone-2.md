@@ -281,19 +281,19 @@ task leaves the build working and the applicable tests passing.
 
 ### 3. Launch commands and API
 
-- [ ] 3.1 Add read endpoints for the Campaign Launch workspace and typed save/resume
+- [x] 3.1 Add read endpoints for the Campaign Launch workspace and typed save/resume
   commands for each draft section.
-- [ ] 3.2 Generalize truth commands to pick, roll, write, defer, resolve nested choices,
+- [x] 3.2 Generalize truth commands to pick, roll, write, defer, resolve nested choices,
   and revise before launch.
-- [ ] 3.3 Extend character proposal/creation commands and support one-to-six launch crew.
-- [ ] 3.4 Add shared-starship proposal, roll, save, accept, and revision commands.
-- [ ] 3.5 Add sector and settlement commands, including authoritative oracle rolls,
+- [x] 3.3 Extend character proposal/creation commands and support one-to-six launch crew.
+- [x] 3.4 Add shared-starship proposal, roll, save, accept, and revision commands.
+- [x] 3.5 Add sector and settlement commands, including authoritative oracle rolls,
   planet/star relationships, node placement, passages, exits, and troubles.
-- [ ] 3.6 Add the automatic-strong-hit starting connection command.
-- [ ] 3.7 Extend incident proposals to the complete accepted launch context.
-- [ ] 3.8 Add the atomic activation command: validate readiness, mark active, begin Session
+- [x] 3.6 Add the automatic-strong-hit starting connection command.
+- [x] 3.7 Extend incident proposals to the complete accepted launch context.
+- [x] 3.8 Add the atomic activation command: validate readiness, mark active, begin Session
   1, start the scene, and return the pending `Swear an Iron Vow` flow.
-- [ ] 3.9 Add explicit post-launch amendment commands for launch facts.
+- [x] 3.9 Add explicit post-launch amendment commands for launch facts.
 
 ### 4. Campaign Launch workspace
 
@@ -416,3 +416,8 @@ implementation note.
   Milestone 1 events remain readable. `npm test` passed with Postgres-backed suites
   enabled; `npm run typecheck` and `npm run lint` passed. Tasks 2.7–2.8 remain open for
   the rules-aware readiness read model and their dedicated void/revision coverage.
+- **Group 3 complete.** Added typed workspace/draft commands, complete truth decisions,
+  launch crew, shared-starship proposal/roll/acceptance, sector graph and oracle commands,
+  connection, incident context, atomic activation, and amendments. `launch-commands.test.ts`
+  covers the principal command boundaries against Postgres; the full suite, typecheck, and
+  lint passed. Group 2's projection/void suite (2.7–2.8) remains independently open.

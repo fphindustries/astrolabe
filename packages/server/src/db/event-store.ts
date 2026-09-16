@@ -41,6 +41,13 @@ export interface NewEvent<T extends EventType = EventType> {
   readonly payload: PayloadFor<T>;
   /** Defaults to the command's actor — most events are authored by whoever issued the command. */
   readonly actor?: Actor;
+  /**
+   * A server-authored causal link for an individual event in a compound
+   * command.  Activation uses this to make the session and opening scene
+   * consequences of the activation event without exposing causality to the
+   * HTTP boundary.
+   */
+  readonly causedBy?: EventId | null;
   readonly sessionId?: SessionId | null;
   readonly sceneId?: SceneId | null;
   readonly subjectCharacterId?: CharacterId | null;
@@ -212,7 +219,7 @@ function buildEvent(
     seq,
     id: event.id ?? uuidv7(),
     commandId: request.commandId,
-    causedBy: request.causedBy ?? null,
+    causedBy: event.causedBy ?? request.causedBy ?? null,
     sessionId: event.sessionId ?? null,
     sceneId: event.sceneId ?? null,
     actor: event.actor ?? request.actor,

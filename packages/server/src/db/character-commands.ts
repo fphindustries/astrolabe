@@ -4,6 +4,7 @@ import {
   grantedAssets,
   startingMeters,
   validateCharacterDraft,
+  validateLaunchCharacterDraft,
   type CharacterDraft,
   type CharacterId,
   type CharacterProblem,
@@ -37,6 +38,19 @@ export class CharacterRejectedError extends Error {
   constructor(readonly problems: readonly CharacterProblem[]) {
     super(problems.map((p) => p.message).join(' '));
     this.name = 'CharacterRejectedError';
+  }
+}
+
+export class LaunchCharacterRejectedError extends Error {
+  constructor(
+    readonly problems: readonly {
+      readonly code: string;
+      readonly field: string;
+      readonly message: string;
+    }[],
+  ) {
+    super(problems.map((problem) => problem.message).join(' '));
+    this.name = 'LaunchCharacterRejectedError';
   }
 }
 
@@ -74,6 +88,13 @@ export interface CreateCharacterRequest {
   readonly hooks?: readonly string[];
   /** D-131: the player's words. Blank means not recorded; the event schema caps the length. */
   readonly pronouns?: string;
+  /** Full Campaign Launch-only character fields. */
+  readonly launch?: {
+    readonly appearance: string;
+    readonly backstory:
+      { readonly kind: 'written'; readonly text: string } | { readonly kind: 'discover_in_play' };
+    readonly signatureGear?: string;
+  };
   /**
    * D-124: the proposal command this character was accepted from. Resolved
    * here to its `character.proposed` event, which becomes the cause; a
@@ -104,6 +125,27 @@ export async function createCharacter(
     throw new CharacterRejectedError(problems);
   }
 
+  if (request.launch !== undefined) {
+    const launchProblems = validateLaunchCharacterDraft(
+      {
+        ...request.draft,
+        appearance: request.launch.appearance,
+        backstory: request.launch.backstory,
+        backgroundVow:
+          request.backgroundVow === undefined
+            ? { title: '', rank: 'troublesome' }
+            : { title: request.backgroundVow.title, rank: request.backgroundVow.rank as never },
+        ...(request.launch.signatureGear === undefined
+          ? {}
+          : { signatureGear: request.launch.signatureGear }),
+        ...(request.hooks === undefined ? {} : { hooks: request.hooks }),
+        ...(request.pronouns === undefined ? {} : { pronouns: request.pronouns }),
+      },
+      STARFORGED,
+    );
+    if (launchProblems.length > 0) throw new LaunchCharacterRejectedError(launchProblems);
+  }
+
   const granted = request.grantCommandVehicle === false ? [] : grantedAssets(STARFORGED);
 
   let causedBy: EventId | undefined;
@@ -120,6 +162,15 @@ export async function createCharacter(
   const pronouns = request.pronouns?.trim() ?? '';
 
   const state = project(await readEvents(sql, request.campaignId));
+  if (request.launch !== undefined && Object.keys(state.characters).length >= 6) {
+    throw new LaunchCharacterRejectedError([
+      {
+        code: 'crew_count_invalid',
+        field: 'characters',
+        message: 'Campaign Launch supports at most six characters.',
+      },
+    ]);
+  }
   const sessionId: SessionId | null = state.session?.id ?? null;
   const characterId = uuidv7() as CharacterId;
 
@@ -142,6 +193,22 @@ export async function createCharacter(
         assets: [...new Set([...request.draft.assets, ...granted])],
         ...(hooks.length > 0 ? { hooks } : {}),
         ...(pronouns !== '' ? { pronouns } : {}),
+        ...(request.launch === undefined
+          ? {}
+          : {
+              appearance: request.launch.appearance.trim(),
+              backstory: request.launch.backstory,
+              backgroundVow:
+                request.backgroundVow === undefined
+                  ? undefined
+                  : {
+                      title: request.backgroundVow.title,
+                      rank: request.backgroundVow.rank as never,
+                    },
+              ...(request.launch.signatureGear === undefined
+                ? {}
+                : { signatureGear: request.launch.signatureGear.trim() }),
+            }),
       },
       sessionId,
       subjectCharacterId: characterId,

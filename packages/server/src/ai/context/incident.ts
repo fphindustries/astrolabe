@@ -41,13 +41,24 @@ export interface IncidentContext {
 }
 
 export function incidentContext(state: CampaignState): IncidentContext {
+  const launchTruths = Object.keys(state.launch.truthDecisions);
+  const launchLocations = Object.values(state.launch.locations).filter(
+    (location): location is { readonly id: EntityId; readonly name: string } =>
+      typeof location === 'object' && location !== null && 'id' in location && 'name' in location,
+  );
   return {
-    truths: new Map(Object.keys(state.truths).map((id) => [id, id as OracleId])),
-    locations: keyed(
-      Object.values(state.entities)
-        .filter((entity) => entity.kind === 'location')
-        .map((entity) => [entity.name, entity.id]),
+    truths: new Map(
+      [...new Set([...Object.keys(state.truths), ...launchTruths])].map((id) => [
+        id,
+        id as OracleId,
+      ]),
     ),
+    locations: keyed([
+      ...Object.values(state.entities)
+        .filter((entity) => entity.kind === 'location')
+        .map((entity) => [entity.name, entity.id] as const),
+      ...launchLocations.map((location) => [location.name, location.id] as const),
+    ]),
     crew: keyed(Object.values(state.characters).map((c) => [c.callsign, c.id])),
   };
 }
@@ -115,7 +126,8 @@ export function renderSetup(state: CampaignState): string {
 
   const truths = [...context.truths].map(([key, id]) => {
     const question = STARFORGED.truths.find((t) => t.id === id)?.name ?? id;
-    return `- ${key} (${question}): ${state.truths[id]?.text ?? ''}`;
+    const launch = state.launch.truthDecisions[id] as { readonly text?: string } | undefined;
+    return `- ${key} (${question}): ${state.truths[id]?.text ?? launch?.text ?? ''}`;
   });
   sections.push(
     truths.length > 0

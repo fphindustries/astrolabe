@@ -111,6 +111,10 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
         vowTrackIds: [],
         hooks: payload.hooks ?? [],
         pronouns: payload.pronouns ?? null,
+        ...(payload.appearance !== undefined ? { appearance: payload.appearance } : {}),
+        ...(payload.backstory !== undefined ? { backstory: payload.backstory } : {}),
+        ...(payload.backgroundVow !== undefined ? { backgroundVow: payload.backgroundVow } : {}),
+        ...(payload.signatureGear !== undefined ? { signatureGear: payload.signatureGear } : {}),
       });
       return withCharacter(state, character);
     }
@@ -324,7 +328,10 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
     case 'creation.proposed':
       return state;
     case 'campaign.foundation_set':
-      return { ...state, launch: { ...state.launch, foundation: event.payload } };
+      return {
+        ...state,
+        launch: { ...state.launch, foundation: { ...event.payload, eventId: event.id } },
+      };
     case 'truth.decided':
       return {
         ...state,
@@ -332,7 +339,7 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
           ...state.launch,
           truthDecisions: {
             ...state.launch.truthDecisions,
-            [event.payload.truthId]: event.payload,
+            [event.payload.truthId]: { ...event.payload, eventId: event.id },
           },
         },
       };
@@ -345,24 +352,45 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
         assets: event.payload.character.assets,
         hooks: event.payload.character.hooks ?? [],
         pronouns: event.payload.character.pronouns ?? null,
+        appearance: event.payload.character.appearance,
+        backstory: event.payload.character.backstory,
+        backgroundVow: event.payload.character.backgroundVow,
+        ...(event.payload.character.signatureGear !== undefined
+          ? { signatureGear: event.payload.character.signatureGear }
+          : {}),
       }));
     case 'character.removed': {
       const { [event.payload.characterId]: _removed, ...characters } = state.characters;
       return { ...state, characters };
     }
     case 'starship.established':
-      return { ...state, launch: { ...state.launch, starship: event.payload } };
+      return {
+        ...state,
+        launch: { ...state.launch, starship: { ...event.payload, eventId: event.id } },
+      };
     case 'starship.revised':
-      return { ...state, launch: { ...state.launch, starship: event.payload.starship } };
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          starship: { ...event.payload.starship, eventId: event.id },
+        },
+      };
     case 'sector.configured':
-      return { ...state, launch: { ...state.launch, sector: event.payload } };
+      return {
+        ...state,
+        launch: { ...state.launch, sector: { ...event.payload, eventId: event.id } },
+      };
     case 'location.added':
     case 'location.revised':
       return {
         ...state,
         launch: {
           ...state.launch,
-          locations: { ...state.launch.locations, [event.payload.id]: event.payload },
+          locations: {
+            ...state.launch.locations,
+            [event.payload.id]: { ...event.payload, eventId: event.id },
+          },
         },
       };
     case 'location.removed': {
@@ -415,16 +443,25 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
         ...state,
         launch: {
           ...state.launch,
-          troubles: { ...state.launch.troubles, [event.payload.troubleId]: event.payload },
+          troubles: {
+            ...state.launch.troubles,
+            [event.payload.troubleId]: { ...event.payload, eventId: event.id },
+          },
         },
       };
     case 'connection.established':
     case 'connection.revised':
       return { ...state, launch: { ...state.launch, connection: event.payload } };
     case 'incident.accepted':
-      return { ...state, launch: { ...state.launch, incident: event.payload } };
+      return {
+        ...state,
+        launch: { ...state.launch, incident: { ...event.payload, eventId: event.id } },
+      };
     case 'incident.revised':
-      return { ...state, launch: { ...state.launch, incident: event.payload } };
+      return {
+        ...state,
+        launch: { ...state.launch, incident: { ...event.payload, eventId: event.id } },
+      };
     case 'campaign.activated':
       return {
         ...state,

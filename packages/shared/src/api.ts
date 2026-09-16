@@ -8,12 +8,21 @@ import type {
   OutcomeTier,
   TrackId,
 } from '@astrolabe/rules';
+import type { LaunchReadiness } from '@astrolabe/rules';
 
 import type { AiErrorKind } from './events/ai.js';
 import { CampaignSettingsSchema } from './events/campaign.js';
 import { CharacterStatsSchema } from './events/character.js';
 import { RollAdjustmentSchema, RollUsingSchema } from './events/move.js';
 import { ChallengeRankSchema } from './events/track.js';
+import {
+  IncidentAcceptedSchema,
+  LaunchDraftSavedSchema,
+  LaunchLocationSchema,
+  LaunchRouteSchema,
+  LaunchTroubleSchema,
+  SharedStarshipSchema,
+} from './events/launch.js';
 import {
   AssetIdSchema,
   CampaignIdSchema,
@@ -62,6 +71,13 @@ export interface CampaignStateResponse {
   readonly state: CampaignState;
   /** D-150: the open session's move chains that no passage covers yet. */
   readonly owedPassages: readonly OwedPassage[];
+}
+
+/** The resumable Campaign Launch workspace; readiness is server-derived. */
+export interface LaunchWorkspaceResponse {
+  readonly headSeq: number;
+  readonly state: CampaignState;
+  readonly readiness: LaunchReadiness;
 }
 
 /** D-150: a move chain committed without its passage, as the log offers to narrate it. */
@@ -123,6 +139,21 @@ export interface CreateCharacterResponse {
   readonly vowTrackId?: TrackId;
 }
 
+export const CreateLaunchCharacterRequestBodySchema = CreateCharacterRequestBodySchema.extend({
+  backgroundVow: z.object({ title: z.string().trim().min(1), rank: ChallengeRankSchema }),
+  launch: z.object({
+    appearance: z.string().trim().min(1),
+    backstory: z.discriminatedUnion('kind', [
+      z.object({ kind: z.literal('written'), text: z.string().trim().min(1) }),
+      z.object({ kind: z.literal('discover_in_play') }),
+    ]),
+    signatureGear: z.string().trim().min(1).optional(),
+  }),
+});
+export type CreateLaunchCharacterRequestBody = z.infer<
+  typeof CreateLaunchCharacterRequestBodySchema
+>;
+
 /**
  * The body of `POST /campaigns` (task 4.1). `commandId` is minted by the
  * client, same reasoning as the character-creation body. `settings` is
@@ -170,6 +201,196 @@ export type SetTruthRequestBody = z.infer<typeof SetTruthRequestBodySchema>;
 export interface SetTruthResponse {
   readonly text: string;
 }
+
+/** Campaign Launch save-and-resume is one typed snapshot per section. */
+export const SaveLaunchDraftRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  draft: LaunchDraftSavedSchema,
+});
+export type SaveLaunchDraftRequestBody = z.infer<typeof SaveLaunchDraftRequestBodySchema>;
+export interface SaveLaunchDraftResponse {
+  readonly section: SaveLaunchDraftRequestBody['draft']['section'];
+}
+
+export const SetLaunchFoundationRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  premise: z.string().trim().min(1),
+  settings: CampaignSettingsSchema,
+});
+export type SetLaunchFoundationRequestBody = z.infer<typeof SetLaunchFoundationRequestBodySchema>;
+export interface SetLaunchFoundationResponse {
+  readonly premise: string;
+}
+
+export const DecideLaunchTruthRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  truthId: OracleIdSchema,
+  resolution: z.enum(['selected', 'rolled', 'custom', 'leave_open']),
+  optionIndex: z.int().nonnegative().optional(),
+  subchoiceId: z.string().min(1).optional(),
+  subchoiceOptionIndex: z.int().nonnegative().optional(),
+  text: z.string().trim().min(1).optional(),
+});
+export type DecideLaunchTruthRequestBody = z.infer<typeof DecideLaunchTruthRequestBodySchema>;
+export interface DecideLaunchTruthResponse {
+  readonly truthId: OracleId;
+}
+
+export const ActivateLaunchRequestBodySchema = z.object({ commandId: CommandIdSchema });
+export type ActivateLaunchRequestBody = z.infer<typeof ActivateLaunchRequestBodySchema>;
+export interface ActivateLaunchResponse {
+  readonly sessionId: string;
+  readonly sceneId: string;
+  readonly pendingVow: string;
+}
+
+export const SaveSharedStarshipRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  starship: SharedStarshipSchema,
+});
+export type SaveSharedStarshipRequestBody = z.infer<typeof SaveSharedStarshipRequestBodySchema>;
+export interface SaveSharedStarshipResponse {
+  readonly starshipId: EntityId;
+}
+
+export const ConfigureLaunchSectorRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  sector: z.object({
+    sectorId: EntityIdSchema,
+    name: z.string().trim().min(1),
+    region: z.enum(['terminus', 'outlands', 'expanse']),
+    baseline: z.object({ settlements: z.int().positive(), passages: z.int().positive() }),
+    starId: EntityIdSchema.optional(),
+  }),
+});
+export type ConfigureLaunchSectorRequestBody = z.infer<
+  typeof ConfigureLaunchSectorRequestBodySchema
+>;
+export interface ConfigureLaunchSectorResponse {
+  readonly sectorId: EntityId;
+}
+
+export const EstablishLaunchConnectionRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  npcName: z.string().trim().min(1),
+  role: z.string().trim().min(1),
+  rank: ChallengeRankSchema,
+  participants: z.array(CharacterIdSchema).min(1),
+});
+export type EstablishLaunchConnectionRequestBody = z.infer<
+  typeof EstablishLaunchConnectionRequestBodySchema
+>;
+export interface EstablishLaunchConnectionResponse {
+  readonly connectionId: EntityId;
+  readonly npcId: EntityId;
+  readonly trackId: TrackId;
+}
+
+export const AcceptLaunchIncidentRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  incident: IncidentAcceptedSchema.omit({ provenance: true, groundedIn: true }),
+});
+export type AcceptLaunchIncidentRequestBody = z.infer<typeof AcceptLaunchIncidentRequestBodySchema>;
+export interface AcceptLaunchIncidentResponse {
+  readonly incidentId: EntityId;
+}
+
+export const AmendLaunchFactRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  subject: z.enum([
+    'foundation',
+    'truth',
+    'character',
+    'starship',
+    'sector',
+    'location',
+    'route',
+    'trouble',
+    'connection',
+    'incident',
+  ]),
+  replacement: z.string().trim().min(1),
+  reason: z.string().trim().min(1),
+  supersedesEventId: EventIdSchema,
+});
+export type AmendLaunchFactRequestBody = z.infer<typeof AmendLaunchFactRequestBodySchema>;
+export interface AmendLaunchFactResponse {
+  readonly supersedesEventId: EventId;
+}
+
+export const SaveLaunchLocationRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  location: LaunchLocationSchema,
+});
+export type SaveLaunchLocationRequestBody = z.infer<typeof SaveLaunchLocationRequestBodySchema>;
+export interface SaveLaunchLocationResponse {
+  readonly locationId: EntityId;
+}
+
+export const SaveLaunchRouteRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  route: LaunchRouteSchema,
+});
+export type SaveLaunchRouteRequestBody = z.infer<typeof SaveLaunchRouteRequestBodySchema>;
+export interface SaveLaunchRouteResponse {
+  readonly from: EntityId;
+}
+
+export const SetStartingSettlementRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  settlementId: EntityIdSchema,
+});
+export type SetStartingSettlementRequestBody = z.infer<
+  typeof SetStartingSettlementRequestBodySchema
+>;
+
+export const SetSectorLayoutRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  coordinates: z.record(EntityIdSchema, z.object({ x: z.number(), y: z.number() })),
+});
+export type SetSectorLayoutRequestBody = z.infer<typeof SetSectorLayoutRequestBodySchema>;
+
+export const SaveLaunchTroubleRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  trouble: LaunchTroubleSchema,
+});
+export type SaveLaunchTroubleRequestBody = z.infer<typeof SaveLaunchTroubleRequestBodySchema>;
+export interface SaveLaunchTroubleResponse {
+  readonly troubleId: EntityId;
+}
+
+export const RollLaunchOracleRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  oracleId: OracleIdSchema,
+});
+export type RollLaunchOracleRequestBody = z.infer<typeof RollLaunchOracleRequestBodySchema>;
+export interface RollLaunchOracleResponse {
+  readonly eventId: EventId;
+  readonly oracleId: OracleId;
+  readonly roll: number;
+  readonly text: string;
+}
+
+export const ProposeLaunchCreationRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  targetKind: z.enum([
+    'truth',
+    'character',
+    'starship',
+    'settlement',
+    'sector',
+    'connection',
+    'trouble',
+    'incident',
+  ]),
+  targetId: z.string().trim().min(1),
+  proposal: z.string().trim().min(1),
+  rationale: z.string().trim().min(1),
+  groundedIn: z.array(EventIdSchema),
+});
+export type ProposeLaunchCreationRequestBody = z.infer<
+  typeof ProposeLaunchCreationRequestBodySchema
+>;
 
 /** The body of `POST /campaigns/:id/sector/locations` (task 4.3). */
 export const AddSectorLocationRequestBodySchema = z.object({

@@ -58,7 +58,7 @@ export const SharedStarshipSchema = z.object({
   modules: z.array(z.object({ assetId: AssetIdSchema, ownerCharacterId: CharacterIdSchema })),
 });
 const RegionSchema = z.enum(['terminus', 'outlands', 'expanse']);
-const LocationSchema = z.discriminatedUnion('kind', [
+export const LaunchLocationSchema = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('settlement'),
     id: EntityIdSchema,
@@ -90,12 +90,12 @@ const LocationSchema = z.discriminatedUnion('kind', [
     description: z.string().min(1),
   }),
 ]);
-const EndpointSchema = z.union([
+export const LaunchRouteEndpointSchema = z.union([
   EntityIdSchema,
   z.object({ kind: z.literal('off_map'), label: z.string().min(1) }),
 ]);
-const RouteSchema = z.object({ from: EntityIdSchema, to: EndpointSchema });
-const TroubleSchema = z.object({
+export const LaunchRouteSchema = z.object({ from: EntityIdSchema, to: LaunchRouteEndpointSchema });
+export const LaunchTroubleSchema = z.object({
   troubleId: EntityIdSchema,
   kind: z.enum(['settlement', 'sector']),
   ownerId: EntityIdSchema.optional(),
@@ -147,7 +147,7 @@ const DraftSnapshotSchema = z.discriminatedUnion('section', [
     section: z.literal('connection_troubles'),
     snapshot: z.object({
       connection: ConnectionSchema.partial().optional(),
-      troubles: z.array(TroubleSchema.partial()),
+      troubles: z.array(LaunchTroubleSchema.partial()),
     }),
   }),
   z.object({
@@ -182,6 +182,7 @@ export const TruthDecidedSchema = z.object({
   resolution: z.enum(['selected', 'rolled', 'custom', 'leave_open']),
   optionIndex: z.int().nonnegative().optional(),
   subchoiceId: z.string().min(1).optional(),
+  subchoiceOptionIndex: z.int().nonnegative().optional(),
   text: z.string().min(1).optional(),
   questStarter: z.string().min(1).optional(),
   ...AcceptanceSchema.shape,
@@ -209,15 +210,15 @@ export const SectorConfiguredSchema = z.object({
   starId: EntityIdSchema.optional(),
   ...AcceptanceSchema.shape,
 });
-export const LocationAddedSchema = LocationSchema.and(z.object(AcceptanceSchema.shape));
-export const LocationRevisedSchema = LocationSchema.and(z.object(AcceptanceSchema.shape));
+export const LocationAddedSchema = LaunchLocationSchema.and(z.object(AcceptanceSchema.shape));
+export const LocationRevisedSchema = LaunchLocationSchema.and(z.object(AcceptanceSchema.shape));
 export const LocationRemovedSchema = z.object({
   locationId: EntityIdSchema,
   supersedesEventId: EventIdSchema,
   reason: z.string().min(1),
 });
-export const RouteAddedSchema = RouteSchema.extend(AcceptanceSchema.shape);
-export const RouteRevisedSchema = RouteSchema.extend(AcceptanceSchema.shape);
+export const RouteAddedSchema = LaunchRouteSchema.extend(AcceptanceSchema.shape);
+export const RouteRevisedSchema = LaunchRouteSchema.extend(AcceptanceSchema.shape);
 export const RouteRemovedSchema = z.object({
   supersedesEventId: EventIdSchema,
   reason: z.string().min(1),
@@ -229,8 +230,8 @@ export const StartingSettlementSelectedSchema = z.object({
   settlementId: EntityIdSchema,
   supersedesEventId: EventIdSchema.optional(),
 });
-export const TroubleEstablishedSchema = TroubleSchema.extend(AcceptanceSchema.shape);
-export const TroubleRevisedSchema = TroubleSchema.extend(AcceptanceSchema.shape);
+export const TroubleEstablishedSchema = LaunchTroubleSchema.extend(AcceptanceSchema.shape);
+export const TroubleRevisedSchema = LaunchTroubleSchema.extend(AcceptanceSchema.shape);
 export const ConnectionEstablishedSchema = ConnectionSchema.extend(AcceptanceSchema.shape);
 export const ConnectionRevisedSchema = ConnectionSchema.extend(AcceptanceSchema.shape);
 export const IncidentAcceptedSchema = IncidentSchema.extend(AcceptanceSchema.shape);

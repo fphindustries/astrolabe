@@ -18,6 +18,41 @@ export {
 } from './event-store.js';
 export { uuidv7 } from './uuid.js';
 export { latestSessionId, readNarrativeEvents } from './event-store.js';
+export {
+  decideTruth,
+  activateLaunch,
+  saveLaunchDraft,
+  saveSharedStarship,
+  configureLaunchSector,
+  establishLaunchConnection,
+  acceptLaunchIncident,
+  amendLaunchFact,
+  saveLaunchLocation,
+  saveLaunchRoute,
+  setStartingSettlement,
+  setSectorLayout,
+  saveLaunchTrouble,
+  rollLaunchOracle,
+  proposeLaunchCreation,
+  setLaunchFoundation,
+  LaunchRejectedError,
+  type DecideTruthRequest,
+  type ActivateLaunchRequest,
+  type SaveLaunchDraftRequest,
+  type SaveSharedStarshipRequest,
+  type ConfigureLaunchSectorRequest,
+  type EstablishLaunchConnectionRequest,
+  type AcceptLaunchIncidentRequest,
+  type AmendLaunchFactRequest,
+  type SaveLaunchLocationRequest,
+  type SaveLaunchRouteRequest,
+  type SetStartingSettlementRequest,
+  type SetSectorLayoutRequest,
+  type SaveLaunchTroubleRequest,
+  type RollLaunchOracleRequest,
+  type ProposeLaunchCreationRequest,
+  type SetLaunchFoundationRequest,
+} from './launch-commands.js';
 export { previewVoid, voidEvent, VoidRefusedError, type VoidRequest } from './void-command.js';
 export {
   overrideState,
@@ -33,6 +68,7 @@ export {
 export {
   createCharacter,
   CharacterRejectedError,
+  LaunchCharacterRejectedError,
   UnknownProposalError,
   type CreateCharacterRequest,
   type CreatedCharacter,

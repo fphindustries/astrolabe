@@ -97,6 +97,12 @@ export interface CharacterState {
   readonly hooks: readonly string[];
   /** D-131: the player's words, or null when none were recorded. */
   readonly pronouns: string | null;
+  /** Campaign Launch fields are absent on legacy Milestone 1 characters. */
+  readonly appearance?: string;
+  readonly backstory?:
+    { readonly kind: 'written'; readonly text: string } | { readonly kind: 'discover_in_play' };
+  readonly backgroundVow?: { readonly title: string; readonly rank: string };
+  readonly signatureGear?: string;
 }
 
 export type TrackKind = 'vow' | 'expedition' | 'clock';
