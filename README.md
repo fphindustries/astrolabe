@@ -10,7 +10,7 @@ Built first for solo play, then for a private table of up to six players in a sh
 
 ## Status
 
-**Milestone 1, in build.** The golden session plays end to end; the visual design pass and keyboard work are under way. Scope and progress: [docs/milestone-1.md](docs/milestone-1.md).
+**Milestone 1 is complete. Milestone 2 is designed and ready to build.** The current milestone is Campaign Launch: the Chapter 2 Session 0 flow for truths, crew, shared starship, starting sector, local connection, inciting incident, and the opening vow. Scope: [docs/milestone-2.md](docs/milestone-2.md). Acceptance narrative: [docs/golden-launch.md](docs/golden-launch.md).
 
 ## Development
 
@@ -109,8 +109,11 @@ Working on the app itself, or `main`'s image isn't reachable: `docker compose up
 | Document | What it is |
 |---|---|
 | [docs/design-record.md](docs/design-record.md) | The living design record: charter, decision log, authority model, rules scope, creation flows, play screen, architecture, and milestone plan |
-| [docs/golden-session.md](docs/golden-session.md) | A scripted slice of ideal play, used as both the acceptance test and the fun test |
-| [docs/milestone-1.md](docs/milestone-1.md) | Current scope, acceptance criteria, and task breakdown |
+| [docs/milestone-2.md](docs/milestone-2.md) | Current Campaign Launch scope, acceptance criteria, domain model, and ordered task breakdown |
+| [docs/golden-launch.md](docs/golden-launch.md) | Milestone 2's scripted Session 0 acceptance and fun test |
+| [docs/milestone-1.md](docs/milestone-1.md) | Completed Milestone 1 scope and implementation record |
+| [docs/golden-session.md](docs/golden-session.md) | Milestone 1's scripted play and regression test |
+| [AGENTS.md](AGENTS.md) | Repository guide and engineering boundaries for Codex and other coding agents |
 | [CLAUDE.md](CLAUDE.md) | Working agreement and repository conventions for Claude Code |
 
 The design record is the source of truth. Every approved decision carries an ID (D-01, D-02, …) so code, issues, and commits can reference it.

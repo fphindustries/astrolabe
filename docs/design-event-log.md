@@ -1,4 +1,4 @@
-# Astrolabe — Event Log and State Projection (v1.0, Approved)
+# Astrolabe — Event Log and State Projection (v1.1, Approved)
 
 The detailed design behind §9 of the [design record](design-record.md): every state
 change is an appended event, and current state is a projection over the log. Recaps,
@@ -7,9 +7,12 @@ come out of that one mechanism.
 
 Decided in design round 11: D-83 (void cascade and containment), D-84 (void bounded to
 the session), D-85 (token accounting exempt from void), D-86 (entity amendment and
-reinstatement deferred), D-87 (the ship is display-only in Milestone 1).
+reinstatement deferred), D-87 (the ship is display-only in Milestone 1). Campaign
+Launch extends this design through D-159–D-170, especially D-161's draft, proposal,
+revision, and amendment semantics.
 
-The build tasks live in [`milestone-1.md`](milestone-1.md) §2.
+The original build tasks live in [`milestone-1.md`](milestone-1.md) §2. Campaign Launch
+tasks live in [`milestone-2.md`](milestone-2.md) §2–3.
 
 ---
 
@@ -256,6 +259,68 @@ once, at write time, not re-derived by every reader. `cause.clause` carries the 
 rule text forward, so "every automated rule behaviour is traceable" survives into the
 log and not just into the rules package.
 
+### Campaign Launch event catalogue
+
+Campaign Launch adds the following types. Names are part of the approved design; the
+Zod schemas may factor shared value objects, but they must preserve the domain-specific
+discriminants listed here.
+
+| Type | Payload responsibility |
+|---|---|
+| `launch.draft_saved` | `{ section, snapshot }`, where `section` discriminates a closed union of Foundation, Truths, Crew, Starship, Sector, Connection/Troubles, and Incident/Launch snapshot schemas. It is resumable setup, not canon. |
+| `creation.proposed` | `{ targetKind, targetId, proposal, rationale, groundedIn }`; `targetKind` selects a closed schema for truth, character, starship, settlement, sector, connection, trouble, or incident. Oracle rolls and the AI accounting event remain separate and are referenced by id. |
+| `campaign.foundation_set` | Accepted premise and launch settings, with provenance and optional `supersedesEventId`. |
+| `truth.decided` | Truth id, `resolution: selected | rolled | custom | leave_open`, resolved option/subchoice or custom text, quest-starter reference, grounding, and optional `supersedesEventId`. |
+| `character.created` | The complete accepted launch character snapshot, including appearance, backstory state, background vow, gear, rules-derived starting state, assets, and provenance. Existing v1 events upcast with explicit absent/default launch fields; readiness still reports what must be completed. |
+| `character.revised` | Complete replacement snapshot plus `characterId`, `supersedesEventId`, and provenance. |
+| `character.removed` | `characterId`, `supersedesEventId`, and reason; valid only before activation and only when no retained launch fact references that character. |
+| `starship.established` | Shared starship id, details, integrity and bounds, shared Starship asset snapshot, installed module references with owners, and provenance. |
+| `starship.revised` | Complete replacement ship snapshot and `supersedesEventId`. |
+| `sector.configured` | Sector id, name, region, snapshotted baseline requirements, optional star reference, and provenance. |
+| `location.added`, `location.revised`, `location.removed` | Typed settlement, planet, star, or other-location snapshot; revisions/removals name the superseded event and are rejected when retained facts reference the location. |
+| `route.added`, `route.revised`, `route.removed` | Passage endpoints, including a typed off-map endpoint; revisions/removals name the superseded event. |
+| `sector.layout_changed` | Complete presentation-only node-coordinate map. It changes no fictional distance or rules state. |
+| `starting_settlement.selected` | Settlement id and optional `supersedesEventId`. |
+| `trouble.established`, `trouble.revised` | Typed `settlement | sector` trouble, owner id, accepted text/structured fields, grounding, and optional supersession. |
+| `connection.established`, `connection.revised` | NPC id, role, rank, progress-track id and snapshot, participant character ids, explicit `automaticStrongHit: true`, provenance, and optional supersession. No dice event is fabricated. |
+| `incident.accepted`, `incident.revised` | Incident id, accepted wording, cited launch-fact event ids, grounding, proposed vow rank, selected roller/participants, opening-scene draft, and optional supersession. No track or session exists yet. |
+| `campaign.activated` | The immutable activation boundary: complete accepted launch-fact event ids, Session 1 id, opening scene id/snapshot, pending incident/vow metadata, and readiness version. |
+| `launch.fact_amended` | Post-activation amendment with `subject` as a closed union of launch fact references, a typed replacement value, mandatory reason, and `supersedesEventId`. |
+
+The shared acceptance fields are `{ provenance, groundedIn, supersedesEventId? }`.
+`provenance` distinguishes `player_written`, `official_choice`, `oracle_roll`,
+`guide_proposal`, and `guide_proposal_edited`. `groundedIn` contains event ids, never
+free-form source claims. When an accepted value comes from a proposal, its event is
+server-caused by `creation.proposed`; when it comes directly from rolls, it references
+the `oracle.rolled` events.
+
+`supersedesEventId` creates a revision chain; projection selects the latest non-voided
+member and naturally falls back if that revision is voided. It does not erase the old
+fact. Before activation, domain revision events are used. After activation, commands
+must write `launch.fact_amended` with a reason rather than masquerading a retcon as a
+setup revision.
+
+`campaign.activated` is non-voidable and references every canonical launch fact it
+freezes. It is appended atomically with the existing `session.began` and `scene.started`
+events. Those events are caused by activation. The pending vow is not a track yet: the
+existing move event sequence creates `track.created` and `vow.sworn` only when the
+player actually invokes `Swear an Iron Vow`.
+
+Metadata rules for the new catalogue:
+
+- `launch.draft_saved` and `creation.proposed` are non-narrative, non-significant, and
+  excluded from ordinary AI context. They remain auditable and `ai.completed` still
+  counts proposal token use.
+- Accepted/revised launch facts are state-mutating and significant but do not appear as
+  session narrative. Their `references` functions include grounding, supersession,
+  participant, endpoint, owner, and cited-fact ids as applicable.
+- Layout is state-mutating presentation data but non-significant and never enters AI
+  context.
+- Activation's references make a later void of any frozen setup fact fail containment;
+  active campaigns use amendments instead.
+- Saved drafts never introduce entities or satisfy readiness. Proposals introduce no
+  canonical entities. Only accepted fact events populate the launch projection.
+
 ---
 
 ## 5. Void and redo
@@ -424,8 +489,9 @@ Two read models over one log:
 ```ts
 interface CampaignState {
   campaign: { id, name, settings: { narrationLatitude, narrationLength, rerollCap }, truths[] };
-  session: { id, number, startedAt, endedAt?, tokenUsage: { input, output } };  // D-75
-  scene:   { id, title, stakes, unresolved, locationId };                       // D-71
+  launch: LaunchState;
+  session?: { id, number, startedAt, endedAt?, tokenUsage: { input, output } }; // absent during launch; D-75
+  scene?:   { id, title, stakes, unresolved, locationId };                      // absent during launch; D-71
   characters: Record<CharacterId, CharacterState>;
   tracks:     Record<TrackId, TrackState>;      // vows, clocks, expeditions, legacy
   entities:   Record<EntityId, EntityState>;    // NPCs, locations, factions, the ship
@@ -444,6 +510,19 @@ interface CharacterState {
 }
 
 interface Provenance { eventId; actorKind: 'player' | 'ai' | 'system'; reason?; at; }
+
+interface LaunchState {
+  phase: 'draft' | 'ready' | 'active';
+  sections: Record<LaunchSection, { status: 'not_started' | 'in_progress' | 'complete'; blockers: LaunchProblem[] }>;
+  drafts: Partial<Record<LaunchSection, TypedLaunchDraft>>;
+  foundation?: CampaignFoundation;
+  starship?: SharedStarshipState;
+  sector?: StartingSectorState;
+  connection?: ConnectionState;
+  troubles: TroubleState[];
+  incident?: IncidentState;
+  activation?: { eventId; sessionId; sceneId; pendingVow: PendingVow };
+}
 ```
 
 **Stored, folded from events:** every meter value, momentum value, track ticks,
@@ -474,9 +553,17 @@ interface EntityState {
 five rolls, one of them the survivor of a reroll — which is how an NPC card links back
 to its chips.
 
-**The ship** is a display-only entity in Milestone 1 (D-87). No golden-session beat
-mutates ship state; Beats 4 and 5 use the *Lantern Wake*'s sensors, but that resolves
-as a character move.
+**The ship** remains a display-only entity in Milestone 1 (D-87). Campaign Launch
+supersedes that setup representation with `launch.starship`, one shared aggregate with
+typed module-owner references (D-164). Compatibility projection must not expose both
+the old display entity/per-character command-vehicle grant and the shared ship as
+independent mechanical assets.
+
+`launch.phase` is partly derived: before activation it is `ready` exactly when the
+server's current launch-readiness function finds no blockers, otherwise `draft`.
+`campaign.activated` permanently makes it `active`. Section statuses and blockers are
+read-model output, not writable facts. Draft snapshots are present only for Campaign
+Launch resumption endpoints; context assembly explicitly strips `launch.drafts`.
 
 ---
 

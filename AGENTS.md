@@ -12,17 +12,23 @@ Before substantive work, read the parts of these documents that govern the chang
    the product source of truth.
 2. `docs/design-event-log.md` — authoritative event-store and projection design for
    changes involving state, persistence, voiding, corrections, or read models.
-3. `docs/milestone-1.md` — implemented scope and detailed implementation notes.
-4. `docs/golden-session.md` — the acceptance narrative and intended play experience.
-5. `CLAUDE.md` — the original compact working agreement.
+3. `docs/milestone-2.md` — current Campaign Launch scope, acceptance criteria, domain
+   model, and ordered implementation plan.
+4. `docs/golden-launch.md` — Milestone 2 acceptance narrative and intended Session 0
+   experience.
+5. `docs/milestone-1.md` — completed scope and detailed implementation notes.
+6. `docs/golden-session.md` — the Milestone 1 regression narrative and play experience.
+7. `CLAUDE.md` — the original compact working agreement.
 
 Milestone 1 is complete. Treat its behavior and golden-session coverage as a baseline
-to preserve. A feature assigned to Milestone 2 or “later” is not authorized merely
-because its eventual direction is mentioned in the design record. If a requested
-change raises a product question not answered by an approved decision, surface the
-gap and ask; do not silently invent a decision or promote a Proposed/Draft item to
-Approved. When an approved decision changes, update the design record and reference
-its decision ID in the implementation notes and commit/PR description.
+to preserve. Milestone 2 is the approved current scope; its boundary is the Golden
+Launch, not every future capability mentioned in the design record. Combat is
+Milestone 3, multiplayer is Milestone 4, and safety/content-expectation tools are
+deferred. If a requested change raises a product question not answered by an approved
+decision, surface the gap and ask; do not silently invent a decision or promote a
+Proposed/Draft item to Approved. When an approved decision changes, update the design
+record and reference its decision ID in the implementation notes and commit/PR
+description.
 
 ## Product invariants
 
@@ -83,6 +89,15 @@ The event log is the architectural center of the application.
 - Campaign state is bounded and projected whole; the narrative log is unbounded and
   paged. Voided events disappear from projected state but remain visibly marked in the
   log.
+- Campaign Launch draft snapshots and unaccepted Guide proposals are durable but
+  non-canonical. Keep them out of narration, recaps, and ordinary world context.
+  Accepted facts are canonical events linked to their provenance; revisions append
+  rather than overwrite.
+- Launch readiness and blocking reasons are server-derived. Campaign phase only moves
+  `draft` → `ready` → `active`; activation is irreversible and creates Session 1 plus
+  its opening scene before the actual `Swear an Iron Vow` move.
+- Model one shared command starship per campaign crew. Do not duplicate the Starship
+  as a character asset; character-selected modules retain their character owner.
 - A new event type normally requires coordinated changes to its Zod payload schema,
   `PAYLOAD_SCHEMAS`, `EVENT_TYPE_META`, payload versioning/upcasting as needed, the
   state projector and/or narrative read model, fixtures, and exhaustive tests. Let
@@ -141,7 +156,9 @@ The event log is the architectural center of the application.
 
 Add or update a colocated `*.test.ts` for behavior changes. Test pure logic at the
 lowest layer that owns it, then add command/HTTP coverage for cross-layer behavior.
-The golden-session test is the regression boundary for the shipped experience.
+The golden-session test is the regression boundary for Milestone 1. The golden-launch
+test is the acceptance boundary for Milestone 2 and must cover both stub-AI mixed
+authoring and completion without an AI provider.
 
 Use focused Vitest runs while iterating, then run the applicable repository checks:
 
