@@ -78,6 +78,19 @@ export interface AppendRequest {
   readonly response?: JsonValue;
   /** Present only on a campaign's first command, which creates its bookkeeping row. */
   readonly createCampaign?: { readonly name: string };
+  /**
+   * A last check, run inside the write transaction while the campaign row
+   * lock is already held, so a decision made from the log cannot be
+   * invalidated by a concurrent writer between reading and appending.
+   * Throwing rejects the command and rolls the whole append back.
+   *
+   * Campaign activation needs this: it revalidates launch readiness over the
+   * log and must not race a launch command that lands in between (D-168).
+   * The alternative it replaces — opening an outer transaction and passing
+   * the handle in as `Sql` — could not work, because a postgres.js
+   * transaction has no `begin` of its own and this function always opens one.
+   */
+  readonly precondition?: (tx: Sql) => Promise<void>;
 }
 
 export type JsonValue =
@@ -142,6 +155,12 @@ export async function appendCommand(sql: Sql, request: AppendRequest): Promise<A
         throw new Error(`Campaign ${request.campaignId} does not exist.`);
       }
       const firstSeq = Number(after.next_seq) - request.events.length;
+
+      // The bump above took the campaign row lock, so anything the
+      // precondition reads from the log is stable through to the insert.
+      if (request.precondition !== undefined) {
+        await request.precondition(tx as unknown as Sql);
+      }
 
       const events = request.events.map((event, index) =>
         buildEvent(request, event, firstSeq + index, occurredAt),

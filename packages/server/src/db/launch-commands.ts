@@ -850,22 +850,6 @@ export async function activateLaunch(
   sql: Sql,
   request: ActivateLaunchRequest,
 ): Promise<AppendResult> {
-  return sql.begin(async (tx) => {
-    // Lock before folding: a concurrent draft/fact command cannot slip in
-    // between readiness validation and the activation append.
-    const campaigns = await tx<{ id: string }[]>`
-      select id from campaigns where id = ${request.campaignId} for update
-    `;
-    if (campaigns[0] === undefined)
-      throw new Error(`Campaign ${request.campaignId} does not exist.`);
-    return activateLaunchLocked(tx as unknown as Sql, request);
-  });
-}
-
-async function activateLaunchLocked(
-  sql: Sql,
-  request: ActivateLaunchRequest,
-): Promise<AppendResult> {
   const eventsSoFar = await readEvents(sql, request.campaignId);
   const { state, readiness } = buildLaunchWorkspace(eventsSoFar);
   if (state.launch.phase === 'active')
@@ -890,6 +874,19 @@ async function activateLaunchLocked(
     commandId: request.commandId,
     kind: 'launch.activate',
     actor: request.actor,
+    // Re-read and revalidate under the campaign row lock, so a launch command
+    // that lands between the fold above and this append cannot slip past
+    // readiness or produce a second activation (D-168, A40).
+    precondition: async (tx) => {
+      const current = buildLaunchWorkspace(await readEvents(tx, request.campaignId));
+      if (current.state.launch.phase === 'active')
+        throw new LaunchRejectedError('campaign_active', 'This campaign has already launched.');
+      if (!current.readiness.ready)
+        throw new LaunchRejectedError(
+          'not_ready',
+          'Complete every launch requirement before activating.',
+        );
+    },
     events: [
       {
         id: activationId,
