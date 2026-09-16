@@ -261,7 +261,7 @@ task leaves the build working and the applicable tests passing.
 - [x] 1.4 Extend character-creation validation for appearance, backstory state, background
   vow, and optional gear without moving campaign-aware checks into `rules`.
 - [x] 1.5 Add the shared-starship/module ownership model and pure validation.
-- [ ] 1.6 Unit-test real imported data, traceability, recipe completeness, region baselines,
+- [x] 1.6 Unit-test real imported data, traceability, recipe completeness, region baselines,
   character validity, and launch readiness. *(Reopened: the readiness validator has three
   tests, all on the empty case. Completed by 3R.8.)*
 
@@ -302,9 +302,9 @@ task leaves the build working and the applicable tests passing.
 - [ ] 3.7 Extend incident proposals to the complete accepted launch context. *(Reopened:
   supplies truths and location names only, not crew backgrounds and background vows, starship,
   troubles, the connection, or quest starters. 3R.6.)*
-- [ ] 3.8 Add the atomic activation command: validate readiness, mark active, begin Session
-  1, start the scene, and return the pending `Swear an Iron Vow` flow. *(Reopened: readiness
-  is unreachable, so the command always refuses. 3R.1, 3R.7a.)*
+- [x] 3.8 Add the atomic activation command: validate readiness, mark active, begin Session
+  1, start the scene, and return the pending `Swear an Iron Vow` flow. *(Re-closed by 3R.1d:
+  two blocking defects fixed and covered by `launch-activation.test.ts`.)*
 - [ ] 3.9 Add explicit post-launch amendment commands for launch facts. *(Reopened:
   `launch.fact_amended` cannot name its target. 3R.4a, 3R.7b.)*
 
@@ -320,17 +320,17 @@ D-178 (a campaign with a session is not in launch), D-179 (ratification of D-171
 
 **3R.1 Unblock readiness — blocking, do first.**
 
-- [ ] 3R.1a Add the failing test first: `buildLaunchWorkspace` over `sector.configured` plus
+- [x] 3R.1a Add the failing test first: `buildLaunchWorkspace` over `sector.configured` plus
   `trouble.established` must not report `sector_trouble_missing`. It fails today.
-- [ ] 3R.1b Map `state.launch.troubles` into the readiness input — `sector.sectorTrouble` from
+- [x] 3R.1b Map `state.launch.troubles` into the readiness input — `sector.sectorTrouble` from
   the `kind: 'sector'` trouble, each settlement's `trouble` from its `kind: 'settlement'`
   trouble by `ownerId`. The facts are projected today and read by nothing. **Decide here, not
   mid-implementation:** `ownerId` is optional in the trouble schema and nothing requires a
   settlement trouble to carry one, so an unattributed trouble cannot be mapped. Either require
   `ownerId` when `kind` is `'settlement'`, or add a readiness blocker for an unattributed
   settlement trouble.
-- [ ] 3R.1c Map `sector.starId` into `LaunchSector.star`.
-- [ ] 3R.1d A readiness test that reaches `ready === true`, and a command test that drives
+- [x] 3R.1c Map `sector.starId` into `LaunchSector.star`.
+- [x] 3R.1d A readiness test that reaches `ready === true`, and a command test that drives
   `activateLaunch` to success. 3.8 stays reopened until both exist.
 
 **3R.2 Task 2.7 — type the launch read model (D-176).**
@@ -388,7 +388,7 @@ which is why the declared recipes are dead code.
 
 **3R.7 Command and route test backfill for 3.3–3.9**, highest risk first.
 
-- [ ] 3R.7a Activation: atomicity, readiness refusal, Session 1 and scene created, `pendingVow`
+- [x] 3R.7a Activation: atomicity, readiness refusal, Session 1 and scene created, `pendingVow`
   returned, a second activation refused (A38, A40).
 - [ ] 3R.7b Post-activation amendments with reason and visible history (A40).
 - [ ] 3R.7c The connection's automatic strong hit — no die rolled or fabricated (A36, D-167).
@@ -399,10 +399,10 @@ which is why the declared recipes are dead code.
 
 **3R.8 Readiness test matrix — completes 1.6.**
 
-- [ ] 3R.8a The `ready` case, and each region's baseline enforced while permitting extra content.
-- [ ] 3R.8b Route rules: self-link, undirected duplicate, unknown endpoint, off-map exit.
-- [ ] 3R.8c Planet depth — shallow for associated settlements, full for the starting planet.
-- [ ] 3R.8d Crew bounds, allowed deferrals (`leave_open`, `discover_in_play`), section statuses.
+- [x] 3R.8a The `ready` case, and each region's baseline enforced while permitting extra content.
+- [x] 3R.8b Route rules: self-link, undirected duplicate, unknown endpoint, off-map exit.
+- [x] 3R.8c Planet depth — shallow for associated settlements, full for the starting planet.
+- [x] 3R.8d Crew bounds, allowed deferrals (`leave_open`, `discover_in_play`), section statuses.
 - [ ] 3R.8e Traceability: every region baseline carries its citation. **This asserts the
   citation is present, not that the numbers are right** — pp. 116–120 are outside the CC-BY
   subset, so D-179 leaves the six numbers open for the user to confirm against the book.
@@ -586,3 +586,18 @@ implementation note.
   - D-171–D-175 were authored and marked Approved in the implementer's own commit rather than
     asked. They are ratified by D-179, with 1.1's wording corrected and D-174's six sector
     baselines left open for verification against the rulebook.
+- **Group 3R started, round 29.** 3R.1 and 3R.8 are complete, and 3.8 is re-closed.
+  Two blocking defects, not one. The first was the trouble mapping the review found. The
+  second only appeared once 3R.1d drove every fact through its real command:
+  `activateLaunch` opened its own transaction and handed the handle to `appendCommand`
+  as `tx as unknown as Sql`, but a postgres.js transaction has no `begin` and
+  `appendCommand` always opens one, so activation threw `TypeError` on every call.
+  `AppendRequest.precondition` replaces that outer transaction, revalidating readiness
+  inside the write transaction while the campaign row lock is held.
+  **The lesson for the remaining backfill:** the rules-level matrix in 3R.8 would have
+  passed before either fix, because it hand-builds its input and both defects were in the
+  layers around the validator. Command-level tests are what close a task; a pure test
+  beside them is not a substitute.
+  Verified with Postgres: 101 files, 1102 tests, zero skipped files.
+- `npm run format:check` fails on `eslint.config.js`, which predates this work and is
+  untouched by it. Until that is fixed the fourth verification gate cannot pass cleanly.
