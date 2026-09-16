@@ -96,7 +96,7 @@ export async function setLaunchFoundation(
   const premise = request.premise.trim();
   if (premise === '')
     throw new LaunchRejectedError('premise_required', 'A campaign premise is required.');
-  const previous = state.launch.foundation as { readonly eventId?: EventId } | undefined;
+  const previous = state.launch.foundation;
   return appendCommand(sql, {
     campaignId: request.campaignId,
     commandId: request.commandId,
@@ -393,7 +393,8 @@ export async function setSectorLayout(
       'campaign_active',
       'Map layout changes by amendment after launch.',
     );
-  if (Object.keys(request.coordinates).some((id) => state.launch.locations[id] === undefined)) {
+  const placed = Object.keys(request.coordinates) as EntityId[];
+  if (placed.some((id) => state.launch.locations[id] === undefined)) {
     throw new LaunchRejectedError(
       'unknown_layout_location',
       'Map layout may only position accepted locations.',
@@ -625,7 +626,7 @@ export async function acceptLaunchIncident(
       'Incident citations must be accepted launch facts.',
     );
   }
-  const previous = state.launch.incident as { readonly eventId?: EventId } | undefined;
+  const previous = state.launch.incident;
   return appendCommand(sql, {
     campaignId: request.campaignId,
     commandId: request.commandId,
@@ -756,7 +757,7 @@ export async function configureLaunchSector(
       'The sector baseline must match the selected region.',
     );
   }
-  const previous = state.launch.sector as { readonly eventId?: EventId } | undefined;
+  const previous = state.launch.sector;
   return appendCommand(sql, {
     campaignId: request.campaignId,
     commandId: request.commandId,
@@ -806,7 +807,7 @@ export async function saveSharedStarship(
       'invalid_starship',
       problems.map((problem) => problem.message).join(' '),
     );
-  const current = state.launch.starship as { readonly eventId?: EventId } | undefined;
+  const current = state.launch.starship;
   const accepted = {
     ...request.starship,
     provenance: 'player_written' as const,
@@ -860,7 +861,7 @@ export async function activateLaunch(
       'Complete every launch requirement before activating.',
     );
   }
-  const incident = state.launch.incident as PayloadFor<'incident.accepted'> | undefined;
+  const incident = state.launch.incident;
   if (incident === undefined)
     throw new LaunchRejectedError('incident_missing', 'Choose an incident first.');
   const sessionId = uuidv7() as SessionId;

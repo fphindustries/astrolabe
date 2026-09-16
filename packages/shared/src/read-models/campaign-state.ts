@@ -1,5 +1,6 @@
 import type {
   AssetId,
+  ChallengeRank,
   CharacterId,
   ImpactId,
   MeterId,
@@ -11,6 +12,8 @@ import type {
 import type { ActorKind, Timestamp } from '../envelope.js';
 import type { CampaignId, EntityId, EventId, SceneId, SessionId } from '../ids.js';
 import type { CampaignSettings } from '../events/campaign.js';
+import type { PayloadFor } from '../events/index.js';
+import type { LaunchSection } from '../events/launch.js';
 
 /**
  * Projected campaign state: a pure fold over the event log.
@@ -101,7 +104,7 @@ export interface CharacterState {
   readonly appearance?: string;
   readonly backstory?:
     { readonly kind: 'written'; readonly text: string } | { readonly kind: 'discover_in_play' };
-  readonly backgroundVow?: { readonly title: string; readonly rank: string };
+  readonly backgroundVow?: { readonly title: string; readonly rank: ChallengeRank };
   readonly signatureGear?: string;
 }
 
@@ -198,26 +201,65 @@ export interface SectorState {
   readonly routes: readonly SectorRoute[];
 }
 
-/** Campaign Launch facts. Readiness is attached by the server's rules-aware read path. */
+/**
+ * A projected launch fact: the accepted payload, plus the event that set it.
+ *
+ * The `eventId` is what a revision supersedes and what A41 links an accepted
+ * fact back to, so it belongs on the projected fact rather than being looked
+ * up again.
+ */
+export type Accepted<T extends LaunchFactType> = PayloadFor<T> & { readonly eventId: EventId };
+
+type LaunchFactType =
+  | 'campaign.foundation_set'
+  | 'truth.decided'
+  | 'starship.established'
+  | 'sector.configured'
+  | 'location.added'
+  | 'route.added'
+  | 'trouble.established'
+  | 'connection.established'
+  | 'incident.accepted';
+
+/** The snapshot a section's **Save and continue** stored (D-161). Not canon. */
+export type LaunchDraftFor<S extends LaunchSection> = Extract<
+  PayloadFor<'launch.draft_saved'>,
+  { readonly section: S }
+>['snapshot'];
+
+/**
+ * Campaign Launch facts, and only facts (D-176).
+ *
+ * Section statuses and blockers are **not** here: deriving them means running
+ * the launch-readiness rules, and this is the output of a fold that reads no
+ * rules content (task 2.7). The server's launch workspace returns them beside
+ * this state, the way D-150 returns `owedPassages` beside it.
+ *
+ * Every member is typed to its accepted-fact payload on purpose. While these
+ * were `unknown`, each reader cast its own way, so the read layer could quietly
+ * stop carrying a fact — which is exactly what happened to trouble, making
+ * readiness unsatisfiable with nothing failing to compile.
+ */
 export interface LaunchState {
   readonly phase: 'draft' | 'ready' | 'active';
-  readonly drafts: Readonly<Record<string, unknown>>;
-  readonly foundation?: unknown;
-  readonly truthDecisions: Readonly<Record<string, unknown>>;
-  readonly starship?: unknown;
-  readonly sector?: unknown;
-  readonly locations: Readonly<Record<string, unknown>>;
-  readonly routes: readonly unknown[];
-  readonly layout: Readonly<Record<string, { readonly x: number; readonly y: number }>>;
+  readonly drafts: { readonly [S in LaunchSection]?: LaunchDraftFor<S> };
+  readonly foundation?: Accepted<'campaign.foundation_set'>;
+  readonly truthDecisions: Readonly<Record<OracleId, Accepted<'truth.decided'>>>;
+  readonly starship?: Accepted<'starship.established'>;
+  readonly sector?: Accepted<'sector.configured'>;
+  readonly locations: Readonly<Record<EntityId, Accepted<'location.added'>>>;
+  readonly routes: readonly Accepted<'route.added'>[];
+  readonly layout: Readonly<Record<EntityId, { readonly x: number; readonly y: number }>>;
   readonly startingSettlementId?: EntityId;
-  readonly troubles: Readonly<Record<string, unknown>>;
-  readonly amendments: readonly unknown[];
-  readonly connection?: unknown;
-  readonly incident?: unknown;
+  readonly troubles: Readonly<Record<EntityId, Accepted<'trouble.established'>>>;
+  readonly amendments: readonly PayloadFor<'launch.fact_amended'>[];
+  readonly connection?: Accepted<'connection.established'>;
+  readonly incident?: Accepted<'incident.accepted'>;
   readonly activation?: {
     readonly eventId: EventId;
     readonly sessionId: SessionId;
     readonly sceneId: SceneId;
+    readonly pendingVow: PayloadFor<'campaign.activated'>['pendingVow'];
   };
 }
 

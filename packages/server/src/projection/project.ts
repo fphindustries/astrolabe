@@ -373,7 +373,17 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
         ...state,
         launch: {
           ...state.launch,
-          starship: { ...event.payload.starship, eventId: event.id },
+          // The revision nests the ship and keeps its acceptance alongside, so
+          // both halves are carried; the projected fact has one shape either way.
+          starship: {
+            ...event.payload.starship,
+            provenance: event.payload.provenance,
+            groundedIn: event.payload.groundedIn,
+            ...(event.payload.supersedesEventId === undefined
+              ? {}
+              : { supersedesEventId: event.payload.supersedesEventId }),
+            eventId: event.id,
+          },
         },
       };
     case 'sector.configured':
@@ -394,17 +404,12 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
         },
       };
     case 'location.removed': {
+      // Removed means gone from the projection; the log still holds the
+      // add and the removal. The tombstone this used to leave behind was
+      // shaped like nothing else in `locations`, and every reader had to
+      // remember to filter it out by guessing at its fields.
       const { [event.payload.locationId]: _removed, ...locations } = state.launch.locations;
-      return {
-        ...state,
-        launch: {
-          ...state.launch,
-          locations: {
-            ...locations,
-            [event.payload.locationId]: { removed: true, eventId: event.id },
-          },
-        },
-      };
+      return { ...state, launch: { ...state.launch, locations } };
     }
     case 'route.added':
     case 'route.revised':
@@ -420,14 +425,14 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
         ...state,
         launch: {
           ...state.launch,
-          routes: [
-            ...state.launch.routes.filter(
-              (route) =>
-                (route as { supersedesEventId?: string }).supersedesEventId !==
-                event.payload.supersedesEventId,
-            ),
-            { removed: true, eventId: event.id },
-          ],
+          // `supersedesEventId` names the event that *added* the route, so the
+          // match is against that route's own `eventId`. It used to compare
+          // against the route's acceptance `supersedesEventId`, which is
+          // undefined on a freshly added route, so nothing was ever removed —
+          // and a tombstone was appended, inflating the passage count instead.
+          routes: state.launch.routes.filter(
+            (route) => route.eventId !== event.payload.supersedesEventId,
+          ),
         },
       };
     case 'sector.layout_changed':
@@ -451,7 +456,10 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
       };
     case 'connection.established':
     case 'connection.revised':
-      return { ...state, launch: { ...state.launch, connection: event.payload } };
+      return {
+        ...state,
+        launch: { ...state.launch, connection: { ...event.payload, eventId: event.id } },
+      };
     case 'incident.accepted':
       return {
         ...state,
@@ -472,6 +480,7 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
             eventId: event.id,
             sessionId: event.payload.sessionId,
             sceneId: event.payload.sceneId,
+            pendingVow: event.payload.pendingVow,
           },
         },
       };

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { EVENT_TYPE_META, EVENT_TYPES, type EventType } from '@astrolabe/shared';
-import { SAMPLE_PAYLOADS } from '@astrolabe/shared/test-fixtures';
+import { SAMPLE_PAYLOADS, testEventId } from '@astrolabe/shared/test-fixtures';
 
 import { project } from './project.js';
 import {
@@ -47,6 +47,20 @@ const PROBES: { readonly [T in EventType]: Probe } = {
       { probe: (b: LogBuilder) => b.add(type as never, SAMPLE_PAYLOADS[type] as never) },
     ]),
   ) as unknown as { readonly [T in EventType]: Probe }),
+  // A removal only mutates if there is something to remove. The blanket probe
+  // above appends one to an empty sector, which used to "mutate" only because
+  // the projector left a tombstone behind; now that removal actually removes,
+  // these need the fact they delete to exist first.
+  'location.removed': {
+    setup: (b) => b.add('location.added', SAMPLE_PAYLOADS['location.added']),
+    probe: (b) => b.add('location.removed', SAMPLE_PAYLOADS['location.removed']),
+  },
+  'route.removed': {
+    // `supersedesEventId` names the event that added the route, so the setup
+    // has to be appended under exactly that id.
+    setup: (b) => b.add('route.added', SAMPLE_PAYLOADS['route.added'], { id: testEventId(1) }),
+    probe: (b) => b.add('route.removed', SAMPLE_PAYLOADS['route.removed']),
+  },
   'campaign.created': {
     probe: (b) =>
       b.add('campaign.created', {

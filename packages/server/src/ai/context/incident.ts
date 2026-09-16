@@ -42,10 +42,8 @@ export interface IncidentContext {
 
 export function incidentContext(state: CampaignState): IncidentContext {
   const launchTruths = Object.keys(state.launch.truthDecisions);
-  const launchLocations = Object.values(state.launch.locations).filter(
-    (location): location is { readonly id: EntityId; readonly name: string } =>
-      typeof location === 'object' && location !== null && 'id' in location && 'name' in location,
-  );
+  // Typed now (D-176), so the structural guard this used to need is gone.
+  const launchLocations = Object.values(state.launch.locations);
   return {
     truths: new Map(
       [...new Set([...Object.keys(state.truths), ...launchTruths])].map((id) => [
@@ -126,7 +124,7 @@ export function renderSetup(state: CampaignState): string {
 
   const truths = [...context.truths].map(([key, id]) => {
     const question = STARFORGED.truths.find((t) => t.id === id)?.name ?? id;
-    const launch = state.launch.truthDecisions[id] as { readonly text?: string } | undefined;
+    const launch = state.launch.truthDecisions[id];
     return `- ${key} (${question}): ${state.truths[id]?.text ?? launch?.text ?? ''}`;
   });
   sections.push(

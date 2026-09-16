@@ -23,6 +23,7 @@ export const LaunchSectionSchema = z.enum([
   'connection_troubles',
   'incident_launch',
 ]);
+export type LaunchSection = z.infer<typeof LaunchSectionSchema>;
 export const LaunchProvenanceSchema = z.enum([
   'player_written',
   'official_choice',

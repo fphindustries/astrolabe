@@ -4,7 +4,7 @@ import {
   type LaunchReadiness,
   type LaunchReadinessInput,
 } from '@astrolabe/rules';
-import type { AstrolabeEvent, CampaignState, PayloadFor } from '@astrolabe/shared';
+import type { AstrolabeEvent, CampaignState } from '@astrolabe/shared';
 
 import { project } from '../projection/project.js';
 
@@ -46,36 +46,35 @@ function readinessInput(state: CampaignState): LaunchReadinessInput {
       backgroundVow:
         character.backgroundVow === undefined
           ? { title: '', rank: 'troublesome' as const }
-          : { title: character.backgroundVow.title, rank: character.backgroundVow.rank as never },
+          : character.backgroundVow,
       ...(character.signatureGear !== undefined ? { signatureGear: character.signatureGear } : {}),
       ...(character.hooks.length > 0 ? { hooks: character.hooks } : {}),
     },
   }));
   const decisions = Object.entries(state.launch.truthDecisions).map(([truthId, value]) => {
-    const decision = value as PayloadFor<'truth.decided'>;
     return {
       truthId,
       kind:
-        decision.resolution === 'selected'
+        value.resolution === 'selected'
           ? 'selected'
-          : decision.resolution === 'rolled'
+          : value.resolution === 'rolled'
             ? 'rolled'
-            : decision.resolution === 'custom'
+            : value.resolution === 'custom'
               ? 'custom'
               : 'leave_open',
-      ...(decision.optionIndex !== undefined ? { optionIndex: decision.optionIndex } : {}),
-      ...(decision.subchoiceId !== undefined ? { subchoiceId: decision.subchoiceId } : {}),
+      ...(value.optionIndex !== undefined ? { optionIndex: value.optionIndex } : {}),
+      ...(value.subchoiceId !== undefined ? { subchoiceId: value.subchoiceId } : {}),
     } as const;
   });
-  const ship = state.launch.starship as PayloadFor<'starship.established'> | undefined;
-  const sector = state.launch.sector as PayloadFor<'sector.configured'> | undefined;
-  const connection = state.launch.connection as PayloadFor<'connection.established'> | undefined;
-  const incident = state.launch.incident as PayloadFor<'incident.accepted'> | undefined;
-  const locations = Object.values(state.launch.locations) as PayloadFor<'location.added'>[];
+  const ship = state.launch.starship;
+  const sector = state.launch.sector;
+  const connection = state.launch.connection;
+  const incident = state.launch.incident;
+  const locations = Object.values(state.launch.locations);
   // Trouble is a fact of its own aggregate, so readiness only sees it if this
   // layer carries it across. Forgetting to made `sector_trouble_missing`
   // permanent and activation unreachable; `workspace.test.ts` guards it.
-  const troubles = Object.values(state.launch.troubles) as PayloadFor<'trouble.established'>[];
+  const troubles = Object.values(state.launch.troubles);
   const sectorTrouble = troubles.find((trouble) => trouble.kind === 'sector');
   const settlementTrouble = new Map<string, string>(
     troubles.flatMap((trouble) =>
@@ -130,7 +129,7 @@ function readinessInput(state: CampaignState): LaunchReadinessInput {
               .filter((location) => location.kind === 'other')
               .map((location) => location.id),
             planets,
-            routes: state.launch.routes as never,
+            routes: state.launch.routes,
             ...(state.launch.startingSettlementId !== undefined
               ? { startingSettlementId: state.launch.startingSettlementId }
               : {}),
