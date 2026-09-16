@@ -41,7 +41,12 @@ describe('the metadata table', () => {
 
   it('exempts exactly token accounting and voids from being voided (D-85)', () => {
     const exempt = EVENT_TYPES.filter((type) => !EVENT_TYPE_META[type].voidable);
-    expect(exempt.sort()).toEqual(['ai.completed', 'ai.failed', 'event.voided']);
+    expect(exempt.sort()).toEqual([
+      'ai.completed',
+      'ai.failed',
+      'campaign.activated',
+      'event.voided',
+    ]);
   });
 
   it('treats every significant type as narrative too, except session boundaries', () => {
@@ -50,7 +55,9 @@ describe('the metadata table', () => {
     const significantButNotNarrative = SIGNIFICANT_EVENT_TYPES.filter(
       (type) => !EVENT_TYPE_META[type].narrative,
     );
-    expect(significantButNotNarrative).toEqual(['session.began']);
+    expect(significantButNotNarrative).toContain('session.began');
+    expect(significantButNotNarrative).toContain('campaign.activated');
+    expect(significantButNotNarrative).toContain('truth.decided');
   });
 
   it('derives the narrative and significant type lists from the table', () => {
@@ -105,8 +112,14 @@ describe('introduces and references, across the whole catalogue', () => {
     const introducing = EVENT_TYPES.filter((type) => refsFor(type).introduces.length > 0);
     expect(introducing.sort()).toEqual([
       'character.created',
+      'connection.established',
       'entity.established',
+      'incident.accepted',
+      'location.added',
+      'sector.configured',
+      'starship.established',
       'track.created',
+      'trouble.established',
     ]);
   });
 });

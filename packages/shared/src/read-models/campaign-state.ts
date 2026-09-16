@@ -192,6 +192,29 @@ export interface SectorState {
   readonly routes: readonly SectorRoute[];
 }
 
+/** Campaign Launch facts. Readiness is attached by the server's rules-aware read path. */
+export interface LaunchState {
+  readonly phase: 'draft' | 'ready' | 'active';
+  readonly drafts: Readonly<Record<string, unknown>>;
+  readonly foundation?: unknown;
+  readonly truthDecisions: Readonly<Record<string, unknown>>;
+  readonly starship?: unknown;
+  readonly sector?: unknown;
+  readonly locations: Readonly<Record<string, unknown>>;
+  readonly routes: readonly unknown[];
+  readonly layout: Readonly<Record<string, { readonly x: number; readonly y: number }>>;
+  readonly startingSettlementId?: EntityId;
+  readonly troubles: Readonly<Record<string, unknown>>;
+  readonly amendments: readonly unknown[];
+  readonly connection?: unknown;
+  readonly incident?: unknown;
+  readonly activation?: {
+    readonly eventId: EventId;
+    readonly sessionId: SessionId;
+    readonly sceneId: SceneId;
+  };
+}
+
 export interface CampaignState {
   readonly campaign: CampaignInfo | null;
   readonly session: SessionState | null;
@@ -202,6 +225,7 @@ export interface CampaignState {
   readonly canon: CanonState;
   readonly truths: Readonly<Record<OracleId, TruthAnswer>>;
   readonly sector: SectorState;
+  readonly launch: LaunchState;
   /**
    * D-125: every AI call the campaign has paid for, in a session or not.
    * Characters are created before any session (D-77), and the session

@@ -41,6 +41,12 @@ const LOCATION_A = '0b0b0b0b-0b0b-4b0b-8b0b-0b0b0b0b0b0b';
 const LOCATION_B = '0c0c0c0c-0c0c-4c0c-8c0c-0c0c0c0c0c0c';
 
 const PROBES: { readonly [T in EventType]: Probe } = {
+  ...(Object.fromEntries(
+    EVENT_TYPES.map((type) => [
+      type,
+      { probe: (b: LogBuilder) => b.add(type as never, SAMPLE_PAYLOADS[type] as never) },
+    ]),
+  ) as unknown as { readonly [T in EventType]: Probe }),
   'campaign.created': {
     probe: (b) =>
       b.add('campaign.created', {

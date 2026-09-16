@@ -249,31 +249,31 @@ task leaves the build working and the applicable tests passing.
 
 ### 1. Rules and imported launch data
 
-- [ ] 1.1 Replace the truth-as-plain-oracle adapter shape with a truth schema that retains
+- [x] 1.1 Replace the truth-as-plain-oracle adapter shape with a truth schema that retains
   nested choices, quest starters, order, and provenance; regenerate the frozen artifact.
-- [ ] 1.2 Add pure launch rules for campaign regions, required settlement/passage counts,
+- [x] 1.2 Add pure launch rules for campaign regions, required settlement/passage counts,
   allowed deferrals, one-to-six crew, and launch readiness, each traced to imported text
   or cited to the rulebook where the procedure is not in Datasworn.
-- [ ] 1.3 Declare recipes for a starship, settlement, shallow planet, detailed starting
+- [x] 1.3 Declare recipes for a starship, settlement, shallow planet, detailed starting
   planet, starting connection NPC, sector trouble, and inciting incident.
-- [ ] 1.4 Extend character-creation validation for appearance, backstory state, background
+- [x] 1.4 Extend character-creation validation for appearance, backstory state, background
   vow, and optional gear without moving campaign-aware checks into `rules`.
-- [ ] 1.5 Add the shared-starship/module ownership model and pure validation.
-- [ ] 1.6 Unit-test real imported data, traceability, recipe completeness, region baselines,
+- [x] 1.5 Add the shared-starship/module ownership model and pure validation.
+- [x] 1.6 Unit-test real imported data, traceability, recipe completeness, region baselines,
   character validity, and launch readiness.
 
 ### 2. Event catalogue and projections
 
-- [ ] 2.1 Implement the approved Campaign Launch catalogue in `design-event-log.md`,
+- [x] 2.1 Implement the approved Campaign Launch catalogue in `design-event-log.md`,
   including per-type payload schemas, revision chains, and introduction/reference
   metadata.
-- [ ] 2.2 Add campaign phase and typed saved-draft events, payload schemas, metadata, and
+- [x] 2.2 Add campaign phase and typed saved-draft events, payload schemas, metadata, and
   upcasters where existing payloads change.
-- [ ] 2.3 Add truth deferral, nested-choice, and revision support.
-- [ ] 2.4 Extend character facts compatibly and add the shared starship aggregate.
-- [ ] 2.5 Add structured sector, settlement, planet/star relationship, map placement,
+- [x] 2.3 Add truth deferral, nested-choice, and revision support.
+- [x] 2.4 Extend character facts compatibly and add the shared starship aggregate.
+- [x] 2.5 Add structured sector, settlement, planet/star relationship, map placement,
   off-map passage, starting-location, and trouble facts.
-- [ ] 2.6 Add the connection aggregate/track participants and shared-vow participants.
+- [x] 2.6 Add the connection aggregate/track participants and shared-vow participants.
 - [ ] 2.7 Project launch status, drafts, ship, complete sector, connection, and
   participants without reading rules content inside projection.
 - [ ] 2.8 Cover void containment, revision fallback, cold rebuild, incremental projection,
@@ -399,3 +399,20 @@ does not verify the group. The final sign-off also requires:
 Add notes here as each group lands. Record deviations and new approved decisions in the
 design record first; do not silently change the acceptance story or task scope in an
 implementation note.
+
+- **Group 1 complete — `ded30a2`.** Added richer frozen truths, pure launch/readiness
+  contracts, launch-character and shared-starship validators, challenge-rank vocabulary,
+  and concrete launch recipe builders. This is additive: current M1 creation/truth flows
+  still use their legacy contracts. Group 2 maps launch drafts into events; Groups 4–9
+  adopt the new rules APIs. Do not remove the legacy Starship grant before Group 7.
+- `validateLaunchReadiness` takes rules-owned draft types plus `STARFORGED`; the server
+  must supply projected facts, never duplicate its checks. It treats missing values as
+  blockers and explicit `leave_open`/`discover_in_play` as valid deferrals.
+- Re-run `npm run generate --workspace @astrolabe/rules` after editing the truth adapter;
+  the committed artifact intentionally includes nested truth tables and quest starters.
+- **Group 2 (2.1–2.6) complete.** Added the typed Campaign Launch catalogue, draft and
+  accepted-fact schemas, compatibility fields for existing characters, shared-starship,
+  sector, connection, incident, activation, and amendment projection state. The legacy
+  Milestone 1 events remain readable. `npm test` passed with Postgres-backed suites
+  enabled; `npm run typecheck` and `npm run lint` passed. Tasks 2.7–2.8 remain open for
+  the rules-aware readiness read model and their dedicated void/revision coverage.

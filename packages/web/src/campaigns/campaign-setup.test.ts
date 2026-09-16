@@ -26,6 +26,16 @@ function emptyState(): CampaignState {
     canon: { sessionSummaries: [] },
     truths: {},
     sector: { routes: [] },
+    launch: {
+      phase: 'draft',
+      drafts: {},
+      truthDecisions: {},
+      locations: {},
+      routes: [],
+      layout: {},
+      troubles: {},
+      amendments: [],
+    },
     tokenUsage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
   };
 }

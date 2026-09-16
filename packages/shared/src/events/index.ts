@@ -11,6 +11,33 @@ import { CharacterCreatedSchema, CharacterProposedSchema } from './character.js'
 import { EntityEstablishedSchema } from './entity.js';
 import { IncidentProposedSchema } from './incident.js';
 import {
+  CampaignActivatedSchema,
+  CampaignFoundationSetSchema,
+  CharacterRemovedSchema,
+  CharacterRevisedSchema,
+  ConnectionEstablishedSchema,
+  ConnectionRevisedSchema,
+  CreationProposedSchema,
+  IncidentAcceptedSchema,
+  IncidentRevisedSchema,
+  LaunchDraftSavedSchema,
+  LaunchFactAmendedSchema,
+  LocationAddedSchema,
+  LocationRemovedSchema,
+  LocationRevisedSchema,
+  RouteAddedSchema,
+  RouteRemovedSchema,
+  RouteRevisedSchema,
+  SectorConfiguredSchema,
+  SectorLayoutChangedSchema,
+  StarshipEstablishedSchema,
+  StarshipRevisedSchema,
+  StartingSettlementSelectedSchema,
+  TroubleEstablishedSchema,
+  TroubleRevisedSchema,
+  TruthDecidedSchema,
+} from './launch.js';
+import {
   DiceRolledSchema,
   MomentumBurnedSchema,
   MoveChainedSchema,
@@ -96,6 +123,31 @@ export const PAYLOAD_SCHEMAS = {
   'session.summary_proposed': SessionSummaryProposedSchema,
   'complication.offered': ComplicationOfferedSchema,
   'complication.set': ComplicationSetSchema,
+  'launch.draft_saved': LaunchDraftSavedSchema,
+  'creation.proposed': CreationProposedSchema,
+  'campaign.foundation_set': CampaignFoundationSetSchema,
+  'truth.decided': TruthDecidedSchema,
+  'character.revised': CharacterRevisedSchema,
+  'character.removed': CharacterRemovedSchema,
+  'starship.established': StarshipEstablishedSchema,
+  'starship.revised': StarshipRevisedSchema,
+  'sector.configured': SectorConfiguredSchema,
+  'location.added': LocationAddedSchema,
+  'location.revised': LocationRevisedSchema,
+  'location.removed': LocationRemovedSchema,
+  'route.added': RouteAddedSchema,
+  'route.revised': RouteRevisedSchema,
+  'route.removed': RouteRemovedSchema,
+  'sector.layout_changed': SectorLayoutChangedSchema,
+  'starting_settlement.selected': StartingSettlementSelectedSchema,
+  'trouble.established': TroubleEstablishedSchema,
+  'trouble.revised': TroubleRevisedSchema,
+  'connection.established': ConnectionEstablishedSchema,
+  'connection.revised': ConnectionRevisedSchema,
+  'incident.accepted': IncidentAcceptedSchema,
+  'incident.revised': IncidentRevisedSchema,
+  'campaign.activated': CampaignActivatedSchema,
+  'launch.fact_amended': LaunchFactAmendedSchema,
 } as const;
 
 export type EventType = keyof typeof PAYLOAD_SCHEMAS;
@@ -165,6 +217,31 @@ export const EventSchema = z.discriminatedUnion('type', [
   eventMember('session.summary_proposed'),
   eventMember('complication.offered'),
   eventMember('complication.set'),
+  eventMember('launch.draft_saved'),
+  eventMember('creation.proposed'),
+  eventMember('campaign.foundation_set'),
+  eventMember('truth.decided'),
+  eventMember('character.revised'),
+  eventMember('character.removed'),
+  eventMember('starship.established'),
+  eventMember('starship.revised'),
+  eventMember('sector.configured'),
+  eventMember('location.added'),
+  eventMember('location.revised'),
+  eventMember('location.removed'),
+  eventMember('route.added'),
+  eventMember('route.revised'),
+  eventMember('route.removed'),
+  eventMember('sector.layout_changed'),
+  eventMember('starting_settlement.selected'),
+  eventMember('trouble.established'),
+  eventMember('trouble.revised'),
+  eventMember('connection.established'),
+  eventMember('connection.revised'),
+  eventMember('incident.accepted'),
+  eventMember('incident.revised'),
+  eventMember('campaign.activated'),
+  eventMember('launch.fact_amended'),
 ]);
 
 /**
@@ -229,6 +306,7 @@ export * from './campaign.js';
 export * from './character.js';
 export * from './entity.js';
 export * from './incident.js';
+export * from './launch.js';
 export * from './move.js';
 export * from './narration.js';
 export * from './oracle.js';

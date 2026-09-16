@@ -313,6 +313,137 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
       };
     }
 
+    case 'launch.draft_saved':
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          drafts: { ...state.launch.drafts, [event.payload.section]: event.payload.snapshot },
+        },
+      };
+    case 'creation.proposed':
+      return state;
+    case 'campaign.foundation_set':
+      return { ...state, launch: { ...state.launch, foundation: event.payload } };
+    case 'truth.decided':
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          truthDecisions: {
+            ...state.launch.truthDecisions,
+            [event.payload.truthId]: event.payload,
+          },
+        },
+      };
+    case 'character.revised':
+      return updateCharacter(state, event.payload.characterId, (current) => ({
+        ...current,
+        name: event.payload.character.name,
+        callsign: event.payload.character.callsign,
+        stats: event.payload.character.stats,
+        assets: event.payload.character.assets,
+        hooks: event.payload.character.hooks ?? [],
+        pronouns: event.payload.character.pronouns ?? null,
+      }));
+    case 'character.removed': {
+      const { [event.payload.characterId]: _removed, ...characters } = state.characters;
+      return { ...state, characters };
+    }
+    case 'starship.established':
+      return { ...state, launch: { ...state.launch, starship: event.payload } };
+    case 'starship.revised':
+      return { ...state, launch: { ...state.launch, starship: event.payload.starship } };
+    case 'sector.configured':
+      return { ...state, launch: { ...state.launch, sector: event.payload } };
+    case 'location.added':
+    case 'location.revised':
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          locations: { ...state.launch.locations, [event.payload.id]: event.payload },
+        },
+      };
+    case 'location.removed': {
+      const { [event.payload.locationId]: _removed, ...locations } = state.launch.locations;
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          locations: {
+            ...locations,
+            [event.payload.locationId]: { removed: true, eventId: event.id },
+          },
+        },
+      };
+    }
+    case 'route.added':
+    case 'route.revised':
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          routes: [...state.launch.routes, { ...event.payload, eventId: event.id }],
+        },
+      };
+    case 'route.removed':
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          routes: [
+            ...state.launch.routes.filter(
+              (route) =>
+                (route as { supersedesEventId?: string }).supersedesEventId !==
+                event.payload.supersedesEventId,
+            ),
+            { removed: true, eventId: event.id },
+          ],
+        },
+      };
+    case 'sector.layout_changed':
+      return { ...state, launch: { ...state.launch, layout: event.payload.coordinates } };
+    case 'starting_settlement.selected':
+      return {
+        ...state,
+        launch: { ...state.launch, startingSettlementId: event.payload.settlementId },
+      };
+    case 'trouble.established':
+    case 'trouble.revised':
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          troubles: { ...state.launch.troubles, [event.payload.troubleId]: event.payload },
+        },
+      };
+    case 'connection.established':
+    case 'connection.revised':
+      return { ...state, launch: { ...state.launch, connection: event.payload } };
+    case 'incident.accepted':
+      return { ...state, launch: { ...state.launch, incident: event.payload } };
+    case 'incident.revised':
+      return { ...state, launch: { ...state.launch, incident: event.payload } };
+    case 'campaign.activated':
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          phase: 'active',
+          activation: {
+            eventId: event.id,
+            sessionId: event.payload.sessionId,
+            sceneId: event.payload.sceneId,
+          },
+        },
+      };
+    case 'launch.fact_amended':
+      return {
+        ...state,
+        launch: { ...state.launch, amendments: [...state.launch.amendments, event.payload] },
+      };
+
     case 'ai.completed':
     case 'ai.failed': {
       // D-85: counted even inside a voided cascade. `isSuppressed` never

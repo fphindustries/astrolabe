@@ -39,6 +39,8 @@ export const TrackCreatedSchema = z.discriminatedUnion('kind', [
      * existed still projects, with its vows unattributed.
      */
     characterId: CharacterIdSchema.optional(),
+    /** D-168: one vow can be shared while retaining one swearing character. */
+    participantCharacterIds: z.array(CharacterIdSchema).min(1).optional(),
   }),
   z.object({
     kind: z.literal('expedition'),
