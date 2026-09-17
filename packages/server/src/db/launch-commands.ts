@@ -35,12 +35,7 @@ import { project } from '../projection/project.js';
 import { cryptoRandomSource } from '../random-source.js';
 import { buildLaunchWorkspace } from '../launch/workspace.js';
 
-import {
-  appendCommand,
-  readEvents,
-  readEventsByCommand,
-  type AppendResult,
-} from './event-store.js';
+import { appendCommand, readEvents, type AppendResult } from './event-store.js';
 import { uuidv7 } from './uuid.js';
 
 /**
@@ -163,8 +158,8 @@ export interface DecideTruthRequest {
   readonly subchoiceId?: string;
   readonly subchoiceOptionIndex?: number;
   readonly text?: string;
-  /** The command that wrote the Guide recommendation this accepts (D-161). */
-  readonly proposalCommandId?: CommandId;
+  /** The `creation.proposed` event this decision accepts, if any (D-161). */
+  readonly proposalEventId?: EventId;
   readonly rng?: RandomSource;
 }
 
@@ -174,62 +169,55 @@ export interface DecideTruthRequest {
  * Two obligations from the design record meet here. An accepted value that
  * came from a proposal is **server-caused** by its `creation.proposed` event,
  * and its provenance says `guide_proposal` or `guide_proposal_edited`. Without
- * this, accepting a recommendation recorded `official_choice` — indistinguishable
- * from a player who picked the same option unaided, which is the one thing A41's
- * provenance exists to distinguish.
+ * this, accepting a recommendation recorded `official_choice` —
+ * indistinguishable from a player who picked the same option unaided, which is
+ * the one thing A41's provenance exists to distinguish.
  *
  * Which of the two it was is decided here, by comparing what was proposed to
  * what is being accepted, rather than taken from the client: whether the player
  * edited the Guide's words is a fact about the player, and a screen has every
  * incentive to get it wrong by accident.
  *
- * Only a chosen or written answer can accept a proposal. A rolled answer's
- * source is the roll — the Guide recommends, it never rolls (§4) — and
- * `leave_open` is a decision about the campaign that the Guide cannot make, so
- * both are refused rather than quietly relabelled.
+ * The proposal is named by event id and checked against the held proposal in
+ * the fold, so no second query is needed and a reloaded screen can still name
+ * it — the projected proposal is the only reference the client ever sees.
+ *
+ * Only a chosen or written answer can accept a recommendation. A rolled
+ * answer's source is the roll — the Guide recommends, it never rolls (section
+ * 4) — and `leave_open` is a decision about the campaign that the Guide cannot
+ * make, so both are refused rather than quietly relabelled.
  */
-async function acceptedProposal(
-  sql: Sql,
+function acceptedProposal(
+  state: CampaignState,
   request: DecideTruthRequest,
   decided: { readonly optionIndex: number | undefined; readonly text: string | undefined },
-): Promise<
-  { eventId: EventId; provenance: 'guide_proposal' | 'guide_proposal_edited' } | undefined
-> {
-  if (request.proposalCommandId === undefined) return undefined;
+): { eventId: EventId; provenance: 'guide_proposal' | 'guide_proposal_edited' } | undefined {
+  if (request.proposalEventId === undefined) return undefined;
   if (request.resolution !== 'selected' && request.resolution !== 'custom') {
     throw new LaunchRejectedError(
       'invalid_proposal_acceptance',
       'Only a chosen or written answer can accept a recommendation.',
     );
   }
-  const proposed = (
-    await readEventsByCommand(sql, request.campaignId, request.proposalCommandId)
-  ).find(
-    (event) =>
-      event.type === 'creation.proposed' &&
-      event.payload.targetKind === 'truth' &&
-      event.payload.proposal.truthId === request.truthId,
-  );
-  if (proposed === undefined || proposed.type !== 'creation.proposed') {
+  const held = state.launch.proposals[request.truthId];
+  if (
+    held === undefined ||
+    held.eventId !== request.proposalEventId ||
+    held.targetKind !== 'truth'
+  ) {
     throw new LaunchRejectedError(
       'unknown_proposal',
       'That recommendation does not exist for this truth.',
     );
   }
-  if (proposed.payload.targetKind !== 'truth') {
-    throw new LaunchRejectedError(
-      'unknown_proposal',
-      'That recommendation does not exist for this truth.',
-    );
-  }
-  const proposal = proposed.payload.proposal;
+  const proposal = held.proposal;
   const unchanged =
     proposal.resolution === request.resolution &&
     (request.resolution === 'selected'
       ? proposal.optionIndex === decided.optionIndex
       : proposal.text?.trim() === decided.text);
   return {
-    eventId: proposed.id,
+    eventId: held.eventId,
     provenance: unchanged ? 'guide_proposal' : 'guide_proposal_edited',
   };
 }
@@ -1164,7 +1152,7 @@ export async function decideTruth(sql: Sql, request: DecideTruthRequest): Promis
       throw new LaunchRejectedError('custom_text_required', 'A custom truth needs text.');
   }
   const previous = state.launch.truthDecisions[request.truthId];
-  const accepted = await acceptedProposal(sql, request, { optionIndex, text });
+  const accepted = acceptedProposal(state, request, { optionIndex, text });
   events.push({
     ...(accepted === undefined ? {} : { causedBy: accepted.eventId }),
     type: 'truth.decided',

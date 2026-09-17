@@ -1,7 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { STARFORGED, type OracleId } from '@astrolabe/rules';
-import { LOCAL_PLAYER_ID, type Actor, type CampaignId, type CommandId } from '@astrolabe/shared';
+import {
+  LOCAL_PLAYER_ID,
+  type Actor,
+  type CampaignId,
+  type CommandId,
+  type EventId,
+} from '@astrolabe/shared';
 
 import { StubProvider } from '../ai/stub.js';
 import { project } from '../projection/project.js';
@@ -200,15 +206,15 @@ describe.skipIf(!hasTestDatabase)('proposing a setting truth (5.3)', () => {
     // from a player who picked the same option unaided, which is the one thing
     // A41's provenance exists to distinguish.
     const campaignId = await campaign();
-    const proposalCommandId = newId<CommandId>();
     const ai = stub({ resolution: 'selected', optionIndex: 1, reason: 'It fits.' });
     const proposed = await proposeTruth(db.sql, ai, {
       campaignId,
-      commandId: proposalCommandId,
+      commandId: newId<CommandId>(),
       actor: PLAYER,
       truthId: PLAIN_TRUTH.id,
     });
     expect(proposed.ok).toBe(true);
+    if (!proposed.ok) return;
 
     await decideTruth(db.sql, {
       campaignId,
@@ -217,7 +223,7 @@ describe.skipIf(!hasTestDatabase)('proposing a setting truth (5.3)', () => {
       truthId: PLAIN_TRUTH.id,
       resolution: 'selected',
       optionIndex: 1,
-      proposalCommandId,
+      proposalEventId: proposed.proposalEventId,
     });
 
     const events = await readEvents(db.sql, campaignId);
@@ -229,14 +235,14 @@ describe.skipIf(!hasTestDatabase)('proposing a setting truth (5.3)', () => {
 
   it('records a changed answer as the Guide’s, edited', async () => {
     const campaignId = await campaign();
-    const proposalCommandId = newId<CommandId>();
     const ai = stub({ resolution: 'selected', optionIndex: 1, reason: 'It fits.' });
-    await proposeTruth(db.sql, ai, {
+    const proposed = await proposeTruth(db.sql, ai, {
       campaignId,
-      commandId: proposalCommandId,
+      commandId: newId<CommandId>(),
       actor: PLAYER,
       truthId: PLAIN_TRUTH.id,
     });
+    if (!proposed.ok) return;
 
     // The player took the recommendation and then chose differently. Whether
     // they edited it is a fact about the player, so the server compares rather
@@ -248,7 +254,7 @@ describe.skipIf(!hasTestDatabase)('proposing a setting truth (5.3)', () => {
       truthId: PLAIN_TRUTH.id,
       resolution: 'selected',
       optionIndex: 2,
-      proposalCommandId,
+      proposalEventId: proposed.proposalEventId,
     });
 
     const state = project(await readEvents(db.sql, campaignId));
@@ -262,14 +268,14 @@ describe.skipIf(!hasTestDatabase)('proposing a setting truth (5.3)', () => {
     // The Guide never rolls (§4) and cannot decide to leave a truth open, so
     // neither is an acceptance of anything it said.
     const campaignId = await campaign();
-    const proposalCommandId = newId<CommandId>();
     const ai = stub({ resolution: 'selected', optionIndex: 0, reason: 'Because.' });
-    await proposeTruth(db.sql, ai, {
+    const proposed = await proposeTruth(db.sql, ai, {
       campaignId,
-      commandId: proposalCommandId,
+      commandId: newId<CommandId>(),
       actor: PLAYER,
       truthId: PLAIN_TRUTH.id,
     });
+    if (!proposed.ok) return;
 
     await expect(
       decideTruth(db.sql, {
@@ -278,12 +284,12 @@ describe.skipIf(!hasTestDatabase)('proposing a setting truth (5.3)', () => {
         actor: PLAYER,
         truthId: PLAIN_TRUTH.id,
         resolution: 'leave_open',
-        proposalCommandId,
+        proposalEventId: proposed.proposalEventId,
       }),
     ).rejects.toThrow(/chosen or written/i);
   });
 
-  it('refuses a proposal command that never recommended this truth', async () => {
+  it('refuses a proposal that never recommended this truth', async () => {
     const campaignId = await campaign();
     await expect(
       decideTruth(db.sql, {
@@ -293,7 +299,7 @@ describe.skipIf(!hasTestDatabase)('proposing a setting truth (5.3)', () => {
         truthId: PLAIN_TRUTH.id,
         resolution: 'selected',
         optionIndex: 0,
-        proposalCommandId: newId<CommandId>(),
+        proposalEventId: newId<EventId>(),
       }),
     ).rejects.toThrow(/does not exist for this truth/i);
   });

@@ -31,6 +31,9 @@ export const LaunchProvenanceSchema = z.enum([
   'guide_proposal',
   'guide_proposal_edited',
 ]);
+/** How an accepted launch fact came to be — A41's badge, in one word. */
+export type LaunchProvenance = z.infer<typeof LaunchProvenanceSchema>;
+
 export const AcceptanceSchema = z.object({
   provenance: LaunchProvenanceSchema,
   groundedIn: z.array(EventIdSchema),
