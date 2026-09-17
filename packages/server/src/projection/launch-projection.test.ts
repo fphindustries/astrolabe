@@ -6,7 +6,7 @@ import { NON_CANONICAL_LAUNCH_EVENT_TYPES } from '@astrolabe/shared';
 import { renderSetup } from '../ai/context/incident.js';
 import { renderState } from '../ai/context/render-state.js';
 
-import { LogBuilder } from './fixtures.js';
+import { LogBuilder, VESNA, character } from './fixtures.js';
 import { applyEvent, project } from './project.js';
 import { emptyState } from './state.js';
 
@@ -315,5 +315,89 @@ describe('a draft and its accepted fact are ordered against each other (D-182)',
     const state = project(acceptThenDraft().build());
 
     expect(state.launch.drafts.foundation!.seq).toBeGreaterThan(state.launch.foundation!.seq);
+  });
+});
+
+describe('a crew member carries its acceptance back (6.0a, D-184)', () => {
+  const crewLog = () =>
+    new LogBuilder().add('campaign.created', {
+      name: 'Lantern Wake',
+      settings: { narrationLatitude: 'color', narrationLength: 'standard', rerollCap: 2 },
+    });
+
+  const launchCharacter = (name: string) => ({
+    ...character(VESNA, name, 2),
+    appearance: 'Sharp-eyed, jacket a size too big.',
+    backstory: { kind: 'written' as const, text: 'Flew charts nobody else trusted.' },
+    backgroundVow: { title: 'Find the lost survey', rank: 'formidable' as const },
+  });
+
+  it('projects the event that accepted it, so a revision can supersede it', () => {
+    // 6.0d fills `supersedesEventId` from here rather than trusting the
+    // client, which is why this sequences first.
+    const builder = crewLog().add('character.created', launchCharacter('Vesna Kade'));
+    const created = builder.last();
+
+    const vesna = project(builder.build()).characters[VESNA];
+
+    expect(vesna?.eventId).toBe(created.id);
+    expect(vesna?.seq).toBe(created.seq);
+  });
+
+  it('projects the provenance and grounding an accepted crew member carries (A41)', () => {
+    const roll = crewLog().add('oracle.rolled', {
+      oracleId: 'oracle:characters/name/given' as never,
+      roll: 42,
+      rowText: 'Vesna',
+    });
+    const rolled = roll.last();
+    roll.add('character.created', {
+      ...launchCharacter('Vesna Kade'),
+      provenance: 'guide_proposal_edited',
+      groundedIn: [rolled.id],
+    });
+
+    const vesna = project(roll.build()).characters[VESNA];
+
+    expect(vesna?.provenance).toBe('guide_proposal_edited');
+    expect(vesna?.groundedIn).toEqual([rolled.id]);
+  });
+
+  it('leaves both absent on a Milestone 1 character, which recorded neither', () => {
+    const vesna = project(
+      crewLog()
+        .add('character.created', character(VESNA, 'Vesna Kade', 2))
+        .build(),
+    ).characters[VESNA];
+
+    // `hasOwn`, not `toBeUndefined`: the key must be *absent*, because
+    // `toEqual` — which the cold-rebuild comparison below uses — treats an
+    // absent key and one explicitly set to `undefined` as equal, and
+    // `exactOptionalPropertyTypes` treats them as different things.
+    expect(Object.hasOwn(vesna!, 'provenance')).toBe(false);
+    expect(Object.hasOwn(vesna!, 'groundedIn')).toBe(false);
+    // The log facts are knowable for every character, legacy or not.
+    expect(vesna?.eventId).toBeDefined();
+    expect(vesna?.seq).toBeDefined();
+  });
+
+  it('moves the acceptance to the revision that superseded it', () => {
+    const builder = crewLog().add('character.created', launchCharacter('Vesna Kade'));
+    const created = builder.last();
+    builder.add('character.revised', {
+      characterId: VESNA,
+      character: { ...launchCharacter('Vesna Kade'), appearance: 'A quieter jacket.' },
+      provenance: 'player_written',
+      groundedIn: [],
+      supersedesEventId: created.id,
+    });
+    const revision = builder.last();
+
+    const vesna = project(builder.build()).characters[VESNA];
+
+    expect(vesna?.appearance).toBe('A quieter jacket.');
+    expect(vesna?.eventId).toBe(revision.id);
+    expect(vesna?.seq).toBe(revision.seq);
+    expect(vesna?.provenance).toBe('player_written');
   });
 });

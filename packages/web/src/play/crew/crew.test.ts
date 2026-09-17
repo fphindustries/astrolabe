@@ -29,6 +29,8 @@ function character(overrides: Partial<CharacterState> = {}): CharacterState {
     vowTrackIds: [],
     hooks: [],
     pronouns: null,
+    eventId: 'evt-1' as never,
+    seq: 1,
     ...overrides,
   };
 }

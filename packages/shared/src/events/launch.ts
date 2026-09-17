@@ -12,6 +12,7 @@ import {
 } from '../ids.js';
 import { CampaignSettingsSchema } from './campaign.js';
 import { CharacterCreatedSchema } from './character.js';
+import { AcceptanceSchema } from './provenance.js';
 import { ChallengeRankSchema } from './track.js';
 
 export const LaunchSectionSchema = z.enum([
@@ -24,21 +25,6 @@ export const LaunchSectionSchema = z.enum([
   'incident_launch',
 ]);
 export type LaunchSection = z.infer<typeof LaunchSectionSchema>;
-export const LaunchProvenanceSchema = z.enum([
-  'player_written',
-  'official_choice',
-  'oracle_roll',
-  'guide_proposal',
-  'guide_proposal_edited',
-]);
-/** How an accepted launch fact came to be — A41's badge, in one word. */
-export type LaunchProvenance = z.infer<typeof LaunchProvenanceSchema>;
-
-export const AcceptanceSchema = z.object({
-  provenance: LaunchProvenanceSchema,
-  groundedIn: z.array(EventIdSchema),
-  supersedesEventId: EventIdSchema.optional(),
-});
 
 const TextListSchema = z.array(z.string().min(1));
 const BackstorySchema = z.discriminatedUnion('kind', [

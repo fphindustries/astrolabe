@@ -115,6 +115,13 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
         ...(payload.backstory !== undefined ? { backstory: payload.backstory } : {}),
         ...(payload.backgroundVow !== undefined ? { backgroundVow: payload.backgroundVow } : {}),
         ...(payload.signatureGear !== undefined ? { signatureGear: payload.signatureGear } : {}),
+        // D-184. The log facts are knowable for every character; the two
+        // acceptance fields are absent on a Milestone 1 one, which recorded
+        // neither.
+        eventId: event.id,
+        seq: event.seq,
+        ...(payload.provenance !== undefined ? { provenance: payload.provenance } : {}),
+        ...(payload.groundedIn !== undefined ? { groundedIn: payload.groundedIn } : {}),
       });
       return withCharacter(state, character);
     }
@@ -422,6 +429,12 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
         ...(event.payload.character.signatureGear !== undefined
           ? { signatureGear: event.payload.character.signatureGear }
           : {}),
+        // The revision is now the event that accepted this character, so it is
+        // what the next revision supersedes and what D-182 compares (D-184).
+        eventId: event.id,
+        seq: event.seq,
+        provenance: event.payload.provenance,
+        groundedIn: event.payload.groundedIn,
       }));
     case 'character.removed': {
       const { [event.payload.characterId]: _removed, ...characters } = state.characters;

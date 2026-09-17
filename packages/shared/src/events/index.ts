@@ -349,6 +349,7 @@ export * from './launch.js';
 export * from './move.js';
 export * from './narration.js';
 export * from './oracle.js';
+export * from './provenance.js';
 export * from './scene.js';
 export * from './sector.js';
 export * from './session.js';

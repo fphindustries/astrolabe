@@ -14,6 +14,7 @@ import type { CampaignId, EntityId, EventId, SceneId, SessionId } from '../ids.j
 import type { CampaignSettings } from '../events/campaign.js';
 import type { PayloadFor } from '../events/index.js';
 import type { LaunchSection } from '../events/launch.js';
+import type { LaunchProvenance } from '../events/provenance.js';
 
 /**
  * Projected campaign state: a pure fold over the event log.
@@ -106,6 +107,28 @@ export interface CharacterState {
     { readonly kind: 'written'; readonly text: string } | { readonly kind: 'discover_in_play' };
   readonly backgroundVow?: { readonly title: string; readonly rank: ChallengeRank };
   readonly signatureGear?: string;
+  /**
+   * The event that accepted this character as it now stands, and where it sits
+   * in the log (D-184).
+   *
+   * Crew is the only launch section whose accepted facts live outside
+   * `state.launch`, so a crew member cannot borrow `Accepted<T>` the way every
+   * other launch fact does — these carry the same two facts for the same two
+   * reasons. `eventId` is what a revision or a removal supersedes, derived
+   * here rather than taken from the client; `seq` is D-182's precedence, which
+   * Crew needs more than any other section because one snapshot holds the
+   * whole crew and a character sits in a draft for its entire build.
+   *
+   * Required, and present on Milestone 1 characters too: every event has an id
+   * and a sequence number, so the fold always knows both. Only `provenance`
+   * and `groundedIn` below are genuinely absent on a legacy character, because
+   * its `character.created` recorded neither.
+   */
+  readonly eventId: EventId;
+  readonly seq: number;
+  /** A41: how this character came to be, and the rolls it was built on. */
+  readonly provenance?: LaunchProvenance;
+  readonly groundedIn?: readonly EventId[];
 }
 
 export type TrackKind = 'vow' | 'expedition' | 'clock';
