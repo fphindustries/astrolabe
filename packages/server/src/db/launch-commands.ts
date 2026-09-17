@@ -35,7 +35,12 @@ import { project } from '../projection/project.js';
 import { cryptoRandomSource } from '../random-source.js';
 import { buildLaunchWorkspace } from '../launch/workspace.js';
 
-import { appendCommand, readEvents, type AppendResult } from './event-store.js';
+import {
+  appendCommand,
+  readEvents,
+  readEventsByCommand,
+  type AppendResult,
+} from './event-store.js';
 import { uuidv7 } from './uuid.js';
 
 /**
@@ -158,7 +163,75 @@ export interface DecideTruthRequest {
   readonly subchoiceId?: string;
   readonly subchoiceOptionIndex?: number;
   readonly text?: string;
+  /** The command that wrote the Guide recommendation this accepts (D-161). */
+  readonly proposalCommandId?: CommandId;
   readonly rng?: RandomSource;
+}
+
+/**
+ * The Guide recommendation this decision accepts, if it names one.
+ *
+ * Two obligations from the design record meet here. An accepted value that
+ * came from a proposal is **server-caused** by its `creation.proposed` event,
+ * and its provenance says `guide_proposal` or `guide_proposal_edited`. Without
+ * this, accepting a recommendation recorded `official_choice` — indistinguishable
+ * from a player who picked the same option unaided, which is the one thing A41's
+ * provenance exists to distinguish.
+ *
+ * Which of the two it was is decided here, by comparing what was proposed to
+ * what is being accepted, rather than taken from the client: whether the player
+ * edited the Guide's words is a fact about the player, and a screen has every
+ * incentive to get it wrong by accident.
+ *
+ * Only a chosen or written answer can accept a proposal. A rolled answer's
+ * source is the roll — the Guide recommends, it never rolls (§4) — and
+ * `leave_open` is a decision about the campaign that the Guide cannot make, so
+ * both are refused rather than quietly relabelled.
+ */
+async function acceptedProposal(
+  sql: Sql,
+  request: DecideTruthRequest,
+  decided: { readonly optionIndex: number | undefined; readonly text: string | undefined },
+): Promise<
+  { eventId: EventId; provenance: 'guide_proposal' | 'guide_proposal_edited' } | undefined
+> {
+  if (request.proposalCommandId === undefined) return undefined;
+  if (request.resolution !== 'selected' && request.resolution !== 'custom') {
+    throw new LaunchRejectedError(
+      'invalid_proposal_acceptance',
+      'Only a chosen or written answer can accept a recommendation.',
+    );
+  }
+  const proposed = (
+    await readEventsByCommand(sql, request.campaignId, request.proposalCommandId)
+  ).find(
+    (event) =>
+      event.type === 'creation.proposed' &&
+      event.payload.targetKind === 'truth' &&
+      event.payload.proposal.truthId === request.truthId,
+  );
+  if (proposed === undefined || proposed.type !== 'creation.proposed') {
+    throw new LaunchRejectedError(
+      'unknown_proposal',
+      'That recommendation does not exist for this truth.',
+    );
+  }
+  if (proposed.payload.targetKind !== 'truth') {
+    throw new LaunchRejectedError(
+      'unknown_proposal',
+      'That recommendation does not exist for this truth.',
+    );
+  }
+  const proposal = proposed.payload.proposal;
+  const unchanged =
+    proposal.resolution === request.resolution &&
+    (request.resolution === 'selected'
+      ? proposal.optionIndex === decided.optionIndex
+      : proposal.text?.trim() === decided.text);
+  return {
+    eventId: proposed.id,
+    provenance: unchanged ? 'guide_proposal' : 'guide_proposal_edited',
+  };
 }
 
 export interface SaveSharedStarshipRequest {
@@ -1091,7 +1164,9 @@ export async function decideTruth(sql: Sql, request: DecideTruthRequest): Promis
       throw new LaunchRejectedError('custom_text_required', 'A custom truth needs text.');
   }
   const previous = state.launch.truthDecisions[request.truthId];
+  const accepted = await acceptedProposal(sql, request, { optionIndex, text });
   events.push({
+    ...(accepted === undefined ? {} : { causedBy: accepted.eventId }),
     type: 'truth.decided',
     payload: {
       truthId: request.truthId,
@@ -1105,11 +1180,13 @@ export async function decideTruth(sql: Sql, request: DecideTruthRequest): Promis
       ...(summary !== undefined ? { summary } : {}),
       ...(questStarter !== undefined ? { questStarter } : {}),
       provenance:
-        request.resolution === 'rolled'
-          ? 'oracle_roll'
-          : request.resolution === 'selected'
-            ? 'official_choice'
-            : 'player_written',
+        accepted !== undefined
+          ? accepted.provenance
+          : request.resolution === 'rolled'
+            ? 'oracle_roll'
+            : request.resolution === 'selected'
+              ? 'official_choice'
+              : 'player_written',
       groundedIn,
       ...(previous?.eventId !== undefined ? { supersedesEventId: previous.eventId } : {}),
     },

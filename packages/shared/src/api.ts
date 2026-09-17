@@ -236,6 +236,18 @@ export const DecideLaunchTruthRequestBodySchema = z.object({
   subchoiceId: z.string().min(1).optional(),
   subchoiceOptionIndex: z.int().nonnegative().optional(),
   text: z.string().trim().min(1).optional(),
+  /**
+   * The command that wrote the Guide's recommendation, when this decision
+   * accepts one (D-161).
+   *
+   * The design record requires an accepted value that came from a proposal to
+   * be server-caused by its `creation.proposed` event, and its provenance to
+   * say `guide_proposal` or `guide_proposal_edited`. The client names the
+   * proposal; the server decides which of the two it was by comparing what was
+   * proposed to what was accepted, because "did the player edit it" is not a
+   * claim the client gets to make about itself.
+   */
+  proposalCommandId: CommandIdSchema.optional(),
 });
 export type DecideLaunchTruthRequestBody = z.infer<typeof DecideLaunchTruthRequestBodySchema>;
 export interface DecideLaunchTruthResponse {

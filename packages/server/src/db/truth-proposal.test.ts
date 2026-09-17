@@ -25,6 +25,12 @@ import { uuidv7 } from './uuid.js';
 const PLAYER: Actor = { kind: 'player', playerId: LOCAL_PLAYER_ID };
 const newId = <T>(): T => uuidv7() as T;
 const TRUTH = STARFORGED.truths[0]!;
+/**
+ * Cataclysm's every option carries a nested subchoice (A25), which the
+ * acceptance tests below are not about. This one has none, so a refusal they
+ * assert is the refusal they meant rather than the subchoice check firing first.
+ */
+const PLAIN_TRUTH = STARFORGED.truths[1]!;
 
 describe.skipIf(!hasTestDatabase)('proposing a setting truth (5.3)', () => {
   let db: TestDatabase;
@@ -187,6 +193,109 @@ describe.skipIf(!hasTestDatabase)('proposing a setting truth (5.3)', () => {
     });
     const state = project(await readEvents(db.sql, campaignId));
     expect(state.launch.truthDecisions[TRUTH.id]?.text).toBe('Decided by hand, with no Guide.');
+  });
+
+  it('records an accepted recommendation as the Guide’s, caused by the proposal (A41)', async () => {
+    // Without this the acceptance recorded `official_choice`: indistinguishable
+    // from a player who picked the same option unaided, which is the one thing
+    // A41's provenance exists to distinguish.
+    const campaignId = await campaign();
+    const proposalCommandId = newId<CommandId>();
+    const ai = stub({ resolution: 'selected', optionIndex: 1, reason: 'It fits.' });
+    const proposed = await proposeTruth(db.sql, ai, {
+      campaignId,
+      commandId: proposalCommandId,
+      actor: PLAYER,
+      truthId: PLAIN_TRUTH.id,
+    });
+    expect(proposed.ok).toBe(true);
+
+    await decideTruth(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      truthId: PLAIN_TRUTH.id,
+      resolution: 'selected',
+      optionIndex: 1,
+      proposalCommandId,
+    });
+
+    const events = await readEvents(db.sql, campaignId);
+    const decided = events.find((event) => event.type === 'truth.decided');
+    expect(decided?.payload).toMatchObject({ provenance: 'guide_proposal' });
+    const proposal = events.find((event) => event.type === 'creation.proposed');
+    expect(decided?.causedBy).toBe(proposal?.id);
+  });
+
+  it('records a changed answer as the Guide’s, edited', async () => {
+    const campaignId = await campaign();
+    const proposalCommandId = newId<CommandId>();
+    const ai = stub({ resolution: 'selected', optionIndex: 1, reason: 'It fits.' });
+    await proposeTruth(db.sql, ai, {
+      campaignId,
+      commandId: proposalCommandId,
+      actor: PLAYER,
+      truthId: PLAIN_TRUTH.id,
+    });
+
+    // The player took the recommendation and then chose differently. Whether
+    // they edited it is a fact about the player, so the server compares rather
+    // than believing a claim the client had every chance to get wrong.
+    await decideTruth(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      truthId: PLAIN_TRUTH.id,
+      resolution: 'selected',
+      optionIndex: 2,
+      proposalCommandId,
+    });
+
+    const state = project(await readEvents(db.sql, campaignId));
+    expect(state.launch.truthDecisions[PLAIN_TRUTH.id]).toMatchObject({
+      provenance: 'guide_proposal_edited',
+      optionIndex: 2,
+    });
+  });
+
+  it('refuses to call a roll or an open truth an accepted recommendation', async () => {
+    // The Guide never rolls (§4) and cannot decide to leave a truth open, so
+    // neither is an acceptance of anything it said.
+    const campaignId = await campaign();
+    const proposalCommandId = newId<CommandId>();
+    const ai = stub({ resolution: 'selected', optionIndex: 0, reason: 'Because.' });
+    await proposeTruth(db.sql, ai, {
+      campaignId,
+      commandId: proposalCommandId,
+      actor: PLAYER,
+      truthId: PLAIN_TRUTH.id,
+    });
+
+    await expect(
+      decideTruth(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        truthId: PLAIN_TRUTH.id,
+        resolution: 'leave_open',
+        proposalCommandId,
+      }),
+    ).rejects.toThrow(/chosen or written/i);
+  });
+
+  it('refuses a proposal command that never recommended this truth', async () => {
+    const campaignId = await campaign();
+    await expect(
+      decideTruth(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        truthId: PLAIN_TRUTH.id,
+        resolution: 'selected',
+        optionIndex: 0,
+        proposalCommandId: newId<CommandId>(),
+      }),
+    ).rejects.toThrow(/does not exist for this truth/i);
   });
 
   it('refuses an id that is not a setting truth', async () => {

@@ -1001,6 +1001,7 @@ export function buildApp({
           subchoiceId,
           subchoiceOptionIndex,
           text,
+          proposalCommandId,
         } = parsed.data;
         await decideTruth(sql, {
           ...dice,
@@ -1013,6 +1014,7 @@ export function buildApp({
           ...(subchoiceId !== undefined ? { subchoiceId } : {}),
           ...(subchoiceOptionIndex !== undefined ? { subchoiceOptionIndex } : {}),
           ...(text !== undefined ? { text } : {}),
+          ...(proposalCommandId !== undefined ? { proposalCommandId } : {}),
         });
         reply.code(201);
         return { truthId: parsed.data.truthId };
