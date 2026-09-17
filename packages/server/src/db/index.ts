@@ -109,6 +109,7 @@ export {
 export {
   proposeCharacter,
   proposeIncidents,
+  proposeTruth,
   type ProposalRequest,
   type ProposalRollSpec,
   type ProposeCharacterRequest,

@@ -8,6 +8,7 @@ import {
   ProposeAmountRequestBodySchema,
   ProposeCharacterRequestBodySchema,
   ProposeIncidentsRequestBodySchema,
+  ProposeTruthRequestBodySchema,
   SuggestMoveRequestBodySchema,
   SuggestActionsRequestBodySchema,
   type SuggestActionsResponse,
@@ -28,6 +29,7 @@ import {
   type ProposeAmountResponse,
   type ProposeCharacterResponse,
   type ProposeIncidentsResponse,
+  type ProposeTruthResponse,
   type SuggestMoveResponse,
   type CheckTriggerResponse,
 } from '@astrolabe/shared';
@@ -47,6 +49,7 @@ import {
   proposeAmount,
   proposeCharacter,
   proposeIncidents,
+  proposeTruth,
   suggestMove,
   suggestActions,
   checkTrigger,
@@ -477,6 +480,45 @@ export function registerAiRoutes(
           status,
         );
         // D-132: the same contract as a character proposal (D-116).
+        reply.code(201);
+        return result;
+      } catch (error) {
+        return refusal(error, reply);
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/truth-proposals',
+    async (
+      request,
+      reply,
+    ): Promise<ProposeTruthResponse | NarrationRefusalResponse | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
+        return undefined;
+      }
+      const parsedBody = ProposeTruthRequestBodySchema.safeParse(request.body);
+      if (!parsedBody.success) {
+        reply.code(400);
+        return undefined;
+      }
+
+      try {
+        const result = await proposeTruth(
+          sql,
+          ai,
+          {
+            ...dice,
+            campaignId: id,
+            commandId: parsedBody.data.commandId,
+            actor: PLAYER,
+            truthId: parsedBody.data.truthId,
+          },
+          status,
+        );
+        // The same contract as every other proposal (D-116): a provider
+        // failure is an outcome the screen renders, not an exception.
         reply.code(201);
         return result;
       } catch (error) {

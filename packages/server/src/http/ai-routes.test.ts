@@ -1,7 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 
-import { createSeededRandomSource, type CharacterId, type MoveId } from '@astrolabe/rules';
+import {
+  createSeededRandomSource,
+  STARFORGED,
+  type CharacterId,
+  type MoveId,
+} from '@astrolabe/rules';
 import {
   LOCAL_PLAYER_ID,
   type AiStatusResponse,
@@ -401,6 +406,52 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
       payload: {},
     });
     expect(malformed.statusCode).toBe(400);
+  });
+
+  it('proposes a setting truth over HTTP, and answers a failure as an outcome (5.3, A42)', async () => {
+    const { campaignId } = await moveMade();
+    const truth = STARFORGED.truths[0]!;
+
+    ai.enqueue({
+      kind: 'structured',
+      value: { resolution: 'selected', optionIndex: 0, reason: 'It fits what is established.' },
+    });
+    const proposed = await app.inject({
+      method: 'POST',
+      url: `/api/campaigns/${campaignId}/truth-proposals`,
+      payload: { commandId: crypto.randomUUID(), truthId: truth.id },
+    });
+
+    expect(proposed.statusCode).toBe(201);
+    expect(proposed.json()).toMatchObject({
+      ok: true,
+      truthId: truth.id,
+      proposal: { targetKind: 'truth', proposal: { resolution: 'selected', optionIndex: 0 } },
+    });
+
+    // A provider failure is a 201 outcome the screen renders, not a 5xx — the
+    // same contract every other proposal route follows (D-116).
+    ai.enqueue({ kind: 'error', errorKind: 'unavailable', message: 'No provider.' });
+    const failed = await app.inject({
+      method: 'POST',
+      url: `/api/campaigns/${campaignId}/truth-proposals`,
+      payload: { commandId: crypto.randomUUID(), truthId: truth.id },
+    });
+
+    expect(failed.statusCode).toBe(201);
+    expect(failed.json()).toMatchObject({ ok: false, errorKind: 'unavailable' });
+  });
+
+  it('rejects a truth-proposal body the schema does not accept with 400', async () => {
+    const { campaignId } = await moveMade();
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/campaigns/${campaignId}/truth-proposals`,
+      payload: { commandId: crypto.randomUUID(), truthId: 'not-an-oracle-id' },
+    });
+
+    expect(response.statusCode).toBe(400);
   });
 
   it('suggests a move for a described action, and a move filled from it names it (7.12, D-135)', async () => {

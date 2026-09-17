@@ -398,6 +398,26 @@ export interface RollLaunchRecipeResponse {
   }[];
 }
 
+/** The body of `POST /campaigns/:id/truth-proposals` (5.3). */
+export const ProposeTruthRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  truthId: OracleIdSchema,
+});
+export type ProposeTruthRequestBody = z.infer<typeof ProposeTruthRequestBodySchema>;
+
+/**
+ * The Guide's recommendation for one truth. Not canon: the player accepts it
+ * through `decideTruth`, the same command the manual paths use (D-161, D-166).
+ */
+export type ProposeTruthResponse =
+  | {
+      readonly ok: true;
+      readonly proposalEventId: EventId;
+      readonly truthId: OracleId;
+      readonly proposal: Extract<PayloadFor<'creation.proposed'>, { targetKind: 'truth' }>;
+    }
+  | { readonly ok: false; readonly errorKind: AiErrorKind; readonly message: string };
+
 export const ProposeLaunchCreationRequestBodySchema = z.intersection(
   CreationProposalSchema,
   z.object({

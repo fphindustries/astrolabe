@@ -11,6 +11,7 @@ import type {
   ProposalRoll,
   ProposeCharacterResponse,
   ProposeIncidentsResponse,
+  ProposeTruthResponse,
 } from '@astrolabe/shared';
 import type { Sql } from 'postgres';
 import type * as z from 'zod';
@@ -30,6 +31,13 @@ import {
   type IncidentProposalOutput,
   type RolledForProposal,
 } from '../ai/context/index.js';
+import {
+  buildTruthProposalRequest,
+  checkTruthProposal,
+  findTruth,
+  truthProposalSchema,
+  type TruthProposalOutput,
+} from '../ai/context/truth.js';
 import type { AiProvider, AiRequest } from '../ai/provider.js';
 import { generateValidated } from '../ai/respond.js';
 import type { AiStatus } from '../ai/status.js';
@@ -331,4 +339,85 @@ export async function proposeIncidents(
         rolls: outcome.rolls,
       }
     : outcome;
+}
+
+export interface ProposeTruthRequest extends ProposalRequest {
+  readonly truthId: OracleId;
+}
+
+/**
+ * Ask the Guide about one setting truth (5.3).
+ *
+ * `rolls` is empty and that is the point: a truth's own table is its
+ * enumerated option set, so there is no recipe to roll before the Guide
+ * interprets it (see `ai/context/truth.ts`). The proposal is recorded as
+ * `creation.proposed` with `targetKind: 'truth'` — the same non-canonical
+ * review surface every other launch object uses (D-166), keyed by the truth it
+ * is about so a second ask replaces the first.
+ */
+export async function proposeTruth(
+  sql: Sql,
+  ai: AiProvider,
+  request: ProposeTruthRequest,
+  status?: AiStatus,
+): Promise<ProposeTruthResponse> {
+  const truth = findTruth(request.truthId);
+  if (truth === undefined) {
+    throw new AiRequestRefusedError('no_campaign', 'That is not a setting truth.');
+  }
+
+  const outcome = await runProposal<TruthProposalOutput, 'creation.proposed'>(
+    sql,
+    ai,
+    request,
+    {
+      kind: PROPOSAL_COMMAND_KINDS[2],
+      contentType: 'creation.proposed',
+      rolls: [],
+      build: (state) => ({
+        request: buildTruthProposalRequest(state, truth),
+        schema: truthProposalSchema(truth),
+        check: (value) => checkTruthProposal(value, truth),
+      }),
+      toPayload: (value) => {
+        const option =
+          value.resolution === 'selected' ? truth.rows[value.optionIndex ?? -1] : undefined;
+        return {
+          targetKind: 'truth',
+          targetId: request.truthId,
+          rationale: value.reason,
+          // No rolls to cite, for the reason above.
+          groundedIn: [],
+          proposal: {
+            truthId: request.truthId,
+            resolution: value.resolution,
+            ...(value.resolution === 'selected' && value.optionIndex !== undefined
+              ? { optionIndex: value.optionIndex }
+              : {}),
+            text: option?.description ?? value.text ?? '',
+            // D-162: inspiration carried alongside, never part of the answer.
+            ...(option?.questStarter === undefined ? {} : { questStarter: option.questStarter }),
+          },
+        };
+      },
+    },
+    status,
+  );
+
+  if (!outcome.ok) {
+    return { ok: false, errorKind: outcome.errorKind, message: outcome.message };
+  }
+  const payload = outcome.event.payload;
+  // `creation.proposed` carries every target kind; this command writes exactly
+  // one of them, so narrowing here keeps the response honest rather than
+  // asserting the discriminant away.
+  if (payload.targetKind !== 'truth') {
+    throw new Error('A truth proposal wrote a different target kind.');
+  }
+  return {
+    ok: true,
+    proposalEventId: outcome.event.id,
+    truthId: request.truthId,
+    proposal: payload,
+  };
 }

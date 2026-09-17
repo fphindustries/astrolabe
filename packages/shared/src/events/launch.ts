@@ -154,6 +154,14 @@ const IncidentSchema = z.object({
 
 const TruthProposalSchema = z.object({
   truthId: OracleIdSchema.optional(),
+  /**
+   * Which path the Guide recommends, and — for an official option — which one.
+   * Without these a proposal could not say what it meant: two options can be
+   * summarised the same way, and a review screen has to preselect the right
+   * one after a reload (A41, D-166).
+   */
+  resolution: z.enum(['selected', 'custom']).optional(),
+  optionIndex: z.int().nonnegative().optional(),
   text: z.string().optional(),
   questStarter: z.string().optional(),
 });
