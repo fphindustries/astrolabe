@@ -6,12 +6,7 @@ import { useProposeTruth } from '../api/launch.js';
 
 import type { DecideTruthBody, TruthSelection } from './truth-form.js';
 import { toDecideRequest } from './truth-form.js';
-import {
-  heldProposal,
-  isEditedProposal,
-  proposalReference,
-  proposalSelection,
-} from './truth-proposal.js';
+import { heldProposal, isEditedProposal, proposalSelection } from './truth-proposal.js';
 import type { TruthView } from './truths.js';
 import styles from './TruthProposalPanel.module.css';
 
@@ -62,10 +57,13 @@ export function TruthProposalPanel({
     });
   };
 
+  // The same call the card's own button makes. There is one accept path and
+  // one provenance: the selection carries the proposal's id from the moment
+  // the player takes it, so pressing the more prominent button cannot record
+  // the Guide's answer as the player's own.
   const accept = () => {
     const body = toDecideRequest(view.truthId, selection);
-    if (body === null) return;
-    onDecide({ ...body, ...proposalReference(held, selection) });
+    if (body !== null) onDecide(body);
   };
 
   return (

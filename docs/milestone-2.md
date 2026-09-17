@@ -515,6 +515,20 @@ that were already being written and that nothing could read.
   `[hidden]`), Datasworn's link markup reached the reader, the option radios fell back to
   their value for an accessible name, and "work you have not saved" outlived the save and
   appeared for a rolled truth nobody had touched.
+- **Two more the browser pass structurally could not reach**, and both were group 4's
+  lesson again — logic in a `.tsx` is logic nothing checks. Clicking an option to compare
+  it against a typed answer threw the typed answer away, and a nested choice was carried
+  onto a different option where a coincidentally valid index would have been sent. The
+  transitions now live in `truth-form.ts` as `selectOption`, `selectSubchoice` and
+  `writeCustom`, where they are three lines of test each. Separately, the card's prominent
+  **Use this answer** recorded `official_choice` for an answer the Guide had just
+  proposed, bypassing the provenance the commit before it existed to record: the selection
+  now carries the proposal's event id from the moment the player takes it and loses it on
+  any manual move away, so there is one accept path and one provenance, and a held
+  proposal from an hour ago cannot attach itself to an unaided revision.
+- The dev stub answers `truth_proposal`, so the launch's stubbed-provider path reaches an
+  acceptance by hand; the no-provider path (A42) is reached by configuring no provider,
+  and both were walked.
 - **The truth proposal cites no oracle roll, deliberately.** A truth's own table is its
   enumerated option set, so the Guide recommends among the official options or drafts
   custom wording — the authority it already has over incident text (D-168) and backstory

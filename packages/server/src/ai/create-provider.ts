@@ -175,6 +175,20 @@ function devStubResponse(
   if (mode === 'structured' && request.purpose === 'character_proposal') {
     return { kind: 'structured', value: STUB_CHARACTER_PROPOSAL };
   }
+  if (mode === 'structured' && request.purpose === 'truth_proposal') {
+    // The first official option, which every truth has, so the stubbed path
+    // through Campaign Launch reaches an acceptance rather than a refusal.
+    // The no-provider path is the *other* half of what the launch has to
+    // prove (A42), and it is reached by configuring no provider at all.
+    return {
+      kind: 'structured',
+      value: {
+        resolution: 'selected',
+        optionIndex: 0,
+        reason: 'Stub recommendation: the first option fits what the campaign has so far.',
+      },
+    };
+  }
   if (mode === 'structured') {
     return {
       kind: 'error',

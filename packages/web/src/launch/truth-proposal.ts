@@ -60,14 +60,23 @@ export function heldProposal(state: CampaignState, truthId: OracleId): HeldPropo
   };
 }
 
-/** What the form becomes when the player takes the recommendation as it stands. */
+/**
+ * What the form becomes when the player takes the recommendation.
+ *
+ * The selection carries the proposal's event id from here on, so whichever
+ * button the player finally presses records the decision as the Guide's. Every
+ * manual move away from it clears the reference again, which is why this is
+ * the only place that sets it.
+ */
 export function proposalSelection(held: HeldProposal): TruthSelection {
+  const from = { fromProposalEventId: held.proposalEventId };
   return held.resolution === 'selected'
     ? {
         resolution: 'selected',
         ...(held.optionIndex !== undefined ? { optionIndex: held.optionIndex } : {}),
+        ...from,
       }
-    : { resolution: 'custom', ...(held.text !== undefined ? { text: held.text } : {}) };
+    : { resolution: 'custom', ...(held.text !== undefined ? { text: held.text } : {}), ...from };
 }
 
 /**
@@ -93,20 +102,6 @@ export function isEditedProposal(held: HeldProposal, selection: TruthSelection):
  */
 export function acceptsProposal(selection: TruthSelection): boolean {
   return selection.resolution === 'selected' || selection.resolution === 'custom';
-}
-
-/**
- * The proposal reference a decision carries, or nothing.
- *
- * Nothing when there is no held proposal, and nothing when the player took a
- * path that cannot accept one — sending it anyway is the 422 this avoids.
- */
-export function proposalReference(
-  held: HeldProposal | null,
-  selection: TruthSelection,
-): { readonly proposalEventId: EventId } | Record<string, never> {
-  if (held === null || !acceptsProposal(selection)) return {};
-  return { proposalEventId: held.proposalEventId };
 }
 
 export type TruthProposalPayload = Extract<

@@ -3,6 +3,7 @@ import type { OracleId } from '@astrolabe/rules';
 import type {
   CampaignState,
   DecideLaunchTruthRequestBody,
+  EventId,
   LaunchDraftFor,
 } from '@astrolabe/shared';
 
@@ -32,6 +33,61 @@ export interface TruthSelection {
   readonly subchoiceId?: string;
   readonly subchoiceOptionIndex?: number;
   readonly text?: string;
+  /**
+   * The Guide recommendation this selection came from, if the player took one
+   * (D-161).
+   *
+   * Session intent, not a fact: it is set by taking the Guide's answer and
+   * cleared by every manual move away from it, so the decision carries it only
+   * when the player really did start from what the Guide said. Nothing clears
+   * `launch.proposals`, so reading the held proposal at decide time instead
+   * would attach a recommendation from an hour ago to a revision the player
+   * made unaided.
+   *
+   * It is deliberately not part of the draft snapshot: a draft records what
+   * the player wrote, not how they arrived at it.
+   */
+  readonly fromProposalEventId?: EventId;
+}
+
+/**
+ * The form transitions, as functions rather than as `onChange` bodies.
+ *
+ * They live here because vitest collects `*.test.ts` and nothing else: a
+ * transition written inline in a component is a transition nothing checks.
+ * The first one written inline dropped the player's typed answer the moment
+ * they clicked an option to compare it against.
+ */
+
+/** Choose an official option, keeping any answer the player has already typed. */
+export function selectOption(selection: TruthSelection, optionIndex: number): TruthSelection {
+  return {
+    resolution: 'selected',
+    optionIndex,
+    // `text` survives, because a player who types an answer and then clicks an
+    // option to read it is comparing, not discarding.
+    ...(selection.text !== undefined ? { text: selection.text } : {}),
+    // The nested choice does not: it belongs to the option that was chosen
+    // before, and an index carried across can land on a valid row of a
+    // different table by coincidence.
+  };
+}
+
+/** Choose the nested option a chosen option requires (A25). */
+export function selectSubchoice(
+  selection: TruthSelection,
+  subchoiceOptionIndex: number,
+): TruthSelection {
+  return { ...selection, subchoiceOptionIndex };
+}
+
+/** Write your own answer. */
+export function writeCustom(selection: TruthSelection, text: string): TruthSelection {
+  // The option and its nested choice go: this is a different answer, not a
+  // decorated version of the one above it. Anything the Guide suggested goes
+  // with them — these are the player's own words now.
+  void selection;
+  return { resolution: 'custom', text };
 }
 
 export type TruthsForm = Readonly<Record<string, TruthSelection>>;
@@ -79,7 +135,11 @@ export function toDraftSnapshot(form: TruthsForm): LaunchDraftFor<'truths'> {
   return {
     decisions: STARFORGED.truths.flatMap((truth) => {
       const selection = form[truth.id];
-      return selection === undefined ? [] : [{ truthId: truth.id, ...selection }];
+      if (selection === undefined) return [];
+      // `fromProposalEventId` is session intent, not something the player
+      // wrote, and the draft schema has no field for it.
+      const { fromProposalEventId: _ignored, ...snapshot } = selection;
+      return [{ truthId: truth.id, ...snapshot }];
     }),
   };
 }
@@ -113,14 +173,21 @@ export function toDecideRequest(
       return { truthId, resolution: 'leave_open' };
     case 'custom': {
       const text = selection.text?.trim() ?? '';
-      return text === '' ? null : { truthId, resolution: 'custom', text };
+      return text === ''
+        ? null
+        : { truthId, resolution: 'custom', text, ...fromProposal(selection) };
     }
     case 'selected': {
       const option =
         selection.optionIndex === undefined ? undefined : truth.rows[selection.optionIndex];
       if (option === undefined || selection.optionIndex === undefined) return null;
       if (option.subchoice === undefined) {
-        return { truthId, resolution: 'selected', optionIndex: selection.optionIndex };
+        return {
+          truthId,
+          resolution: 'selected',
+          optionIndex: selection.optionIndex,
+          ...fromProposal(selection),
+        };
       }
       // A25: the nested choice is part of the same accepted truth, so an option
       // that has one is not decidable without it.
@@ -132,6 +199,7 @@ export function toDecideRequest(
         optionIndex: selection.optionIndex,
         subchoiceId: option.subchoice.id,
         subchoiceOptionIndex: nested,
+        ...fromProposal(selection),
       };
     }
     default:
@@ -151,6 +219,19 @@ export function toDecideRequest(
  * has an entry in the baseline and none in the form, and reading that as a
  * difference would warn about work nobody did.
  */
+/**
+ * The proposal reference, on the two resolutions that can accept one.
+ *
+ * The server refuses the other two by name, and it is right to: rolling is not
+ * accepting a recommendation — the Guide never rolls (section 4) — and leaving
+ * a truth open is a decision the Guide cannot make for the player (D-162).
+ */
+function fromProposal(selection: TruthSelection): { proposalEventId?: EventId } {
+  return selection.fromProposalEventId === undefined
+    ? {}
+    : { proposalEventId: selection.fromProposalEventId };
+}
+
 export function unsavedTruths(form: TruthsForm, baseline: TruthsForm): readonly string[] {
   return Object.keys(form).filter((id) => !sameSelection(form[id], baseline[id]));
 }

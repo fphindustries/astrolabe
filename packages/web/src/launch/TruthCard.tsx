@@ -1,7 +1,13 @@
 import { useId, useState } from 'react';
 
 import type { TruthSelection } from './truth-form.js';
-import { toDecideRequest, type DecideTruthBody } from './truth-form.js';
+import {
+  selectOption,
+  selectSubchoice,
+  toDecideRequest,
+  writeCustom,
+  type DecideTruthBody,
+} from './truth-form.js';
 import type { TruthView } from './truths.js';
 import { TruthProvenance } from './TruthProvenance.js';
 import { TruthStatusChip } from './TruthStatusChip.js';
@@ -91,7 +97,7 @@ export function TruthCard({
                 checked={
                   selection.resolution === 'selected' && selection.optionIndex === option.index
                 }
-                onChange={() => onSelect({ resolution: 'selected', optionIndex: option.index })}
+                onChange={() => onSelect(selectOption(selection, option.index))}
               />
               <span className={styles.optionBody}>
                 <span className={styles.optionSummary}>{option.summary}</span>
@@ -114,7 +120,7 @@ export function TruthCard({
               name={group}
               aria-label="Write your own"
               checked={selection.resolution === 'custom'}
-              onChange={() => onSelect({ resolution: 'custom', text: selection.text ?? '' })}
+              onChange={() => onSelect(writeCustom(selection, selection.text ?? ''))}
             />
             <span className={styles.optionBody}>
               <span className={styles.optionSummary}>Write your own</span>
@@ -132,7 +138,7 @@ export function TruthCard({
                   name={`${group}-nested`}
                   aria-label={nested.text}
                   checked={selection.subchoiceOptionIndex === nested.index}
-                  onChange={() => onSelect({ ...selection, subchoiceOptionIndex: nested.index })}
+                  onChange={() => onSelect(selectSubchoice(selection, nested.index))}
                 />
                 <span className={styles.optionBody}>{nested.text}</span>
               </label>
@@ -146,7 +152,7 @@ export function TruthCard({
             rows={3}
             aria-label={`Your answer to ${view.name}`}
             value={selection.text ?? ''}
-            onChange={(event) => onSelect({ resolution: 'custom', text: event.target.value })}
+            onChange={(event) => onSelect(writeCustom(selection, event.target.value))}
           />
         )}
 

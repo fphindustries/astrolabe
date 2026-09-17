@@ -7,7 +7,6 @@ import {
   acceptsProposal,
   heldProposal,
   isEditedProposal,
-  proposalReference,
   proposalSelection,
   type HeldProposal,
   type TruthProposalPayload,
@@ -89,7 +88,11 @@ describe('accepting, or not', () => {
   };
 
   it('turns a recommendation into the selection that accepts it unchanged', () => {
-    expect(proposalSelection(selected)).toEqual({ resolution: 'selected', optionIndex: 1 });
+    expect(proposalSelection(selected)).toEqual({
+      resolution: 'selected',
+      optionIndex: 1,
+      fromProposalEventId: PROPOSAL,
+    });
     expect(isEditedProposal(selected, proposalSelection(selected))).toBe(false);
     expect(isEditedProposal(written, proposalSelection(written))).toBe(false);
   });
@@ -106,18 +109,21 @@ describe('accepting, or not', () => {
     ).toBe(false);
   });
 
-  it('names the proposal only on a path that can accept one', () => {
+  it('carries the proposal’s id into the selection that accepts it', () => {
+    // Whichever button the player finally presses, the decision names the
+    // recommendation it came from — so the prominent one cannot record the
+    // Guide's answer as the player's own.
+    expect(proposalSelection(selected).fromProposalEventId).toBe(PROPOSAL);
+    expect(proposalSelection(written).fromProposalEventId).toBe(PROPOSAL);
+  });
+
+  it('knows which paths can accept a recommendation at all', () => {
     // The server refuses the other two by name, and it is right to: rolling is
     // not accepting a recommendation (the Guide never rolls), and leaving a
     // truth open is a decision the Guide cannot make for the player.
+    expect(acceptsProposal({ resolution: 'selected', optionIndex: 1 })).toBe(true);
+    expect(acceptsProposal({ resolution: 'custom', text: 'Mine' })).toBe(true);
     expect(acceptsProposal({ resolution: 'rolled' })).toBe(false);
     expect(acceptsProposal({ resolution: 'leave_open' })).toBe(false);
-
-    expect(proposalReference(selected, { resolution: 'selected', optionIndex: 1 })).toEqual({
-      proposalEventId: PROPOSAL,
-    });
-    expect(proposalReference(selected, { resolution: 'rolled' })).toEqual({});
-    expect(proposalReference(selected, { resolution: 'leave_open' })).toEqual({});
-    expect(proposalReference(null, { resolution: 'selected', optionIndex: 1 })).toEqual({});
   });
 });

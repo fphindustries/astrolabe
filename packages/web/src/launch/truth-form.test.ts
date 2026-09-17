@@ -6,9 +6,12 @@ import { describe, expect, it } from 'vitest';
 import { emptyCampaignState } from './state-fixture.js';
 import {
   initialTruthsForm,
+  selectOption,
+  selectSubchoice,
   toDecideRequest,
   toDraftSnapshot,
   unsavedTruths,
+  writeCustom,
 } from './truth-form.js';
 
 /**
@@ -245,5 +248,80 @@ describe('unsaved work', () => {
     expect(unsavedTruths({ [EXODUS.id]: { resolution: 'custom', text: '' } }, baseline)).toEqual(
       [],
     );
+  });
+});
+
+describe('moving between the paths', () => {
+  const PROPOSAL = 'aaaaaaaa-0000-4000-8000-000000000007' as EventId;
+
+  it('keeps a typed answer when the player clicks an option to compare it', () => {
+    // The defect this exists to prevent: the first version of this transition
+    // lived in an `onChange` body, replaced the whole selection, and threw the
+    // player's own words away the moment they looked at an official option.
+    const typed = { resolution: 'custom' as const, text: 'A slow unmaking.' };
+
+    const compared = selectOption(typed, 1);
+    expect(compared).toMatchObject({ resolution: 'selected', optionIndex: 1 });
+    expect(compared.text).toBe('A slow unmaking.');
+
+    // And it is still there on the way back.
+    expect(writeCustom(compared, compared.text ?? '').text).toBe('A slow unmaking.');
+  });
+
+  it('drops a nested choice that belonged to the option before it (A25)', () => {
+    // A nested index carried across can land on a valid row of a different
+    // table by coincidence, and then `toDecideRequest` would happily send it.
+    const chosen = {
+      resolution: 'selected' as const,
+      optionIndex: 0,
+      subchoiceId: CATACLYSM.rows[0]!.subchoice!.id,
+      subchoiceOptionIndex: 3,
+    };
+
+    const moved = selectOption(chosen, 1);
+    expect(moved.subchoiceOptionIndex).toBeUndefined();
+    expect(moved.subchoiceId).toBeUndefined();
+    expect(toDecideRequest(CATACLYSM.id, moved)).toBeNull();
+  });
+
+  it('keeps the nested choice while the option stays put', () => {
+    const chosen = { resolution: 'selected' as const, optionIndex: 0 };
+    expect(selectSubchoice(chosen, 2)).toEqual({
+      resolution: 'selected',
+      optionIndex: 0,
+      subchoiceOptionIndex: 2,
+    });
+  });
+
+  it('stops calling it the Guide’s answer once the player moves off it', () => {
+    // Nothing clears a held proposal, so "came from the Guide" has to be
+    // session intent that a manual move ends — otherwise a revision made an
+    // hour later would be recorded as the Guide's.
+    const taken = {
+      resolution: 'selected' as const,
+      optionIndex: 1,
+      fromProposalEventId: PROPOSAL,
+    };
+
+    expect(toDecideRequest(EXODUS.id, taken)).toMatchObject({ proposalEventId: PROPOSAL });
+    expect(selectOption(taken, 2).fromProposalEventId).toBeUndefined();
+    expect(writeCustom(taken, 'My own words').fromProposalEventId).toBeUndefined();
+    expect(toDecideRequest(EXODUS.id, selectOption(taken, 2))).not.toHaveProperty(
+      'proposalEventId',
+    );
+  });
+
+  it('keeps the proposal out of the draft, which records words rather than intent', () => {
+    const form = {
+      [EXODUS.id]: { resolution: 'custom' as const, text: 'Mine', fromProposalEventId: PROPOSAL },
+    };
+
+    const parsed = LaunchDraftSavedSchema.safeParse({
+      section: 'truths',
+      snapshot: toDraftSnapshot(form),
+    });
+
+    expect(parsed.success).toBe(true);
+    expect(toDraftSnapshot(form).decisions[0]).not.toHaveProperty('fromProposalEventId');
   });
 });
