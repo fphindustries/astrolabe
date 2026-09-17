@@ -255,3 +255,22 @@ export function truthProgress(views: readonly TruthView[]): TruthProgress {
   ).length;
   return { decided, total: views.length, text: `${decided} of ${views.length} decided` };
 }
+
+/**
+ * The name of the table a chip's roll came from.
+ *
+ * A chip carries the oracle's id, because the roll event does — the table's
+ * name is rules content, and the event log stores facts rather than labels.
+ * Naming it here is the adapter's job done at the last moment: "Cataclysm —
+ * Elaboration" rather than `oracle:cataclysm/0`. An id that names no truth
+ * table falls back to itself rather than to a guess.
+ */
+export function oracleTableName(oracleId: string): string {
+  for (const truth of STARFORGED.truths) {
+    if (truth.id === oracleId) return truth.name;
+    for (const row of truth.rows) {
+      if (row.subchoice?.id === oracleId) return `${truth.name} — ${row.subchoice.name}`;
+    }
+  }
+  return oracleId;
+}

@@ -15,6 +15,7 @@ import {
 } from './truth-form.js';
 import { buildTruths, truthProgress } from './truths.js';
 import { TruthCard } from './TruthCard.js';
+import { TruthProposalPanel } from './TruthProposalPanel.js';
 import styles from './TruthsSection.module.css';
 
 /**
@@ -79,7 +80,16 @@ export function TruthsSection({
               onSelect={(selection) => select(view.truthId, selection)}
               onDecide={handleDecide}
               pending={decide.isPending}
-            />
+            >
+              <TruthProposalPanel
+                campaignId={campaignId}
+                view={view}
+                workspace={workspace}
+                selection={form[view.truthId] ?? {}}
+                onSelect={(selection) => select(view.truthId, selection)}
+                onDecide={handleDecide}
+              />
+            </TruthCard>
           </li>
         ))}
       </ol>

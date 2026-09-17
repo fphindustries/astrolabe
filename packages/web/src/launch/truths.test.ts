@@ -3,7 +3,7 @@ import type { EventId, OracleChip, PayloadFor } from '@astrolabe/shared';
 import { describe, expect, it } from 'vitest';
 
 import { emptyCampaignState } from './state-fixture.js';
-import { buildTruths, truthProgress, TRUTH_STATUS_TEXT } from './truths.js';
+import { buildTruths, oracleTableName, truthProgress, TRUTH_STATUS_TEXT } from './truths.js';
 
 /**
  * The Truths overview and one truth's answer (5.1, 5.2).
@@ -320,5 +320,18 @@ describe('one truth (5.2)', () => {
     expect(buildTruths(state, {}, []).find((view) => view.truthId === EXODUS.id)?.history).toEqual(
       [],
     );
+  });
+});
+
+describe('naming the table a roll came from', () => {
+  it('names a truth table and a nested one', () => {
+    expect(oracleTableName(CATACLYSM.id)).toBe(CATACLYSM.name);
+    expect(oracleTableName(CATACLYSM.rows[0]!.subchoice!.id)).toBe(
+      `${CATACLYSM.name} — ${CATACLYSM.rows[0]!.subchoice!.name}`,
+    );
+  });
+
+  it('falls back to the id rather than guessing', () => {
+    expect(oracleTableName('oracle:not-a-truth')).toBe('oracle:not-a-truth');
   });
 });

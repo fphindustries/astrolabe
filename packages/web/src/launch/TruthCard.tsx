@@ -3,6 +3,7 @@ import { useId, useState } from 'react';
 import type { TruthSelection } from './truth-form.js';
 import { toDecideRequest, type DecideTruthBody } from './truth-form.js';
 import type { TruthView } from './truths.js';
+import { TruthProvenance } from './TruthProvenance.js';
 import { TruthStatusChip } from './TruthStatusChip.js';
 import styles from './TruthCard.module.css';
 
@@ -68,6 +69,11 @@ export function TruthCard({
         {view.characterPrompt !== undefined && (
           <p className={styles.prompt}>{view.characterPrompt}</p>
         )}
+
+        {/* The accepted answer and where it came from, above the controls that
+            would change it: what the campaign says now, then how to revise it
+            (A26 — a revision leaves the earlier answer readable). */}
+        <TruthProvenance view={view} />
 
         <fieldset className={styles.options}>
           <legend className={styles.legend}>Answers to {view.name}</legend>
