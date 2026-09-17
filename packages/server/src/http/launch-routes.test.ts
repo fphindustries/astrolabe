@@ -147,6 +147,28 @@ describe.skipIf(!hasTestDatabase)('the Campaign Launch routes (3.1–3.9)', () =
     });
   });
 
+  it('orders a draft against its accepted fact over the wire (D-182)', async () => {
+    const id = await campaign();
+    await put(`/api/campaigns/${id}/launch/drafts`, {
+      commandId: newId(),
+      draft: { section: 'foundation', snapshot: { premise: 'Drafted words.' } },
+    });
+    await post(`/api/campaigns/${id}/launch/foundation`, {
+      commandId: newId(),
+      premise: 'The words actually accepted.',
+      settings: { narrationLatitude: 'color', narrationLength: 'standard', rerollCap: 2 },
+    });
+
+    const workspace = await app.inject({ method: 'GET', url: `/api/campaigns/${id}/launch` });
+    const launch = (workspace.json() as LaunchWorkspaceResponse).state.launch;
+
+    // The client's whole precedence rule rests on these two numbers being
+    // comparable at the layer it reads them, not just inside the fold: this is
+    // the sequence where a form that simply prefers its draft would show
+    // "Drafted words." beside a section the same payload reports complete.
+    expect(launch.foundation!.seq).toBeGreaterThan(launch.drafts.foundation!.seq);
+  });
+
   it('rolls a declared recipe through the injected dice (D-65, D-152)', async () => {
     const id = await campaign();
 
