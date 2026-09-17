@@ -150,7 +150,9 @@ function buildTruth(
   return {
     truthId: truth.id,
     name: truth.name,
-    ...(truth.characterPrompt !== undefined ? { characterPrompt: truth.characterPrompt } : {}),
+    ...(truth.characterPrompt !== undefined
+      ? { characterPrompt: plainRulesText(truth.characterPrompt) }
+      : {}),
     options: truth.rows.map(toOptionView),
     status,
     statusText: TRUTH_STATUS_TEXT[status],
@@ -164,9 +166,11 @@ function buildTruth(
 function toOptionView(option: TruthOption, index: number): TruthOptionView {
   return {
     index,
-    summary: option.summary,
-    description: option.description,
-    ...(option.questStarter !== undefined ? { questStarter: option.questStarter } : {}),
+    summary: plainRulesText(option.summary),
+    description: plainRulesText(option.description),
+    ...(option.questStarter !== undefined
+      ? { questStarter: plainRulesText(option.questStarter) }
+      : {}),
     ...(option.subchoice === undefined
       ? {}
       : {
@@ -175,7 +179,7 @@ function toOptionView(option: TruthOption, index: number): TruthOptionView {
             name: option.subchoice.name,
             options: option.subchoice.rows.map((row, rowIndex) => ({
               index: rowIndex,
-              text: row.text,
+              text: plainRulesText(row.text),
             })),
           },
         }),
@@ -201,13 +205,15 @@ function buildAnswer(
     resolution: decision.resolution,
     provenance: decision.provenance,
     provenanceText: PROVENANCE_TEXT[decision.provenance],
-    ...(decision.text !== undefined ? { text: decision.text } : {}),
-    ...(decision.summary !== undefined ? { summary: decision.summary } : {}),
+    ...(decision.text !== undefined ? { text: plainRulesText(decision.text) } : {}),
+    ...(decision.summary !== undefined ? { summary: plainRulesText(decision.summary) } : {}),
     // Read from the decision, not from the option it names: the quest starter
     // is recorded on the answer when it is accepted, and a campaign decided
     // against an earlier rules import should still show what it was given.
-    ...(decision.questStarter !== undefined ? { questStarter: decision.questStarter } : {}),
-    ...(subchoiceText !== undefined ? { subchoiceText } : {}),
+    ...(decision.questStarter !== undefined
+      ? { questStarter: plainRulesText(decision.questStarter) }
+      : {}),
+    ...(subchoiceText !== undefined ? { subchoiceText: plainRulesText(subchoiceText) } : {}),
     // An id that names no chip resolves to nothing rather than to a blank one:
     // a roll can be voided away, and a struck chip is the narrative log's job,
     // not this page's.
@@ -273,4 +279,16 @@ export function oracleTableName(oracleId: string): string {
     }
   }
   return oracleId;
+}
+
+/**
+ * Rules text with Datasworn's own link markup taken out.
+ *
+ * Imported text carries links in the form `[Veteran](id:asset:path/veteran)`,
+ * which is meaningful to Datasworn and noise on the page. The adapter keeps
+ * the text as imported — rules data stays as it was published — so the last
+ * step before rendering is where the markup goes, and only the label is kept.
+ */
+export function plainRulesText(text: string): string {
+  return text.replace(/\[([^\]]+)\]\((?:id:)?[^)]*\)/g, '$1');
 }

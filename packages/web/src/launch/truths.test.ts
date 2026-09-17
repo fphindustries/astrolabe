@@ -3,7 +3,13 @@ import type { EventId, OracleChip, PayloadFor } from '@astrolabe/shared';
 import { describe, expect, it } from 'vitest';
 
 import { emptyCampaignState } from './state-fixture.js';
-import { buildTruths, oracleTableName, truthProgress, TRUTH_STATUS_TEXT } from './truths.js';
+import {
+  buildTruths,
+  oracleTableName,
+  plainRulesText,
+  truthProgress,
+  TRUTH_STATUS_TEXT,
+} from './truths.js';
 
 /**
  * The Truths overview and one truth's answer (5.1, 5.2).
@@ -333,5 +339,37 @@ describe('naming the table a roll came from', () => {
 
   it('falls back to the id rather than guessing', () => {
     expect(oracleTableName('oracle:not-a-truth')).toBe('oracle:not-a-truth');
+  });
+});
+
+describe('rules text on the page', () => {
+  it('keeps the label and drops Datasworn’s link markup', () => {
+    // The imported text says `[Veteran](id:asset:path/veteran)`, which means
+    // something to Datasworn and nothing to a reader. The adapter keeps rules
+    // data as published, so the markup goes at the last step before rendering.
+    expect(plainRulesText('you might be a [Veteran](id:asset:path/veteran).')).toBe(
+      'you might be a Veteran.',
+    );
+    expect(
+      plainRulesText('a [Gunner](id:asset:path/gunner) or [Sniper](id:asset:path/sniper)'),
+    ).toBe('a Gunner or Sniper');
+    expect(plainRulesText('nothing to strip')).toBe('nothing to strip');
+  });
+
+  it('strips it everywhere the page reads rules text', () => {
+    const withLinks = STARFORGED.truths.find((truth) =>
+      (truth.characterPrompt ?? '').includes(']('),
+    );
+    expect(withLinks).toBeDefined();
+
+    const view = buildTruths(emptyCampaignState(), {}, []).find(
+      (candidate) => candidate.truthId === withLinks!.id,
+    );
+
+    expect(view?.characterPrompt).not.toContain('](');
+    for (const option of view?.options ?? []) {
+      expect(option.summary).not.toContain('](');
+      expect(option.description).not.toContain('](');
+    }
   });
 });

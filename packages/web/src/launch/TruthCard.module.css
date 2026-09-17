@@ -37,6 +37,12 @@
   font-size: var(--text-sm);
 }
 
+/* `display: flex` beats the user agent's `[hidden] { display: none }`, so the
+   disclosure has to say it again or it never closes. */
+.body[hidden] {
+  display: none;
+}
+
 .body {
   display: flex;
   flex-direction: column;

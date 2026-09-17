@@ -140,14 +140,19 @@ export function toDecideRequest(
 }
 
 /**
- * Whether the form holds work no accepted truth has caught up with.
+ * The truths whose selection on screen says something the server does not
+ * hold yet.
  *
- * This is what **Save and continue** is for, and what makes leaving the page
- * with unsaved words a thing the screen can warn about.
+ * This is what **Save and continue** is for, and what lets the screen warn
+ * about leaving with unsaved words.
+ *
+ * Only truths the player has actually touched are considered. A truth the
+ * server settled on its own — rolled, say, where the player picked no option —
+ * has an entry in the baseline and none in the form, and reading that as a
+ * difference would warn about work nobody did.
  */
 export function unsavedTruths(form: TruthsForm, baseline: TruthsForm): readonly string[] {
-  const ids = new Set([...Object.keys(form), ...Object.keys(baseline)]);
-  return [...ids].filter((id) => !sameSelection(form[id], baseline[id]));
+  return Object.keys(form).filter((id) => !sameSelection(form[id], baseline[id]));
 }
 
 function sameSelection(a: TruthSelection | undefined, b: TruthSelection | undefined): boolean {

@@ -82,6 +82,12 @@ export function TruthCard({
               <input
                 type="radio"
                 name={group}
+                // Named explicitly rather than by the label that wraps it. The
+                // label holds the option's whole description and its quest
+                // starter, and an accessible name built from all of that would
+                // read the inspiration as part of the answer — the one thing
+                // A25 asks the page not to do.
+                aria-label={option.summary}
                 checked={
                   selection.resolution === 'selected' && selection.optionIndex === option.index
                 }
@@ -106,6 +112,7 @@ export function TruthCard({
             <input
               type="radio"
               name={group}
+              aria-label="Write your own"
               checked={selection.resolution === 'custom'}
               onChange={() => onSelect({ resolution: 'custom', text: selection.text ?? '' })}
             />
@@ -123,6 +130,7 @@ export function TruthCard({
                 <input
                   type="radio"
                   name={`${group}-nested`}
+                  aria-label={nested.text}
                   checked={selection.subchoiceOptionIndex === nested.index}
                   onChange={() => onSelect({ ...selection, subchoiceOptionIndex: nested.index })}
                 />

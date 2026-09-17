@@ -39,7 +39,12 @@ export function TruthsSection({
   readonly campaignId: string;
   readonly workspace: LaunchWorkspaceResponse;
 }) {
-  const [baseline] = useState(() => initialTruthsForm(workspace.state));
+  // The baseline is what the server holds right now, recomputed each render
+  // rather than frozen at mount. Both the draft and an accepted truth
+  // invalidate this query, so "work you have not saved or accepted" stops
+  // being true the moment it stops being true — a baseline captured once said
+  // it forever, including right after a save.
+  const baseline = initialTruthsForm(workspace.state);
   const [form, setForm] = useState(baseline);
   const [saved, setSaved] = useState<string | undefined>(undefined);
 

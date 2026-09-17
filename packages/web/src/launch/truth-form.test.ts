@@ -232,6 +232,14 @@ describe('unsaved work', () => {
     expect(new Set(unsavedTruths(edited, baseline))).toEqual(new Set([EXODUS.id, COMMUNITIES.id]));
   });
 
+  it('says nothing about a truth the server settled without the player picking', () => {
+    // A rolled truth has an accepted decision and no local selection. Reading
+    // that as a difference would warn about work nobody did.
+    expect(unsavedTruths({}, { [EXODUS.id]: { resolution: 'rolled', optionIndex: 1 } })).toEqual(
+      [],
+    );
+  });
+
   it('does not call an empty answer a change', () => {
     const baseline = { [EXODUS.id]: { resolution: 'custom' as const } };
     expect(unsavedTruths({ [EXODUS.id]: { resolution: 'custom', text: '' } }, baseline)).toEqual(
