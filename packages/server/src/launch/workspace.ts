@@ -70,6 +70,17 @@ export function buildLaunchWorkspace(events: readonly AstrolabeEvent[]): LaunchW
  * would ship chips that silently resolve to nothing — the failure this whole
  * group keeps finding. Ids that name something other than a roll resolve to no
  * chip, so over-collecting is safe.
+ *
+ * **Crew is walked separately, and this is why (6.0b, D-184).** Walking
+ * `state.launch` was written as though it covered every section, and group 5's
+ * implementation note said groups 6–9 would need no edit here. That holds only
+ * for facts stored *under* `state.launch`, and crew is the one section whose
+ * accepted facts are not: a character projects to `state.characters`. So a
+ * crew member's chips resolved to nothing, silently — exactly the failure the
+ * walk-don't-list approach was chosen to avoid, arriving through the one door
+ * it did not cover. Superseded versions need no line of their own:
+ * `crewHistory` lives inside `state.launch` and the first walk already reaches
+ * it.
  */
 function launchChips(
   events: readonly AstrolabeEvent[],
@@ -91,6 +102,7 @@ function launchChips(
     }
   };
   walk(state.launch);
+  walk(state.characters);
   const chips = oracleChips(events)([...cited]);
   return Object.fromEntries(chips.map((chip) => [chip.eventId, chip]));
 }

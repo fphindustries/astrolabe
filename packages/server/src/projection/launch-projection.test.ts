@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { STARFORGED } from '@astrolabe/rules';
 import { NON_CANONICAL_LAUNCH_EVENT_TYPES } from '@astrolabe/shared';
+import { testEventId } from '@astrolabe/shared/test-fixtures';
 
 import { renderSetup } from '../ai/context/incident.js';
 import { renderState } from '../ai/context/render-state.js';
@@ -422,6 +423,18 @@ describe('the crew revision chain is readable (6.0c, D-184)', () => {
     provenance: 'player_written' as const,
     groundedIn: [],
     supersedesEventId: supersedesEventId as never,
+  });
+
+  it('writes no history for a revision of a character that does not exist', () => {
+    // `updateCharacter` already returns the state untouched in this case, so
+    // without the same guard on the history push the fold would remember a
+    // version of a character it does not have.
+    const builder = crewLog().add('character.revised', revision('From nowhere.', testEventId(1)));
+
+    const state = project(builder.build());
+
+    expect(state.characters[VESNA]).toBeUndefined();
+    expect(state.launch.crewHistory[VESNA]).toBeUndefined();
   });
 
   it('keeps no history for a character nobody has revised', () => {

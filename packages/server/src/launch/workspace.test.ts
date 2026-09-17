@@ -280,3 +280,97 @@ describe('the launch workspace read layer', () => {
 function codes(workspace: ReturnType<typeof buildLaunchWorkspace>): string[] {
   return workspace.readiness.problems.map((problem) => problem.code);
 }
+
+describe('a crew member cites its rolls too (6.0b, D-184)', () => {
+  const VESNA = 'aaaa9999-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as CharacterId;
+  const METERS = {
+    health: { value: 5, min: 0, max: 5 },
+    spirit: { value: 5, min: 0, max: 5 },
+    supply: { value: 5, min: 0, max: 5 },
+  } as const;
+
+  const launchCharacter = (appearance: string, groundedIn: readonly string[]) => ({
+    characterId: VESNA,
+    name: 'Vesna Kade',
+    callsign: 'Vesna',
+    stats: { edge: 3, heart: 2, iron: 1, shadow: 2, wits: 1 },
+    meters: METERS,
+    momentum: 2,
+    assets: [],
+    appearance,
+    backstory: { kind: 'written' as const, text: 'Flew charts nobody else trusted.' },
+    backgroundVow: { title: 'Find the lost survey', rank: 'formidable' as const },
+    provenance: 'guide_proposal' as const,
+    groundedIn: groundedIn as never,
+  });
+
+  const nameRoll = (seq: number, rowText: string) =>
+    testEvent(
+      'oracle.rolled',
+      { oracleId: 'oracle:characters/name/given', roll: 42, rowText },
+      { seq },
+    );
+
+  it('resolves the rolls an accepted character was built on (A41)', () => {
+    // The gap this closes: `launchChips` walked `state.launch` only, and a
+    // character projects to `state.characters`. Crew is the one section whose
+    // accepted facts live outside the launch fold, so its chips resolved to
+    // nothing — group 5's note that groups 6-9 need no edit here does not
+    // hold for crew.
+    const rollId = testEventId(1);
+    const workspace = buildLaunchWorkspace([
+      nameRoll(1, 'Vesna'),
+      testEvent('character.created', launchCharacter('A jacket a size too big.', [rollId]), {
+        seq: 2,
+      }),
+    ]);
+
+    expect(workspace.chips[rollId]).toMatchObject({
+      oracleId: 'oracle:characters/name/given',
+      roll: 42,
+      rowText: 'Vesna',
+      voided: false,
+    });
+  });
+
+  it('carries no chip for a character built entirely by hand (A42)', () => {
+    const workspace = buildLaunchWorkspace([
+      testEvent('character.created', { ...launchCharacter('Written by hand.', []) }, { seq: 1 }),
+    ]);
+
+    expect(workspace.chips).toEqual({});
+  });
+
+  it('resolves the rolls behind the current version and the ones it superseded', () => {
+    // `crewHistory` lives inside `state.launch`, so superseded rolls were
+    // already being collected as of 6.0c; the current version's are what 6.0b
+    // adds. Both resolve, and stating it here keeps that behaviour checked
+    // rather than emergent.
+    const firstRoll = testEventId(1);
+    const secondRoll = testEventId(3);
+    const created = testEvent(
+      'character.created',
+      launchCharacter('A jacket a size too big.', [firstRoll]),
+      { seq: 2 },
+    );
+    const workspace = buildLaunchWorkspace([
+      nameRoll(1, 'Vesna'),
+      created,
+      nameRoll(3, 'Kade'),
+      testEvent(
+        'character.revised',
+        {
+          characterId: VESNA,
+          character: launchCharacter('A quieter jacket.', [secondRoll]),
+          provenance: 'player_written',
+          groundedIn: [secondRoll],
+          supersedesEventId: created.id,
+        },
+        { seq: 4 },
+      ),
+    ]);
+
+    expect(workspace.chips[secondRoll]?.rowText).toBe('Kade');
+    expect(workspace.chips[firstRoll]?.rowText).toBe('Vesna');
+  });
+});
