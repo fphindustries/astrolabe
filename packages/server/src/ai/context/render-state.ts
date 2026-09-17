@@ -11,6 +11,15 @@ import type { CampaignState } from '@astrolabe/shared';
  * stands, their condition, what presses on them, who is here. It carries no
  * character interiority, because the event log holds none (§3).
  */
+/**
+ * How an open truth is stated to the Guide (D-162).
+ *
+ * One string because it is one fact. It was written twice — once here and
+ * once in `renderSetup` — and the two spellings had already drifted apart by
+ * a dash, which is two prompts for one rule.
+ */
+export const TRUTH_LEFT_OPEN = 'deliberately left open — do not settle it';
+
 export function renderState(state: CampaignState): string {
   const sections: string[] = [];
 
@@ -22,10 +31,7 @@ export function renderState(state: CampaignState): string {
     const question = STARFORGED.truths.find((t) => t.id === oracleId)?.name ?? oracleId;
     // D-162: an open truth is a fact that the category is deliberately
     // undefined, not an unanswered question the Guide may quietly settle.
-    const answer =
-      decision.resolution === 'leave_open'
-        ? 'deliberately left open — do not settle it'
-        : (decision.text ?? '');
+    const answer = decision.resolution === 'leave_open' ? TRUTH_LEFT_OPEN : (decision.text ?? '');
     return `- ${question}: ${answer}`;
   });
   if (truths.length > 0) {

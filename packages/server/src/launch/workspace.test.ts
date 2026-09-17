@@ -7,9 +7,9 @@ import {
   type SceneId,
   type SessionId,
 } from '@astrolabe/shared';
-import { testEvent } from '@astrolabe/shared/test-fixtures';
+import { testEvent, testEventId } from '@astrolabe/shared/test-fixtures';
 
-import type { CharacterId } from '@astrolabe/rules';
+import type { CharacterId, OracleId } from '@astrolabe/rules';
 
 import { buildLaunchWorkspace } from './workspace.js';
 
@@ -71,6 +71,63 @@ function sectorEvents(): AstrolabeEvent[] {
 }
 
 describe('the launch workspace read layer', () => {
+  it('resolves the oracle rolls a decided truth cites (A41)', () => {
+    // The gap this closes: a rolled truth records `groundedIn` as event ids,
+    // and nothing else in the payload says which table came up with what. A
+    // truth is not an entity, so `/entities/:entityId/grounding` cannot answer
+    // for it, and the chip beat 2 asks for had no source.
+    const rollId = testEventId(4);
+    const events: AstrolabeEvent[] = [
+      testEvent(
+        'oracle.rolled',
+        { oracleId: 'oracle:truth/cataclysm', roll: 42, rowText: 'A slow unmaking.' },
+        { seq: 4 },
+      ),
+      testEvent(
+        'truth.decided',
+        {
+          truthId: 'oracle:truth/cataclysm' as OracleId,
+          resolution: 'rolled',
+          optionIndex: 1,
+          text: 'A slow unmaking of everything that held.',
+          provenance: 'oracle_roll',
+          groundedIn: [rollId],
+        },
+        { seq: 5 },
+      ),
+    ];
+
+    const workspace = buildLaunchWorkspace(events);
+
+    expect(workspace.chips[rollId]).toMatchObject({
+      oracleId: 'oracle:truth/cataclysm',
+      roll: 42,
+      rowText: 'A slow unmaking.',
+      voided: false,
+    });
+  });
+
+  it('carries no chip for a truth chosen rather than rolled', () => {
+    // Over-collecting citations is safe, but an empty `groundedIn` must not
+    // conjure a chip: "chosen" and "rolled" are different provenance, and A41
+    // shows a chip only for the roll that actually happened.
+    const workspace = buildLaunchWorkspace([
+      testEvent(
+        'truth.decided',
+        {
+          truthId: 'oracle:truth/cataclysm' as OracleId,
+          resolution: 'selected',
+          optionIndex: 0,
+          text: 'It was a war.',
+          ...acceptance,
+        },
+        { seq: 1 },
+      ),
+    ]);
+
+    expect(workspace.chips).toEqual({});
+  });
+
   it('feeds an accepted sector trouble to readiness', () => {
     const events = [
       ...sectorEvents(),

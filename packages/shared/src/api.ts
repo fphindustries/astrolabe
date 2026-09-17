@@ -98,6 +98,13 @@ export interface LaunchWorkspaceResponse {
    */
   readonly launchOpen: boolean;
   readonly closedReason?: LaunchClosedReason;
+  /**
+   * A41: the oracle rolls the launch's accepted facts cite, resolved by event
+   * id. `groundedIn` carries ids; a chip needs the table and the result, and a
+   * truth is not an entity, so the entity grounding endpoint cannot answer for
+   * one. Beside the state, like `readiness`.
+   */
+  readonly chips: Readonly<Record<EventId, OracleChip>>;
 }
 
 /** D-150: a move chain committed without its passage, as the log offers to narrate it. */

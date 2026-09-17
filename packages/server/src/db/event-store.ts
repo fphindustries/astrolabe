@@ -374,7 +374,8 @@ export async function readNarrativeEvents(
        and type = any(${[...NARRATIVE_EVENT_TYPES]})
        and command_id not in (
          select id from commands
-          where campaign_id = ${campaignId} and kind = any(${[...PROPOSAL_COMMAND_KINDS]})
+          where campaign_id = ${campaignId}
+            and (kind = any(${[...PROPOSAL_COMMAND_KINDS]}) or kind like ${LAUNCH_PROPOSAL_PREFIX})
        )
        ${options.sessionId === undefined ? sql`` : sql`and session_id = ${options.sessionId}`}
        ${options.before === undefined ? sql`` : sql`and seq < ${options.before}`}
@@ -414,8 +415,21 @@ const EVENTS_PER_BEAT_ALLOWANCE = 4;
 export const PROPOSAL_COMMAND_KINDS = [
   'character.propose',
   'campaign.propose_incidents',
-  'launch.propose_truth',
+  'launch.propose.truth',
 ] as const;
+
+/**
+ * Every Campaign Launch proposal command, by prefix.
+ *
+ * `proposeLaunchCreation` mints its kind from the target
+ * (`launch.propose.${'<targetKind>'}`), so there are eight of them and a list
+ * would go stale the next time a target kind is added. Matching the prefix
+ * excludes all of them and cannot drift. Belt and braces today — a launch
+ * proposal is written before `session.began`, and the narrative log is
+ * session-scoped — but the rule is "a proposal is not a beat", not "a
+ * proposal happens to be unreachable".
+ */
+const LAUNCH_PROPOSAL_PREFIX = 'launch.propose.%';
 
 const AMENDMENT_TYPES = [
   'event.voided',

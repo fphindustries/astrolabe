@@ -4,9 +4,16 @@ import {
   type LaunchReadiness,
   type LaunchReadinessInput,
 } from '@astrolabe/rules';
-import type { AstrolabeEvent, CampaignState, LaunchClosedReason } from '@astrolabe/shared';
+import type {
+  AstrolabeEvent,
+  CampaignState,
+  EventId,
+  LaunchClosedReason,
+  OracleChip,
+} from '@astrolabe/shared';
 
 import { launchClosedReason } from '../db/launch-commands.js';
+import { oracleChips } from '../projection/narrative-log.js';
 import { project } from '../projection/project.js';
 
 /**
@@ -19,6 +26,7 @@ export interface LaunchWorkspace {
   readonly readiness: LaunchReadiness;
   readonly launchOpen: boolean;
   readonly closedReason?: LaunchClosedReason;
+  readonly chips: Readonly<Record<EventId, OracleChip>>;
 }
 
 export function buildLaunchWorkspace(events: readonly AstrolabeEvent[]): LaunchWorkspace {
@@ -32,6 +40,7 @@ export function buildLaunchWorkspace(events: readonly AstrolabeEvent[]): LaunchW
   const open = {
     launchOpen: closedReason === undefined,
     ...(closedReason ? { closedReason } : {}),
+    chips: launchChips(events, state),
   };
   if (state.launch.phase === 'active') return { state, readiness, ...open };
   return {
@@ -42,6 +51,48 @@ export function buildLaunchWorkspace(events: readonly AstrolabeEvent[]): LaunchW
     readiness,
     ...open,
   };
+}
+
+/**
+ * The oracle rolls the launch's accepted facts were built on, resolved (A41).
+ *
+ * Every accepted launch fact carries `groundedIn`: the ids of the
+ * `oracle.rolled` events behind it. Ids alone render nothing — a rolled truth
+ * can say it was rolled but not what came up on which table — and a truth is
+ * not an entity, so `/entities/:entityId/grounding` cannot answer for it.
+ * Resolving them here, beside the state rather than inside it, is the same
+ * arrangement `readiness` uses: the fold stores facts; this adapter resolves
+ * them.
+ *
+ * The citations are collected by walking the launch state for `groundedIn`
+ * arrays rather than by listing each section's field. A per-section list would
+ * need an edit every time a section lands, and a section whose author forgot
+ * would ship chips that silently resolve to nothing — the failure this whole
+ * group keeps finding. Ids that name something other than a roll resolve to no
+ * chip, so over-collecting is safe.
+ */
+function launchChips(
+  events: readonly AstrolabeEvent[],
+  state: CampaignState,
+): Readonly<Record<EventId, OracleChip>> {
+  const cited = new Set<EventId>();
+  const walk = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      for (const item of value) walk(item);
+      return;
+    }
+    if (value === null || typeof value !== 'object') return;
+    for (const [key, child] of Object.entries(value)) {
+      if (key === 'groundedIn' && Array.isArray(child)) {
+        for (const id of child) if (typeof id === 'string') cited.add(id as EventId);
+        continue;
+      }
+      walk(child);
+    }
+  };
+  walk(state.launch);
+  const chips = oracleChips(events)([...cited]);
+  return Object.fromEntries(chips.map((chip) => [chip.eventId, chip]));
 }
 
 function readinessInput(state: CampaignState): LaunchReadinessInput {

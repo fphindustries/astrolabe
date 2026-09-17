@@ -6,6 +6,7 @@ import type { AiRequest } from '../provider.js';
 
 import { NARRATOR_RULES, rubricText } from './authority-rubric.js';
 import type { RolledForProposal } from './creation.js';
+import { TRUTH_LEFT_OPEN } from './render-state.js';
 
 /**
  * AI-proposed inciting incidents' prompt (task 4.6, D-132–D-134). Pure, like
@@ -156,10 +157,7 @@ export function renderSetup(state: CampaignState): string {
   const truths = [...context.truths].map(([key, id]) => {
     const question = STARFORGED.truths.find((t) => t.id === id)?.name ?? id;
     const launch = state.launch.truthDecisions[id];
-    const answer =
-      launch?.resolution === 'leave_open'
-        ? 'deliberately left open - do not settle it'
-        : (launch?.text ?? '');
+    const answer = launch?.resolution === 'leave_open' ? TRUTH_LEFT_OPEN : (launch?.text ?? '');
     // D-162: a quest starter is inspiration for the incident, never canon.
     const starter =
       launch?.questStarter === undefined
