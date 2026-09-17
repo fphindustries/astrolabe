@@ -1,0 +1,35 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.back {
+  align-self: flex-start;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.back:hover {
+  color: var(--text-primary);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.heading {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+}
+
+.summary {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-base);
+}

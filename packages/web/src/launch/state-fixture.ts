@@ -1,5 +1,5 @@
 import { DEFAULT_CAMPAIGN_SETTINGS } from '@astrolabe/shared';
-import type { CampaignState, LaunchState } from '@astrolabe/shared';
+import type { CampaignId, CampaignState, LaunchState } from '@astrolabe/shared';
 
 /**
  * An empty `CampaignState` for the launch view-model tests.
@@ -37,7 +37,7 @@ export function emptyCampaignState(launch: Partial<LaunchState> = {}): CampaignS
 
 export const NAMED_CAMPAIGN = {
   campaign: {
-    id: 'c1',
+    id: 'c1' as CampaignId,
     name: 'Lantern Wake',
     settings: DEFAULT_CAMPAIGN_SETTINGS,
   },

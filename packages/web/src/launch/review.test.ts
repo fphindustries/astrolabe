@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import type { LaunchProblem, LaunchReadiness, LaunchSection } from '@astrolabe/rules';
+import type {
+  LaunchProblem,
+  LaunchReadiness,
+  LaunchSection,
+  LaunchSectionStatus,
+} from '@astrolabe/rules';
 
 import { buildReview, groupProblemsBySection } from './review.js';
 import { emptyCampaignState, NAMED_CAMPAIGN } from './state-fixture.js';
@@ -14,12 +19,14 @@ const problem = (section: LaunchSection, code: string): LaunchProblem => ({
 });
 
 function readiness(problems: readonly LaunchProblem[]): LaunchReadiness {
-  const sections = Object.fromEntries(
-    LAUNCH_SECTION_ORDER.map((section) => {
-      const blockers = problems.filter((p) => p.section === section);
-      return [section, { status: blockers.length === 0 ? 'complete' : 'in_progress', blockers }];
-    }),
-  ) as LaunchReadiness['sections'];
+  const sections = {} as Record<
+    LaunchSection,
+    { status: LaunchSectionStatus; blockers: readonly LaunchProblem[] }
+  >;
+  for (const section of LAUNCH_SECTION_ORDER) {
+    const blockers = problems.filter((problem) => problem.section === section);
+    sections[section] = { status: blockers.length === 0 ? 'complete' : 'in_progress', blockers };
+  }
   return { ready: problems.length === 0, problems, sections };
 }
 

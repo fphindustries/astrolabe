@@ -1,0 +1,40 @@
+/* The error summary is a bordered aside, not a red wash: §10 keeps meaning in
+   the words, and the heading says what is wrong without relying on the tone. */
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--outcome-miss);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+}
+
+.summary:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+
+.title {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+}
+
+.details,
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: var(--space-4);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.link {
+  color: var(--text-primary);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}

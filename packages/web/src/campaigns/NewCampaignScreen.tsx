@@ -4,61 +4,30 @@ import { CampaignSettingsSchema, DEFAULT_CAMPAIGN_SETTINGS } from '@astrolabe/sh
 import type { CampaignSettings } from '@astrolabe/shared';
 
 import { useCreateCampaign } from '../api/campaigns.js';
+import { navigate } from '../app/location.js';
+import { launchOverviewPath } from '../launch/sections.js';
 
-import { IncitingIncidentStep } from './IncitingIncidentStep.js';
-import { SectorStep } from './SectorStep.js';
-import { TruthsStep } from './TruthsStep.js';
-import styles from './CampaignCreationScreen.module.css';
+import styles from './NewCampaignScreen.module.css';
 
 const NARRATION_LATITUDES = CampaignSettingsSchema.shape.narrationLatitude.options;
 const NARRATION_LENGTHS = CampaignSettingsSchema.shape.narrationLength.options;
 
-type Step = 'settings' | 'truths' | 'sector' | 'incident';
-
 /**
- * `/campaigns/new` (task 4.1, D-100 — a full page, not a drawer). A
- * four-step wizard covering the whole shared setup evening (design record
- * §6): campaign + settings (4.1, 4.5), truths (4.2), the sector (4.3), and
- * the inciting incident that becomes the first vow (4.4). Steps are kept as
- * component state here rather than routes — the campaign this screen
- * creates in step one is what every later step writes against, and there's
- * nothing else that needs a URL of its own.
+ * `/campaigns/new` — a name, the narration settings, and nothing else.
+ *
+ * This was a four-step wizard that carried truths, the sector and the inciting
+ * vow. Campaign Launch replaces all three, so what is left here is the one
+ * command that creates the campaign row; everything after it belongs to the
+ * workspace, which this screen opens on (D-160, golden launch beat 1).
+ *
+ * The premise is deliberately not here: it is the Foundation section's, where
+ * it can be saved as a draft and revised before it becomes canon (D-161).
  */
-export function CampaignCreationScreen() {
-  const [step, setStep] = useState<Step>('settings');
-  const [campaignId, setCampaignId] = useState<string | undefined>(undefined);
-
-  if (step !== 'settings' && campaignId !== undefined) {
-    return (
-      <div className={styles.page}>
-        <h1 className={styles.title}>New campaign</h1>
-        {step === 'truths' && (
-          <TruthsStep campaignId={campaignId} onNext={() => setStep('sector')} />
-        )}
-        {step === 'sector' && (
-          <SectorStep campaignId={campaignId} onNext={() => setStep('incident')} />
-        )}
-        {step === 'incident' && <IncitingIncidentStep campaignId={campaignId} />}
-      </div>
-    );
-  }
-
-  return (
-    <SettingsStep
-      onCreated={(id) => {
-        setCampaignId(id);
-        setStep('truths');
-      }}
-    />
-  );
-}
-
-function SettingsStep({ onCreated }: { readonly onCreated: (campaignId: string) => void }) {
+export function NewCampaignScreen() {
   const [name, setName] = useState('');
   const [settings, setSettings] = useState<CampaignSettings>(DEFAULT_CAMPAIGN_SETTINGS);
 
   const createCampaign = useCreateCampaign();
-
   const canSubmit = name.trim().length > 0 && !createCampaign.isPending;
 
   const handleSubmit = (event: FormEvent) => {
@@ -67,14 +36,18 @@ function SettingsStep({ onCreated }: { readonly onCreated: (campaignId: string) 
       return;
     }
     createCampaign.mutate(
-      { name, settings },
-      { onSuccess: (response) => onCreated(response.campaignId) },
+      { name: name.trim(), settings },
+      { onSuccess: (response) => navigate(launchOverviewPath(response.campaignId)) },
     );
   };
 
   return (
     <div className={styles.page}>
       <h1 className={styles.title}>New campaign</h1>
+      <p className={styles.lede}>
+        Naming it opens Campaign Launch, where the crew, the sector and the first vow are settled
+        before play begins. Nothing here is final — every part can be revised until you launch.
+      </p>
       <form className={styles.form} onSubmit={handleSubmit}>
         <section className={styles.section}>
           <label className={styles.label} htmlFor="name">
@@ -150,7 +123,7 @@ function SettingsStep({ onCreated }: { readonly onCreated: (campaignId: string) 
         </section>
 
         {createCampaign.isError && (
-          <p className={styles.formError}>
+          <p className={styles.formError} role="alert">
             Couldn&rsquo;t create the campaign. Check the server and try again.
           </p>
         )}
