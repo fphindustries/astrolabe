@@ -541,11 +541,79 @@ that were already being written and that nothing could read.
 
 ### 6. Crew
 
+Group 6 found the same shape of defect groups 4 and 5 each found, and it has one cause worth
+stating once: **Crew is the only launch section whose accepted facts live outside
+`state.launch`.** A character projects to `state.characters`, and `LaunchState` has no crew
+member in it, so every cross-cutting affordance group 5 built is blind to crew. 6.0 fixes
+that before the editor is built.
+
+Decisions behind this group: D-184 (crew metadata on the character), D-185 (`creation.proposed`
+for crew), D-186 (a declared character recipe), D-187 (a saved draft starts a section).
+
+- [ ] 6.0 Prerequisites found while planning group 6. Each begins with its failing test
+  (3R.1a's pattern):
+  - **6.0a Crew acceptance is readable (D-184).** `CharacterCreatedSchema` gains optional
+    `provenance` and `groundedIn`; projection carries `eventId`, `seq`, `provenance` and
+    `groundedIn` onto `CharacterState`. All optional, so no upcaster is owed.
+  - **6.0b Crew chips resolve (D-184).** `launchChips` walks `state.characters` as well as
+    `state.launch`, and its comment stops claiming groups 6–9 need no edit there.
+  - **6.0c The crew revision chain is readable (D-184).** `LaunchState.crewHistory`, oldest
+    first, written by the `character.revised` arm — `truthHistory`'s shape and projection arm.
+  - **6.0d `reviseCharacter` and `removeCharacter` commands and routes.** Both events have
+    schemas, metadata, projection arms and sample payloads, and **no command appends either**;
+    6.4 requires both. Guarded by `requireLaunchOpen` (D-178), revalidated with
+    `validateLaunchCharacterDraft`, and filling `supersedesEventId` from the projected
+    `CharacterState.eventId` 6.0a adds rather than trusting the client — which is why 6.0a
+    sequences first. **Dangling background-vow tracks are handled in the `character.removed`
+    projection arm**, which today only deletes from `state.characters`: it also drops tracks
+    whose `characterId` is the removed character. Not a new event type and not a void (D-177
+    leaves void no job here). A removal that orphans an installed module surfaces as
+    `module_owner_unknown` from the existing `validateSharedStarship` rather than silently —
+    assert it.
+  - **6.0e Crew draft identity (D-182, D-185, A23).** The crew draft arm becomes
+    `{ characters: Array<{ draftId, characterId?, …loose fields }> }`. 3R.4d typed this
+    snapshot but gave an in-progress character no stable key, so nothing could correlate a
+    saved draft to the crew member it belongs to. `draftId` is minted client-side, stable
+    across saves, and is the proposal `targetId` D-185 defines. Precedence is decided **per
+    crew member**, as group 5 decided it per truth. The inner `min(1)` constraints drop, as
+    the `connection_troubles` arm already does deliberately: a draft is incomplete by nature.
+  - **6.0f `sectionStarted` honours drafts (D-187).** `LaunchReadinessInput.draftedSections`,
+    supplied by the workspace from the projected drafts. This changes status for all seven
+    sections, so assertions of `not_started` where a draft exists need updating in
+    `ready.test.ts` and `dashboard.test.ts`.
+  - **6.0g Delete the `rank as never` casts.** `character-commands.ts` types
+    `backgroundVow.rank` as `string` and casts twice. `/launch/crew` routes through it, so it
+    is a launch command path and 3R.2b's rule applies; D-175 exists to stop this drift.
+  - **6.0h Declare `CHARACTER_RECIPE` (D-186).** Five distinct slots, added to
+    `CAMPAIGN_LAUNCH_RECIPE_MATERIALIZATIONS`, `LaunchRecipeSelector` and
+    `materializeLaunchRecipe`; `CHARACTER_PROPOSAL_ROLLS` becomes a read of it.
 - [ ] 6.1 Refactor character creation into a resumable step flow over the existing draft.
-- [ ] 6.2 Add appearance, backstory/discover-in-play, required background vow, and gear.
+  Identity → Stats → Assets → Background → Review, with **Save and continue** at any step.
+  Every transition lives in `crew-form.ts`, not in the `.tsx` — group 5's note is unambiguous
+  that logic in a `.tsx` is logic nothing checks, and crew has more transitions than truths
+  did. Reuses `assignStat`, `slotOptionGroups`, `CREATION_SLOTS`, `problemsByField` and
+  `AssetPicker` rather than restating them. `SECTION_ARRIVES_IN.crew` becomes null and the
+  placeholder example moves to Starship.
+- [ ] 6.2 Add appearance, backstory/discover-in-play, required background vow, and gear,
+  validated by `validateLaunchCharacterDraft` in both client and command layer. The form says
+  in words that an omitted pronoun is not guessed (D-131) and that discover-in-play is an
+  explicit state, not a missing required field. Field-level **Roll** for backstory prompts
+  through the existing single-oracle endpoint (3R.5c), its chip resolved by 6.0b.
 - [ ] 6.3 Update concept-first proposals and field-level help to fill the same draft.
+  `characterProposalSchema`, `CREATION_RULES` and `checkCharacterProposal` gain `appearance`,
+  `backstory` and optional `signatureGear` — beat 3 keeps the *proposed* appearance and
+  backstory, and today the schema has neither. The command writes `creation.proposed`
+  (D-185) grounded in `CHARACTER_RECIPE` rolled as its own command (D-186), and acceptance
+  generalizes `acceptedProposal` to any target kind. Field-level help (beat 5: hooks and a
+  background vow) is the same command with a requested-field list, not a second path.
 - [ ] 6.4 Add the one-to-six crew overview, completion status, revision, and removal before
-  launch, retaining server-side rules validation.
+  launch, retaining server-side rules validation. Per-character status from
+  `readiness.sections.crew.blockers`, visible revision history from `crewHistory`, and beat
+  5's sentence: one complete character is the launch minimum, three is this campaign's choice.
+
+**Scope fences.** The per-character Starship grant stays until 7.3 (D-171). The Milestone 1
+`/campaigns/:id/characters/new` screen is untouched — mid-play character creation is in no
+criterion A22–A44. Starship modules, connection and incident belong to groups 7 and 9.
 
 ### 7. Shared starship
 
