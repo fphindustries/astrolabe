@@ -322,7 +322,12 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
         ...state,
         launch: {
           ...state.launch,
-          drafts: { ...state.launch.drafts, [event.payload.section]: event.payload.snapshot },
+          // D-182: the snapshot plus where it sits, so a section's form can
+          // tell a draft saved after an accepted fact from one saved before it.
+          drafts: {
+            ...state.launch.drafts,
+            [event.payload.section]: { snapshot: event.payload.snapshot, seq: event.seq },
+          },
         },
       };
     case 'creation.proposed':
@@ -342,7 +347,10 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
     case 'campaign.foundation_set':
       return {
         ...state,
-        launch: { ...state.launch, foundation: { ...event.payload, eventId: event.id } },
+        launch: {
+          ...state.launch,
+          foundation: { ...event.payload, eventId: event.id, seq: event.seq },
+        },
       };
     case 'truth.decided':
       return {
@@ -351,7 +359,7 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
           ...state.launch,
           truthDecisions: {
             ...state.launch.truthDecisions,
-            [event.payload.truthId]: { ...event.payload, eventId: event.id },
+            [event.payload.truthId]: { ...event.payload, eventId: event.id, seq: event.seq },
           },
         },
       };
@@ -378,7 +386,10 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
     case 'starship.established':
       return {
         ...state,
-        launch: { ...state.launch, starship: { ...event.payload, eventId: event.id } },
+        launch: {
+          ...state.launch,
+          starship: { ...event.payload, eventId: event.id, seq: event.seq },
+        },
       };
     case 'starship.revised':
       return {
@@ -395,13 +406,17 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
               ? {}
               : { supersedesEventId: event.payload.supersedesEventId }),
             eventId: event.id,
+            seq: event.seq,
           },
         },
       };
     case 'sector.configured':
       return {
         ...state,
-        launch: { ...state.launch, sector: { ...event.payload, eventId: event.id } },
+        launch: {
+          ...state.launch,
+          sector: { ...event.payload, eventId: event.id, seq: event.seq },
+        },
       };
     case 'location.added':
     case 'location.revised':
@@ -411,7 +426,7 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
           ...state.launch,
           locations: {
             ...state.launch.locations,
-            [event.payload.id]: { ...event.payload, eventId: event.id },
+            [event.payload.id]: { ...event.payload, eventId: event.id, seq: event.seq },
           },
         },
       };
@@ -436,7 +451,7 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
             ...state.launch.routes.filter(
               (route) => route.eventId !== event.payload.supersedesEventId,
             ),
-            { ...event.payload, eventId: event.id },
+            { ...event.payload, eventId: event.id, seq: event.seq },
           ],
         },
       };
@@ -470,7 +485,7 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
           ...state.launch,
           troubles: {
             ...state.launch.troubles,
-            [event.payload.troubleId]: { ...event.payload, eventId: event.id },
+            [event.payload.troubleId]: { ...event.payload, eventId: event.id, seq: event.seq },
           },
         },
       };
@@ -478,17 +493,26 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
     case 'connection.revised':
       return {
         ...state,
-        launch: { ...state.launch, connection: { ...event.payload, eventId: event.id } },
+        launch: {
+          ...state.launch,
+          connection: { ...event.payload, eventId: event.id, seq: event.seq },
+        },
       };
     case 'incident.accepted':
       return {
         ...state,
-        launch: { ...state.launch, incident: { ...event.payload, eventId: event.id } },
+        launch: {
+          ...state.launch,
+          incident: { ...event.payload, eventId: event.id, seq: event.seq },
+        },
       };
     case 'incident.revised':
       return {
         ...state,
-        launch: { ...state.launch, incident: { ...event.payload, eventId: event.id } },
+        launch: {
+          ...state.launch,
+          incident: { ...event.payload, eventId: event.id, seq: event.seq },
+        },
       };
     case 'campaign.activated':
       return {

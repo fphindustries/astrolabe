@@ -65,8 +65,10 @@ describe.skipIf(!hasTestDatabase)('Campaign Launch workspace commands (3.1–3.2
       draft: { section: 'foundation', snapshot: { premise: 'Resumed draft' } },
     });
 
+    // D-182: the snapshot comes back with where it sits in the log, so a
+    // section's form can tell it from an accepted fact written before or after.
     expect(project(await readEvents(db.sql, campaignId)).launch.drafts).toEqual({
-      foundation: { premise: 'Resumed draft' },
+      foundation: { snapshot: { premise: 'Resumed draft' }, seq: expect.any(Number) },
     });
   });
 

@@ -4,8 +4,9 @@ import {
   type LaunchReadiness,
   type LaunchReadinessInput,
 } from '@astrolabe/rules';
-import type { AstrolabeEvent, CampaignState } from '@astrolabe/shared';
+import type { AstrolabeEvent, CampaignState, LaunchClosedReason } from '@astrolabe/shared';
 
+import { launchClosedReason } from '../db/launch-commands.js';
 import { project } from '../projection/project.js';
 
 /**
@@ -16,19 +17,30 @@ import { project } from '../projection/project.js';
 export interface LaunchWorkspace {
   readonly state: CampaignState;
   readonly readiness: LaunchReadiness;
+  readonly launchOpen: boolean;
+  readonly closedReason?: LaunchClosedReason;
 }
 
 export function buildLaunchWorkspace(events: readonly AstrolabeEvent[]): LaunchWorkspace {
   const state = project(events);
   const input = readinessInput(state);
   const readiness = validateLaunchReadiness(input, STARFORGED.truths, STARFORGED);
-  if (state.launch.phase === 'active') return { state, readiness };
+  // Asked of the projected state, before the phase override below: that is the
+  // state a launch command would see, and the point of the field is to answer
+  // exactly as the command's own refusal would (D-178).
+  const closedReason = launchClosedReason(state);
+  const open = {
+    launchOpen: closedReason === undefined,
+    ...(closedReason ? { closedReason } : {}),
+  };
+  if (state.launch.phase === 'active') return { state, readiness, ...open };
   return {
     state: {
       ...state,
       launch: { ...state.launch, phase: readiness.ready ? 'ready' : 'draft' },
     },
     readiness,
+    ...open,
   };
 }
 
@@ -118,6 +130,9 @@ function readinessInput(state: CampaignState): LaunchReadinessInput {
   );
   return {
     campaignName: state.campaign?.name ?? '',
+    // D-181. Only the accepted foundation counts: a saved draft is not canon
+    // (D-161), so a premise still sitting in a draft does not clear the blocker.
+    ...(state.launch.foundation === undefined ? {} : { premise: state.launch.foundation.premise }),
     truths: decisions,
     characters,
     ...(ship === undefined

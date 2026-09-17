@@ -78,11 +78,26 @@ export interface CampaignStateResponse {
   readonly owedPassages: readonly OwedPassage[];
 }
 
+/**
+ * Why Campaign Launch is closed for a campaign. The same union types the 422
+ * `reason` a launch command refuses with, so the field a client routes on and
+ * the refusal it would otherwise earn share one vocabulary.
+ */
+export type LaunchClosedReason = 'campaign_active' | 'campaign_in_play';
+
 /** The resumable Campaign Launch workspace; readiness is server-derived. */
 export interface LaunchWorkspaceResponse {
   readonly headSeq: number;
   readonly state: CampaignState;
   readonly readiness: LaunchReadiness;
+  /**
+   * D-178: a campaign that has begun a session is in play whatever its phase
+   * says, which is every Milestone 1 campaign. A43 routes on this rather than
+   * on `phase`, and it is derived server-side so the client does not keep a
+   * second copy of the rule (D-176's lesson).
+   */
+  readonly launchOpen: boolean;
+  readonly closedReason?: LaunchClosedReason;
 }
 
 /** D-150: a move chain committed without its passage, as the log offers to narrate it. */

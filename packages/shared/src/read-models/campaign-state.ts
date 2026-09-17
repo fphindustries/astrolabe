@@ -207,8 +207,16 @@ export interface SectorState {
  * The `eventId` is what a revision supersedes and what A41 links an accepted
  * fact back to, so it belongs on the projected fact rather than being looked
  * up again.
+ *
+ * `seq` orders it against the section's saved draft (D-182). An accepted fact
+ * and a draft can disagree — nothing clears a draft — and the only honest
+ * tie-break is which was written last, which the fold knows and no reader can
+ * recover afterwards.
  */
-export type Accepted<T extends LaunchFactType> = PayloadFor<T> & { readonly eventId: EventId };
+export type Accepted<T extends LaunchFactType> = PayloadFor<T> & {
+  readonly eventId: EventId;
+  readonly seq: number;
+};
 
 type LaunchFactType =
   | 'campaign.foundation_set'
@@ -228,6 +236,19 @@ export type LaunchDraftFor<S extends LaunchSection> = Extract<
 >['snapshot'];
 
 /**
+ * A saved draft as projected: the snapshot, and where it sits in the log.
+ *
+ * `seq` is the same ordering `Accepted` carries, and exists for the same
+ * reason (D-182): a section's form has to know whether its draft or its
+ * accepted fact was written last, or it will show one while the dashboard
+ * reports the other.
+ */
+export interface SavedDraft<S extends LaunchSection> {
+  readonly snapshot: LaunchDraftFor<S>;
+  readonly seq: number;
+}
+
+/**
  * Campaign Launch facts, and only facts (D-176).
  *
  * Section statuses and blockers are **not** here: deriving them means running
@@ -242,7 +263,7 @@ export type LaunchDraftFor<S extends LaunchSection> = Extract<
  */
 export interface LaunchState {
   readonly phase: 'draft' | 'ready' | 'active';
-  readonly drafts: { readonly [S in LaunchSection]?: LaunchDraftFor<S> };
+  readonly drafts: { readonly [S in LaunchSection]?: SavedDraft<S> };
   readonly foundation?: Accepted<'campaign.foundation_set'>;
   readonly truthDecisions: Readonly<Record<OracleId, Accepted<'truth.decided'>>>;
   readonly starship?: Accepted<'starship.established'>;

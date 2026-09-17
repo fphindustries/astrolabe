@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import type { AstrolabeEvent, EntityId } from '@astrolabe/shared';
+import {
+  DEFAULT_CAMPAIGN_SETTINGS,
+  type AstrolabeEvent,
+  type EntityId,
+  type SceneId,
+  type SessionId,
+} from '@astrolabe/shared';
 import { testEvent } from '@astrolabe/shared/test-fixtures';
+
+import type { CharacterId } from '@astrolabe/rules';
 
 import { buildLaunchWorkspace } from './workspace.js';
 
@@ -19,6 +27,10 @@ const STAR = 'aaaa3333-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as EntityId;
 const SETTLEMENT = 'aaaa4444-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as EntityId;
 const SECTOR_TROUBLE = 'aaaa5555-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as EntityId;
 const SETTLEMENT_TROUBLE = 'aaaa6666-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as EntityId;
+const SESSION = 'aaaa7777-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as SessionId;
+const SCENE = 'aaaa8888-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as SceneId;
+const INCIDENT = 'aaaa9999-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as EntityId;
+const VESNA = 'aaaabbbb-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as CharacterId;
 
 const acceptance = { provenance: 'player_written', groundedIn: [] } as const;
 
@@ -120,6 +132,92 @@ describe('the launch workspace read layer', () => {
 
   // A star is optional (A33), so readiness has nothing to assert about it. The
   // mapping exists for the read model; 8.3 covers it once the UI reads it.
+
+  it('reports whether launch is open, exactly as a launch command would (D-178)', () => {
+    const created = testEvent(
+      'campaign.created',
+      { name: 'Lantern Wake', settings: DEFAULT_CAMPAIGN_SETTINGS },
+      { seq: 1 },
+    );
+
+    expect(buildLaunchWorkspace([created])).toMatchObject({ launchOpen: true });
+    expect(buildLaunchWorkspace([created]).closedReason).toBeUndefined();
+
+    // The case a phase-only guard misses, and the one A43 turns on: every
+    // Milestone 1 campaign has sessions and no `campaign.activated`, so its
+    // phase still reads `draft` while it is plainly in play.
+    const inPlay = buildLaunchWorkspace([
+      created,
+      testEvent('session.began', { sessionId: SESSION, number: 1 }, { seq: 2 }),
+    ]);
+    expect(inPlay.state.launch.phase).toBe('draft');
+    expect(inPlay).toMatchObject({ launchOpen: false, closedReason: 'campaign_in_play' });
+
+    const activated = buildLaunchWorkspace([
+      created,
+      testEvent(
+        'campaign.activated',
+        {
+          sessionId: SESSION,
+          sceneId: SCENE,
+          readinessVersion: 1,
+          launchFactEventIds: [],
+          pendingVow: {
+            incidentId: INCIDENT,
+            rank: 'formidable',
+            rollerId: VESNA,
+            participants: [VESNA],
+          },
+        },
+        { seq: 2 },
+      ),
+    ]);
+    expect(activated).toMatchObject({ launchOpen: false, closedReason: 'campaign_active' });
+  });
+
+  it('carries the accepted premise across, and only the accepted one (D-181, D-161)', () => {
+    const created = testEvent(
+      'campaign.created',
+      { name: 'Lantern Wake', settings: DEFAULT_CAMPAIGN_SETTINGS },
+      { seq: 1 },
+    );
+
+    // A named campaign with nothing else: foundation is in progress, and the
+    // premise is what it is waiting for.
+    const bare = buildLaunchWorkspace([created]);
+    expect(bare.readiness.sections.foundation.status).toBe('in_progress');
+    expect(bare.readiness.sections.foundation.blockers.map((problem) => problem.code)).toEqual([
+      'premise_required',
+    ]);
+
+    // A premise sitting in a saved draft is not canon (D-161), so it does not
+    // clear the blocker. This is the half a `?? draft` read would get wrong.
+    const drafted = buildLaunchWorkspace([
+      created,
+      testEvent(
+        'launch.draft_saved',
+        { section: 'foundation', snapshot: { premise: 'Drafted, not accepted.' } },
+        { seq: 2 },
+      ),
+    ]);
+    expect(codes(drafted)).toContain('premise_required');
+
+    // Accepting it does.
+    const accepted = buildLaunchWorkspace([
+      created,
+      testEvent(
+        'campaign.foundation_set',
+        {
+          premise: 'A crew chasing a signal out past the Drift.',
+          settings: DEFAULT_CAMPAIGN_SETTINGS,
+          ...acceptance,
+        },
+        { seq: 3 },
+      ),
+    ]);
+    expect(codes(accepted)).not.toContain('premise_required');
+    expect(accepted.readiness.sections.foundation.status).toBe('complete');
+  });
 });
 
 function codes(workspace: ReturnType<typeof buildLaunchWorkspace>): string[] {

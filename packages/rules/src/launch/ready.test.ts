@@ -32,6 +32,7 @@ const allTruthsLeftOpen = STARFORGED.truths.map((truth) => ({
 function readyInput(): LaunchReadinessInput {
   return {
     campaignName: 'Lantern Wake',
+    premise: 'A crew chasing a signal out past the Drift.',
     truths: allTruthsLeftOpen,
     characters: [
       {
@@ -210,6 +211,28 @@ describe('launch readiness can be satisfied', () => {
         incident: { ...ready.incident!, rollerId: 'crew-0', participants: ['crew-0'] },
       }).ready,
     ).toBe(true);
+  });
+
+  it('blocks on a missing premise but not on the campaign settings (D-181)', () => {
+    const ready = readyInput();
+    const { premise: _dropped, ...withoutPremise } = ready;
+
+    const foundation = check(withoutPremise).sections.foundation;
+
+    // The named campaign is what makes the section started, so the player sees
+    // a section in progress with a stated reason rather than an untouched one.
+    expect(foundation.status).toBe('in_progress');
+    expect(foundation.blockers.map((problem) => problem.code)).toEqual(['premise_required']);
+
+    // Blank is the same as absent: the command refuses both, and readiness must
+    // agree with the command it fronts.
+    expect(check({ ...ready, premise: '   ' }).problems.map((problem) => problem.code)).toContain(
+      'premise_required',
+    );
+
+    // The bound D-181 draws: settings always have defaults, so they never block.
+    // `readyInput` carries no settings at all and still reaches ready.
+    expect(check(ready).ready).toBe(true);
   });
 
   it('treats an unanswered truth as a blocker and an open one as decided (D-162)', () => {

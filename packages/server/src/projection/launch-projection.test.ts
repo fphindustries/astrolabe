@@ -189,6 +189,43 @@ describe('non-canonical launch events stay out of AI context (D-161)', () => {
 
   it('projects the draft for resumption even though context never sees it', () => {
     // A23 needs the draft back; D-161 needs it out of narration. Both.
-    expect(state.launch.drafts.foundation?.premise).toBe('A draft nobody accepted.');
+    expect(state.launch.drafts.foundation?.snapshot.premise).toBe('A draft nobody accepted.');
+  });
+});
+
+describe('a draft and its accepted fact are ordered against each other (D-182)', () => {
+  const SETTINGS = {
+    narrationLatitude: 'color',
+    narrationLength: 'standard',
+    rerollCap: 2,
+  } as const;
+  const started = () =>
+    new LogBuilder().add('campaign.created', { name: 'Lantern Wake', settings: SETTINGS });
+  /** The premise saved as a draft, then accepted with different words. */
+  const draftThenAccept = () =>
+    started()
+      .add('launch.draft_saved', { section: 'foundation', snapshot: { premise: 'B' } })
+      .add('campaign.foundation_set', { premise: 'C', settings: SETTINGS, ...acceptance });
+  const acceptThenDraft = () =>
+    started()
+      .add('campaign.foundation_set', { premise: 'C', settings: SETTINGS, ...acceptance })
+      .add('launch.draft_saved', { section: 'foundation', snapshot: { premise: 'B' } });
+
+  it('orders an accepted fact after the draft it replaced', () => {
+    // The sequence that made this necessary: save a draft, edit the words
+    // again, accept *those*, reload. Without ordering the form shows the stale
+    // draft while the dashboard reports the section complete from the accepted
+    // one — the form and its own status contradicting each other.
+    const state = project(draftThenAccept().build());
+
+    expect(state.launch.foundation!.seq).toBeGreaterThan(state.launch.drafts.foundation!.seq);
+  });
+
+  it('orders a draft saved after acceptance ahead of it, so A23 still holds', () => {
+    // The mirror case, and the reason the rule is not just "accepted wins":
+    // work saved after a fact was accepted is still work, and must come back.
+    const state = project(acceptThenDraft().build());
+
+    expect(state.launch.drafts.foundation!.seq).toBeGreaterThan(state.launch.foundation!.seq);
   });
 });

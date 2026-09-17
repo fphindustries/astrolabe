@@ -11,6 +11,10 @@ import type {
 } from '@astrolabe/shared';
 
 import { StubProvider } from '../ai/stub.js';
+import { FIXTURES, seedFixture } from '../fixtures/index.js';
+import { GOLDEN_SESSION } from '../fixtures/golden-session.js';
+import { SESSION_ONE } from '../fixtures/session-one.js';
+import { SESSION_TWO_OPEN } from '../fixtures/session-two-open.js';
 import { loadedDice } from '../fixtures/loaded-dice.js';
 import { createTestDatabase, hasTestDatabase, type TestDatabase } from '../db/testing.js';
 
@@ -90,6 +94,34 @@ describe.skipIf(!hasTestDatabase)('the Campaign Launch routes (3.1–3.9)', () =
     ]);
   });
 
+  it('serves the workspace for a Milestone 1 fixture, closed rather than broken (A43, D-178)', async () => {
+    // 4.4 makes this endpoint the front door for *every* campaign open, active
+    // and legacy ones included. It runs the launch validator over characters
+    // created under the Milestone 1 rules — which carry the per-character
+    // Starship grant D-171 makes invalid for a launch — so the thing worth
+    // asserting is that a legacy campaign yields *blockers and a closed
+    // workspace*, not a 500. 3R.10b proved these campaigns refuse launch
+    // commands; nothing proved the launch read survives them.
+    for (const name of [SESSION_ONE, SESSION_TWO_OPEN, GOLDEN_SESSION]) {
+      const fixture = FIXTURES.get(name)!;
+      await seedFixture(db.sql, name);
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/campaigns/${fixture.campaignId}/launch`,
+      });
+
+      expect(response.statusCode, name).toBe(200);
+      const body = response.json() as LaunchWorkspaceResponse;
+      expect({ name, ...body }).toMatchObject({
+        launchOpen: false,
+        closedReason: 'campaign_in_play',
+      });
+      // The phase alone would have said `draft` and sent A43 to the wrong screen.
+      expect(body.state.launch.phase, name).toBe('draft');
+    }
+  });
+
   it('404s the workspace for a campaign that does not exist', async () => {
     const response = await app.inject({
       method: 'GET',
@@ -110,7 +142,8 @@ describe.skipIf(!hasTestDatabase)('the Campaign Launch routes (3.1–3.9)', () =
     expect(saved.statusCode).toBe(201);
     const workspace = await app.inject({ method: 'GET', url: `/api/campaigns/${id}/launch` });
     expect((workspace.json() as LaunchWorkspaceResponse).state.launch.drafts.foundation).toEqual({
-      premise: 'A signal past the Drift.',
+      snapshot: { premise: 'A signal past the Drift.' },
+      seq: expect.any(Number),
     });
   });
 

@@ -19,6 +19,7 @@ import type {
   EventType,
   LaunchAmendment,
   LaunchAmendmentSubject,
+  LaunchClosedReason,
   LaunchRouteEndpoint,
   CampaignSettings,
   CommandId,
@@ -53,11 +54,23 @@ type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K>
  * `campaign.activated`, so a phase-only guard left the built-in fixtures open
  * to launch writes.
  */
+export function launchClosedReason(state: CampaignState): LaunchClosedReason | undefined {
+  if (state.launch.phase === 'active') return 'campaign_active';
+  if (state.session !== null) return 'campaign_in_play';
+  return undefined;
+}
+
+/**
+ * The refusal, over the predicate above. The launch workspace read layer asks
+ * the same function, so the client's routing decision and this refusal cannot
+ * drift into disagreeing about whether a campaign is still in launch.
+ */
 function requireLaunchOpen(state: CampaignState, whenActive: string): void {
-  if (state.launch.phase === 'active') throw new LaunchRejectedError('campaign_active', whenActive);
-  if (state.session !== null)
+  const reason = launchClosedReason(state);
+  if (reason === 'campaign_active') throw new LaunchRejectedError(reason, whenActive);
+  if (reason === 'campaign_in_play')
     throw new LaunchRejectedError(
-      'campaign_in_play',
+      reason,
       'This campaign is already in play; Campaign Launch is closed for it.',
     );
 }

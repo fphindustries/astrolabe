@@ -114,6 +114,12 @@ export interface LaunchIncident {
 }
 export interface LaunchReadinessInput {
   readonly campaignName: string;
+  /**
+   * D-181: a launch needs a premise, and the campaign settings do not gate
+   * readiness — they always have defaults. `setLaunchFoundation` already
+   * refuses a blank premise; this is the same rule, stated once.
+   */
+  readonly premise?: string;
   readonly truths: readonly TruthDecision[];
   readonly characters: readonly { readonly id: string; readonly draft: LaunchCharacterDraft }[];
   readonly starship?: SharedStarshipDraft;
@@ -153,6 +159,8 @@ export function validateLaunchReadiness(
     problems.push({ section, code, path, message });
   if (!nonblank(input.campaignName))
     add('foundation', 'campaign_name_required', 'campaignName', 'A campaign needs a name.');
+  if (!nonblank(input.premise))
+    add('foundation', 'premise_required', 'premise', 'A campaign needs a premise.');
   const decisions = new Map(input.truths.map((decision) => [decision.truthId, decision]));
   for (const truth of truths) {
     const decision = decisions.get(truth.id);

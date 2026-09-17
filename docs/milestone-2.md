@@ -429,11 +429,28 @@ which is why the declared recipes are dead code.
 
 ### 4. Campaign Launch workspace
 
+Group 4 is the workspace **shell**: the sections it navigates to are built by groups 5–9, so
+Foundation is the one working section here and the other six are honest placeholders that
+still show their server blockers. Three gaps below the client are fixed first — see 4.0.
+
+- [ ] 4.0 Prerequisites found while planning group 4:
+  - the `premise_required` foundation blocker in `rules`, so Foundation is not complete the
+    moment a campaign has a name (D-181);
+  - `launchOpen`/`closedReason` on the launch workspace response, derived from the same
+    predicate `requireLaunchOpen` uses, so 4.4's routing and the server's refusal cannot
+    drift (D-178);
+  - `seq` on accepted launch facts and on projected drafts, so a section's form and its
+    status cannot disagree about which write was last (D-182);
+  - a test that `GET /launch` returns 200 for the three built-in fixtures. 3R.10b proved they
+    reject launch *commands*; 4.4 makes that endpoint the front door for every campaign open.
 - [ ] 4.1 Replace the one-way creation wizard with the resumable section dashboard and
   server-projected completion/blocking status.
 - [ ] 4.2 Add Save and continue, leave/reopen behavior, section navigation, and accessible
   error summaries without duplicating server readiness rules.
-- [ ] 4.3 Add the ready review page and irreversible Launch campaign confirmation.
+- [ ] 4.3 Add the ready review page and irreversible Launch campaign confirmation. The
+  review page is the shell: the swearing character, sharing crew, rank and opening scene come
+  from the accepted incident, so their pickers belong to 9.3 and `activateLaunch` takes only
+  a `commandId`.
 - [ ] 4.4 Route incomplete existing campaigns to Finish campaign launch and active
   campaigns to the existing play screen.
 
