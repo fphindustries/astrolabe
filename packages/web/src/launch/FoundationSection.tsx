@@ -37,7 +37,7 @@ export function FoundationSection({
   const [saved, setSaved] = useState<string | undefined>(undefined);
   const [submitted, setSubmitted] = useState(false);
 
-  const saveDraft = useSaveLaunchDraft(campaignId);
+  const saveDraft = useSaveLaunchDraft<'foundation'>(campaignId);
   const setFoundation = useSetFoundation(campaignId);
   const failure = setFoundation.error ?? saveDraft.error;
   const premiseMissing = toFoundationRequest(form) === null;

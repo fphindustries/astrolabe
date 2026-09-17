@@ -42,7 +42,7 @@ const chip: OracleChip = {
 
 describe('the truths overview (5.1)', () => {
   it('lists every setting truth in the book’s order, undecided by default', () => {
-    const views = buildTruths(emptyCampaignState());
+    const views = buildTruths(emptyCampaignState(), {}, []);
 
     expect(views).toHaveLength(14);
     expect(views.map((view) => view.truthId)).toEqual(STARFORGED.truths.map((truth) => truth.id));
@@ -65,7 +65,7 @@ describe('the truths overview (5.1)', () => {
       },
     });
 
-    const views = buildTruths(state);
+    const views = buildTruths(state, {}, []);
     const exodus = views.find((view) => view.truthId === EXODUS.id);
 
     expect(exodus?.status).toBe('left_open');
@@ -83,7 +83,52 @@ describe('the truths overview (5.1)', () => {
       ),
     });
 
-    expect(truthProgress(buildTruths(state)).text).toBe('14 of 14 decided');
+    expect(truthProgress(buildTruths(state, {}, [])).text).toBe('14 of 14 decided');
+  });
+
+  it('does not count a decided truth the server is still blocking', () => {
+    // A Milestone 1 campaign's truths arrive through the `truth.set` arm, with
+    // no nested choice the validator wants. Counting them would put "14 of 14
+    // decided" beside a section chip reading In progress, with neither line
+    // explaining the other.
+    const state = emptyCampaignState({
+      truthDecisions: {
+        [CATACLYSM.id]: decided({ truthId: CATACLYSM.id, optionIndex: 0 }),
+      },
+    });
+    const blocker = {
+      section: 'truths' as const,
+      code: 'truth_subchoice_missing',
+      path: `truths.${CATACLYSM.id}`,
+      message: 'Cataclysm needs its nested choice.',
+    };
+
+    const views = buildTruths(state, {}, [blocker]);
+    const view = views.find((candidate) => candidate.truthId === CATACLYSM.id);
+
+    expect(view?.status).toBe('needs_attention');
+    // The server's own words, not a restatement of them.
+    expect(view?.overviewText).toBe('Cataclysm needs its nested choice.');
+    expect(view?.blockers).toEqual([blocker]);
+    expect(truthProgress(views).decided).toBe(0);
+  });
+
+  it('shows a blocker only against the truth it names', () => {
+    const state = emptyCampaignState({
+      truthDecisions: { [EXODUS.id]: decided({ truthId: EXODUS.id, optionIndex: 0 }) },
+    });
+
+    const views = buildTruths(state, {}, [
+      {
+        section: 'truths',
+        code: 'truth_missing',
+        path: `truths.${CATACLYSM.id}`,
+        message: 'Cataclysm must be answered or left open.',
+      },
+    ]);
+
+    expect(views.find((view) => view.truthId === EXODUS.id)?.status).toBe('answered');
+    expect(views.find((view) => view.truthId === EXODUS.id)?.blockers).toEqual([]);
   });
 
   it('shows the answer’s short form on the overview line, not the whole option', () => {
@@ -98,7 +143,7 @@ describe('the truths overview (5.1)', () => {
       },
     });
 
-    const exodus = buildTruths(state).find((view) => view.truthId === EXODUS.id);
+    const exodus = buildTruths(state, {}, []).find((view) => view.truthId === EXODUS.id);
     expect(exodus?.overviewText).toBe(EXODUS.rows[1]!.summary);
     expect(exodus?.answer?.text).toBe(EXODUS.rows[1]!.description);
   });
@@ -118,7 +163,7 @@ describe('one truth (5.2)', () => {
       },
     });
 
-    const answer = buildTruths(state).find((view) => view.truthId === EXODUS.id)?.answer;
+    const answer = buildTruths(state, {}, []).find((view) => view.truthId === EXODUS.id)?.answer;
 
     expect(answer?.questStarter).toBe(EXODUS.rows[withStarter]!.questStarter);
     expect(answer?.text).toBe(EXODUS.rows[withStarter]!.description);
@@ -139,7 +184,7 @@ describe('one truth (5.2)', () => {
       },
     });
 
-    const view = buildTruths(state).find((truth) => truth.truthId === CATACLYSM.id);
+    const view = buildTruths(state, {}, []).find((truth) => truth.truthId === CATACLYSM.id);
 
     expect(view?.answer?.subchoiceText).toBe(subchoice.rows[1]!.text);
     expect(view?.options[0]?.subchoice?.options).toHaveLength(subchoice.rows.length);
@@ -159,12 +204,45 @@ describe('one truth (5.2)', () => {
       },
     });
 
-    const answer = buildTruths(state, { [ROLL]: chip }).find(
+    const answer = buildTruths(state, { [ROLL]: chip }, []).find(
       (view) => view.truthId === EXODUS.id,
     )?.answer;
 
     expect(answer?.chips).toEqual([chip]);
     expect(answer?.provenanceText).toBe('Rolled');
+  });
+
+  it('resolves every roll a nested answer cites, in the order cited (A41)', () => {
+    // Rolling Cataclysm writes two rolls into one `groundedIn` — the truth
+    // table and its nested table — which is the case beat 2 walks.
+    const nestedRoll = 'aaaaaaaa-0000-4000-8000-000000000043' as EventId;
+    const nestedChip: OracleChip = {
+      eventId: nestedRoll,
+      oracleId: 'oracle:cataclysm/0',
+      roll: 7,
+      rowText: 'It came from outside.',
+      voided: false,
+    };
+    const state = emptyCampaignState({
+      truthDecisions: {
+        [CATACLYSM.id]: decided({
+          truthId: CATACLYSM.id,
+          resolution: 'rolled',
+          provenance: 'oracle_roll',
+          optionIndex: 0,
+          subchoiceId: CATACLYSM.rows[0]!.subchoice!.id,
+          subchoiceOptionIndex: 0,
+          groundedIn: [ROLL, nestedRoll],
+        }),
+      },
+    });
+
+    const answer = buildTruths(state, { [ROLL]: chip, [nestedRoll]: nestedChip }, []).find(
+      (view) => view.truthId === CATACLYSM.id,
+    )?.answer;
+
+    expect(answer?.chips).toEqual([chip, nestedChip]);
+    expect(answer?.subchoiceText).toBe(CATACLYSM.rows[0]!.subchoice!.rows[0]!.text);
   });
 
   it('renders no chip for a citation it cannot resolve', () => {
@@ -182,7 +260,7 @@ describe('one truth (5.2)', () => {
     });
 
     expect(
-      buildTruths(state, {}).find((view) => view.truthId === EXODUS.id)?.answer?.chips,
+      buildTruths(state, {}, []).find((view) => view.truthId === EXODUS.id)?.answer?.chips,
     ).toEqual([]);
   });
 
@@ -199,7 +277,7 @@ describe('one truth (5.2)', () => {
     });
 
     expect(
-      buildTruths(state).find((view) => view.truthId === EXODUS.id)?.answer?.provenanceText,
+      buildTruths(state, {}, []).find((view) => view.truthId === EXODUS.id)?.answer?.provenanceText,
     ).toBe('Suggested by the Guide, edited');
   });
 
@@ -224,7 +302,7 @@ describe('one truth (5.2)', () => {
       },
     });
 
-    const view = buildTruths(state).find((truth) => truth.truthId === EXODUS.id);
+    const view = buildTruths(state, {}, []).find((truth) => truth.truthId === EXODUS.id);
 
     expect(view?.history.map((entry) => entry.text)).toEqual([
       'The first answer.',
@@ -239,6 +317,8 @@ describe('one truth (5.2)', () => {
       truthDecisions: { [EXODUS.id]: decided({ truthId: EXODUS.id, optionIndex: 0 }) },
     });
 
-    expect(buildTruths(state).find((view) => view.truthId === EXODUS.id)?.history).toEqual([]);
+    expect(buildTruths(state, {}, []).find((view) => view.truthId === EXODUS.id)?.history).toEqual(
+      [],
+    );
   });
 });

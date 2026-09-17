@@ -7,6 +7,7 @@ import { buildSectionCard } from './dashboard.js';
 import { FoundationSection } from './FoundationSection.js';
 import { SectionPlaceholder } from './SectionPlaceholder.js';
 import { SectionStatusChip } from './SectionStatusChip.js';
+import { TruthsSection } from './TruthsSection.js';
 import { launchOverviewPath } from './sections.js';
 import styles from './LaunchSectionScreen.module.css';
 
@@ -45,6 +46,8 @@ export function LaunchSectionScreen({
           letting the Foundation editor render under a Truths heading. */}
       {section === 'foundation' ? (
         <FoundationSection campaignId={campaignId} workspace={workspace} />
+      ) : section === 'truths' ? (
+        <TruthsSection campaignId={campaignId} workspace={workspace} />
       ) : (
         <SectionPlaceholder card={card} />
       )}

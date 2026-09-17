@@ -231,6 +231,33 @@ describe.skipIf(!hasTestDatabase)('the Campaign Launch routes (3.1–3.9)', () =
     expect(state.launch.truthDecisions[truth.id]).toMatchObject({ resolution: 'leave_open' });
   });
 
+  it('serves a rolled truth’s oracle rolls as chips (A41)', async () => {
+    // The chips are computed beside the state; this is the assertion that they
+    // reach the wire. Without it, a client that never reads them loses every
+    // chip with nothing failing — the launch-state read model has been written
+    // and unread twice already in this milestone.
+    const id = await campaign();
+    const truth = STARFORGED.truths[0]!;
+
+    const rolled = await post(`/api/campaigns/${id}/launch/truths`, {
+      commandId: newId(),
+      truthId: truth.id,
+      resolution: 'rolled',
+    });
+    expect(rolled.statusCode).toBe(201);
+
+    const workspace = await app.inject({ method: 'GET', url: `/api/campaigns/${id}/launch` });
+    const body = workspace.json() as LaunchWorkspaceResponse;
+    const decision = body.state.launch.truthDecisions[truth.id];
+
+    // Cataclysm's every option has a nested table, so rolling it cites two.
+    expect(decision?.groundedIn.length).toBeGreaterThan(0);
+    for (const rollId of decision?.groundedIn ?? []) {
+      expect(body.chips[rollId]).toMatchObject({ eventId: rollId, voided: false });
+      expect(typeof body.chips[rollId]?.roll).toBe('number');
+    }
+  });
+
   it('creates a launch character without the command-vehicle grant (D-171)', async () => {
     const id = await campaign();
 

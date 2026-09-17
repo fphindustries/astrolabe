@@ -30,12 +30,14 @@ describe('the launch section catalogue', () => {
       expect(Object.keys(table).sort()).toEqual([...LAUNCH_SECTION_ORDER].sort());
   });
 
-  it('marks exactly the sections group 4 does not build', () => {
-    // Foundation is the one working section in group 4; the rest are honest
-    // placeholders until their own group lands.
+  it('marks exactly the sections that have no editor yet', () => {
+    // Built sections are `null`; the rest are honest placeholders naming the
+    // group that brings them. Group 4 built Foundation, group 5 Truths, so this
+    // count drops by one each time a group lands.
     expect(SECTION_ARRIVES_IN.foundation).toBeNull();
+    expect(SECTION_ARRIVES_IN.truths).toBeNull();
     const pending = LAUNCH_SECTION_ORDER.filter((section) => SECTION_ARRIVES_IN[section] !== null);
-    expect(pending).toHaveLength(6);
+    expect(pending).toHaveLength(5);
     for (const section of pending) expect(SECTION_ARRIVES_IN[section]).toMatch(/group \d/);
   });
 

@@ -92,12 +92,12 @@ describe('the launch dashboard view model', () => {
     // whether group 4 built its form.
     const { cards } = buildDashboard(
       'c1',
-      readiness({ truths: { status: 'complete', blockers: [] } }),
+      readiness({ crew: { status: 'complete', blockers: [] } }),
     );
-    const truths = cards.find((card) => card.section === 'truths')!;
+    const crew = cards.find((card) => card.section === 'crew')!;
 
-    expect(truths).toMatchObject({ statusText: 'Complete', implemented: false });
-    expect(truths.arrivesIn).toBe('Truths (group 5)');
+    expect(crew).toMatchObject({ statusText: 'Complete', implemented: false });
+    expect(crew.arrivesIn).toBe('Crew (group 6)');
   });
 
   it('points at the first unfinished section, and says start or continue', () => {

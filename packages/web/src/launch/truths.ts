@@ -1,5 +1,5 @@
 import { STARFORGED } from '@astrolabe/rules';
-import type { OracleId, SettingTruth, TruthOption } from '@astrolabe/rules';
+import type { LaunchProblem, OracleId, SettingTruth, TruthOption } from '@astrolabe/rules';
 import type {
   CampaignState,
   EventId,
@@ -23,7 +23,7 @@ import type {
  * the roll event, which the client never sees.
  */
 
-export type TruthStatus = 'not_decided' | 'answered' | 'left_open';
+export type TruthStatus = 'not_decided' | 'answered' | 'left_open' | 'needs_attention';
 
 /**
  * Words, never colour alone (design record section 10). "Left open" reads as
@@ -34,6 +34,7 @@ export const TRUTH_STATUS_TEXT: Record<TruthStatus, string> = {
   not_decided: 'Not decided',
   answered: 'Answered',
   left_open: 'Left open',
+  needs_attention: 'Needs attention',
 };
 
 /** A41's badge, in the words the page shows. */
@@ -91,20 +92,44 @@ export interface TruthView {
   readonly answer?: TruthAnswerView;
   /** Earlier answers, oldest first (A26). Empty unless the truth was revised. */
   readonly history: readonly TruthAnswerView[];
+  /**
+   * What the server still says is wrong with this truth, verbatim and in its
+   * own order (D-176).
+   *
+   * A truth can be decided and still blocked: `truth_option_invalid` and
+   * `truth_subchoice_missing` both survive a decision that is present in the
+   * fold, which is how a Milestone 1 campaign's truths arrive — folded in
+   * through the `truth.set` arm with no nested choice the validator wants.
+   * Without this, "14 of 14 decided" would sit beside a section chip reading
+   * **In progress**, and neither line would explain the other.
+   */
+  readonly blockers: readonly LaunchProblem[];
 }
 
+/**
+ * `chips` and `problems` are required rather than defaulted: both arrive in the
+ * same `GET /launch` payload as the state, and a caller that forgot one would
+ * silently lose every oracle chip or every blocker with nothing failing.
+ */
 export function buildTruths(
   state: CampaignState,
-  chips: Readonly<Record<EventId, OracleChip>> = {},
+  chips: Readonly<Record<EventId, OracleChip>>,
+  problems: readonly LaunchProblem[],
 ): readonly TruthView[] {
-  return STARFORGED.truths.map((truth) => buildTruth(truth, state, chips));
+  return STARFORGED.truths.map((truth) => buildTruth(truth, state, chips, problems));
 }
 
 function buildTruth(
   truth: SettingTruth,
   state: CampaignState,
   chips: Readonly<Record<EventId, OracleChip>>,
+  problems: readonly LaunchProblem[],
 ): TruthView {
+  // The validator paths a truth's problems as `truths.<id>`, so each one can be
+  // shown against the truth it is about without the client deciding anything.
+  const blockers = problems.filter(
+    (problem) => problem.section === 'truths' && problem.path === `truths.${truth.id}`,
+  );
   const decision = state.launch.truthDecisions[truth.id];
   const answer =
     decision === undefined
@@ -116,9 +141,11 @@ function buildTruth(
   const status: TruthStatus =
     answer === undefined
       ? 'not_decided'
-      : answer.resolution === 'leave_open'
-        ? 'left_open'
-        : 'answered';
+      : blockers.length > 0
+        ? 'needs_attention'
+        : answer.resolution === 'leave_open'
+          ? 'left_open'
+          : 'answered';
 
   return {
     truthId: truth.id,
@@ -127,9 +154,10 @@ function buildTruth(
     options: truth.rows.map(toOptionView),
     status,
     statusText: TRUTH_STATUS_TEXT[status],
-    overviewText: overviewText(status, answer),
+    overviewText: overviewText(status, answer, blockers),
     ...(answer !== undefined ? { answer } : {}),
     history,
+    blockers,
   };
 }
 
@@ -190,8 +218,14 @@ function buildAnswer(
   };
 }
 
-function overviewText(status: TruthStatus, answer: TruthAnswerView | undefined): string {
+function overviewText(
+  status: TruthStatus,
+  answer: TruthAnswerView | undefined,
+  blockers: readonly LaunchProblem[],
+): string {
   if (answer === undefined) return 'No answer yet.';
+  // The server's own words, not a restatement of them.
+  if (status === 'needs_attention') return blockers[0]?.message ?? 'Needs attention.';
   if (status === 'left_open') return 'Deliberately left open.';
   return answer.summary ?? answer.text ?? 'Answered.';
 }
@@ -210,8 +244,14 @@ export interface TruthProgress {
  * the question, it does not leave it outstanding. Counting it as undecided
  * would make the section unable to complete for a player who used a path the
  * rules offer.
+ *
+ * A truth the server is still blocking does not count, so this line and the
+ * section's status chip cannot contradict each other. The count follows the
+ * server's blockers; it does not second-guess them.
  */
 export function truthProgress(views: readonly TruthView[]): TruthProgress {
-  const decided = views.filter((view) => view.status !== 'not_decided').length;
+  const decided = views.filter(
+    (view) => view.status === 'answered' || view.status === 'left_open',
+  ).length;
   return { decided, total: views.length, text: `${decided} of ${views.length} decided` };
 }

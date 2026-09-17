@@ -1,0 +1,146 @@
+.card {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0;
+  font-size: var(--text-base);
+}
+
+.disclosure {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  text-align: left;
+}
+
+.caret {
+  color: var(--text-muted);
+}
+
+.overview {
+  margin: var(--space-1) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--surface-border);
+}
+
+.prompt {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.legend {
+  padding: 0;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+.option {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.optionBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.optionSummary {
+  color: var(--text-primary);
+}
+
+.optionDescription {
+  color: var(--text-secondary);
+}
+
+.starter {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.starterLabel {
+  font-family: var(--font-display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.textarea {
+  width: 100%;
+  padding: var(--space-2);
+  border: 1px solid var(--surface-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-0);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+}
+
+.blockers {
+  margin: 0;
+  padding-left: var(--space-4);
+  color: var(--outcome-miss);
+  font-size: var(--text-sm);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.primary {
+  composes: primary from '../ui/controls.module.css';
+}
+
+.secondary {
+  composes: secondary from '../ui/controls.module.css';
+}
+
+.primary[aria-disabled='true'],
+.secondary[aria-disabled='true'] {
+  opacity: 0.5;
+}
+
+.note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
