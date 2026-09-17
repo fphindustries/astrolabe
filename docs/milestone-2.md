@@ -433,7 +433,7 @@ Group 4 is the workspace **shell**: the sections it navigates to are built by gr
 Foundation is the one working section here and the other six are honest placeholders that
 still show their server blockers. Three gaps below the client are fixed first — see 4.0.
 
-- [ ] 4.0 Prerequisites found while planning group 4:
+- [x] 4.0 Prerequisites found while planning group 4:
   - the `premise_required` foundation blocker in `rules`, so Foundation is not complete the
     moment a campaign has a name (D-181);
   - `launchOpen`/`closedReason` on the launch workspace response, derived from the same
@@ -443,15 +443,15 @@ still show their server blockers. Three gaps below the client are fixed first �
     status cannot disagree about which write was last (D-182);
   - a test that `GET /launch` returns 200 for the three built-in fixtures. 3R.10b proved they
     reject launch *commands*; 4.4 makes that endpoint the front door for every campaign open.
-- [ ] 4.1 Replace the one-way creation wizard with the resumable section dashboard and
+- [x] 4.1 Replace the one-way creation wizard with the resumable section dashboard and
   server-projected completion/blocking status.
-- [ ] 4.2 Add Save and continue, leave/reopen behavior, section navigation, and accessible
+- [x] 4.2 Add Save and continue, leave/reopen behavior, section navigation, and accessible
   error summaries without duplicating server readiness rules.
-- [ ] 4.3 Add the ready review page and irreversible Launch campaign confirmation. The
+- [x] 4.3 Add the ready review page and irreversible Launch campaign confirmation. The
   review page is the shell: the swearing character, sharing crew, rank and opening scene come
   from the accepted incident, so their pickers belong to 9.3 and `activateLaunch` takes only
   a `commandId`.
-- [ ] 4.4 Route incomplete existing campaigns to Finish campaign launch and active
+- [x] 4.4 Route incomplete existing campaigns to Finish campaign launch and active
   campaigns to the existing play screen.
 
 ### 5. Truths
@@ -706,3 +706,49 @@ implementation note.
   format:check clean.
   **Group 4 is unblocked.** Readiness reaches `ready`, activation works, `LaunchState` is
   typed, and every task group 3 claimed has a test behind it.
+- **Group 4 complete.** The Campaign Launch workspace, and the Milestone 1 wizard retired.
+  Three gaps below the client had to be closed first, and each is a decision rather than a
+  detail:
+  - **Foundation could not be incomplete (D-181).** Readiness had one foundation blocker,
+    `campaign_name_required`, and `premise` appeared nowhere in `rules` — so the section
+    reported `complete` the moment a campaign had a name, and beat 1 had nothing to show.
+    `setLaunchFoundation` already refused a blank premise; readiness did not reflect the rule
+    its own command enforced. D-181 adds the blocker and records the bound: the campaign
+    settings never gate readiness, because they always have defaults.
+  - **A43 had no signal to route on.** A Milestone 1 campaign projects `phase: 'draft'` yet
+    must open in play. `launchClosedReason` is now one predicate with two callers, the
+    command's refusal and the workspace read, and `launchOpen`/`closedReason` ride on the
+    response. `launch-routes.test.ts` seeds the three real fixtures and asserts `GET /launch`
+    answers 200 and closed: 3R.10b proved they reject launch *commands*, and nothing proved
+    the launch *read* survived characters carrying the legacy Starship grant D-171 makes
+    invalid for a launch.
+  - **A form could contradict its own status (D-182).** Nothing clears a draft, so preferring
+    the draft shows stale words beside a section reporting `complete` from the accepted ones,
+    and preferring the accepted fact breaks A23 instead. `Accepted<T>` and each projected
+    draft now carry `seq`, and the newer wins. Clearing the draft on acceptance was considered
+    and rejected: right for Foundation, wrong for Crew, where one snapshot holds the whole crew.
+  **Six sections are honest placeholders** naming the group that builds them. Two properties
+  of them are deliberate and should survive: the next useful action still points at them,
+  because the next useful thing genuinely is Truths; and one renders `Complete` if the server
+  says so, because the status is about the campaign rather than about whether group 4 built a
+  form. Client logic forcing a placeholder to display incomplete would be a D-176 violation
+  in an honesty costume.
+  **The wizard cluster is gone** — the four-step screen, its truths/sector/incident steps,
+  their helpers and `api/campaign-setup.ts`. Those steps wrote Milestone 1 facts that launch
+  readiness does not count, so a player could have completed every one of them and still been
+  blocked. Two web test files went with the helpers they covered; both tested M1 contracts
+  that groups 5, 8 and 9 replace outright. The M1 *server* routes are untouched — group 10
+  owns their removal.
+  **`ui/ErrorSummary`** is new shared ground: the package had no error summary, and no
+  `aria-current`, `aria-invalid` or `aria-describedby` anywhere. One path yields both the
+  summary link and the field id it moves focus to, so the two cannot drift.
+  **4.3 is the shell.** The swearing character, sharing crew, rank and opening scene come from
+  the accepted incident — `activateLaunch` takes only a `commandId` — so their pickers are
+  9.3's and the review page shows them read-only.
+  Verified with Postgres: 111 files, 1211 tests, zero skipped files. typecheck, lint,
+  format:check and the web build clean. Browser pass at 1280x720: beat 1 end to end including
+  save, leave, reopen and a process-independent reload; D-182's edit-then-accept sequence,
+  where the form and the dashboard agree on the accepted words; the review page refusing to
+  launch with its blockers grouped and linked; a blank premise raising the error summary and
+  its link reaching the field by keyboard alone; and the `session-1` fixture opening directly
+  in play (A43).
