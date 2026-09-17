@@ -14,10 +14,10 @@ import {
   addSectorLocation,
   addSectorRoute,
   createCampaign,
-  setTruth,
   swearIncitingVow,
 } from '../db/campaign-commands.js';
 import { createCharacter } from '../db/character-commands.js';
+import { decideTruth } from '../db/launch-commands.js';
 import { appendCommand } from '../db/event-store.js';
 import { beginSession, endSession, proposeSessionSummary } from '../db/session-commands.js';
 import { setComplication } from '../db/complication-commands.js';
@@ -98,13 +98,26 @@ export async function playSessionOne(
     name: campaignName,
     settings: { narrationLatitude: 'color', narrationLength: 'standard', rerollCap: 2 },
   });
+  // D-183: one truth representation. This used to call `setTruth`, which no
+  // longer exists; `truth.set` stays readable for campaigns that already have
+  // them, but nothing writes it.
+  // Cataclysm's first option carries a nested subchoice, which `decideTruth`
+  // requires as part of the accepted truth (A25) — the legacy command had no
+  // concept of one, which is half of why D-162 called it the M1 omission.
+  const subchoices: Readonly<Record<string, { id: string; index: number } | undefined>> = {
+    'oracle:cataclysm': { id: 'oracle:cataclysm/0', index: 0 },
+  };
   for (const oracle of ['oracle:cataclysm', 'oracle:communities', 'oracle:iron'] as const) {
-    await setTruth(sql, {
+    const nested = subchoices[oracle];
+    await decideTruth(sql, {
       ...base,
       commandId: key(`truth:${oracle}`),
-      oracleId: oracle as never,
-      source: 'picked',
-      rowIndex: 0,
+      truthId: oracle as never,
+      resolution: 'selected',
+      optionIndex: 0,
+      ...(nested === undefined
+        ? {}
+        : { subchoiceId: nested.id, subchoiceOptionIndex: nested.index }),
     });
   }
 

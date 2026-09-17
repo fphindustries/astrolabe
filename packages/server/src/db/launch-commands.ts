@@ -1018,6 +1018,7 @@ export async function decideTruth(sql: Sql, request: DecideTruthRequest): Promis
 
   let optionIndex = request.optionIndex;
   let text: string | undefined;
+  let summary: string | undefined;
   let questStarter: string | undefined;
   let groundedIn: EventId[] = [];
   const events: Parameters<typeof appendCommand>[1]['events'][number][] = [];
@@ -1074,7 +1075,12 @@ export async function decideTruth(sql: Sql, request: DecideTruthRequest): Promis
         );
       }
     }
-    text = option.text;
+    // D-183: `text` is the resolved answer, which for a chosen option is its
+    // description — the same string this line wrote before the adapter stopped
+    // making `row.text` double as one. `summary` is recorded beside it so an
+    // overview line and a chip have the short form without re-deriving it.
+    text = option.description;
+    summary = option.summary;
     // D-162: the option's quest starter is inspiration for the incident, not
     // canon by itself. Recorded on the decision so incident generation can
     // read it (A25); nothing treats it as an accepted fact.
@@ -1084,8 +1090,7 @@ export async function decideTruth(sql: Sql, request: DecideTruthRequest): Promis
     if (text === undefined || text === '')
       throw new LaunchRejectedError('custom_text_required', 'A custom truth needs text.');
   }
-  const previous = state.launch.truthDecisions[request.truthId] as
-    { eventId?: EventId } | undefined;
+  const previous = state.launch.truthDecisions[request.truthId];
   events.push({
     type: 'truth.decided',
     payload: {
@@ -1097,6 +1102,7 @@ export async function decideTruth(sql: Sql, request: DecideTruthRequest): Promis
         ? { subchoiceOptionIndex: request.subchoiceOptionIndex }
         : {}),
       ...(text !== undefined ? { text } : {}),
+      ...(summary !== undefined ? { summary } : {}),
       ...(questStarter !== undefined ? { questStarter } : {}),
       provenance:
         request.resolution === 'rolled'

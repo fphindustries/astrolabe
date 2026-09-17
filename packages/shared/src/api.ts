@@ -201,27 +201,6 @@ export interface CreateCampaignResponse {
   readonly campaignId: CampaignId;
 }
 
-/**
- * The body of `POST /campaigns/:id/truths` (task 4.2). Which of `rowIndex`
- * or `text` matters depends on `source` — the server rejects a `'picked'`
- * request with no `rowIndex` and a `'written'` one with no `text` (see
- * `setTruth`'s note on why this isn't a discriminated union: a rolled
- * request carries neither).
- */
-export const SetTruthRequestBodySchema = z.object({
-  commandId: CommandIdSchema,
-  oracleId: OracleIdSchema,
-  source: z.enum(['picked', 'rolled', 'written']),
-  rowIndex: z.int().nonnegative().optional(),
-  text: z.string().optional(),
-});
-
-export type SetTruthRequestBody = z.infer<typeof SetTruthRequestBodySchema>;
-
-export interface SetTruthResponse {
-  readonly text: string;
-}
-
 /** Campaign Launch save-and-resume is one typed snapshot per section. */
 export const SaveLaunchDraftRequestBodySchema = z.object({
   commandId: CommandIdSchema,

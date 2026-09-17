@@ -8,13 +8,9 @@ import { StubProvider } from '../ai/stub.js';
 import { loadedDice } from '../fixtures/loaded-dice.js';
 import { project } from '../projection/project.js';
 
-import {
-  addSectorLocation,
-  createCampaign,
-  setTruth,
-  swearIncitingVow,
-} from './campaign-commands.js';
+import { addSectorLocation, createCampaign, swearIncitingVow } from './campaign-commands.js';
 import { createCharacter, UnknownProposalError } from './character-commands.js';
+import { decideTruth } from './launch-commands.js';
 import { readEvents } from './event-store.js';
 import { AiRequestRefusedError } from './narration-commands.js';
 import { proposeCharacter, proposeIncidents } from './proposal-commands.js';
@@ -525,12 +521,12 @@ describe.skipIf(!hasTestDatabase)('inciting incident proposals (task 4.6, D-132â
 
   /** A truth, a location and one crew member with a backstory, as a setup evening leaves them. */
   async function setUp(campaignId: CampaignId) {
-    await setTruth(db.sql, {
+    await decideTruth(db.sql, {
       campaignId,
       commandId: newId(),
       actor: PLAYER,
-      oracleId: 'oracle:cataclysm' as OracleId,
-      source: 'written',
+      truthId: 'oracle:cataclysm' as OracleId,
+      resolution: 'custom',
       text: 'The sun plague burned the old worlds.',
     });
     await addSectorLocation(db.sql, {

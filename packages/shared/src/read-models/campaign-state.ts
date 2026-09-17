@@ -185,12 +185,6 @@ export interface CanonState {
   readonly sessionSummaries: readonly SessionSummary[];
 }
 
-/** One answered setting truth (task 4.2, D-31): keyed by which question, not a list position. */
-export interface TruthAnswer {
-  readonly text: string;
-  readonly source: 'picked' | 'rolled' | 'written';
-}
-
 /** A route between two established locations (task 4.3, D-103). The locations themselves are `entities` of `kind: 'location'`. */
 export interface SectorRoute {
   readonly from: EntityId;
@@ -266,6 +260,21 @@ export interface LaunchState {
   readonly drafts: { readonly [S in LaunchSection]?: SavedDraft<S> };
   readonly foundation?: Accepted<'campaign.foundation_set'>;
   readonly truthDecisions: Readonly<Record<OracleId, Accepted<'truth.decided'>>>;
+  /**
+   * Superseded truth decisions, oldest first, beside the current one (A26).
+   *
+   * `supersedesEventId` makes a revision chain, but projection is latest-wins
+   * by design and `truth.decided` never reaches the narrative log, so without
+   * this the earlier answer beat 2 asks for is written and unreadable.
+   *
+   * On boundedness, which this read model is held to (D-150, D-176): fourteen
+   * keys, and a revision is a deliberate pre-activation act by one local user,
+   * so the growth is bounded by how often a player changes their mind before
+   * launching. That is a judgement rather than a guarantee — if it stops being
+   * obviously small, the answer is a history endpoint, not a bigger state
+   * payload.
+   */
+  readonly truthHistory: Readonly<Record<OracleId, readonly Accepted<'truth.decided'>[]>>;
   readonly starship?: Accepted<'starship.established'>;
   readonly sector?: Accepted<'sector.configured'>;
   readonly locations: Readonly<Record<EntityId, Accepted<'location.added'>>>;
@@ -300,7 +309,6 @@ export interface CampaignState {
   readonly tracks: Readonly<Record<TrackId, TrackState>>;
   readonly entities: Readonly<Record<EntityId, EntityState>>;
   readonly canon: CanonState;
-  readonly truths: Readonly<Record<OracleId, TruthAnswer>>;
   readonly sector: SectorState;
   readonly launch: LaunchState;
   /**

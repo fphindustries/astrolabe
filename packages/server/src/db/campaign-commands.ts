@@ -1,11 +1,4 @@
-import {
-  rollOracle,
-  STARFORGED,
-  type CharacterId,
-  type OracleId,
-  type RandomSource,
-  type TrackId,
-} from '@astrolabe/rules';
+import type { CharacterId, TrackId } from '@astrolabe/rules';
 import {
   DEFAULT_CAMPAIGN_SETTINGS,
   type Actor,
@@ -19,7 +12,6 @@ import {
 import type { Sql } from 'postgres';
 
 import { project } from '../projection/project.js';
-import { cryptoRandomSource } from '../random-source.js';
 
 import { UnknownProposalError } from './character-commands.js';
 import {
@@ -115,107 +107,6 @@ export async function createCampaign(
   });
 
   return { campaignId, result };
-}
-
-export class TruthRejectedError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'TruthRejectedError';
-  }
-}
-
-/**
- * Answering one setting truth (task 4.2, D-31): pick, roll, or write.
- * `oracleId` names which of `STARFORGED.truths` this answers — the "one
- * truth per question" constraint is checked here against the projection,
- * never in `rules`, which sees no campaign state (section 3's convention).
- *
- * **The server rolls, not the client** (design record §9, §4): a `'rolled'`
- * request carries no die result — this is where `rollOracle` actually
- * runs, via the real, non-seeded `RandomSource` (`cryptoRandomSource`,
- * overridable only for tests). A `'picked'` request names a row by index
- * rather than sending text, so the stored answer is always one of the
- * book's own options, never client-supplied text masquerading as one — the
- * same reasoning `createCharacter` revalidating a draft the client already
- * validated is built on.
- */
-export interface SetTruthRequest {
-  readonly campaignId: CampaignId;
-  readonly commandId: CommandId;
-  readonly actor: Actor;
-  readonly oracleId: OracleId;
-  readonly source: 'picked' | 'rolled' | 'written';
-  /** Required when `source` is `'picked'`: an index into the truth table's rows. */
-  readonly rowIndex?: number;
-  /** Required when `source` is `'written'`. */
-  readonly text?: string;
-  /** Test-only override of the real RNG; defaults to `cryptoRandomSource()`. */
-  readonly rng?: RandomSource;
-}
-
-export interface SetTruth {
-  readonly text: string;
-  readonly result: AppendResult;
-}
-
-export async function setTruth(sql: Sql, request: SetTruthRequest): Promise<SetTruth> {
-  const table = STARFORGED.truths.find((t) => t.id === request.oracleId);
-  if (table === undefined) {
-    throw new TruthRejectedError(`"${request.oracleId}" is not a setting truth.`);
-  }
-
-  const state = project(await readEvents(sql, request.campaignId));
-  if (state.truths[request.oracleId] !== undefined) {
-    throw new TruthRejectedError(`"${request.oracleId}" has already been answered.`);
-  }
-
-  let text: string;
-  let roll: number | undefined;
-  switch (request.source) {
-    case 'written': {
-      const written = request.text?.trim() ?? '';
-      if (written.length === 0) {
-        throw new TruthRejectedError('A written truth needs its own text.');
-      }
-      text = written;
-      break;
-    }
-    case 'picked': {
-      const row = table.rows[request.rowIndex ?? -1];
-      if (row === undefined) {
-        throw new TruthRejectedError(`"${request.oracleId}" has no option at that index.`);
-      }
-      text = row.text;
-      break;
-    }
-    case 'rolled': {
-      const rolled = rollOracle(request.rng ?? cryptoRandomSource(), table);
-      text = rolled.row.text;
-      roll = rolled.roll;
-      break;
-    }
-  }
-
-  const result = await appendCommand(sql, {
-    campaignId: request.campaignId,
-    commandId: request.commandId,
-    kind: 'truth.set',
-    actor: request.actor,
-    events: [
-      {
-        type: 'truth.set',
-        payload: {
-          oracleId: request.oracleId,
-          source: request.source,
-          text,
-          ...(roll !== undefined ? { roll } : {}),
-        },
-      },
-    ],
-    response: { text },
-  });
-
-  return { text, result };
 }
 
 /**

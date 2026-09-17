@@ -115,17 +115,13 @@ export {
 } from './proposal-commands.js';
 export {
   createCampaign,
-  setTruth,
   addSectorLocation,
   addSectorRoute,
   swearIncitingVow,
-  TruthRejectedError,
   SectorRouteRejectedError,
   IncitingVowRejectedError,
   type CreateCampaignRequest,
   type CreatedCampaign,
-  type SetTruthRequest,
-  type SetTruth,
   type AddSectorLocationRequest,
   type AddedSectorLocation,
   type AddSectorRouteRequest,

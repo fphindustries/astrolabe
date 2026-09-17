@@ -193,6 +193,94 @@ describe('non-canonical launch events stay out of AI context (D-161)', () => {
   });
 });
 
+describe('one truth representation (D-183)', () => {
+  const started = () =>
+    new LogBuilder().add('campaign.created', {
+      name: 'Lantern Wake',
+      settings: { narrationLatitude: 'color', narrationLength: 'standard', rerollCap: 2 },
+    });
+
+  it('folds a Milestone 1 `truth.set` into the launch decisions', () => {
+    // No command writes this type any more, but every Milestone 1 campaign has
+    // them. Reading them into a second place is what made `renderState` blind
+    // to a launched campaign's truths.
+    const state = project(
+      started()
+        .add('truth.set', {
+          oracleId: ACCEPTED_TRUTH,
+          source: 'written',
+          text: 'A slow collapse, not one cataclysm.',
+        })
+        .build(),
+    );
+
+    expect(state.launch.truthDecisions[ACCEPTED_TRUTH]).toMatchObject({
+      truthId: ACCEPTED_TRUTH,
+      resolution: 'custom',
+      text: 'A slow collapse, not one cataclysm.',
+      provenance: 'player_written',
+    });
+  });
+
+  it('maps each legacy source onto the resolution and provenance it meant', () => {
+    const decide = (source: 'picked' | 'rolled' | 'written') =>
+      project(started().add('truth.set', { oracleId: ACCEPTED_TRUTH, source, text: 'x' }).build())
+        .launch.truthDecisions[ACCEPTED_TRUTH];
+
+    expect(decide('picked')).toMatchObject({
+      resolution: 'selected',
+      provenance: 'official_choice',
+    });
+    expect(decide('rolled')).toMatchObject({ resolution: 'rolled', provenance: 'oracle_roll' });
+    expect(decide('written')).toMatchObject({ resolution: 'custom', provenance: 'player_written' });
+  });
+});
+
+describe('a revised truth keeps its earlier answer readable (A26)', () => {
+  const decided = (text: string) =>
+    [
+      'truth.decided',
+      { truthId: ACCEPTED_TRUTH, resolution: 'custom', text, ...acceptance },
+    ] as const;
+
+  function log(...texts: readonly string[]) {
+    let builder = new LogBuilder().add('campaign.created', {
+      name: 'Lantern Wake',
+      settings: { narrationLatitude: 'color', narrationLength: 'standard', rerollCap: 2 },
+    });
+    for (const text of texts) {
+      const [type, payload] = decided(text);
+      builder = builder.add(type, payload);
+    }
+    return builder;
+  }
+
+  it('records nothing until there is something superseded', () => {
+    const state = project(log('First.').build());
+
+    expect(state.launch.truthDecisions[ACCEPTED_TRUTH]?.text).toBe('First.');
+    expect(state.launch.truthHistory[ACCEPTED_TRUTH]).toBeUndefined();
+  });
+
+  it('keeps every earlier answer, oldest first, under the current one', () => {
+    const state = project(log('First.', 'Second.', 'Third.').build());
+
+    expect(state.launch.truthDecisions[ACCEPTED_TRUTH]?.text).toBe('Third.');
+    expect(state.launch.truthHistory[ACCEPTED_TRUTH]?.map((entry) => entry.text)).toEqual([
+      'First.',
+      'Second.',
+    ]);
+  });
+
+  it('rebuilds the same history cold as incrementally', () => {
+    // The chain is folded forward, so a cold rebuild and a replay must agree —
+    // the property 2.8 asks of every launch fact.
+    const events = log('First.', 'Second.').build();
+
+    expect(project([...events])).toEqual(project(events));
+  });
+});
+
 describe('a draft and its accepted fact are ordered against each other (D-182)', () => {
   const SETTINGS = {
     narrationLatitude: 'color',

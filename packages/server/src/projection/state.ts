@@ -25,12 +25,12 @@ export function emptyState(): CampaignState {
     tracks: {},
     entities: {},
     canon: { sessionSummaries: [] },
-    truths: {},
     sector: { routes: [] },
     launch: {
       phase: 'draft',
       drafts: {},
       truthDecisions: {},
+      truthHistory: {},
       locations: {},
       routes: [],
       layout: {},

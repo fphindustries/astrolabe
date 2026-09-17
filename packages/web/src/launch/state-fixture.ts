@@ -17,12 +17,12 @@ export function emptyCampaignState(launch: Partial<LaunchState> = {}): CampaignS
     tracks: {},
     entities: {},
     canon: { sessionSummaries: [] },
-    truths: {},
     sector: { routes: [] },
     launch: {
       phase: 'draft',
       drafts: {},
       truthDecisions: {},
+      truthHistory: {},
       locations: {},
       routes: [],
       layout: {},

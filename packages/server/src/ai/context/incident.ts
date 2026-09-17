@@ -53,12 +53,9 @@ export function incidentContext(state: CampaignState): IncidentContext {
   // Typed now (D-176), so the structural guard this used to need is gone.
   const launchLocations = Object.values(state.launch.locations);
   return {
-    truths: new Map(
-      [...new Set([...Object.keys(state.truths), ...launchTruths])].map((id) => [
-        id,
-        id as OracleId,
-      ]),
-    ),
+    // D-183: one representation. `truth.set` folds into the same map, so a
+    // Milestone 1 campaign and a launched one look identical from here.
+    truths: new Map(launchTruths.map((id) => [id, id as OracleId])),
     locations: keyed([
       ...Object.values(state.entities)
         .filter((entity) => entity.kind === 'location')
@@ -162,7 +159,7 @@ export function renderSetup(state: CampaignState): string {
     const answer =
       launch?.resolution === 'leave_open'
         ? 'deliberately left open - do not settle it'
-        : (state.truths[id]?.text ?? launch?.text ?? '');
+        : (launch?.text ?? '');
     // D-162: a quest starter is inspiration for the incident, never canon.
     const starter =
       launch?.questStarter === undefined

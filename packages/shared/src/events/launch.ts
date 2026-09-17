@@ -282,7 +282,15 @@ export const TruthDecidedSchema = z.object({
   optionIndex: z.int().nonnegative().optional(),
   subchoiceId: z.string().min(1).optional(),
   subchoiceOptionIndex: z.int().nonnegative().optional(),
+  /**
+   * The resolved answer: a chosen option's description, or the player's own
+   * words. Unchanged in meaning by D-183 — `decideTruth` writes
+   * `option.description` where it wrote `option.text`, and those were the same
+   * string until the adapter stopped making `row.text` do two jobs.
+   */
   text: z.string().min(1).optional(),
+  /** The chosen option's short form, for an overview line and a chip (D-183). */
+  summary: z.string().min(1).optional(),
   questStarter: z.string().min(1).optional(),
   ...AcceptanceSchema.shape,
 });

@@ -294,12 +294,41 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
       return state;
 
     case 'truth.set': {
+      // D-183: one truth representation. No command writes this type any more,
+      // but every Milestone 1 campaign has them, so the arm stays and folds
+      // into the same read model rather than a second one.
+      //
+      // Not an upcaster: the versioning rule is explicit that a genuinely
+      // different fact is a new type, not a new version. It maps only what the
+      // event already stored — there is no option index to recover, and the
+      // projector may not read rules content to find one (D-176).
       const { payload } = event;
       return {
         ...state,
-        truths: {
-          ...state.truths,
-          [payload.oracleId]: { text: payload.text, source: payload.source },
+        launch: {
+          ...state.launch,
+          truthDecisions: {
+            ...state.launch.truthDecisions,
+            [payload.oracleId]: {
+              truthId: payload.oracleId,
+              resolution:
+                payload.source === 'picked'
+                  ? 'selected'
+                  : payload.source === 'rolled'
+                    ? 'rolled'
+                    : 'custom',
+              text: payload.text,
+              provenance:
+                payload.source === 'picked'
+                  ? 'official_choice'
+                  : payload.source === 'rolled'
+                    ? 'oracle_roll'
+                    : 'player_written',
+              groundedIn: [],
+              eventId: event.id,
+              seq: event.seq,
+            },
+          },
         },
       };
     }
@@ -352,7 +381,13 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
           foundation: { ...event.payload, eventId: event.id, seq: event.seq },
         },
       };
-    case 'truth.decided':
+    case 'truth.decided': {
+      // A26: the answer this one supersedes stays readable. Projection is
+      // latest-wins by design and `truth.decided` never reaches the narrative
+      // log, so without keeping the chain here the earlier answer is written
+      // and unreadable.
+      const superseded = state.launch.truthDecisions[event.payload.truthId];
+      const history = state.launch.truthHistory[event.payload.truthId] ?? [];
       return {
         ...state,
         launch: {
@@ -361,8 +396,17 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
             ...state.launch.truthDecisions,
             [event.payload.truthId]: { ...event.payload, eventId: event.id, seq: event.seq },
           },
+          ...(superseded === undefined
+            ? {}
+            : {
+                truthHistory: {
+                  ...state.launch.truthHistory,
+                  [event.payload.truthId]: [...history, superseded],
+                },
+              }),
         },
       };
+    }
     case 'character.revised':
       return updateCharacter(state, event.payload.characterId, (current) => ({
         ...current,

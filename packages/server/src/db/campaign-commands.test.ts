@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { createSeededRandomSource, STARFORGED } from '@astrolabe/rules';
+import { STARFORGED } from '@astrolabe/rules';
 import {
   LOCAL_PLAYER_ID,
   type Actor,
@@ -17,9 +17,7 @@ import {
   createCampaign,
   IncitingVowRejectedError,
   SectorRouteRejectedError,
-  setTruth,
   swearIncitingVow,
-  TruthRejectedError,
 } from './campaign-commands.js';
 import { readEvents } from './event-store.js';
 import { createTestDatabase, hasTestDatabase, type TestDatabase } from './testing.js';
@@ -116,112 +114,6 @@ describe.skipIf(!hasTestDatabase)('creating a campaign (task 4.1, task 4.5)', ()
     });
     return campaignId;
   }
-
-  describe('answering a setting truth (task 4.2)', () => {
-    it('writes the written answer verbatim', async () => {
-      const campaignId = await newCampaign();
-      const { text } = await setTruth(db.sql, {
-        campaignId,
-        commandId: newId<CommandId>(),
-        actor: PLAYER,
-        oracleId: CATACLYSM.id,
-        source: 'written',
-        text: 'A slow climate collapse, not a single cataclysm.',
-      });
-      expect(text).toBe('A slow climate collapse, not a single cataclysm.');
-
-      const state = project(await readEvents(db.sql, campaignId));
-      expect(state.truths[CATACLYSM.id]).toEqual({ text, source: 'written' });
-    });
-
-    it('resolves a picked option to the book’s own text, not client-supplied text', async () => {
-      const campaignId = await newCampaign();
-      const row = CATACLYSM.rows[0];
-      if (row === undefined) throw new Error('expected a row');
-
-      const { text } = await setTruth(db.sql, {
-        campaignId,
-        commandId: newId<CommandId>(),
-        actor: PLAYER,
-        oracleId: CATACLYSM.id,
-        source: 'picked',
-        rowIndex: 0,
-      });
-      expect(text).toBe(row.text);
-    });
-
-    it('rolls on the server — deterministic under a seeded RNG, not client-supplied', async () => {
-      const first = await setTruth(db.sql, {
-        campaignId: await newCampaign(),
-        commandId: newId<CommandId>(),
-        actor: PLAYER,
-        oracleId: CATACLYSM.id,
-        source: 'rolled',
-        rng: createSeededRandomSource(1),
-      });
-      const second = await setTruth(db.sql, {
-        campaignId: await newCampaign(),
-        commandId: newId<CommandId>(),
-        actor: PLAYER,
-        oracleId: CATACLYSM.id,
-        source: 'rolled',
-        rng: createSeededRandomSource(1),
-      });
-
-      expect(first.text).toBe(second.text);
-      expect(CATACLYSM.rows.map((r) => r.text)).toContain(first.text);
-    });
-
-    it('rejects answering the same question twice', async () => {
-      const campaignId = await newCampaign();
-      await setTruth(db.sql, {
-        campaignId,
-        commandId: newId<CommandId>(),
-        actor: PLAYER,
-        oracleId: CATACLYSM.id,
-        source: 'written',
-        text: 'First answer.',
-      });
-
-      await expect(
-        setTruth(db.sql, {
-          campaignId,
-          commandId: newId<CommandId>(),
-          actor: PLAYER,
-          oracleId: CATACLYSM.id,
-          source: 'written',
-          text: 'Second answer.',
-        }),
-      ).rejects.toThrow(TruthRejectedError);
-    });
-
-    it('rejects an oracle id that is not a setting truth', async () => {
-      const campaignId = await newCampaign();
-      await expect(
-        setTruth(db.sql, {
-          campaignId,
-          commandId: newId<CommandId>(),
-          actor: PLAYER,
-          oracleId: 'oracle:core/action' as never,
-          source: 'written',
-          text: 'x',
-        }),
-      ).rejects.toThrow(TruthRejectedError);
-    });
-
-    it('rejects a written answer with no text', async () => {
-      const campaignId = await newCampaign();
-      await expect(
-        setTruth(db.sql, {
-          campaignId,
-          commandId: newId<CommandId>(),
-          actor: PLAYER,
-          oracleId: CATACLYSM.id,
-          source: 'written',
-        }),
-      ).rejects.toThrow(TruthRejectedError);
-    });
-  });
 
   describe('the sector: locations and routes (task 4.3)', () => {
     it('establishes a player-written location', async () => {

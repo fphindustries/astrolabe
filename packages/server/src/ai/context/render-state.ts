@@ -14,9 +14,19 @@ import type { CampaignState } from '@astrolabe/shared';
 export function renderState(state: CampaignState): string {
   const sections: string[] = [];
 
-  const truths = Object.entries(state.truths).map(([oracleId, answer]) => {
+  // D-183: one representation, and this is the reason it is one. This read
+  // used to be `state.truths`, the Milestone 1 fold — so a campaign that
+  // decided its truths through Campaign Launch was narrated by a Guide that
+  // knew none of them. Nothing failed; the truths were simply invisible.
+  const truths = Object.entries(state.launch.truthDecisions).map(([oracleId, decision]) => {
     const question = STARFORGED.truths.find((t) => t.id === oracleId)?.name ?? oracleId;
-    return `- ${question}: ${answer.text}`;
+    // D-162: an open truth is a fact that the category is deliberately
+    // undefined, not an unanswered question the Guide may quietly settle.
+    const answer =
+      decision.resolution === 'leave_open'
+        ? 'deliberately left open — do not settle it'
+        : (decision.text ?? '');
+    return `- ${question}: ${answer}`;
   });
   if (truths.length > 0) {
     sections.push(`Setting truths:\n${truths.join('\n')}`);

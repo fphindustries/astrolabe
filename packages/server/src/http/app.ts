@@ -10,7 +10,6 @@ import {
   InvokeMoveRequestBodySchema,
   LOCAL_PLAYER_ID,
   ResolvePayThePriceRequestBodySchema,
-  SetTruthRequestBodySchema,
   SaveLaunchDraftRequestBodySchema,
   SetLaunchFoundationRequestBodySchema,
   DecideLaunchTruthRequestBodySchema,
@@ -44,7 +43,6 @@ import {
   type EntityGroundingResponse,
   type NarrativeLogResponse,
   type ResolvePayThePriceResponse,
-  type SetTruthResponse,
   type SaveLaunchDraftResponse,
   type SetLaunchFoundationResponse,
   type DecideLaunchTruthResponse,
@@ -101,7 +99,6 @@ import {
   readNarrativeEvents,
   resolvePayThePriceMethod,
   SectorRouteRejectedError,
-  setTruth,
   saveLaunchDraft,
   setLaunchFoundation,
   decideTruth,
@@ -121,7 +118,6 @@ import {
   proposeLaunchCreation,
   LaunchRejectedError,
   swearIncitingVow,
-  TruthRejectedError,
   voidEvent,
   VoidRefusedError,
 } from '../db/index.js';
@@ -1085,44 +1081,6 @@ export function buildApp({
         if (error instanceof UnknownProposalError) {
           reply.code(422);
           return { problems: [], problem: error.message };
-        }
-        throw error;
-      }
-    },
-  );
-
-  app.post<{ Params: CampaignParams }>(
-    '/api/campaigns/:id/truths',
-    async (request, reply): Promise<SetTruthResponse | { problem: string } | undefined> => {
-      const id = parseCampaignId(request.params.id, reply);
-      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
-        return undefined;
-      }
-
-      const parsedBody = SetTruthRequestBodySchema.safeParse(request.body);
-      if (!parsedBody.success) {
-        reply.code(400);
-        return undefined;
-      }
-      const { commandId, oracleId, source, rowIndex, text } = parsedBody.data;
-
-      try {
-        const answered = await setTruth(sql, {
-          ...dice,
-          campaignId: id,
-          commandId,
-          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
-          oracleId,
-          source,
-          ...(rowIndex !== undefined ? { rowIndex } : {}),
-          ...(text !== undefined ? { text } : {}),
-        });
-        reply.code(201);
-        return { text: answered.text };
-      } catch (error) {
-        if (error instanceof TruthRejectedError) {
-          reply.code(422);
-          return { problem: error.message };
         }
         throw error;
       }

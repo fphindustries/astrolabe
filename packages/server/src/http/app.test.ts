@@ -11,7 +11,6 @@ import type {
   InvokeMoveResponse,
   NarrativeLogResponse,
   ResolvePayThePriceResponse,
-  SetTruthResponse,
   SwearIncitingVowResponse,
   VoidPreviewResult,
   CommandId,
@@ -385,77 +384,6 @@ describe.skipIf(!hasTestDatabase)('the HTTP read API', () => {
     });
     return response.json<CreateCharacterResponse>().characterId;
   }
-
-  describe('answering a setting truth (task 4.2)', () => {
-    it('writes a written answer and reflects it in state', async () => {
-      const campaignId = await freshCampaignId();
-      const response = await app.inject({
-        method: 'POST',
-        url: `/api/campaigns/${campaignId}/truths`,
-        payload: {
-          commandId: crypto.randomUUID(),
-          oracleId: 'oracle:cataclysm',
-          source: 'written',
-          text: 'A slow climate collapse.',
-        },
-      });
-      expect(response.statusCode).toBe(201);
-      const body = response.json<SetTruthResponse>();
-      expect(body.text).toBe('A slow climate collapse.');
-
-      const state = await app.inject({ method: 'GET', url: `/api/campaigns/${campaignId}/state` });
-      expect(state.json<CampaignStateResponse>().state.truths['oracle:cataclysm']).toEqual({
-        text: 'A slow climate collapse.',
-        source: 'written',
-      });
-    });
-
-    it('422s answering the same truth twice', async () => {
-      const campaignId = await freshCampaignId();
-      const payload = {
-        commandId: crypto.randomUUID(),
-        oracleId: 'oracle:cataclysm',
-        source: 'written',
-        text: 'First.',
-      };
-      await app.inject({ method: 'POST', url: `/api/campaigns/${campaignId}/truths`, payload });
-
-      const response = await app.inject({
-        method: 'POST',
-        url: `/api/campaigns/${campaignId}/truths`,
-        payload: { ...payload, commandId: crypto.randomUUID(), text: 'Second.' },
-      });
-      expect(response.statusCode).toBe(422);
-    });
-
-    it('400s an unknown source', async () => {
-      const campaignId = await freshCampaignId();
-      const response = await app.inject({
-        method: 'POST',
-        url: `/api/campaigns/${campaignId}/truths`,
-        payload: {
-          commandId: crypto.randomUUID(),
-          oracleId: 'oracle:cataclysm',
-          source: 'guessed',
-        },
-      });
-      expect(response.statusCode).toBe(400);
-    });
-
-    it('404s an unknown campaign', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/api/campaigns/00000000-0000-0000-0000-000000000000/truths',
-        payload: {
-          commandId: crypto.randomUUID(),
-          oracleId: 'oracle:cataclysm',
-          source: 'written',
-          text: 'x',
-        },
-      });
-      expect(response.statusCode).toBe(404);
-    });
-  });
 
   describe('the sector: locations and routes (task 4.3)', () => {
     it('adds a location and a route between two locations', async () => {

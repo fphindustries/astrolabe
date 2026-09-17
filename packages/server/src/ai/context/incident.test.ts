@@ -39,10 +39,18 @@ function withSetup(): CampaignState {
       name: 'Lantern Wake',
       settings: { narrationLatitude: 'color', narrationLength: 'standard', rerollCap: 2 },
     },
-    truths: {
-      ['oracle:cataclysm' as never]: {
-        text: 'The sun plague burned the old worlds.',
-        source: 'written',
+    launch: {
+      ...EMPTY.launch,
+      truthDecisions: {
+        ['oracle:cataclysm' as never]: {
+          truthId: 'oracle:cataclysm' as never,
+          resolution: 'custom',
+          text: 'The sun plague burned the old worlds.',
+          provenance: 'player_written',
+          groundedIn: [],
+          eventId: 'e1' as never,
+          seq: 1,
+        },
       },
     },
     entities: {

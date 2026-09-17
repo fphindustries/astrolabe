@@ -120,7 +120,9 @@ describe.skipIf(!hasTestDatabase)('the session-1 fixture (D-72, D-122)', () => {
         .filter((e) => e.kind === 'location')
         .map((e) => e.name),
     ).toEqual(['Deepwater Anchorage', 'Kessel Drift', 'Varga Relay']);
-    expect(Object.keys(state.truths)).toHaveLength(3);
+    // D-183: one representation — the fixture decides its truths through the
+    // launch command, and a legacy `truth.set` log folds into the same place.
+    expect(Object.keys(state.launch.truthDecisions)).toHaveLength(3);
   });
 
   it('ends session 1 with a summary and open threads for the next recap', () => {

@@ -15,14 +15,16 @@ import { rewriteLinks } from './text.js';
  * `'truths'` marker, anticipated since task 1.3 — see `id-mapping.ts`) and
  * the same `rollOracle` dice function apply unchanged.
  *
- * **Deliberately not imported**: each option's `quest_starter` text (only
- * useful once AI-proposed inciting incidents exist, D-101), and the nested
- * per-option elaboration table some options embed via `{{table:...}}`
- * (e.g. Cataclysm's "what caused it" sub-roll). Neither is read by the pick
- * /roll/write flow 4.2 builds; a truth row's `embeddedOracles` is left
- * unset rather than pointing at a sub-table this adapter never adapts —
- * the same kind of deliberate, tested gap as the collection-link case
- * `id-mapping.ts` already documents.
+ * The quest starter and the nested elaboration table *are* imported (D-172):
+ * Campaign Launch reads both, and leaving them out was the Milestone 1
+ * omission D-162 reverses.
+ *
+ * **`text` is the option's summary** (D-183). It used to be the cleaned
+ * description, which made `row.text` do two jobs at once — the short label a
+ * chip and an overview line want, and the full option a player reads before
+ * choosing. They are different strings, Datasworn supplies both, and every
+ * consumer now names the one it means. `rollOracle` returns `row.text`, so a
+ * rolled truth's oracle chip reads the way a chip should.
  */
 interface RawTruthOption {
   readonly min?: number;
@@ -72,12 +74,14 @@ function mapTruthOption(
     raw.table === undefined
       ? undefined
       : mapSubchoice(raw.table, `${truthId}/${optionIndex}`, version);
+  const summary = raw.summary ?? description.split('\n')[0] ?? description;
   return {
     min: raw.min,
     max: raw.max,
-    text: description,
+    // D-183: the summary, not the description. See the note above.
+    text: summary,
     description,
-    summary: raw.summary ?? description.split('\n')[0] ?? description,
+    summary,
     ...(raw.quest_starter === undefined ? {} : { questStarter: raw.quest_starter }),
     ...(subchoice === undefined ? {} : { subchoice }),
   };

@@ -456,6 +456,16 @@ still show their server blockers. Three gaps below the client are fixed first �
 
 ### 5. Truths
 
+Group 5 found the same shape of defect group 4 did, and fixes it first — see 5.0. The
+editor itself plugs into the section shell group 4 built; there are no new routes.
+
+- [ ] 5.0 Prerequisites found while planning group 5:
+  - **one truth representation (D-183)**, because `renderState` read only the Milestone 1
+    one — a campaign launched through group 5 would have been narrated by a Guide that
+    knew none of its truths;
+  - `truthHistory` projected beside `truthDecisions`, because `supersedesEventId` is
+    written and nothing can read the chain back (A26);
+  - a truth-proposal AI route, which does not exist as characters' and incidents' do (5.3).
 - [ ] 5.1 Build the fourteen-truth overview with answer/open status and progress.
 - [ ] 5.2 Render choices, nested subchoices, quest starters, custom text, authoritative
   rolls, and revisions with complete provenance.

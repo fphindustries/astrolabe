@@ -598,6 +598,66 @@ describe('renderState (task 7.4)', () => {
     );
   });
 
+  it('carries a launched campaign’s truths into play narration (D-183)', () => {
+    // The defect group 5 exists to fix: this read was `state.truths`, the
+    // Milestone 1 fold, so a campaign that decided its truths through Campaign
+    // Launch was narrated by a Guide that knew none of them.
+    const text = renderState(
+      project(
+        goldenSessionPrelude()
+          .add('truth.decided', {
+            truthId: 'oracle:cataclysm' as never,
+            resolution: 'selected',
+            optionIndex: 0,
+            text: 'The Sun Plague extinguished the stars.',
+            summary: 'The Sun Plague.',
+            provenance: 'official_choice',
+            groundedIn: [],
+          })
+          .build(),
+      ),
+    );
+
+    expect(text).toContain('Setting truths:');
+    expect(text).toContain('- Cataclysm: The Sun Plague extinguished the stars.');
+  });
+
+  it('carries a Milestone 1 campaign’s truths too, through the same read (D-183)', () => {
+    // The positive control for the fold: one representation has to serve both,
+    // or ending the split would have traded one blind spot for another.
+    const text = renderState(
+      project(
+        goldenSessionPrelude()
+          .add('truth.set', {
+            oracleId: 'oracle:cataclysm' as never,
+            source: 'written',
+            text: 'A slow collapse, not one cataclysm.',
+          })
+          .build(),
+      ),
+    );
+
+    expect(text).toContain('- Cataclysm: A slow collapse, not one cataclysm.');
+  });
+
+  it('states a deliberately open truth as open, never as blank (D-162)', () => {
+    const text = renderState(
+      project(
+        goldenSessionPrelude()
+          .add('truth.decided', {
+            truthId: 'oracle:horrors' as never,
+            resolution: 'leave_open',
+            provenance: 'player_written',
+            groundedIn: [],
+          })
+          .build(),
+      ),
+    );
+
+    // An open truth is a fact about the campaign, not a gap the Guide may fill.
+    expect(text).toContain('- Horrors: deliberately left open — do not settle it');
+  });
+
   it('names recorded pronouns, and says when none are recorded without implying a default (D-131)', () => {
     const lines = renderState(project(goldenSessionPrelude().build())).split('\n');
     const vesna = lines.find((line) => line.startsWith('- Vesna Kade'));

@@ -40,6 +40,23 @@ describe('mapTruths against the real Starforged data', () => {
     }
   });
 
+  it('makes `text` the summary, not the description (D-183)', () => {
+    // The doubling D-172 left open and 5.5 closes: `row.text` was the cleaned
+    // description, so a chip and an overview line had no short form to show.
+    // They are genuinely different strings in the source data, which is what
+    // makes this worth separating rather than deriving.
+    let differing = 0;
+    for (const truth of truths) {
+      for (const row of truth.rows) {
+        expect(row.text).toBe(row.summary);
+        expect(row.summary).not.toBe('');
+        expect(row.description).not.toBe('');
+        if (row.summary !== row.description) differing += 1;
+      }
+    }
+    expect(differing).toBeGreaterThan(0);
+  });
+
   it('keeps source order, character prompts, and stable nested IDs', () => {
     expect(truths.map((truth) => truth.order)).toEqual([...truths.keys()]);
     expect(truths[0]?.characterPrompt).toBeTruthy();

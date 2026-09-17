@@ -95,6 +95,36 @@ describe.skipIf(!hasTestDatabase)('Campaign Launch workspace commands (3.1–3.2
     expect(project(events).launch.foundation).toMatchObject({ premise: 'A restless reach' });
   });
 
+  it('records the option’s description and summary, not client-supplied text (D-183)', async () => {
+    const campaignId = await campaign();
+    // A truth whose first option has no nested choice, so this test is about
+    // the recorded fields rather than the subchoice rule.
+    const truth = STARFORGED.truths.find((candidate) => candidate.rows[0]?.subchoice === undefined);
+    if (truth === undefined) throw new Error('expected a truth with a plain first option');
+    const option = truth.rows[0]!;
+
+    await decideTruth(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      truthId: truth.id,
+      resolution: 'selected',
+      optionIndex: 0,
+    });
+
+    const decided = (await readEvents(db.sql, campaignId)).find(
+      (event) => event.type === 'truth.decided',
+    );
+    // `text` is the resolved answer and stays the long form; `summary` is the
+    // short one an overview line and a chip want. They are different strings,
+    // which is the whole of what D-183 separated.
+    expect(decided?.payload).toMatchObject({
+      text: option.description,
+      summary: option.summary,
+    });
+    expect(option.summary).not.toBe(option.description);
+  });
+
   it('rolls a truth server-side and revisions cite the earlier decision', async () => {
     const campaignId = await campaign();
     const truth = STARFORGED.truths[0];
