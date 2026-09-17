@@ -401,3 +401,97 @@ describe('a crew member carries its acceptance back (6.0a, D-184)', () => {
     expect(vesna?.provenance).toBe('player_written');
   });
 });
+
+describe('the crew revision chain is readable (6.0c, D-184)', () => {
+  const crewLog = () =>
+    new LogBuilder().add('campaign.created', {
+      name: 'Lantern Wake',
+      settings: { narrationLatitude: 'color', narrationLength: 'standard', rerollCap: 2 },
+    });
+
+  const launchCharacter = (appearance: string) => ({
+    ...character(VESNA, 'Vesna Kade', 2),
+    appearance,
+    backstory: { kind: 'written' as const, text: 'Flew charts nobody else trusted.' },
+    backgroundVow: { title: 'Find the lost survey', rank: 'formidable' as const },
+  });
+
+  const revision = (appearance: string, supersedesEventId: string) => ({
+    characterId: VESNA,
+    character: launchCharacter(appearance),
+    provenance: 'player_written' as const,
+    groundedIn: [],
+    supersedesEventId: supersedesEventId as never,
+  });
+
+  it('keeps no history for a character nobody has revised', () => {
+    const builder = crewLog().add('character.created', {
+      ...launchCharacter('A jacket a size too big.'),
+      provenance: 'guide_proposal',
+      groundedIn: [],
+    });
+
+    expect(project(builder.build()).launch.crewHistory[VESNA]).toBeUndefined();
+  });
+
+  it('pushes the superseded version, with the acceptance it carried (A26, A41)', () => {
+    const builder = crewLog().add('character.created', {
+      ...launchCharacter('A jacket a size too big.'),
+      provenance: 'guide_proposal',
+      groundedIn: [],
+    });
+    const created = builder.last();
+    builder.add('character.revised', revision('A quieter jacket.', created.id));
+
+    const state = project(builder.build());
+
+    // The current version is the revision.
+    expect(state.characters[VESNA]?.appearance).toBe('A quieter jacket.');
+    // The superseded one is still readable, with its own acceptance — not the
+    // revision's. This is the whole point: `supersedesEventId` was being
+    // written and nothing could read the chain back.
+    const history = state.launch.crewHistory[VESNA];
+    expect(history).toHaveLength(1);
+    expect(history?.[0]?.appearance).toBe('A jacket a size too big.');
+    expect(history?.[0]?.eventId).toBe(created.id);
+    expect(history?.[0]?.provenance).toBe('guide_proposal');
+  });
+
+  it('keeps every superseded version, oldest first', () => {
+    const builder = crewLog().add('character.created', launchCharacter('First.'));
+    builder.add('character.revised', revision('Second.', builder.last().id));
+    builder.add('character.revised', revision('Third.', builder.last().id));
+
+    const state = project(builder.build());
+
+    expect(state.launch.crewHistory[VESNA]?.map((entry) => entry.appearance)).toEqual([
+      'First.',
+      'Second.',
+    ]);
+    expect(state.characters[VESNA]?.appearance).toBe('Third.');
+  });
+
+  it('records a Milestone 1 character’s first revision with no provenance', () => {
+    // A legacy character recorded none, so its history entry has none either —
+    // absent, rather than a provenance invented to fill the field.
+    const builder = crewLog().add('character.created', character(VESNA, 'Vesna Kade', 2));
+    builder.add('character.revised', revision('Now with an appearance.', builder.last().id));
+
+    const entry = project(builder.build()).launch.crewHistory[VESNA]?.[0];
+
+    expect(entry).toBeDefined();
+    expect(Object.hasOwn(entry!, 'provenance')).toBe(false);
+  });
+
+  it('rebuilds cold to exactly what incremental projection produced', () => {
+    const builder = crewLog().add('character.created', launchCharacter('First.'));
+    builder.add('character.revised', revision('Second.', builder.last().id));
+    const events = builder.build();
+
+    const cold = project(events);
+    const incremental = events.reduce((state, event) => applyEvent(state, event), emptyState());
+
+    expect(cold).toEqual(incremental);
+    expect(cold.launch.crewHistory[VESNA]).toHaveLength(1);
+  });
+});

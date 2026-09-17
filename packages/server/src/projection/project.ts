@@ -8,6 +8,7 @@ import type {
   EntityId,
   FieldProvenance,
   MeterState,
+  SupersededCharacter,
   TokenUsage,
   TrackState,
 } from '@astrolabe/shared';
@@ -414,8 +415,28 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
         },
       };
     }
-    case 'character.revised':
-      return updateCharacter(state, event.payload.characterId, (current) => ({
+    case 'character.revised': {
+      // Read before replacing: `updateCharacter` overwrites in place, so by the
+      // time its callback returns the superseded version is gone. Same
+      // read-then-push ordering `truth.decided` uses, for the same reason.
+      const superseded = state.characters[event.payload.characterId];
+      const withHistory =
+        superseded === undefined
+          ? state
+          : {
+              ...state,
+              launch: {
+                ...state.launch,
+                crewHistory: {
+                  ...state.launch.crewHistory,
+                  [event.payload.characterId]: [
+                    ...(state.launch.crewHistory[event.payload.characterId] ?? []),
+                    supersededCharacter(superseded),
+                  ],
+                },
+              },
+            };
+      return updateCharacter(withHistory, event.payload.characterId, (current) => ({
         ...current,
         name: event.payload.character.name,
         callsign: event.payload.character.callsign,
@@ -436,6 +457,7 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
         provenance: event.payload.provenance,
         groundedIn: event.payload.groundedIn,
       }));
+    }
     case 'character.removed': {
       const { [event.payload.characterId]: _removed, ...characters } = state.characters;
       return { ...state, characters };
@@ -641,6 +663,34 @@ function normaliseCharacter(character: CharacterState): CharacterState {
       max: momentumMax(markedImpacts),
       resetValue: momentumResetValue(markedImpacts),
     },
+  };
+}
+
+/**
+ * The launch-relevant half of a character, for `crewHistory` (6.0c, D-184).
+ *
+ * Field by field, never by spreading the character: a `CharacterState` also
+ * carries meters, momentum, impacts and vow tracks, and a revision changes
+ * none of them. Optional fields are omitted rather than set to `undefined`,
+ * because `exactOptionalPropertyTypes` treats those as different things and
+ * the cold-rebuild comparison does not.
+ */
+function supersededCharacter(character: CharacterState): SupersededCharacter {
+  return {
+    name: character.name,
+    callsign: character.callsign,
+    stats: character.stats,
+    assets: character.assets,
+    hooks: character.hooks,
+    pronouns: character.pronouns,
+    eventId: character.eventId,
+    seq: character.seq,
+    ...(character.appearance !== undefined ? { appearance: character.appearance } : {}),
+    ...(character.backstory !== undefined ? { backstory: character.backstory } : {}),
+    ...(character.backgroundVow !== undefined ? { backgroundVow: character.backgroundVow } : {}),
+    ...(character.signatureGear !== undefined ? { signatureGear: character.signatureGear } : {}),
+    ...(character.provenance !== undefined ? { provenance: character.provenance } : {}),
+    ...(character.groundedIn !== undefined ? { groundedIn: character.groundedIn } : {}),
   };
 }
 

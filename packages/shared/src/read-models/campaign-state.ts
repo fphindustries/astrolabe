@@ -131,6 +131,34 @@ export interface CharacterState {
   readonly groundedIn?: readonly EventId[];
 }
 
+/**
+ * A crew member as a revision left it behind (6.0c, D-184, A26).
+ *
+ * The launch-relevant half of a character, and no more. A `CharacterState`
+ * also carries meters, momentum, impacts and vow tracks, none of which a
+ * pre-launch revision changes and all of which would grow this read model for
+ * nothing — the same boundedness judgement `truthHistory` records beside
+ * itself. It is a `Pick` rather than a new shape so a field added to a
+ * character cannot quietly stop being remembered: the compiler asks here.
+ */
+export type SupersededCharacter = Pick<
+  CharacterState,
+  | 'name'
+  | 'callsign'
+  | 'stats'
+  | 'assets'
+  | 'hooks'
+  | 'pronouns'
+  | 'appearance'
+  | 'backstory'
+  | 'backgroundVow'
+  | 'signatureGear'
+  | 'eventId'
+  | 'seq'
+  | 'provenance'
+  | 'groundedIn'
+>;
+
 export type TrackKind = 'vow' | 'expedition' | 'clock';
 
 export interface TrackState {
@@ -298,6 +326,24 @@ export interface LaunchState {
    * payload.
    */
   readonly truthHistory: Readonly<Record<OracleId, readonly Accepted<'truth.decided'>[]>>;
+  /**
+   * Superseded crew members, oldest first, beside the current one (A26, A40).
+   *
+   * `truthHistory`'s job for the one section whose accepted facts live outside
+   * this state. `character.revised` carries the full acceptance and is
+   * projected latest-wins, so without this the earlier version 6.4 shows is
+   * written and unreadable — the same defect, in the same shape, one section
+   * later.
+   *
+   * A character revised before it was ever a launch character has an entry
+   * with no `provenance`: a Milestone 1 `character.created` recorded none, and
+   * inventing one to fill the field is exactly what A41's badge exists to
+   * prevent.
+   *
+   * Boundedness is `truthHistory`'s judgement again: at most six keys, and a
+   * revision is a deliberate pre-activation act by one local user.
+   */
+  readonly crewHistory: Readonly<Record<CharacterId, readonly SupersededCharacter[]>>;
   readonly starship?: Accepted<'starship.established'>;
   readonly sector?: Accepted<'sector.configured'>;
   readonly locations: Readonly<Record<EntityId, Accepted<'location.added'>>>;

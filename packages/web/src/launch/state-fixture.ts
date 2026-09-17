@@ -23,6 +23,7 @@ export function emptyCampaignState(launch: Partial<LaunchState> = {}): CampaignS
       drafts: {},
       truthDecisions: {},
       truthHistory: {},
+      crewHistory: {},
       locations: {},
       routes: [],
       layout: {},

@@ -31,6 +31,7 @@ export function emptyState(): CampaignState {
       drafts: {},
       truthDecisions: {},
       truthHistory: {},
+      crewHistory: {},
       locations: {},
       routes: [],
       layout: {},
