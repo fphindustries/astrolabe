@@ -459,21 +459,71 @@ still show their server blockers. Three gaps below the client are fixed first �
 Group 5 found the same shape of defect group 4 did, and fixes it first — see 5.0. The
 editor itself plugs into the section shell group 4 built; there are no new routes.
 
-- [ ] 5.0 Prerequisites found while planning group 5:
+- [x] 5.0 Prerequisites found while planning group 5:
   - **one truth representation (D-183)**, because `renderState` read only the Milestone 1
     one — a campaign launched through group 5 would have been narrated by a Guide that
     knew none of its truths;
   - `truthHistory` projected beside `truthDecisions`, because `supersedesEventId` is
     written and nothing can read the chain back (A26);
-  - a truth-proposal AI route, which does not exist as characters' and incidents' do (5.3).
-- [ ] 5.1 Build the fourteen-truth overview with answer/open status and progress.
-- [ ] 5.2 Render choices, nested subchoices, quest starters, custom text, authoritative
+  - a truth-proposal AI route, which does not exist as characters' and incidents' do (5.3);
+  - **`chips` on the workspace response**, because a decision cites its rolls by event id
+    and a truth is not an entity, so nothing could resolve them and A41's oracle chip had
+    no source;
+  - **proposal-aware acceptance**, because `decideTruth` had no concept of a proposal, so
+    accepting the Guide's recommendation recorded `official_choice` — indistinguishable
+    from a player who picked the same option unaided.
+- [x] 5.1 Build the fourteen-truth overview with answer/open status and progress.
+- [x] 5.2 Render choices, nested subchoices, quest starters, custom text, authoritative
   rolls, and revisions with complete provenance.
-- [ ] 5.3 Add field help and full truth proposals without allowing the Guide to commit.
-- [ ] 5.4 Verify keyboard navigation, screen-reader grouping, and no-color-only status.
-- [ ] 5.5 Complete D-172's `row.text` transition: cut the legacy truth flow over to the
+- [x] 5.3 Add field help and full truth proposals without allowing the Guide to commit.
+- [x] 5.4 Verify keyboard navigation, screen-reader grouping, and no-color-only status.
+- [x] 5.5 Complete D-172's `row.text` transition: cut the legacy truth flow over to the
   richer schema's summary/description fields, so `row.text` stops doubling as the cleaned
   description. Owns the obligation D-179 left open; drop the task only by amending D-172.
+
+**Implementation note (group 5).** Truths is the first section where all four of D-162's
+paths, nested subchoices, quest starters, revisions and a Guide proposal appear together,
+and the shape of the work was the same as group 4's: most of the difficulty was in facts
+that were already being written and that nothing could read.
+
+- **D-183 ends the two representations.** `TruthOption.text` becomes the summary and
+  `description` carries the full option, so every consumer names the field it means. The
+  `truth.set` arm folds into `launch.truthDecisions`, so a Milestone 1 campaign keeps its
+  truths; `state.truths` and `setTruth` are gone. No payload version bump and no upcaster —
+  the doubling ended in the adapter, where it started.
+- **Three reads that were written and unreadable.** `truthHistory` gives A26's revision
+  chain a read path; `chips` on the workspace response resolves the rolls a decision cites,
+  collected by walking the launch state for `groundedIn` rather than by naming each
+  section's field, so groups 6-9 need no edit here; and accepting a Guide recommendation
+  now names the proposal, which the server resolves to set `causedBy` and to decide between
+  `guide_proposal` and `guide_proposal_edited` by comparing what was proposed to what was
+  accepted. Whether the player edited it is a fact about the player, not a claim the client
+  makes about itself.
+- **A truths draft holds unaccepted work.** Each truth is accepted on its own the moment
+  the player chooses, rolls, writes or leaves it open, so Save and continue is for the work
+  in between. D-182's precedence is therefore applied **per truth**: the draft is one
+  snapshot with one `seq` while each accepted truth carries its own, and comparing the
+  section as a whole would discard thirteen neighbours' work the moment one truth was
+  accepted. Groups 6-9 inherit this; `truth-form.ts`'s module comment states it.
+- **A truth can be decided and still blocked.** `truth_option_invalid` and
+  `truth_subchoice_missing` survive a decision present in the fold, which is how a
+  Milestone 1 campaign's truths arrive. Such a truth reads "Needs attention" in the
+  server's own words and does not count toward the progress line, so "14 of 14 decided"
+  cannot sit beside a section chip reading In progress.
+- **5.4 earned its place.** The pass at 1280x720 found four defects that typechecked,
+  linted and unit-tested clean: the disclosure never closed (`display: flex` beats
+  `[hidden]`), Datasworn's link markup reached the reader, the option radios fell back to
+  their value for an accessible name, and "work you have not saved" outlived the save and
+  appeared for a rolled truth nobody had touched.
+- **The truth proposal cites no oracle roll, deliberately.** A truth's own table is its
+  enumerated option set, so the Guide recommends among the official options or drafts
+  custom wording — the authority it already has over incident text (D-168) and backstory
+  (D-163). It generates no random result, so section 4 is satisfied without a roll, and a
+  player who wants dice uses the Roll path. `truth-proposal.test.ts` asserts the absence
+  rather than leaving it to be assumed.
+- Group 4 pinned Truths as its placeholder example; `SECTION_ARRIVES_IN.truths` is now
+  null and the two tests that named Truths moved to Crew, the first section without an
+  editor.
 
 ### 6. Crew
 
