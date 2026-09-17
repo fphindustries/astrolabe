@@ -4,17 +4,15 @@ import type { LaunchWorkspaceResponse } from '@astrolabe/shared';
 
 import { Link } from '../app/routes.js';
 
-import { campaignDestination } from './routing.js';
-import { launchOverviewPath, launchReviewPath, playPath } from './sections.js';
+import { launchOverviewPath, launchReviewPath } from './sections.js';
 import styles from './LaunchWorkspaceScreen.module.css';
 
 /**
  * The chrome every Campaign Launch page shares (task 4.1, D-160).
  *
- * It also holds the one guard each of those pages needs: a bookmarked launch
- * URL opened after activation must not offer a workspace that no longer
- * exists. The answer is the server's `launchOpen`, the same field the
- * dispatcher routes on, so a launch page and `/campaigns/:id` cannot disagree.
+ * Only the workspace itself: whether launch is still open at all is decided
+ * before this renders, in `CampaignHomeScreen`, so there is one place that
+ * answers it rather than one per page.
  */
 export function LaunchWorkspaceScreen({
   campaignId,
@@ -25,20 +23,6 @@ export function LaunchWorkspaceScreen({
   readonly workspace: LaunchWorkspaceResponse;
   readonly children: ReactNode;
 }) {
-  const destination = campaignDestination(workspace);
-
-  if (destination.kind === 'play') {
-    return (
-      <div className={styles.page}>
-        <h1 className={styles.title}>Campaign Launch is closed</h1>
-        <p className={styles.closed}>{destination.message}</p>
-        <Link className={styles.back} href={playPath(campaignId)}>
-          Go to the campaign
-        </Link>
-      </div>
-    );
-  }
-
   const name = workspace.state.campaign?.name ?? 'This campaign';
 
   return (

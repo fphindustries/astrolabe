@@ -128,3 +128,12 @@
 .primary {
   composes: primary from '../ui/controls.module.css';
 }
+
+/* `aria-disabled` keeps the button focusable, so it has to look unavailable
+   on its own — `:disabled` never matches it. */
+.primary[aria-disabled='true'] {
+  border-color: var(--surface-border-strong);
+  background: var(--surface-3);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}

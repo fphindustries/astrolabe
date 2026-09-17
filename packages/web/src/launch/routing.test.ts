@@ -3,30 +3,40 @@ import { describe, expect, it } from 'vitest';
 import { campaignDestination } from './routing.js';
 
 describe('where a campaign opens', () => {
-  it('opens the workspace while launch is open', () => {
-    expect(campaignDestination({ launchOpen: true })).toEqual({ kind: 'workspace' });
+  it('opens the workspace while launch is open, from either address', () => {
+    for (const entry of ['campaign_home', 'launch_page'] as const)
+      expect(campaignDestination({ launchOpen: true }, entry)).toEqual({ kind: 'workspace' });
   });
 
-  it('opens play once the campaign has launched, and says why', () => {
-    expect(campaignDestination({ launchOpen: false, closedReason: 'campaign_active' })).toEqual({
-      kind: 'play',
+  it('opens a closed campaign in play when the campaign itself was asked for', () => {
+    // A43's case: `/campaigns/:id` means "open this campaign". A Milestone 1
+    // campaign reports `phase: 'draft'` and belongs in play, which is why this
+    // turns on `launchOpen` rather than on the phase.
+    expect(
+      campaignDestination({ launchOpen: false, closedReason: 'campaign_in_play' }, 'campaign_home'),
+    ).toEqual({ kind: 'play' });
+  });
+
+  it('tells a bookmarked launch URL that the workspace is gone, rather than silently showing play', () => {
+    // D-160, beat 12: the workspace is no longer offered after activation. A
+    // launch URL that quietly rendered the play screen would leave a bookmark
+    // doing something other than what it says.
+    expect(
+      campaignDestination({ launchOpen: false, closedReason: 'campaign_active' }, 'launch_page'),
+    ).toEqual({
+      kind: 'closed',
       message: 'This campaign has launched. Changes to launch facts are now amendments.',
     });
+    expect(
+      campaignDestination({ launchOpen: false, closedReason: 'campaign_in_play' }, 'launch_page'),
+    ).toMatchObject({ kind: 'closed', message: expect.stringContaining('already in play') });
   });
 
-  it('opens play for a campaign already in play (A43, D-178)', () => {
-    // The Milestone 1 case. Its phase still reads `draft`, which is why this
-    // decision turns on `launchOpen` and not on the phase.
-    expect(campaignDestination({ launchOpen: false, closedReason: 'campaign_in_play' })).toEqual({
-      kind: 'play',
-      message: 'This campaign is already in play; Campaign Launch is closed for it.',
+  it('still answers when the reason is missing, rather than throwing', () => {
+    expect(campaignDestination({ launchOpen: false }, 'launch_page')).toMatchObject({
+      kind: 'closed',
+      message: expect.stringContaining('closed'),
     });
-  });
-
-  it('still opens play when the reason is missing, rather than throwing', () => {
-    const destination = campaignDestination({ launchOpen: false });
-
-    expect(destination.kind).toBe('play');
-    expect(destination).toMatchObject({ message: expect.stringContaining('closed') });
+    expect(campaignDestination({ launchOpen: false }, 'campaign_home')).toEqual({ kind: 'play' });
   });
 });

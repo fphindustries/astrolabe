@@ -38,7 +38,8 @@ function Routed() {
     case 'campaign-new':
       return <NewCampaignScreen />;
     case 'campaign-home':
-      return <CampaignHomeScreen campaignId={route.campaignId} view={{ kind: 'overview' }} />;
+      // "Open this campaign" — so a campaign past launch opens in play.
+      return <CampaignHomeScreen campaignId={route.campaignId} view={{ kind: 'home' }} />;
     case 'launch-overview':
       return <CampaignHomeScreen campaignId={route.campaignId} view={{ kind: 'overview' }} />;
     case 'launch-review':

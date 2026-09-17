@@ -112,12 +112,18 @@ export function LaunchReviewScreen({
       </dl>
 
       <div className={styles.actions}>
+        {/* `aria-disabled` rather than `disabled`, so the control stays in the
+            tab order and a keyboard user reaches the reason it names. A
+            `disabled` button is skipped entirely, which would have made the
+            `aria-describedby` below reach nobody. The click is guarded instead. */}
         <button
           type="button"
           className={styles.primary}
-          disabled={!review.launchEnabled || activate.isPending}
+          aria-disabled={!review.launchEnabled || activate.isPending}
           aria-describedby={review.launchEnabled ? undefined : 'launch-blocked'}
-          onClick={() => setConfirming(true)}
+          onClick={() => {
+            if (review.launchEnabled && !activate.isPending) setConfirming(true);
+          }}
         >
           Launch campaign
         </button>

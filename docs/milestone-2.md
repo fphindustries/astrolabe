@@ -745,6 +745,17 @@ implementation note.
   **4.3 is the shell.** The swearing character, sharing crew, rank and opening scene come from
   the accepted incident — `activateLaunch` takes only a `commandId` — so their pickers are
   9.3's and the review page shows them read-only.
+  **Which URL was asked for is part of 4.4's decision, not just the answer.** `/campaigns/:id`
+  means "open this campaign", so a closed one opens in play and says nothing about launch
+  (A43). A launch URL asked for a workspace that no longer exists and is told so, because a
+  bookmark that quietly rendered the play screen would be doing something other than what it
+  says (D-160, beat 12). The first version routed both the same way, which left the closed
+  panel unreachable and `closedReason` displayed nowhere — the review caught it, and the
+  entry point is now an argument to `campaignDestination` so a test can tell the two apart.
+  **Not verified, and 10.4 owns it:** the client activation path — the confirm dialog, the
+  201, and the handoff into play — is unexercised, because no campaign can reach `ready`
+  until groups 5–9 fill the sections. The server side is covered by 3R.7a and
+  `launch-activation.test.ts`.
   Verified with Postgres: 111 files, 1211 tests, zero skipped files. typecheck, lint,
   format:check and the web build clean. Browser pass at 1280x720: beat 1 end to end including
   save, leave, reopen and a process-independent reload; D-182's edit-then-accept sequence,
