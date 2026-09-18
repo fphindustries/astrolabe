@@ -1,3 +1,5 @@
+import { planetClassFromRow, settlementLocationFromRow } from '@astrolabe/rules';
+
 import { stubComplicationOptions } from './context/complication.js';
 import { stubSessionSummary } from './context/summary.js';
 import { stubWhatNow } from './context/what-now.js';
@@ -192,6 +194,12 @@ function devStubResponse(
   if (mode === 'structured' && request.purpose === 'starship_proposal') {
     return { kind: 'structured', value: stubStarshipProposal(request.user) };
   }
+  if (mode === 'structured' && request.purpose === 'settlement_proposal') {
+    return { kind: 'structured', value: stubSettlementProposal(request.user) };
+  }
+  if (mode === 'structured' && request.purpose === 'trouble_proposal') {
+    return { kind: 'structured', value: stubTroubleProposal(request.user) };
+  }
   if (mode === 'structured') {
     return {
       kind: 'error',
@@ -226,6 +234,65 @@ function stubStarshipProposal(user: string) {
       groundedIn: [key],
     })),
     reason: 'Stub proposal: the ship as the rolls describe it.',
+  };
+}
+
+/**
+ * A settlement that cites every roll it was given (8.0e), so the stubbed launch
+ * reaches an acceptance. What to answer is read off the rolls in the prompt:
+ * the location and planet class must be the rolled ones, and the schema wants
+ * exactly as many projects and first looks as were rolled.
+ */
+function stubSettlementProposal(user: string) {
+  const rolls = oracleRollsOf(user);
+  const rolled = (key: string) =>
+    new RegExp(`^- ${key} \\([^)]*\\): (.*)$`, 'm').exec(rolls)?.[1]?.trim();
+  const cite = (key: string, value: string) => ({
+    value,
+    reason: `Stub proposal: the ${key} roll.`,
+    groundedIn: [key],
+  });
+  const location = settlementLocationFromRow(rolled('location') ?? '') ?? 'deep_space';
+  const planetClass = planetClassFromRow(rolled('planet_class') ?? '');
+  const projects = ['project_1', 'project_2'].filter((key) => rolled(key) !== undefined);
+  const looks = ['first_look_1', 'first_look_2'].filter((key) => rolled(key) !== undefined);
+  return {
+    name: cite('name', rolled('name') ?? 'Stub Settlement'),
+    location: { ...cite('location', location), value: location },
+    population: cite('population', rolled('population') ?? 'Stub population'),
+    authority: cite('authority', rolled('authority') ?? 'Stub authority'),
+    projects: projects.map((key) => cite(key, rolled(key)!)),
+    planet:
+      planetClass === undefined
+        ? null
+        : {
+            planetClass: { ...cite('planet_class', planetClass), value: planetClass },
+            name: cite('planet_name', rolled('planet_name') ?? 'Stub World'),
+          },
+    firstLooks: looks.length === 0 ? null : looks.map((key) => cite(key, rolled(key)!)),
+    reason: 'Stub proposal: the settlement as the rolls describe it.',
+  };
+}
+
+/**
+ * The `<oracle_rolls>` block of a proposal prompt. The campaign block above it
+ * lists truths in the same `- key (label): text` shape, so reading the whole
+ * prompt would cite a truth as a roll.
+ */
+function oracleRollsOf(user: string): string {
+  return /<oracle_rolls>([\s\S]*?)<\/oracle_rolls>/.exec(user)?.[1] ?? '';
+}
+
+/** A trouble read straight off its roll (8.0e). */
+function stubTroubleProposal(user: string) {
+  const key = /^- (\S+) \(/m.exec(oracleRollsOf(user))?.[1] ?? 'trouble';
+  return {
+    text: {
+      value: 'Stub trouble, read off the roll.',
+      reason: 'Stub proposal: the trouble roll.',
+      groundedIn: [key],
+    },
+    reason: 'Stub proposal: the trouble as the roll describes it.',
   };
 }
 

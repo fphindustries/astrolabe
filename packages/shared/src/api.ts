@@ -26,6 +26,7 @@ import {
   LaunchRouteSchema,
   LaunchTroubleSchema,
   SharedStarshipSchema,
+  type CreationTargetKind,
   type LaunchAmendmentSubject,
 } from './events/launch.js';
 import {
@@ -998,6 +999,32 @@ export const ProposeStarshipRequestBodySchema = z.object({
 });
 export type ProposeStarshipRequestBody = z.infer<typeof ProposeStarshipRequestBodySchema>;
 
+/** `POST /campaigns/:id/settlement-proposals` (8.0e, D-196). */
+export const ProposeSettlementRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  /** The settlement's `draftId` before acceptance, or its `locationId` after. */
+  targetId: z.string().trim().min(1),
+  /** The `oracle.rolled` events from this campaign's settlement recipe rolls. */
+  groundedIn: z.array(EventIdSchema).min(1),
+  /** The fields the player wants help with. Steering only, never stored. */
+  fields: z.array(z.string().min(1)).optional(),
+});
+export type ProposeSettlementRequestBody = z.infer<typeof ProposeSettlementRequestBodySchema>;
+
+/** `POST /campaigns/:id/trouble-proposals` (8.0e, D-194). */
+export const ProposeTroubleRequestBodySchema = z.intersection(
+  z.object({
+    commandId: CommandIdSchema,
+    /** The `oracle.rolled` event of the trouble roll. */
+    groundedIn: z.array(EventIdSchema).min(1),
+  }),
+  z.discriminatedUnion('kind', [
+    z.object({ kind: z.literal('sector') }),
+    z.object({ kind: z.literal('settlement'), ownerId: EntityIdSchema }),
+  ]),
+);
+export type ProposeTroubleRequestBody = z.infer<typeof ProposeTroubleRequestBodySchema>;
+
 /** One server-rolled oracle result a proposal was grounded in (D-123). */
 export interface ProposalRoll {
   readonly eventId: EventId;
@@ -1108,6 +1135,43 @@ export type ProposeIncidentsResponse =
       readonly ok: true;
       readonly proposalEventId: EventId;
       readonly proposal: PayloadFor<'incident.proposed'>;
+      readonly rolls: readonly ProposalRoll[];
+    }
+  | {
+      readonly ok: false;
+      readonly errorKind: AiErrorKind;
+      readonly message: string;
+      readonly rolls: readonly ProposalRoll[];
+    };
+
+type ProposalFor<K extends CreationTargetKind> = Extract<
+  PayloadFor<'creation.proposed'>,
+  { readonly targetKind: K }
+>['proposal'];
+
+/** The Guide's settlement. Not canon: accepted through `saveLaunchLocation` (8.0f). */
+export type ProposeSettlementResponse =
+  | {
+      readonly ok: true;
+      readonly proposalEventId: EventId;
+      readonly targetId: string;
+      readonly proposal: ProposalFor<'settlement'>;
+      readonly rolls: readonly ProposalRoll[];
+    }
+  | {
+      readonly ok: false;
+      readonly errorKind: AiErrorKind;
+      readonly message: string;
+      readonly rolls: readonly ProposalRoll[];
+    };
+
+/** The Guide's reading of a rolled trouble. Not canon: accepted through `saveLaunchTrouble`. */
+export type ProposeTroubleResponse =
+  | {
+      readonly ok: true;
+      readonly proposalEventId: EventId;
+      readonly targetId: string;
+      readonly proposal: ProposalFor<'trouble'>;
       readonly rolls: readonly ProposalRoll[];
     }
   | {

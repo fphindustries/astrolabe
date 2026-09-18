@@ -8,7 +8,9 @@ import {
   ProposeAmountRequestBodySchema,
   ProposeCharacterRequestBodySchema,
   ProposeIncidentsRequestBodySchema,
+  ProposeSettlementRequestBodySchema,
   ProposeStarshipRequestBodySchema,
+  ProposeTroubleRequestBodySchema,
   ProposeTruthRequestBodySchema,
   SuggestMoveRequestBodySchema,
   SuggestActionsRequestBodySchema,
@@ -30,7 +32,9 @@ import {
   type ProposeAmountResponse,
   type ProposeCharacterResponse,
   type ProposeIncidentsResponse,
+  type ProposeSettlementResponse,
   type ProposeStarshipResponse,
+  type ProposeTroubleResponse,
   type ProposeTruthResponse,
   type SuggestMoveResponse,
   type CheckTriggerResponse,
@@ -51,7 +55,9 @@ import {
   proposeAmount,
   proposeCharacter,
   proposeIncidents,
+  proposeSettlement,
   proposeStarship,
+  proposeTrouble,
   proposeTruth,
   suggestMove,
   suggestActions,
@@ -564,6 +570,86 @@ export function registerAiRoutes(
           status,
         );
         // The same contract as every other proposal (D-116).
+        reply.code(201);
+        return result;
+      } catch (error) {
+        return refusal(error, reply);
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/settlement-proposals',
+    async (
+      request,
+      reply,
+    ): Promise<ProposeSettlementResponse | NarrationRefusalResponse | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
+        return undefined;
+      }
+      const parsedBody = ProposeSettlementRequestBodySchema.safeParse(request.body);
+      if (!parsedBody.success) {
+        reply.code(400);
+        return undefined;
+      }
+
+      try {
+        const result = await proposeSettlement(
+          sql,
+          ai,
+          {
+            ...dice,
+            campaignId: id,
+            commandId: parsedBody.data.commandId,
+            actor: PLAYER,
+            targetId: parsedBody.data.targetId,
+            groundedIn: parsedBody.data.groundedIn,
+            ...(parsedBody.data.fields === undefined ? {} : { fields: parsedBody.data.fields }),
+          },
+          status,
+        );
+        reply.code(201);
+        return result;
+      } catch (error) {
+        return refusal(error, reply);
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/trouble-proposals',
+    async (
+      request,
+      reply,
+    ): Promise<ProposeTroubleResponse | NarrationRefusalResponse | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
+        return undefined;
+      }
+      const parsedBody = ProposeTroubleRequestBodySchema.safeParse(request.body);
+      if (!parsedBody.success) {
+        reply.code(400);
+        return undefined;
+      }
+
+      try {
+        const body = parsedBody.data;
+        const base = {
+          ...dice,
+          campaignId: id,
+          commandId: body.commandId,
+          actor: PLAYER,
+          groundedIn: body.groundedIn,
+        };
+        const result = await proposeTrouble(
+          sql,
+          ai,
+          body.kind === 'sector'
+            ? { ...base, kind: 'sector' }
+            : { ...base, kind: 'settlement', ownerId: body.ownerId },
+          status,
+        );
         reply.code(201);
         return result;
       } catch (error) {

@@ -1,20 +1,35 @@
-import { rollOracle, STARFORGED, type OracleId, type RandomSource } from '@astrolabe/rules';
+import {
+  PLANET_CLASS_RECIPE,
+  planetClassFromRow,
+  rollOracle,
+  settlementLocationFromRow,
+  STARFORGED,
+  type OracleId,
+  type RandomSource,
+} from '@astrolabe/rules';
 import type {
   Actor,
   AstrolabeEvent,
   CampaignId,
   CampaignState,
   CommandId,
+  EntityId,
   EventId,
   EventType,
   PayloadFor,
   ProposalRoll,
   ProposeCharacterResponse,
   ProposeIncidentsResponse,
+  ProposeSettlementResponse,
   ProposeStarshipResponse,
+  ProposeTroubleResponse,
   ProposeTruthResponse,
 } from '@astrolabe/shared';
-import { STARSHIP_PROPOSAL_TARGET } from '@astrolabe/shared';
+import {
+  SECTOR_PROPOSAL_TARGET,
+  STARSHIP_PROPOSAL_TARGET,
+  troubleProposalTarget,
+} from '@astrolabe/shared';
 import type { Sql } from 'postgres';
 import type * as z from 'zod';
 
@@ -40,6 +55,18 @@ import {
   starshipProposalSchema,
   type StarshipProposalOutput,
 } from '../ai/context/starship.js';
+import {
+  buildSettlementProposalRequest,
+  buildTroubleProposalRequest,
+  checkSettlementProposal,
+  settlementProposalRolls,
+  settlementProposalSchema,
+  troubleProposalRolls,
+  troubleProposalSchema,
+  type SettlementProposalOutput,
+  type SettlementProposalShape,
+  type TroubleProposalOutput,
+} from '../ai/context/sector.js';
 import {
   buildTruthProposalRequest,
   checkTruthProposal,
@@ -644,6 +671,262 @@ export async function proposeStarship(
   return {
     ok: true,
     proposalEventId: outcome.event.id,
+    proposal: payload.proposal,
+    rolls: outcome.rolls,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Settlements and troubles (task 8.0e)
+// ---------------------------------------------------------------------------
+
+export interface ProposeSettlementRequest extends ProposalRequest {
+  /**
+   * What this proposal is about (D-196): the settlement's `draftId` while it
+   * is being built, or its `locationId` once accepted.
+   */
+  readonly targetId: string;
+  /** The `oracle.rolled` events from this campaign's settlement recipe rolls. */
+  readonly groundedIn: readonly EventId[];
+  /** The fields the player asked for help with. Steering only, never stored (6.3). */
+  readonly fields?: readonly string[];
+}
+
+/**
+ * Ask the Guide for one settlement (8.0e, D-166, D-196).
+ *
+ * The client rolls the settlement recipe for the sector's region, and, where
+ * it wants them, a planet's class and shallow recipe and the starting
+ * settlement's first looks, each through `rollLaunchRecipe`, and cites the
+ * results. What the proposal covers is read off what was cited: two project
+ * rolls ask for two projects, a class roll asks for a planet, first-look rolls
+ * ask for first looks. A proposal missing a slot of what it asked for is
+ * refused before the Guide is asked, rather than asking it to ground a field
+ * in nothing.
+ */
+export async function proposeSettlement(
+  sql: Sql,
+  ai: AiProvider,
+  request: ProposeSettlementRequest,
+  status?: AiStatus,
+): Promise<ProposeSettlementResponse> {
+  const events = await readEvents(sql, request.campaignId);
+  const state = project(events);
+  const closed = launchClosedReason(state);
+  if (closed !== undefined)
+    throw new AiRequestRefusedError(closed, 'Campaign Launch is closed for this campaign.');
+  const sector = state.launch.sector;
+  if (sector === undefined)
+    throw new AiRequestRefusedError(
+      'no_sector',
+      'Choose the sector’s region before its settlements.',
+    );
+  if (isReservedTarget(request.targetId))
+    throw new AiRequestRefusedError('invalid_target', 'That target belongs to another proposal.');
+  const accepted = state.launch.locations[request.targetId as EntityId];
+  if (accepted !== undefined && accepted.kind !== 'settlement')
+    throw new AiRequestRefusedError('invalid_target', 'Only a settlement can be proposed here.');
+
+  const cited = request.groundedIn.flatMap((id) => {
+    const event = events.find((candidate) => candidate.id === id);
+    return event?.type === 'oracle.rolled' ? [event] : [];
+  });
+  const count = (oracleId: string) =>
+    cited.filter((event) => event.payload.oracleId === oracleId).length;
+  const classOracle = PLANET_CLASS_RECIPE.rolls[0]!.oracle;
+  const classRoll = cited.find((event) => event.payload.oracleId === classOracle);
+  const planetClass =
+    classRoll === undefined ? undefined : planetClassFromRow(classRoll.payload.rowText);
+  const firstLooks = count('oracle:settlements/first-look');
+  if (firstLooks > 0 && request.targetId !== state.launch.startingSettlementId)
+    throw new AiRequestRefusedError(
+      'not_starting_settlement',
+      'First looks are for the starting settlement; choose it first.',
+    );
+  const shape: SettlementProposalShape = {
+    region: sector.region,
+    projectCount: count('oracle:settlements/projects') >= 2 ? 2 : 1,
+    ...(planetClass === undefined ? {} : { planetClass }),
+    ...(firstLooks === 0 ? {} : { firstLookCount: firstLooks >= 2 ? 2 : 1 }),
+  };
+  const slots = settlementProposalRolls(shape);
+  const provided = rollsForProposal(events, request.groundedIn, slots);
+  if (provided.length !== slots.length)
+    throw new AiRequestRefusedError(
+      'no_rolls',
+      'Roll the settlement’s prompts before asking the Guide.',
+    );
+  const location = settlementLocationFromRow(
+    provided.find((roll) => roll.key === 'location')?.rowText ?? '',
+  );
+  if (location === 'deep_space' && planetClass !== undefined)
+    throw new AiRequestRefusedError(
+      'deep_space_planet',
+      'A deep-space settlement has no planet; only planetside and orbital ones do.',
+    );
+  const keys = slots.map((slot) => slot.key);
+
+  const outcome = await runProposal<SettlementProposalOutput, 'creation.proposed'>(
+    sql,
+    ai,
+    request,
+    {
+      kind: PROPOSAL_COMMAND_KINDS[4],
+      contentType: 'creation.proposed',
+      rolls: slots,
+      provided,
+      build: (current, rolled) => ({
+        request: buildSettlementProposalRequest(current, rolled, request.fields),
+        schema: settlementProposalSchema(keys, shape),
+        check: (value) => checkSettlementProposal(value, rolled),
+      }),
+      toPayload: (value, eventIdOf) => {
+        const text = (field: {
+          readonly value: string;
+          readonly reason: string;
+          readonly groundedIn: readonly string[];
+        }) => ({
+          value: field.value,
+          reason: field.reason,
+          groundedIn: field.groundedIn.map(eventIdOf),
+        });
+        return {
+          targetKind: 'settlement',
+          targetId: request.targetId,
+          rationale: value.reason,
+          groundedIn: provided.map((roll) => roll.eventId),
+          proposal: {
+            name: text(value.name),
+            location: { ...value.location, groundedIn: value.location.groundedIn.map(eventIdOf) },
+            population: text(value.population),
+            authority: text(value.authority),
+            projects: value.projects.map(text),
+            ...(value.planet === null
+              ? {}
+              : {
+                  planet: {
+                    planetClass: {
+                      ...value.planet.planetClass,
+                      groundedIn: value.planet.planetClass.groundedIn.map(eventIdOf),
+                    },
+                    name: text(value.planet.name),
+                  },
+                }),
+            ...(value.firstLooks === null ? {} : { firstLooks: value.firstLooks.map(text) }),
+          },
+        };
+      },
+    },
+    status,
+  );
+
+  if (!outcome.ok) return outcome;
+  const payload = outcome.event.payload;
+  if (payload.targetKind !== 'settlement') {
+    throw new Error('A settlement proposal wrote a different target kind.');
+  }
+  return {
+    ok: true,
+    proposalEventId: outcome.event.id,
+    targetId: payload.targetId,
+    proposal: payload.proposal,
+    rolls: outcome.rolls,
+  };
+}
+
+/** Targets another kind of proposal is held under, which a settlement may not take. */
+function isReservedTarget(targetId: string): boolean {
+  return (
+    targetId === SECTOR_PROPOSAL_TARGET ||
+    targetId === STARSHIP_PROPOSAL_TARGET ||
+    targetId.startsWith('trouble:')
+  );
+}
+
+export type ProposeTroubleRequest = ProposalRequest & {
+  /** The `oracle.rolled` event of the trouble roll. */
+  readonly groundedIn: readonly EventId[];
+} & ({ readonly kind: 'sector' } | { readonly kind: 'settlement'; readonly ownerId: EntityId });
+
+/**
+ * Ask the Guide to interpret a rolled trouble (8.0e, beat 9, D-194).
+ *
+ * A settlement trouble belongs to an accepted settlement; a sector trouble to
+ * the sector. Either way the Guide sees the accepted truths, so what it
+ * proposes can coexist with them, and it may not settle a truth left open.
+ */
+export async function proposeTrouble(
+  sql: Sql,
+  ai: AiProvider,
+  request: ProposeTroubleRequest,
+  status?: AiStatus,
+): Promise<ProposeTroubleResponse> {
+  const events = await readEvents(sql, request.campaignId);
+  const state = project(events);
+  const closed = launchClosedReason(state);
+  if (closed !== undefined)
+    throw new AiRequestRefusedError(closed, 'Campaign Launch is closed for this campaign.');
+  let owner: { readonly name: string } | undefined;
+  if (request.kind === 'settlement') {
+    const location = state.launch.locations[request.ownerId];
+    if (location?.kind !== 'settlement')
+      throw new AiRequestRefusedError(
+        'invalid_target',
+        'A settlement trouble needs an accepted settlement.',
+      );
+    owner = location;
+  }
+
+  const slots = troubleProposalRolls(request.kind);
+  const provided = rollsForProposal(events, request.groundedIn, slots);
+  if (provided.length !== slots.length)
+    throw new AiRequestRefusedError('no_rolls', 'Roll the trouble before asking the Guide.');
+  const keys = slots.map((slot) => slot.key);
+  const trouble =
+    request.kind === 'sector'
+      ? ({ kind: 'sector' } as const)
+      : ({ kind: 'settlement', ownerId: request.ownerId } as const);
+
+  const outcome = await runProposal<TroubleProposalOutput, 'creation.proposed'>(
+    sql,
+    ai,
+    request,
+    {
+      kind: PROPOSAL_COMMAND_KINDS[5],
+      contentType: 'creation.proposed',
+      rolls: slots,
+      provided,
+      build: (current, rolled) => ({
+        request: buildTroubleProposalRequest(
+          current,
+          owner === undefined ? { kind: 'sector' } : { kind: 'settlement', settlement: owner.name },
+          rolled,
+        ),
+        schema: troubleProposalSchema(keys),
+      }),
+      toPayload: (value, eventIdOf) => ({
+        targetKind: 'trouble',
+        targetId: troubleProposalTarget(trouble),
+        rationale: value.reason,
+        groundedIn: provided.map((roll) => roll.eventId),
+        proposal: {
+          ...trouble,
+          text: { ...value.text, groundedIn: value.text.groundedIn.map(eventIdOf) },
+        },
+      }),
+    },
+    status,
+  );
+
+  if (!outcome.ok) return outcome;
+  const payload = outcome.event.payload;
+  if (payload.targetKind !== 'trouble') {
+    throw new Error('A trouble proposal wrote a different target kind.');
+  }
+  return {
+    ok: true,
+    proposalEventId: outcome.event.id,
+    targetId: payload.targetId,
     proposal: payload.proposal,
     rolls: outcome.rolls,
   };

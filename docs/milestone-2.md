@@ -805,7 +805,7 @@ proposal per object), D-197 (the map is hand-rolled SVG).
     winning. So a trouble proposal is held under `trouble:sector` or
     `trouble:<settlementId>`. Keyed by the settlement's own id, it would replace that
     settlement's proposal. The sample payloads use the truth arm, so none needed changing.
-  - [ ] **8.0e Settlement and trouble proposal routes (7.0e's shape).** Add
+  - [x] **8.0e Settlement and trouble proposal routes (7.0e's shape).** Add
     `settlement_proposal` and `trouble_proposal` purposes and a context builder in
     `ai/context/sector.ts` over accepted facts only: truths, the sector, and the accepted
     settlements, so a proposal does not duplicate them. No drafts (D-161). Add

@@ -245,6 +245,49 @@ describe.skipIf(!hasTestDatabase)('the Campaign Launch routes (3.1–3.9)', () =
     expect(refused.json()).toMatchObject({ reason: 'no_rolls' });
   });
 
+  it('asks the Guide for a settlement and a sector trouble from recipe rolls (8.0e)', async () => {
+    const id = await campaign();
+    await post(`/api/campaigns/${id}/launch/sector`, {
+      commandId: newId(),
+      sector: { name: 'Lantern Reach', region: 'expanse' },
+    });
+    const rolled = async (selector: object) =>
+      (
+        (
+          await post(`/api/campaigns/${id}/launch/recipe-rolls`, { commandId: newId(), selector })
+        ).json() as RollLaunchRecipeResponse
+      ).results.map((result) => result.eventId);
+    const settlement = await rolled({ kind: 'settlement', region: 'expanse', projectCount: 1 });
+
+    const asked = await post(`/api/campaigns/${id}/settlement-proposals`, {
+      commandId: newId(),
+      targetId: 'draft-1',
+      groundedIn: settlement,
+    });
+    expect(asked.statusCode).toBe(201);
+    const refused = await post(`/api/campaigns/${id}/settlement-proposals`, {
+      commandId: newId(),
+      targetId: 'draft-1',
+      groundedIn: settlement.slice(0, 1),
+    });
+    expect(refused.statusCode).toBe(422);
+    expect(refused.json()).toMatchObject({ reason: 'no_rolls' });
+
+    const trouble = await post(`/api/campaigns/${id}/trouble-proposals`, {
+      commandId: newId(),
+      kind: 'sector',
+      groundedIn: await rolled({ kind: 'sector_trouble' }),
+    });
+    expect(trouble.statusCode).toBe(201);
+    // A settlement trouble names its settlement, or the body is refused.
+    const ownerless = await post(`/api/campaigns/${id}/trouble-proposals`, {
+      commandId: newId(),
+      kind: 'settlement',
+      groundedIn: settlement,
+    });
+    expect(ownerless.statusCode).toBe(400);
+  });
+
   it('rejects a body the schema does not accept with 400, not 500', async () => {
     const id = await campaign();
 
