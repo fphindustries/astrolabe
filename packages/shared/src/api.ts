@@ -24,7 +24,8 @@ import {
   LaunchDraftSavedSchema,
   LaunchLocationDetailsSchema,
   LaunchRouteSchema,
-  LaunchTroubleSchema,
+  LaunchPlanetDetailsSchema,
+  LaunchTroubleDetailsSchema,
   SharedStarshipSchema,
   type CreationTargetKind,
   type LaunchAmendmentSubject,
@@ -354,9 +355,22 @@ export const LaunchSectorDetailsSchema = z.object({
 });
 export type LaunchSectorDetails = z.infer<typeof LaunchSectorDetailsSchema>;
 
+/**
+ * What accepting a proposal names, and the field rolls a player kept (8.0f).
+ *
+ * The proposal is named by event id and resolved against the fold, and the
+ * server decides whether it was edited (7.0c). `groundedIn` is the rolls
+ * behind fields the player rolled one at a time and kept (A41).
+ */
+const AcceptanceRequestFields = {
+  proposalEventId: EventIdSchema.optional(),
+  groundedIn: z.array(EventIdSchema).optional(),
+};
+
 export const ConfigureLaunchSectorRequestBodySchema = z.object({
   commandId: CommandIdSchema,
   sector: LaunchSectorDetailsSchema,
+  ...AcceptanceRequestFields,
 });
 export type ConfigureLaunchSectorRequestBody = z.infer<
   typeof ConfigureLaunchSectorRequestBodySchema
@@ -409,6 +423,20 @@ export const SaveLaunchLocationRequestBodySchema = z.object({
   /** The accepted node being revised. Absent to add one; the server mints its id (8.0a). */
   locationId: EntityIdSchema.optional(),
   location: LaunchLocationDetailsSchema,
+  /**
+   * A settlement's planet, accepted in the same command (8.0f): one decision,
+   * one command (D-105). `locationId` names the planet being revised.
+   */
+  planet: z
+    .object({
+      locationId: EntityIdSchema.optional(),
+      details: LaunchPlanetDetailsSchema,
+      groundedIn: z.array(EventIdSchema).optional(),
+    })
+    .optional(),
+  /** The key the proposal was made under: a `draftId`, or the `locationId` (D-196). */
+  proposalTargetId: z.string().min(1).optional(),
+  ...AcceptanceRequestFields,
 });
 export type SaveLaunchLocationRequestBody = z.infer<typeof SaveLaunchLocationRequestBodySchema>;
 export interface SaveLaunchLocationResponse {
@@ -440,7 +468,9 @@ export type SetSectorLayoutRequestBody = z.infer<typeof SetSectorLayoutRequestBo
 
 export const SaveLaunchTroubleRequestBodySchema = z.object({
   commandId: CommandIdSchema,
-  trouble: LaunchTroubleSchema,
+  /** No id: there is one sector trouble and one per settlement, so the owner says which (8.0f). */
+  trouble: LaunchTroubleDetailsSchema,
+  ...AcceptanceRequestFields,
 });
 export type SaveLaunchTroubleRequestBody = z.infer<typeof SaveLaunchTroubleRequestBodySchema>;
 export interface SaveLaunchTroubleResponse {

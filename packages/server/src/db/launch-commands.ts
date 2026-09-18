@@ -15,6 +15,7 @@ import {
 } from '@astrolabe/rules';
 import type {
   Actor,
+  AstrolabeEvent,
   CampaignId,
   CampaignState,
   CreationProposal,
@@ -24,6 +25,8 @@ import type {
   LaunchAmendmentSubject,
   LaunchClosedReason,
   LaunchLocationDetails,
+  LaunchPlanetDetails,
+  LaunchTroubleDetails,
   LaunchSectorDetails,
   LaunchRouteEndpoint,
   CampaignSettings,
@@ -49,13 +52,6 @@ import { buildLaunchWorkspace } from '../launch/workspace.js';
 
 import { appendCommand, readEvents, type AppendResult } from './event-store.js';
 import { uuidv7 } from './uuid.js';
-
-/**
- * A plain `Omit` over a discriminated union collapses it into one object and
- * loses the discriminant, which is how a settlement trouble's required
- * `ownerId` went missing from the command's own request type.
- */
-type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 
 /**
  * A launch command is closed two ways.
@@ -487,6 +483,10 @@ export interface ConfigureLaunchSectorRequest {
   readonly actor: Actor;
   /** What the player states; the id and baseline are the server's (8.0a). */
   readonly sector: DeepReadonly<LaunchSectorDetails>;
+  /** The sector-name proposal being accepted, if any; resolved against the fold (8.0f). */
+  readonly proposalEventId?: EventId;
+  /** Field rolls the player kept, such as a rolled name (A41). */
+  readonly groundedIn?: readonly EventId[];
 }
 
 export interface EstablishLaunchConnectionRequest {
@@ -524,6 +524,18 @@ export interface SaveLaunchLocationRequest {
   /** The accepted node being revised; absent to add one, whose id the server mints (8.0a). */
   readonly locationId?: EntityId;
   readonly location: DeepReadonly<LaunchLocationDetails>;
+  /** A settlement's planet, accepted in the same command (8.0f, D-105). */
+  readonly planet?: {
+    readonly locationId?: EntityId | undefined;
+    readonly details: DeepReadonly<LaunchPlanetDetails>;
+    readonly groundedIn?: readonly EventId[] | undefined;
+  };
+  /** The settlement proposal being accepted, if any; resolved against the fold (8.0f). */
+  readonly proposalEventId?: EventId;
+  /** The key that proposal was made under: a `draftId`, or the `locationId` (D-196). */
+  readonly proposalTargetId?: string;
+  /** Field rolls the player kept (A41). Each must be a recorded oracle roll. */
+  readonly groundedIn?: readonly EventId[];
 }
 
 export interface SaveLaunchRouteRequest {
@@ -544,55 +556,129 @@ export interface SaveLaunchTroubleRequest {
   readonly campaignId: CampaignId;
   readonly commandId: CommandId;
   readonly actor: Actor;
-  readonly trouble: DistributiveOmit<
-    PayloadFor<'trouble.established'>,
-    'provenance' | 'groundedIn'
-  >;
+  /** No id: the owner says which trouble this is, and the server keeps its id (8.0f). */
+  readonly trouble: DeepReadonly<LaunchTroubleDetails>;
+  /** The trouble proposal being accepted, if any; resolved against the fold (8.0f). */
+  readonly proposalEventId?: EventId;
+  /** The trouble roll, when the player kept a rolled result without the Guide (A41). */
+  readonly groundedIn?: readonly EventId[];
 }
 
+/**
+ * Accept or revise a trouble (8.0f).
+ *
+ * There is one sector trouble and one trouble per settlement, so the owner
+ * names the trouble and the server keeps its id: a revision cannot become a
+ * second trouble for the same place, which readiness would silently map over.
+ * Accepting a proposal names it, and whether the player edited the Guide's
+ * words is decided here (7.0c).
+ */
 export async function saveLaunchTrouble(
   sql: Sql,
   request: SaveLaunchTroubleRequest,
 ): Promise<AppendResult> {
-  const state = project(await readEvents(sql, request.campaignId));
+  const events = await readEvents(sql, request.campaignId);
+  const state = project(events);
   requireLaunchOpen(state, 'Troubles change by amendment after launch.');
-  // The schema now carries the shape rule — a settlement trouble has an owner
-  // and a sector trouble cannot — so only the owner's *existence* is checked
-  // here, which is campaign state and not something a schema can know.
+  // The schema carries the shape rule — a settlement trouble has an owner and
+  // a sector trouble cannot — so only the owner's *existence* is checked here,
+  // which is campaign state and not something a schema can know.
   if (
     request.trouble.kind === 'settlement' &&
-    (state.launch.locations[request.trouble.ownerId] as { readonly kind?: string } | undefined)
-      ?.kind !== 'settlement'
+    state.launch.locations[request.trouble.ownerId]?.kind !== 'settlement'
   ) {
     throw new LaunchRejectedError(
       'invalid_trouble_owner',
       'A settlement trouble needs an accepted settlement.',
     );
   }
-  const previous = state.launch.troubles[request.trouble.troubleId] as
-    { readonly eventId?: EventId } | undefined;
+  const trouble = request.trouble;
+  const previous = Object.values(state.launch.troubles).find((candidate) =>
+    candidate.kind === 'sector'
+      ? trouble.kind === 'sector'
+      : trouble.kind === 'settlement' && candidate.ownerId === trouble.ownerId,
+  );
+  const troubleId = previous?.troubleId ?? (uuidv7() as EntityId);
+  const kept = recordedRolls(events, request.groundedIn, 'A trouble');
+  const accepted =
+    request.proposalEventId === undefined
+      ? undefined
+      : acceptedTroubleProposal(state, trouble, request.proposalEventId);
   const acceptance = {
-    provenance: 'player_written' as const,
-    groundedIn: [] as EventId[],
-    ...(previous?.eventId === undefined ? {} : { supersedesEventId: previous.eventId }),
+    provenance: accepted?.provenance ?? ('player_written' as const),
+    groundedIn: [...new Set([...(accepted?.groundedIn ?? []), ...kept])],
+    ...(previous === undefined ? {} : { supersedesEventId: previous.eventId }),
   };
   // Rebuilt per branch rather than spread, so the discriminant stays narrow.
   const payload =
-    request.trouble.kind === 'settlement'
-      ? { ...request.trouble, ...acceptance }
-      : { ...request.trouble, ...acceptance };
+    trouble.kind === 'settlement'
+      ? {
+          kind: trouble.kind,
+          ownerId: trouble.ownerId,
+          text: trouble.text,
+          troubleId,
+          ...acceptance,
+        }
+      : { kind: trouble.kind, text: trouble.text, troubleId, ...acceptance };
   return appendCommand(sql, {
     campaignId: request.campaignId,
     commandId: request.commandId,
     kind: previous === undefined ? 'launch.trouble.establish' : 'launch.trouble.revise',
     actor: request.actor,
+    ...(accepted === undefined ? {} : { causedBy: accepted.eventId }),
     events: [
-      previous?.eventId === undefined
+      previous === undefined
         ? { type: 'trouble.established', payload }
         : { type: 'trouble.revised', payload },
     ],
-    response: { troubleId: request.trouble.troubleId },
+    response: { troubleId },
   });
+}
+
+/** The rolls a request cites, each checked as a recorded oracle roll (A41). */
+function recordedRolls(
+  events: readonly AstrolabeEvent[],
+  groundedIn: readonly EventId[] | undefined,
+  what: string,
+): readonly EventId[] {
+  const rolls = new Set(
+    events.filter((event) => event.type === 'oracle.rolled').map((event) => event.id),
+  );
+  if ((groundedIn ?? []).some((id) => !rolls.has(id)))
+    throw new LaunchRejectedError(
+      'invalid_grounding',
+      `${what} may cite only recorded oracle rolls.`,
+    );
+  return groundedIn ?? [];
+}
+
+type Acceptance = {
+  readonly eventId: EventId;
+  readonly provenance: 'guide_proposal' | 'guide_proposal_edited';
+  readonly groundedIn: readonly EventId[];
+};
+
+const sameWords = (proposed: string, accepted: string) => proposed.trim() === accepted.trim();
+
+/** What accepting a trouble proposal records (8.0f); `acceptedStarshipProposal`'s shape. */
+function acceptedTroubleProposal(
+  state: CampaignState,
+  trouble: DeepReadonly<LaunchTroubleDetails>,
+  proposalEventId: EventId,
+): Acceptance {
+  const { proposal } = heldProposal(
+    state,
+    troubleProposalTarget(trouble),
+    'trouble',
+    proposalEventId,
+    'That trouble proposal does not exist for this trouble.',
+  );
+  const kept = sameWords(proposal.text.value, trouble.text);
+  return {
+    eventId: proposalEventId,
+    provenance: kept ? 'guide_proposal' : 'guide_proposal_edited',
+    groundedIn: kept ? proposal.text.groundedIn : [],
+  };
 }
 
 export async function setStartingSettlement(
@@ -736,64 +822,225 @@ function routeKey(route: { readonly from: EntityId; readonly to: LaunchRouteEndp
  * fold already holds, so a request can neither invent an id nor split one node
  * into two by sending a fresh one. A revision keeps the node's kind: a trouble,
  * a route or a settlement's `planetId` may already rest on what it is.
+ *
+ * **A settlement and its planet are one decision (8.0f, D-105)**, so a request
+ * may carry the planet, and one command writes both, the planet first. The
+ * alternative made the player accept a planet before the settlement that is
+ * the reason for it. Accepting a Guide proposal names it by event id and by the
+ * key it was made under (D-196), and whether the player edited it is decided
+ * here, field by field (7.0c).
  */
 export async function saveLaunchLocation(
   sql: Sql,
   request: SaveLaunchLocationRequest,
 ): Promise<AppendResult> {
-  const state = project(await readEvents(sql, request.campaignId));
+  const events = await readEvents(sql, request.campaignId);
+  const state = project(events);
   requireLaunchOpen(state, 'Locations change by amendment after launch.');
   if (state.launch.sector === undefined)
     throw new LaunchRejectedError(
       'sector_required',
       'Configure the sector before adding locations.',
     );
-  const previous =
-    request.locationId === undefined ? undefined : state.launch.locations[request.locationId];
-  if (request.locationId !== undefined && previous === undefined)
-    throw new LaunchRejectedError(
-      'unknown_location',
-      'Only an accepted location can be revised; add a new one without an id.',
-    );
-  if (previous !== undefined && previous.kind !== request.location.kind)
-    throw new LaunchRejectedError(
-      'location_kind_changed',
-      `That location is a ${previous.kind}; a revision cannot make it a ${request.location.kind}.`,
-    );
+  const previous = revisedLocation(state, request.locationId, request.location.kind);
   const locationId = request.locationId ?? (uuidv7() as EntityId);
-  if (request.location.kind === 'settlement' && request.location.planetId !== undefined) {
+  const planet = request.planet;
+  if (planet !== undefined && request.location.kind !== 'settlement')
+    throw new LaunchRejectedError('planet_not_settlement', 'Only a settlement has a planet.');
+  if (planet !== undefined && request.location.kind === 'settlement' && request.location.planetId)
+    throw new LaunchRejectedError(
+      'planet_conflict',
+      'Name the planet once: accept it with the settlement, or link an accepted one.',
+    );
+  const planetPrevious =
+    planet === undefined ? undefined : revisedLocation(state, planet.locationId, 'planet');
+  const planetId = planet === undefined ? undefined : (planet.locationId ?? (uuidv7() as EntityId));
+  const location =
+    planetId === undefined || request.location.kind !== 'settlement'
+      ? request.location
+      : { ...request.location, planetId };
+  if (location.kind === 'settlement' && location.planetId !== undefined) {
     // A deep-space settlement has no world, so a planet link would be a fact
     // readiness never reads and the screen could never explain (8.0b).
-    if (request.location.location === 'deep_space')
+    if (location.location === 'deep_space')
       throw new LaunchRejectedError(
         'deep_space_planet',
         'A deep-space settlement has no planet; only planetside and orbital ones do.',
       );
-    if (state.launch.locations[request.location.planetId]?.kind !== 'planet')
+    if (planet === undefined && state.launch.locations[location.planetId]?.kind !== 'planet')
       throw new LaunchRejectedError(
         'unknown_planet',
         'A planetside settlement must reference an accepted planet.',
       );
   }
+  const kept = recordedRolls(events, request.groundedIn, 'A location');
+  const planetKept = recordedRolls(events, planet?.groundedIn, 'A planet');
+  let accepted: SettlementAcceptance | undefined;
+  if (request.proposalEventId !== undefined) {
+    const target = request.proposalTargetId ?? request.locationId;
+    if (location.kind !== 'settlement' || target === undefined)
+      throw new LaunchRejectedError(
+        'invalid_proposal_acceptance',
+        'Name the settlement proposal and the key it was made under.',
+      );
+    accepted = acceptedSettlementProposal(
+      state,
+      target,
+      request.proposalEventId,
+      location,
+      planet?.details,
+    );
+  }
+
+  const acceptance = (
+    provenance: Acceptance['provenance'] | undefined,
+    groundedIn: readonly EventId[],
+    superseded: { readonly eventId: EventId } | undefined,
+  ) => ({
+    provenance: provenance ?? ('player_written' as const),
+    groundedIn: [...new Set(groundedIn)],
+    ...(superseded === undefined ? {} : { supersedesEventId: superseded.eventId }),
+  });
+  const planetEvents =
+    planet === undefined || planetId === undefined
+      ? []
+      : [
+          {
+            type: planetPrevious === undefined ? 'location.added' : 'location.revised',
+            payload: {
+              ...planet.details,
+              id: planetId,
+              ...acceptance(
+                accepted?.planet?.provenance,
+                [...(accepted?.planet?.groundedIn ?? []), ...planetKept],
+                planetPrevious,
+              ),
+            },
+          } as const,
+        ];
   const payload: PayloadFor<'location.added'> = {
-    ...request.location,
+    ...location,
     id: locationId,
-    provenance: 'player_written' as const,
-    groundedIn: [],
-    ...(previous === undefined ? {} : { supersedesEventId: previous.eventId }),
+    ...acceptance(accepted?.provenance, [...(accepted?.groundedIn ?? []), ...kept], previous),
   };
   return appendCommand(sql, {
     campaignId: request.campaignId,
     commandId: request.commandId,
     kind: previous === undefined ? 'launch.location.add' : 'launch.location.revise',
     actor: request.actor,
+    ...(accepted === undefined ? {} : { causedBy: accepted.eventId }),
     events: [
+      ...planetEvents,
       previous === undefined
         ? { type: 'location.added', payload }
         : { type: 'location.revised', payload },
     ],
-    response: { locationId },
+    response: { locationId, ...(planetId === undefined ? {} : { planetId }) },
   });
+}
+
+/**
+ * The accepted node a request revises, or `undefined` for an add (8.0a). An id
+ * the fold does not hold, or a revision that changes the node's kind, is
+ * refused.
+ */
+function revisedLocation(
+  state: CampaignState,
+  locationId: EntityId | undefined,
+  kind: LaunchLocationDetails['kind'],
+): CampaignState['launch']['locations'][EntityId] | undefined {
+  if (locationId === undefined) return undefined;
+  const previous = state.launch.locations[locationId];
+  if (previous === undefined)
+    throw new LaunchRejectedError(
+      'unknown_location',
+      'Only an accepted location can be revised; add a new one without an id.',
+    );
+  if (previous.kind !== kind)
+    throw new LaunchRejectedError(
+      'location_kind_changed',
+      `That location is a ${previous.kind}; a revision cannot make it a ${kind}.`,
+    );
+  return previous;
+}
+
+type SettlementAcceptance = Acceptance & {
+  /** The planet's own acceptance, when the proposal carried one and the request accepts one. */
+  readonly planet?: Omit<Acceptance, 'eventId'>;
+};
+
+/**
+ * What accepting a settlement proposal records (8.0f, D-196).
+ *
+ * Field by field, as for the ship (7.0c): the grounding is the rolls behind
+ * each field the player **kept**, and any field changed, dropped or added
+ * makes the whole acceptance `guide_proposal_edited`. The planet is judged on
+ * its own, because it is written as its own fact: a player who kept the
+ * Guide's planet but renamed the settlement accepted the planet unedited.
+ */
+function acceptedSettlementProposal(
+  state: CampaignState,
+  targetId: string,
+  proposalEventId: EventId,
+  settlement: Extract<DeepReadonly<LaunchLocationDetails>, { readonly kind: 'settlement' }>,
+  planet: DeepReadonly<LaunchPlanetDetails> | undefined,
+): SettlementAcceptance {
+  const { proposal } = heldProposal(
+    state,
+    targetId,
+    'settlement',
+    proposalEventId,
+    'That settlement proposal does not exist for this settlement.',
+  );
+  const grounded: EventId[] = [];
+  let edited = false;
+  const keep = (
+    proposed: { readonly value: string; readonly groundedIn: readonly EventId[] },
+    accepted: string,
+  ) => {
+    if (sameWords(proposed.value, accepted)) grounded.push(...proposed.groundedIn);
+    else edited = true;
+  };
+  const keepList = (
+    proposed: readonly { readonly value: string; readonly groundedIn: readonly EventId[] }[],
+    accepted: readonly string[],
+  ) => {
+    for (const item of proposed) {
+      if (accepted.some((words) => sameWords(item.value, words))) grounded.push(...item.groundedIn);
+      else edited = true;
+    }
+    if (accepted.length !== proposed.length) edited = true;
+  };
+  keep(proposal.name, settlement.name);
+  keep(proposal.location, settlement.location);
+  keep(proposal.population, settlement.population);
+  keep(proposal.authority, settlement.authority);
+  keepList(proposal.projects, settlement.projects);
+  keepList(proposal.firstLooks ?? [], settlement.firstLooks ?? []);
+
+  let planetAcceptance: SettlementAcceptance['planet'];
+  if (proposal.planet === undefined) {
+    if (planet !== undefined) edited = true;
+  } else if (planet === undefined) {
+    edited = true;
+  } else {
+    const keptClass = proposal.planet.planetClass.value === planet.planetClass;
+    const keptName = sameWords(proposal.planet.name.value, planet.name);
+    if (!keptClass || !keptName) edited = true;
+    planetAcceptance = {
+      provenance: keptClass && keptName ? 'guide_proposal' : 'guide_proposal_edited',
+      groundedIn: [
+        ...(keptClass ? proposal.planet.planetClass.groundedIn : []),
+        ...(keptName ? proposal.planet.name.groundedIn : []),
+      ],
+    };
+  }
+  return {
+    eventId: proposalEventId,
+    provenance: edited ? 'guide_proposal_edited' : 'guide_proposal',
+    groundedIn: grounded,
+    ...(planetAcceptance === undefined ? {} : { planet: planetAcceptance }),
+  };
 }
 
 /** Post-launch canon changes are explicit amendments, never draft rewrites. */
@@ -1051,8 +1298,26 @@ export async function configureLaunchSector(
   sql: Sql,
   request: ConfigureLaunchSectorRequest,
 ): Promise<AppendResult> {
-  const state = project(await readEvents(sql, request.campaignId));
+  const events = await readEvents(sql, request.campaignId);
+  const state = project(events);
   requireLaunchOpen(state, 'The sector changes by amendment after launch.');
+  const kept = recordedRolls(events, request.groundedIn, 'A sector');
+  let accepted: Acceptance | undefined;
+  if (request.proposalEventId !== undefined) {
+    const { proposal } = heldProposal(
+      state,
+      SECTOR_PROPOSAL_TARGET,
+      'sector',
+      request.proposalEventId,
+      'That sector proposal does not exist for this campaign.',
+    );
+    const keptName = sameWords(proposal.name.value, request.sector.name);
+    accepted = {
+      eventId: request.proposalEventId,
+      provenance: keptName ? 'guide_proposal' : 'guide_proposal_edited',
+      groundedIn: keptName ? proposal.name.groundedIn : [],
+    };
+  }
   // D-195: the optional star belongs to the sector, and is an accepted star.
   if (
     request.sector.starId !== undefined &&
@@ -1067,6 +1332,7 @@ export async function configureLaunchSector(
     commandId: request.commandId,
     kind: previous === undefined ? 'launch.sector.configure' : 'launch.sector.revise',
     actor: request.actor,
+    ...(accepted === undefined ? {} : { causedBy: accepted.eventId }),
     events: [
       {
         type: 'sector.configured',
@@ -1076,8 +1342,8 @@ export async function configureLaunchSector(
           region: request.sector.region,
           baseline: { settlements, passages },
           ...(request.sector.starId === undefined ? {} : { starId: request.sector.starId }),
-          provenance: 'player_written',
-          groundedIn: [],
+          provenance: accepted?.provenance ?? 'player_written',
+          groundedIn: [...new Set([...(accepted?.groundedIn ?? []), ...kept])],
           ...(previous === undefined ? {} : { supersedesEventId: previous.eventId }),
         },
       },

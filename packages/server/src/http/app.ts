@@ -597,14 +597,18 @@ export function buildApp({
         return undefined;
       }
       try {
-        await saveLaunchTrouble(sql, {
+        const result = await saveLaunchTrouble(sql, {
           campaignId: id,
           commandId: parsed.data.commandId,
           actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
           trouble: parsed.data.trouble,
+          ...(parsed.data.proposalEventId === undefined
+            ? {}
+            : { proposalEventId: parsed.data.proposalEventId }),
+          ...(parsed.data.groundedIn === undefined ? {} : { groundedIn: parsed.data.groundedIn }),
         });
         reply.code(201);
-        return { troubleId: parsed.data.trouble.troubleId };
+        return result.response as SaveLaunchTroubleResponse;
       } catch (error) {
         if (error instanceof LaunchRejectedError) {
           reply.code(422);
@@ -731,6 +735,14 @@ export function buildApp({
           actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
           ...(parsed.data.locationId === undefined ? {} : { locationId: parsed.data.locationId }),
           location: parsed.data.location,
+          ...(parsed.data.planet === undefined ? {} : { planet: parsed.data.planet }),
+          ...(parsed.data.proposalTargetId === undefined
+            ? {}
+            : { proposalTargetId: parsed.data.proposalTargetId }),
+          ...(parsed.data.proposalEventId === undefined
+            ? {}
+            : { proposalEventId: parsed.data.proposalEventId }),
+          ...(parsed.data.groundedIn === undefined ? {} : { groundedIn: parsed.data.groundedIn }),
         });
         reply.code(201);
         return result.response as SaveLaunchLocationResponse;
@@ -992,6 +1004,10 @@ export function buildApp({
           commandId: parsed.data.commandId,
           actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
           sector: parsed.data.sector,
+          ...(parsed.data.proposalEventId === undefined
+            ? {}
+            : { proposalEventId: parsed.data.proposalEventId }),
+          ...(parsed.data.groundedIn === undefined ? {} : { groundedIn: parsed.data.groundedIn }),
         });
         reply.code(201);
         return result.response as ConfigureLaunchSectorResponse;

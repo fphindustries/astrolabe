@@ -815,7 +815,7 @@ proposal per object), D-197 (the map is hand-rolled SVG).
     recipe. Field-level help is the same command with a requested-field list (6.3's shape).
     A trouble proposal carries the accepted truths, so beat 9's "can coexist with the
     selected truths" has something to be checked against.
-  - [ ] **8.0f Proposal-aware acceptance (7.0c again).** `configureLaunchSector`,
+  - [x] **8.0f Proposal-aware acceptance (7.0c again).** `configureLaunchSector`,
     `saveLaunchLocation` and `saveLaunchTrouble` stop hardcoding `player_written` and
     `groundedIn: []`. Acceptance names the proposal event, and `heldProposal` resolves it,
     so there is still one mechanism. The server decides `guide_proposal` or
@@ -824,7 +824,12 @@ proposal per object), D-197 (the map is hand-rolled SVG).
     recorded `oracle.rolled` events. `saveLaunchRoute` stays `player_written`, because
     nothing proposes a passage (D-196). **A settlement and its planet are one decision**, so
     one command writes both `location.added` events (D-105's rule). Otherwise the player
-    must accept a planet before the settlement that is the reason for it.
+    must accept a planet before the settlement that is the reason for it. *Found while
+    implementing:* `saveLaunchTrouble` took the trouble id from the client, which is 8.0a's
+    defect in the one aggregate 8.0a did not name. There is one sector trouble and one per
+    settlement, so the owner now names the trouble and the server keeps its id. A second
+    write revises the first instead of adding a trouble that readiness would silently map
+    over.
   - [ ] **8.0g Removal commands (the missing half of 3R.9a).** Add `removeLaunchLocation`
     and `removeLaunchRoute`, with routes, guarded by `requireLaunchOpen`. A location
     removal is refused while a retained fact references it: a route, the starting-settlement

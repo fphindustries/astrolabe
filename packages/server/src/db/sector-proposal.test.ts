@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { STARFORGED, type LaunchRecipeSelector } from '@astrolabe/rules';
 import {
   LOCAL_PLAYER_ID,
+  SECTOR_PROPOSAL_TARGET,
   type Actor,
   type CampaignId,
   type CommandId,
@@ -21,7 +22,9 @@ import {
   decideTruth,
   rollLaunchRecipe,
   saveLaunchDraft,
+  proposeLaunchCreation,
   saveLaunchLocation,
+  saveLaunchTrouble,
   setStartingSettlement,
 } from './launch-commands.js';
 import { AiRequestRefusedError } from './narration-commands.js';
@@ -308,5 +311,226 @@ describe.skipIf(!hasTestDatabase)('proposing a settlement or a trouble (8.0e)', 
         groundedIn,
       }),
     ).rejects.toBeInstanceOf(AiRequestRefusedError);
+  });
+  // 8.0f — acceptance names the proposal, and the server decides whether it was edited.
+  describe('accepting a sector proposal (8.0f)', () => {
+    async function proposedSettlement(campaignId: CampaignId) {
+      const result = await proposeSettlement(db.sql, devStub(), {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        targetId: 'draft-deepwater',
+        groundedIn: await planetsideRolls(campaignId),
+      });
+      if (!result.ok) throw new Error('expected a proposal');
+      return result;
+    }
+
+    it('writes the settlement and its planet in one command, as proposed', async () => {
+      const campaignId = await campaign();
+      const { proposal, proposalEventId } = await proposedSettlement(campaignId);
+
+      const saved = await saveLaunchLocation(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        location: {
+          kind: 'settlement',
+          name: proposal.name.value,
+          location: proposal.location.value,
+          population: proposal.population.value,
+          authority: proposal.authority.value,
+          projects: proposal.projects.map((project) => project.value),
+        },
+        planet: {
+          details: {
+            kind: 'planet',
+            name: proposal.planet!.name.value,
+            planetClass: proposal.planet!.planetClass.value,
+            details: {},
+          },
+        },
+        proposalEventId,
+        proposalTargetId: 'draft-deepwater',
+      });
+
+      // One decision, one command (D-105): the planet first, then its settlement.
+      expect(saved.events.map((event) => event.type)).toEqual(['location.added', 'location.added']);
+      expect(saved.events.every((event) => event.causedBy === proposalEventId)).toBe(true);
+      const { locationId, planetId } = saved.response as {
+        locationId: EntityId;
+        planetId: EntityId;
+      };
+      const state = project(await readEvents(db.sql, campaignId));
+      expect(state.launch.locations[locationId]).toMatchObject({
+        provenance: 'guide_proposal',
+        planetId,
+      });
+      expect(state.launch.locations[planetId]).toMatchObject({
+        kind: 'planet',
+        provenance: 'guide_proposal',
+        groundedIn: [
+          ...proposal.planet!.planetClass.groundedIn,
+          ...proposal.planet!.name.groundedIn,
+        ],
+      });
+      // Every settlement field was kept, so every one of its rolls grounds it (A41).
+      const settlementRolls = [
+        proposal.name,
+        proposal.location,
+        proposal.population,
+        proposal.authority,
+        ...proposal.projects,
+      ].flatMap((field) => field.groundedIn);
+      expect(state.launch.locations[locationId]?.groundedIn).toEqual(settlementRolls);
+    });
+
+    it('records an edited field as edited, and drops the roll behind it', async () => {
+      const campaignId = await campaign();
+      const { proposal, proposalEventId } = await proposedSettlement(campaignId);
+
+      const saved = await saveLaunchLocation(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        location: {
+          kind: 'settlement',
+          name: 'Deepwater Anchorage',
+          location: proposal.location.value,
+          population: proposal.population.value,
+          authority: proposal.authority.value,
+          projects: proposal.projects.map((project) => project.value),
+        },
+        planet: {
+          details: {
+            kind: 'planet',
+            name: proposal.planet!.name.value,
+            planetClass: proposal.planet!.planetClass.value,
+            details: {},
+          },
+        },
+        proposalEventId,
+        proposalTargetId: 'draft-deepwater',
+      });
+
+      const { locationId, planetId } = saved.response as {
+        locationId: EntityId;
+        planetId: EntityId;
+      };
+      const state = project(await readEvents(db.sql, campaignId));
+      const settlement = state.launch.locations[locationId]!;
+      expect(settlement.provenance).toBe('guide_proposal_edited');
+      expect(settlement.groundedIn).not.toContain(proposal.name.groundedIn[0]);
+      // The planet was kept as proposed, so it is judged on its own.
+      expect(state.launch.locations[planetId]?.provenance).toBe('guide_proposal');
+    });
+
+    it('refuses a proposal named under the wrong key', async () => {
+      const campaignId = await campaign();
+      const { proposalEventId } = await proposedSettlement(campaignId);
+
+      await expect(
+        saveLaunchLocation(db.sql, {
+          campaignId,
+          commandId: newId<CommandId>(),
+          actor: PLAYER,
+          location: {
+            kind: 'settlement',
+            name: 'Elsewhere',
+            location: 'deep_space',
+            population: 'Few',
+            authority: 'None',
+            projects: ['Waiting'],
+          },
+          proposalEventId,
+          proposalTargetId: 'draft-other',
+        }),
+      ).rejects.toMatchObject({ reason: 'unknown_proposal' });
+    });
+
+    it('accepts a trouble proposal as edited, and revises the same trouble after', async () => {
+      const campaignId = await campaign();
+      const [trouble] = await roll(campaignId, { kind: 'sector_trouble' });
+      const result = await proposeTrouble(db.sql, devStub(), {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        kind: 'sector',
+        groundedIn: [trouble!],
+      });
+      if (!result.ok) throw new Error('expected a proposal');
+
+      const first = await saveLaunchTrouble(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        trouble: { kind: 'sector', text: 'Blockade, as the crew heard it.' },
+        proposalEventId: result.proposalEventId,
+      });
+      const second = await saveLaunchTrouble(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        trouble: { kind: 'sector', text: 'Blockade, worse than rumoured.' },
+      });
+
+      // The owner names the trouble, so the second write revises the first (8.0f).
+      expect(second.response).toEqual(first.response);
+      expect(second.events[0]?.type).toBe('trouble.revised');
+      const troubles = Object.values(project(await readEvents(db.sql, campaignId)).launch.troubles);
+      expect(troubles).toHaveLength(1);
+      expect(first.events[0]).toMatchObject({
+        causedBy: result.proposalEventId,
+        payload: { provenance: 'guide_proposal_edited', groundedIn: [] },
+      });
+    });
+
+    it('accepts the sector name the Guide proposed, with its rolls', async () => {
+      const campaignId = await campaign();
+      const rolls = await roll(campaignId, { kind: 'sector_name' });
+      await proposeLaunchCreation(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        proposal: {
+          targetKind: 'sector',
+          proposal: { name: { value: 'Ashen Anvil', reason: 'The two rolls.', groundedIn: rolls } },
+        },
+        targetId: SECTOR_PROPOSAL_TARGET,
+        rationale: 'A name for the reach.',
+        groundedIn: rolls,
+      });
+      const proposalEventId = project(await readEvents(db.sql, campaignId)).launch.proposals[
+        SECTOR_PROPOSAL_TARGET
+      ]!.eventId;
+
+      await configureLaunchSector(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        sector: { name: 'Ashen Anvil', region: 'outlands' },
+        proposalEventId,
+      });
+
+      expect(project(await readEvents(db.sql, campaignId)).launch.sector).toMatchObject({
+        name: 'Ashen Anvil',
+        provenance: 'guide_proposal',
+        groundedIn: rolls,
+      });
+    });
+
+    it('refuses field rolls that are not recorded oracle rolls (A41)', async () => {
+      const campaignId = await campaign();
+
+      await expect(
+        saveLaunchTrouble(db.sql, {
+          campaignId,
+          commandId: newId<CommandId>(),
+          actor: PLAYER,
+          trouble: { kind: 'sector', text: 'Written.' },
+          groundedIn: [newId<EventId>()],
+        }),
+      ).rejects.toMatchObject({ reason: 'invalid_grounding' });
+    });
   });
 });

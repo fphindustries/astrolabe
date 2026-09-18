@@ -199,6 +199,9 @@ const LOCATION_DETAIL_ARMS = [
 ] as const;
 export const LaunchLocationDetailsSchema = z.discriminatedUnion('kind', LOCATION_DETAIL_ARMS);
 export type LaunchLocationDetails = z.infer<typeof LaunchLocationDetailsSchema>;
+/** A planet's details alone, for the planet accepted with its settlement (8.0f). */
+export const LaunchPlanetDetailsSchema = LOCATION_DETAIL_ARMS[1];
+export type LaunchPlanetDetails = z.infer<typeof LaunchPlanetDetailsSchema>;
 const withId = <T extends z.ZodRawShape>(arm: z.ZodObject<T>) => arm.extend({ id: EntityIdSchema });
 export const LaunchLocationSchema = z.discriminatedUnion('kind', [
   withId(LOCATION_DETAIL_ARMS[0]),
@@ -232,6 +235,16 @@ export const LaunchTroubleSchema = z.discriminatedUnion('kind', [
   SettlementTroubleSchema,
   SectorTroubleSchema,
 ]);
+/**
+ * What the player states about a trouble, without its id (8.0f). The id is
+ * the server's: there is one sector trouble and one trouble per settlement,
+ * so the owner already says which trouble a write revises.
+ */
+export const LaunchTroubleDetailsSchema = z.discriminatedUnion('kind', [
+  SettlementTroubleSchema.pick({ kind: true, ownerId: true, text: true }),
+  SectorTroubleSchema.pick({ kind: true, text: true }),
+]);
+export type LaunchTroubleDetails = z.infer<typeof LaunchTroubleDetailsSchema>;
 const ConnectionSchema = z.object({
   connectionId: EntityIdSchema,
   npcId: EntityIdSchema,

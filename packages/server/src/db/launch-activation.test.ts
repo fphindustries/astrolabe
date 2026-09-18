@@ -186,7 +186,7 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
       actor: PLAYER,
       trouble: {
         kind: 'settlement',
-        troubleId: newId<EntityId>(),
+
         ownerId: emberHold,
         text: 'The dock crews have not been paid in three cycles.',
       },
@@ -197,7 +197,7 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
       actor: PLAYER,
       trouble: {
         kind: 'sector',
-        troubleId: newId<EntityId>(),
+
         text: 'The relay grid is failing, one node at a time.',
       },
     });
@@ -450,7 +450,7 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
         actor: PLAYER,
         trouble: {
           kind: 'sector',
-          troubleId: newId<EntityId>(),
+
           text: 'A late addition.',
         },
       }),
