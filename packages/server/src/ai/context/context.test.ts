@@ -3,9 +3,11 @@ import type { AstrolabeEvent, CampaignSettings, EventId } from '@astrolabe/share
 import { describe, expect, it } from 'vitest';
 
 import {
+  character,
   goldenSessionPrelude,
   PLAYER_ACTOR,
   ROOK,
+  VESNA,
   AI_ACTOR,
   type LogBuilder,
 } from '../../projection/fixtures.js';
@@ -620,6 +622,49 @@ describe('renderState (task 7.4)', () => {
 
     expect(text).toContain('Setting truths:');
     expect(text).toContain('- Cataclysm: The Sun Plague extinguished the stars.');
+  });
+
+  // 7.0h: the same defect as D-183, for the ship.
+  it('carries the launched ship into play narration, with each module’s owner', () => {
+    const text = renderState(
+      project(
+        goldenSessionPrelude()
+          .add('character.revised', {
+            characterId: VESNA,
+            character: {
+              ...character(VESNA, 'Vesna Kade', 7),
+              assets: ['asset:module/sensor-array' as never],
+              appearance: 'A flight jacket.',
+              backstory: { kind: 'discover_in_play' },
+              backgroundVow: { title: 'Chart the Drift', rank: 'formidable' },
+            },
+            provenance: 'player_written',
+            groundedIn: [],
+          })
+          .add('starship.established', {
+            starshipId: 'aaaa8888-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as never,
+            name: 'Lantern Wake',
+            appearance: 'A patched hull.',
+            history: 'Won in a wager.',
+            quirks: ['Its clocks run slow.'],
+            integrity: { value: 5, min: 0, max: 5 },
+            assetId: 'asset:command-vehicle/starship' as never,
+            provenance: 'player_written',
+            groundedIn: [],
+          })
+          .build(),
+      ),
+    );
+
+    expect(text).toContain(
+      "The crew's shared starship: Lantern Wake, integrity 5 of 5 - A patched hull.; " +
+        'history: Won in a wager.; quirks: Its clocks run slow.; ' +
+        "installed modules: Sensor Array (Vesna Kade's).",
+    );
+  });
+
+  it('says nothing about a ship a campaign never established', () => {
+    expect(renderState(project(goldenSessionPrelude().build()))).not.toContain('starship');
   });
 
   it('carries a Milestone 1 campaign’s truths too, through the same read (D-183)', () => {

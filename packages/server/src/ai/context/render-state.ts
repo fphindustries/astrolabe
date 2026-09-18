@@ -1,4 +1,4 @@
-import { STARFORGED } from '@astrolabe/rules';
+import { installedModules, STARFORGED } from '@astrolabe/rules';
 import type { CampaignState } from '@astrolabe/shared';
 
 /**
@@ -19,6 +19,31 @@ import type { CampaignState } from '@astrolabe/shared';
  * a dash, which is two prompts for one rule.
  */
 export const TRUTH_LEFT_OPEN = 'deliberately left open — do not settle it';
+
+/**
+ * The crew's ship in one line, or undefined before it is established.
+ *
+ * Shared by play context and incident context, for `TRUTH_LEFT_OPEN`'s
+ * reason: one fact, one spelling. Installed modules are derived from the crew
+ * (D-191) and named with their owner (D-190). The integrity is the projected
+ * value, so play narration sees damage once anything writes it.
+ */
+export function renderStarship(state: CampaignState): string | undefined {
+  const ship = state.launch.starship;
+  if (ship === undefined) return undefined;
+  const modules = installedModules(Object.values(state.characters), STARFORGED).map((module) => {
+    const name = STARFORGED.assets.find((asset) => asset.id === module.assetId)?.name;
+    const owner = Object.values(state.characters).find(
+      (character) => character.id === module.ownerCharacterId,
+    )?.name;
+    return `${name ?? module.assetId} (${owner ?? 'unknown'}'s)`;
+  });
+  return (
+    `${ship.name}, integrity ${ship.integrity.value} of ${ship.integrity.max} - ${ship.appearance}; ` +
+    `history: ${ship.history}; quirks: ${ship.quirks.join(' / ')}` +
+    (modules.length > 0 ? `; installed modules: ${modules.join(', ')}` : '')
+  );
+}
 
 export function renderState(state: CampaignState): string {
   const sections: string[] = [];
@@ -65,6 +90,14 @@ export function renderState(state: CampaignState): string {
   });
   if (crew.length > 0) {
     sections.push(`The crew:\n${crew.join('\n')}`);
+  }
+
+  // 7.0h: D-183's defect again, for the ship. Play context read no
+  // `launch.starship`, so a launched campaign was narrated by a Guide that did
+  // not know the crew's ship by name.
+  const ship = renderStarship(state);
+  if (ship !== undefined) {
+    sections.push(`The crew's shared starship: ${ship}.`);
   }
 
   const tracks = Object.values(state.tracks).map((t) =>

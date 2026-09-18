@@ -6,7 +6,7 @@ import type { AiRequest } from '../provider.js';
 
 import { NARRATOR_RULES, rubricText } from './authority-rubric.js';
 import type { RolledForProposal } from './creation.js';
-import { TRUTH_LEFT_OPEN } from './render-state.js';
+import { renderStarship, TRUTH_LEFT_OPEN } from './render-state.js';
 
 /**
  * AI-proposed inciting incidents' prompt (task 4.6, D-132–D-134). Pure, like
@@ -247,11 +247,9 @@ export function renderSetup(state: CampaignState): string {
 
   // D-168's remaining accepted facts. Each says plainly when it is absent,
   // for the same reason the sections above do (D-133).
-  const ship = state.launch.starship;
+  const ship = renderStarship(state);
   sections.push(
-    ship === undefined
-      ? 'The starship: not established yet.'
-      : `The starship: ${ship.name} - ${ship.appearance}; history: ${ship.history}; quirks: ${ship.quirks.join(' / ')}`,
+    ship === undefined ? 'The starship: not established yet.' : `The starship: ${ship}`,
   );
 
   const troubles = Object.values(state.launch.troubles).map(

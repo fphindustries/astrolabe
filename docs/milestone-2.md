@@ -634,7 +634,7 @@ Decisions behind this group: D-190 (a module keeps its owner, the crew uses it),
 (installed modules are derived from the crew), D-192 (shared abilities are shown, not
 automated), D-193 (the legacy grant is neutralized in projection).
 
-- [ ] 7.0 Prerequisites found while planning group 7. Each starts with its failing test
+- [x] 7.0 Prerequisites found while planning group 7. Each starts with its failing test
   (3R.1a's pattern). **Before the first schema change lands** (7.0d, 7.0f, 7.0i), update
   `design-event-log.md`: the `creation.proposed` starship arm, `starshipHistory` in §8, and
   the `starship.established` and `character.removed` rows that D-191 corrects.
@@ -682,7 +682,7 @@ automated), D-193 (the legacy grant is neutralized in projection).
     `SharedStarshipSchema.partial()`, whose inner `min(1)` and quirk bounds refuse a draft
     that has one quirk blank. Loosen it as 6.0e did for crew. D-182's precedence is
     per section, because there is one ship.
-  - [ ] **7.0h Play context knows the ship.** `renderState` reads no `launch.starship`, so a
+  - [x] **7.0h Play context knows the ship.** `renderState` reads no `launch.starship`, so a
     launched campaign would be narrated by a Guide that does not know the *Lantern Wake* by
     name. This is D-183's defect again. Render name, appearance, history, quirks, integrity
     and installed modules with their owners. Assert that each one arrives.
