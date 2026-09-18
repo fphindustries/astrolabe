@@ -369,11 +369,27 @@ export interface LaunchState {
    */
   readonly starshipHistory: readonly AcceptedStarship[];
   readonly sector?: Accepted<'sector.configured'>;
+  /**
+   * The sector's superseded versions, oldest first (8.0h, A40): `truthHistory`'s
+   * job for the one sector, whose region and name are revised in place.
+   */
+  readonly sectorHistory: readonly Accepted<'sector.configured'>[];
   readonly locations: Readonly<Record<EntityId, Accepted<'location.added'>>>;
+  /**
+   * Each location's superseded versions, oldest first (8.0h, A40), and a
+   * removed location's final version, so what was removed stays answerable
+   * as `crewHistory` keeps a removed crew member's. Bounded as the other
+   * histories are, by deliberate pre-activation acts of one local user.
+   */
+  readonly locationHistory: Readonly<Record<EntityId, readonly Accepted<'location.added'>[]>>;
   readonly routes: readonly Accepted<'route.added'>[];
   readonly layout: Readonly<Record<EntityId, { readonly x: number; readonly y: number }>>;
   readonly startingSettlementId?: EntityId;
+  /** The selection's own event, so a new selection can name what it supersedes (8.0h). */
+  readonly startingSettlementEventId?: EventId;
   readonly troubles: Readonly<Record<EntityId, Accepted<'trouble.established'>>>;
+  /** Each trouble's superseded versions, oldest first (8.0h, A40). */
+  readonly troubleHistory: Readonly<Record<EntityId, readonly Accepted<'trouble.established'>[]>>;
   readonly amendments: readonly PayloadFor<'launch.fact_amended'>[];
   /**
    * Guide and player proposals by target, newest wins. Not canon (D-161):

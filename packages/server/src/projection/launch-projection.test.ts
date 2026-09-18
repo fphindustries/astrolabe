@@ -786,3 +786,103 @@ describe('the starship revision chain is readable (7.0f, A40)', () => {
     expect(incremental.launch.starshipHistory).toEqual(project(events).launch.starshipHistory);
   });
 });
+
+describe('the sector revision chains are readable (8.0h, A40)', () => {
+  const revisedSector = (builder: LogBuilder, name: string) =>
+    builder.add('sector.configured', {
+      sectorId: SECTOR as never,
+      name,
+      region: 'expanse',
+      baseline: { settlements: 2, passages: 1 },
+      ...acceptance,
+      supersedesEventId: builder.last().id as never,
+    });
+
+  it('starts empty, and nothing revised has no history', () => {
+    const state = project(launchLog().build());
+    expect(emptyState().launch.sectorHistory).toEqual([]);
+    expect(state.launch.sectorHistory).toEqual([]);
+    expect(state.launch.locationHistory).toEqual({});
+    expect(state.launch.troubleHistory).toEqual({});
+  });
+
+  it('keeps the sector each revision supersedes, oldest first', () => {
+    const builder = launchLog();
+    revisedSector(builder, 'Ashen Reach');
+    revisedSector(builder, 'Ashen Anvil');
+
+    const state = project(builder.build());
+    expect(state.launch.sector?.name).toBe('Ashen Anvil');
+    expect(state.launch.sectorHistory.map((entry) => entry.name)).toEqual([
+      'Lantern Reach',
+      'Ashen Reach',
+    ]);
+  });
+
+  it("keeps a location's superseded versions, and its final one once removed", () => {
+    const builder = launchLog().add('location.revised', {
+      kind: 'settlement',
+      id: SETTLEMENT as never,
+      name: 'Ember Hold Station',
+      location: 'deep_space',
+      population: 'Hundreds',
+      authority: 'Corporate',
+      projects: ['Rebuilding the relay'],
+      ...acceptance,
+    });
+    const revised = builder.last();
+    builder.add('location.removed', {
+      locationId: SETTLEMENT as never,
+      supersedesEventId: revised.id,
+      reason: 'Not this sector.',
+    });
+
+    const state = project(builder.build());
+    expect(state.launch.locations[SETTLEMENT as never]).toBeUndefined();
+    expect(state.launch.locationHistory[SETTLEMENT as never]?.map((entry) => entry.name)).toEqual([
+      'Ember Hold',
+      'Ember Hold Station',
+    ]);
+  });
+
+  it("keeps a trouble's superseded version with its own acceptance", () => {
+    const builder = launchLog().add('trouble.established', {
+      troubleId: TROUBLE as never,
+      kind: 'sector',
+      text: 'The relay grid is failing.',
+      provenance: 'guide_proposal',
+      groundedIn: [],
+    });
+    builder.add('trouble.revised', {
+      troubleId: TROUBLE as never,
+      kind: 'sector',
+      text: 'The relay grid is being jammed.',
+      ...acceptance,
+      supersedesEventId: builder.last().id,
+    });
+
+    const history = project(builder.build()).launch.troubleHistory[TROUBLE as never];
+    expect(history).toHaveLength(1);
+    expect(history?.[0]).toMatchObject({
+      text: 'The relay grid is failing.',
+      provenance: 'guide_proposal',
+    });
+  });
+
+  it('projects the starting selection with its own event, for the next one to supersede', () => {
+    const builder = launchLog().add('starting_settlement.selected', {
+      settlementId: SETTLEMENT as never,
+    });
+
+    const state = project(builder.build());
+    expect(state.launch.startingSettlementEventId).toBe(builder.last().id);
+  });
+
+  it('folds the same incrementally as from cold', () => {
+    const builder = launchLog();
+    revisedSector(builder, 'Ashen Reach');
+    const events = builder.build();
+
+    expect(events.reduce(applyEvent, emptyState())).toEqual(project(events));
+  });
+});

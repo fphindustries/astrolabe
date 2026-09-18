@@ -533,8 +533,12 @@ interface LaunchState {
   starship?: SharedStarshipState;
   starshipHistory: SharedStarshipState[];  // superseded versions, oldest first (7.0f)
   sector?: StartingSectorState;
+  sectorHistory: StartingSectorState[];     // superseded versions, oldest first (8.0h)
+  locationHistory: Record<EntityId, LocationState[]>;  // and a removed location's final one (8.0h)
+  startingSettlementEventId?: EventId;      // what the next selection supersedes (8.0h)
   connection?: ConnectionState;
   troubles: TroubleState[];
+  troubleHistory: Record<EntityId, TroubleState[]>;    // superseded versions (8.0h)
   incident?: IncidentState;
   activation?: { eventId; sessionId; sceneId; pendingVow: PendingVow };
 }

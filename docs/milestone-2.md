@@ -838,7 +838,7 @@ proposal per object), D-197 (the map is hand-rolled SVG).
     `location.removed` projection arm also drops the location's layout coordinate.
     Otherwise the client's next complete-layout write is refused as
     `unknown_layout_location`.
-  - [ ] **8.0h The sector's revision chains are readable (A40).** Add `sectorHistory`,
+  - [x] **8.0h The sector's revision chains are readable (A40).** Add `sectorHistory`,
     `locationHistory` by id, and `troubleHistory` by id, oldest first, in the shape of
     `truthHistory`, `crewHistory` and `starshipHistory`. A removed location's final version
     goes into its history, as `character.removed` does (6.0d). Project the starting

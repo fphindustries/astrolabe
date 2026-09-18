@@ -699,7 +699,13 @@ export async function setStartingSettlement(
     events: [
       {
         type: 'starting_settlement.selected',
-        payload: { settlementId: request.settlementId },
+        // 8.0h: the field existed from group 2 and nothing filled it.
+        payload: {
+          settlementId: request.settlementId,
+          ...(state.launch.startingSettlementEventId === undefined
+            ? {}
+            : { supersedesEventId: state.launch.startingSettlementEventId }),
+        },
       },
     ],
     response: { settlementId: request.settlementId },

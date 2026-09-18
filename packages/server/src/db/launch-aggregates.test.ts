@@ -762,6 +762,18 @@ describe.skipIf(!hasTestDatabase)('the launch aggregates', () => {
       });
       expect(project(await readEvents(db.sql, campaignId)).launch.startingSettlementId).toBe(ember);
 
+      // 8.0h: a second selection names the one it supersedes.
+      const reselected = await setStartingSettlement(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        settlementId: ember,
+      });
+      const selections = (await readEvents(db.sql, campaignId)).filter(
+        (event) => event.type === 'starting_settlement.selected',
+      );
+      expect(reselected.events[0]?.payload).toMatchObject({ supersedesEventId: selections[0]!.id });
+
       await expect(
         setStartingSettlement(db.sql, {
           campaignId,

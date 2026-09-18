@@ -557,11 +557,18 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
         ...state,
         launch: {
           ...state.launch,
+          // 8.0h: the version this replaces stays readable (A40).
+          sectorHistory:
+            state.launch.sector === undefined
+              ? state.launch.sectorHistory
+              : [...state.launch.sectorHistory, state.launch.sector],
           sector: { ...event.payload, eventId: event.id, seq: event.seq },
         },
       };
     case 'location.added':
-    case 'location.revised':
+    case 'location.revised': {
+      // Read before replacing, as `truth.decided` does (8.0h, A40).
+      const superseded = state.launch.locations[event.payload.id];
       return {
         ...state,
         launch: {
@@ -570,19 +577,34 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
             ...state.launch.locations,
             [event.payload.id]: { ...event.payload, eventId: event.id, seq: event.seq },
           },
+          ...(superseded === undefined
+            ? {}
+            : {
+                locationHistory: withHistory(
+                  state.launch.locationHistory,
+                  event.payload.id,
+                  superseded,
+                ),
+              }),
         },
       };
+    }
     case 'location.removed': {
       // Removed means gone from the projection; the log still holds the
       // add and the removal. The tombstone this used to leave behind was
       // shaped like nothing else in `locations`, and every reader had to
       // remember to filter it out by guessing at its fields.
-      const { [event.payload.locationId]: _removed, ...locations } = state.launch.locations;
+      const { [event.payload.locationId]: removed, ...locations } = state.launch.locations;
       // Its map position goes with it (8.0g). Left behind, the client's next
       // complete-layout write would name a node the command no longer knows,
       // and be refused for a position the player never saw.
       const { [event.payload.locationId]: _placed, ...layout } = state.launch.layout;
-      return { ...state, launch: { ...state.launch, locations, layout } };
+      // What was removed stays answerable, as a removed crew member does (8.0h).
+      const locationHistory =
+        removed === undefined
+          ? state.launch.locationHistory
+          : withHistory(state.launch.locationHistory, event.payload.locationId, removed);
+      return { ...state, launch: { ...state.launch, locations, layout, locationHistory } };
     }
     case 'route.added':
     case 'route.revised':
@@ -621,10 +643,15 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
     case 'starting_settlement.selected':
       return {
         ...state,
-        launch: { ...state.launch, startingSettlementId: event.payload.settlementId },
+        launch: {
+          ...state.launch,
+          startingSettlementId: event.payload.settlementId,
+          startingSettlementEventId: event.id,
+        },
       };
     case 'trouble.established':
-    case 'trouble.revised':
+    case 'trouble.revised': {
+      const superseded = state.launch.troubles[event.payload.troubleId];
       return {
         ...state,
         launch: {
@@ -633,8 +660,18 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
             ...state.launch.troubles,
             [event.payload.troubleId]: { ...event.payload, eventId: event.id, seq: event.seq },
           },
+          ...(superseded === undefined
+            ? {}
+            : {
+                troubleHistory: withHistory(
+                  state.launch.troubleHistory,
+                  event.payload.troubleId,
+                  superseded,
+                ),
+              }),
         },
       };
+    }
     case 'connection.established':
     case 'connection.revised':
       return {
@@ -927,4 +964,13 @@ export type { CharacterId, EntityId, TrackId };
 function withoutModules<T extends { readonly modules?: unknown }>(ship: T): Omit<T, 'modules'> {
   const { modules: _stored, ...rest } = ship;
   return rest;
+}
+
+/** Append a superseded version to its key's history, oldest first (8.0h, A40). */
+function withHistory<K extends string, T>(
+  history: Readonly<Record<K, readonly T[]>>,
+  key: K,
+  superseded: T,
+): Readonly<Record<K, readonly T[]>> {
+  return { ...history, [key]: [...(history[key] ?? []), superseded] };
 }
