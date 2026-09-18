@@ -169,6 +169,10 @@ describe('incident context carries the complete accepted launch facts (D-168)', 
     expect(setup).toContain('[starting settlement]');
   });
 
+  it("carries the sector's own name and region (8.0j)", () => {
+    expect(setup).toContain('The starting sector: Lantern Reach, in the expanse.');
+  });
+
   it('carries the shared starship', () => {
     expect(setup).toContain('The starship: Lantern Wake');
     expect(setup).toContain('quirks: The clocks run slow');

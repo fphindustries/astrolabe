@@ -663,6 +663,119 @@ describe('renderState (task 7.4)', () => {
     );
   });
 
+  // 8.0j: the same defect as D-183 and 7.0h, for the sector.
+  describe('a launched sector in play narration (8.0j)', () => {
+    const SECTOR = 'aaaa2222-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as never;
+    const STAR = 'aaaa3333-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as never;
+    const PLANET = 'aaaa4444-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as never;
+    const DEEPWATER = 'aaaa5555-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as never;
+    const DRIFT = 'aaaa7777-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as never;
+    const accepted = { provenance: 'player_written', groundedIn: [] } as const;
+    const sectorLog = () =>
+      goldenSessionPrelude()
+        .add('location.added', {
+          kind: 'star',
+          id: STAR,
+          name: 'Cinder',
+          details: { description: 'Smoldering red star' },
+          ...accepted,
+        })
+        .add('sector.configured', {
+          sectorId: SECTOR,
+          name: 'Ashen Anvil',
+          region: 'outlands',
+          baseline: { settlements: 3, passages: 2 },
+          starId: STAR,
+          ...accepted,
+        })
+        .add('location.added', {
+          kind: 'planet',
+          id: PLANET,
+          name: 'Hollow',
+          planetClass: 'ice',
+          details: { atmosphere: 'Thin and cold' },
+          ...accepted,
+        })
+        .add('location.added', {
+          kind: 'settlement',
+          id: DEEPWATER,
+          name: 'Deepwater Anchorage',
+          location: 'orbital',
+          population: 'Thousands',
+          authority: 'Corporate',
+          projects: ['Ice mining'],
+          planetId: PLANET,
+          ...accepted,
+        })
+        .add('location.added', {
+          kind: 'other',
+          id: DRIFT,
+          name: 'Kessel Drift',
+          description: 'A slow river of broken ice',
+          ...accepted,
+        })
+        .add('route.added', { from: DEEPWATER, to: DRIFT, ...accepted })
+        .add('starting_settlement.selected', { settlementId: DEEPWATER })
+        .add('trouble.established', {
+          kind: 'settlement',
+          troubleId: 'aaaa9999-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as never,
+          ownerId: DEEPWATER,
+          text: 'The ice haulers have stopped answering.',
+          ...accepted,
+        })
+        .add('trouble.established', {
+          kind: 'sector',
+          troubleId: 'aaaa1111-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as never,
+          text: 'A blockade chokes trade.',
+          ...accepted,
+        });
+
+    it('names the sector, its star, each place, the passages and the troubles', () => {
+      const text = renderState(project(sectorLog().build()));
+
+      expect(text).toContain(
+        'The starting sector: Ashen Anvil, in the outlands; its star: Cinder (Smoldering red star).',
+      );
+      expect(text).toMatch(
+        /- Deepwater Anchorage \[starting settlement\] \(orbital; population: Thousands/,
+      );
+      expect(text).toContain('; planet Hollow (planet, class ice; atmosphere: Thin and cold)');
+      expect(text).toContain('; passages to Kessel Drift');
+      expect(text).toContain(
+        '- Kessel Drift (A slow river of broken ice); passages to Deepwater Anchorage',
+      );
+      expect(text).toContain(
+        '- Trouble in Deepwater Anchorage: The ice haulers have stopped answering.',
+      );
+      expect(text).toContain('- Trouble in the sector: A blockade chokes trade.');
+      // A planet and a star are details, not places of their own (D-165).
+      expect(text).not.toMatch(/^- Hollow/m);
+      expect(text).not.toMatch(/^- Cinder/m);
+    });
+
+    it('opens a scene at a launch location by name (D-168)', () => {
+      const text = renderState(
+        project(
+          sectorLog()
+            .add('scene.started', {
+              sceneId: 'aaaa6666-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as never,
+              title: 'The ice dock',
+              locationId: DEEPWATER,
+            })
+            .build(),
+        ),
+      );
+
+      expect(text).toContain('Current scene: The ice dock at Deepwater Anchorage.');
+    });
+
+    it('says nothing about a sector a campaign never configured', () => {
+      expect(renderState(project(goldenSessionPrelude().build()))).not.toContain(
+        'The starting sector',
+      );
+    });
+  });
+
   it('says nothing about a ship a campaign never established', () => {
     expect(renderState(project(goldenSessionPrelude().build()))).not.toContain('starship');
   });

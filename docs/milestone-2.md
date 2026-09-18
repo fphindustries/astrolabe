@@ -851,7 +851,7 @@ proposal per object), D-197 (the map is hand-rolled SVG).
     gains loose other locations and a loose star. Routes and layout are accepted when the
     player acts, as a truth is, so they are not in the draft. D-182's precedence applies
     **per settlement**, as it applied per truth and per crew member.
-  - [ ] **8.0j Play context knows the sector (D-183 and 7.0h, a third time).**
+  - [x] **8.0j Play context knows the sector (D-183 and 7.0h, a third time).**
     `renderState` reads no `launch.locations`, and it resolves a scene's location only
     against `state.entities`. Activation opens Session 1's scene at a launch location id,
     so the Guide would narrate beat 12 at no place and in a sector it has never been told

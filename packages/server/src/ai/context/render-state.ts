@@ -1,5 +1,5 @@
 import { installedModules, STARFORGED } from '@astrolabe/rules';
-import type { CampaignState } from '@astrolabe/shared';
+import type { CampaignState, EntityId } from '@astrolabe/shared';
 
 /**
  * Projected campaign state as the AI reads it (task 7.4): "context assembly
@@ -49,6 +49,56 @@ export function renderStarship(state: CampaignState): string | undefined {
   );
 }
 
+/**
+ * The starting sector in one line, or undefined before it is configured
+ * (8.0j). Shared by play and setup context, for `renderStarship`'s reason.
+ * The star is the sector's (D-195).
+ */
+export function renderSectorLine(state: CampaignState): string | undefined {
+  const sector = state.launch.sector;
+  if (sector === undefined) return undefined;
+  const star = sector.starId === undefined ? undefined : state.launch.locations[sector.starId];
+  return (
+    `${sector.name}, in the ${sector.region}` +
+    (star?.kind === 'star'
+      ? `; its star: ${star.name}${star.details.description === undefined ? '' : ` (${star.details.description})`}`
+      : '')
+  );
+}
+
+/**
+ * The sector's places as play reads them (8.0j): each settlement with its
+ * detail and planet, each other location, the passages between them, and the
+ * troubles. Planets and the star are details, not places of their own (D-165).
+ */
+function renderSectorPlaces(state: CampaignState): string[] {
+  const launch = state.launch;
+  const nameOf = (id: EntityId) => launch.locations[id]?.name ?? 'an unknown place';
+  return Object.values(launch.locations)
+    .filter((location) => location.kind === 'settlement' || location.kind === 'other')
+    .map((location) => {
+      const start = launch.startingSettlementId === location.id ? ' [starting settlement]' : '';
+      const planet =
+        location.kind === 'settlement' && location.planetId !== undefined
+          ? launch.locations[location.planetId]
+          : undefined;
+      const passages = launch.routes.flatMap((route) =>
+        route.from === location.id
+          ? [typeof route.to === 'string' ? nameOf(route.to) : `off-map: ${route.to.label}`]
+          : route.to === location.id
+            ? [nameOf(route.from)]
+            : [],
+      );
+      return (
+        `- ${location.name}${start} (${launchLocationDetail(state, location.id)})` +
+        (planet === undefined
+          ? ''
+          : `; planet ${planet.name} (${launchLocationDetail(state, planet.id)})`) +
+        (passages.length > 0 ? `; passages to ${passages.join(', ')}` : '')
+      );
+    });
+}
+
 export function renderState(state: CampaignState): string {
   const sections: string[] = [];
 
@@ -68,11 +118,36 @@ export function renderState(state: CampaignState): string {
   }
 
   if (state.scene !== null) {
-    const location =
-      state.scene.locationId === undefined ? undefined : state.entities[state.scene.locationId];
+    const id = state.scene.locationId;
+    // 8.0j: activation opens Session 1 at a launch location (D-168), which is
+    // not an entity, so resolving only `entities` put the opening scene at no
+    // place at all.
+    const entity = id === undefined ? undefined : state.entities[id];
+    const launchLocation = id === undefined ? undefined : state.launch.locations[id];
     const where =
-      location === undefined ? '' : ` at ${location.name}${describeFields(location.fields)}`;
+      entity !== undefined
+        ? ` at ${entity.name}${describeFields(entity.fields)}`
+        : launchLocation !== undefined
+          ? ` at ${launchLocation.name}`
+          : '';
     sections.push(`Current scene: ${state.scene.title}${where}.`);
+  }
+
+  // 8.0j: D-183's defect a third time, for the sector. Play context read no
+  // launch sector, so a launched campaign was narrated by a Guide that did not
+  // know where the crew starts or what troubles it.
+  const sector = renderSectorLine(state);
+  if (sector !== undefined) {
+    const places = renderSectorPlaces(state);
+    sections.push(
+      `The starting sector: ${sector}.` + (places.length > 0 ? `\n${places.join('\n')}` : ''),
+    );
+  }
+  const troubles = Object.values(state.launch.troubles).map(
+    (trouble) => `- ${troubleLabel(state, trouble)}: ${trouble.text}`,
+  );
+  if (troubles.length > 0) {
+    sections.push(`Troubles:\n${troubles.join('\n')}`);
   }
 
   const crew = Object.values(state.characters).map((c) => {
@@ -132,4 +207,48 @@ export function renderState(state: CampaignState): string {
 function describeFields(fields: Readonly<Record<string, string>>): string {
   const parts = Object.entries(fields).map(([key, value]) => `${key}: ${value}`);
   return parts.length === 0 ? '' : ` (${parts.join('; ')})`;
+}
+
+/** One label per trouble, so the citation key and the rendered line agree. */
+export function troubleLabel(
+  state: CampaignState,
+  trouble: CampaignState['launch']['troubles'][EntityId],
+): string {
+  const owner =
+    trouble.kind === 'settlement'
+      ? (state.launch.locations[trouble.ownerId]?.name ?? 'a settlement')
+      : 'the sector';
+  return `Trouble in ${owner}`;
+}
+
+/** Typed launch-location detail, to the depth the launch actually recorded. */
+export function launchLocationDetail(state: CampaignState, id: EntityId): string {
+  const location = state.launch.locations[id];
+  if (location === undefined) return '';
+  switch (location.kind) {
+    case 'settlement':
+      return [
+        location.location,
+        `population: ${location.population}`,
+        `authority: ${location.authority}`,
+        `projects: ${location.projects.join(', ')}`,
+        ...(location.firstLooks === undefined
+          ? []
+          : [`first looks: ${location.firstLooks.join(', ')}`]),
+      ].join('; ');
+    case 'planet':
+      return [
+        `planet, class ${location.planetClass}`,
+        ...Object.entries(location.details).flatMap(([field, value]) =>
+          value === undefined ? [] : [`${field}: ${value}`],
+        ),
+      ].join('; ');
+    case 'star':
+      return [
+        'star',
+        ...(location.details.description === undefined ? [] : [location.details.description]),
+      ].join('; ');
+    case 'other':
+      return location.description;
+  }
 }

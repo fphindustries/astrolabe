@@ -6,7 +6,13 @@ import type { AiRequest } from '../provider.js';
 
 import { NARRATOR_RULES, rubricText } from './authority-rubric.js';
 import type { RolledForProposal } from './creation.js';
-import { renderStarship, TRUTH_LEFT_OPEN } from './render-state.js';
+import {
+  launchLocationDetail,
+  renderSectorLine,
+  renderStarship,
+  troubleLabel,
+  TRUTH_LEFT_OPEN,
+} from './render-state.js';
 
 /**
  * AI-proposed inciting incidents' prompt (task 4.6, D-132–D-134). Pure, like
@@ -81,18 +87,6 @@ function launchFactEntries(state: CampaignState): (readonly [string, EntityId])[
   return entries;
 }
 
-/** One label per trouble, so the citation key and the rendered line agree. */
-function troubleLabel(
-  state: CampaignState,
-  trouble: CampaignState['launch']['troubles'][EntityId],
-): string {
-  const owner =
-    trouble.kind === 'settlement'
-      ? (state.launch.locations[trouble.ownerId]?.name ?? 'a settlement')
-      : 'the sector';
-  return `Trouble in ${owner}`;
-}
-
 function keyed<T>(entries: readonly (readonly [string, T])[]): ReadonlyMap<string, T> {
   const map = new Map<string, T>();
   for (const [name, value] of entries) {
@@ -153,6 +147,9 @@ export function buildIncidentProposalRequest(
 export function renderSetup(state: CampaignState): string {
   const context = incidentContext(state);
   const sections: string[] = [`Campaign: ${state.campaign?.name ?? 'unnamed'}`];
+  // 8.0j: the sector's own name, region and star, which no section said.
+  const sector = renderSectorLine(state);
+  if (sector !== undefined) sections.push(`The starting sector: ${sector}.`);
 
   const truths = [...context.truths].map(([key, id]) => {
     const question = STARFORGED.truths.find((t) => t.id === id)?.name ?? id;
@@ -269,38 +266,6 @@ export function renderSetup(state: CampaignState): string {
   );
 
   return sections.join('\n\n');
-}
-
-/** Typed launch-location detail, to the depth the launch actually recorded. */
-function launchLocationDetail(state: CampaignState, id: EntityId): string {
-  const location = state.launch.locations[id];
-  if (location === undefined) return '';
-  switch (location.kind) {
-    case 'settlement':
-      return [
-        location.location,
-        `population: ${location.population}`,
-        `authority: ${location.authority}`,
-        `projects: ${location.projects.join(', ')}`,
-        ...(location.firstLooks === undefined
-          ? []
-          : [`first looks: ${location.firstLooks.join(', ')}`]),
-      ].join('; ');
-    case 'planet':
-      return [
-        `planet, class ${location.planetClass}`,
-        ...Object.entries(location.details).flatMap(([field, value]) =>
-          value === undefined ? [] : [`${field}: ${value}`],
-        ),
-      ].join('; ');
-    case 'star':
-      return [
-        'star',
-        ...(location.details.description === undefined ? [] : [location.details.description]),
-      ].join('; ');
-    case 'other':
-      return location.description;
-  }
 }
 
 export interface IncidentOptionOutput {
