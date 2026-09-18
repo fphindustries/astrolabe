@@ -3,6 +3,7 @@ import type {
   CreateCharacterResponse,
   RemoveCharacterResponse,
   ReviseCharacterResponse,
+  RollLaunchOracleResponse,
 } from '@astrolabe/shared';
 
 import { apiDelete, apiPost, apiPut } from './http.js';
@@ -33,6 +34,8 @@ export interface AcceptCrewMemberInput {
   };
   readonly hooks?: readonly string[];
   readonly pronouns?: string;
+  /** The `oracle.rolled` events this character was built on (A41). */
+  readonly groundedIn?: readonly string[];
 }
 
 export function useCreateLaunchCharacter(campaignId: string) {
@@ -67,6 +70,27 @@ export function useReviseLaunchCharacter(campaignId: string) {
       apiPut<ReviseCharacterResponse>(`/campaigns/${campaignId}/launch/crew/${characterId}`, {
         commandId: crypto.randomUUID(),
         ...input,
+      }),
+    onSuccess: invalidate,
+  });
+}
+
+/**
+ * Roll one launch oracle for a field (3R.5c).
+ *
+ * The single-oracle roll, not a recipe: a recipe is for building a whole
+ * object before the Guide interprets it, while this is the player asking one
+ * table one question. The oracle it names comes from the declared character
+ * recipe, so the client still cannot reach a table the rules did not declare.
+ */
+export function useRollLaunchOracle(campaignId: string) {
+  const invalidate = useInvalidateCampaign(campaignId);
+
+  return useMutation({
+    mutationFn: (oracleId: string) =>
+      apiPost<RollLaunchOracleResponse>(`/campaigns/${campaignId}/launch/oracle-rolls`, {
+        commandId: crypto.randomUUID(),
+        oracleId,
       }),
     onSuccess: invalidate,
   });

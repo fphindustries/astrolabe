@@ -876,6 +876,7 @@ export function buildApp({
           ...(parsed.data.proposalCommandId === undefined
             ? {}
             : { proposalCommandId: parsed.data.proposalCommandId }),
+          ...(parsed.data.groundedIn === undefined ? {} : { groundedIn: parsed.data.groundedIn }),
         });
         reply.code(201);
         return {
@@ -927,6 +928,7 @@ export function buildApp({
           },
           ...(parsed.data.hooks === undefined ? {} : { hooks: parsed.data.hooks }),
           ...(parsed.data.pronouns === undefined ? {} : { pronouns: parsed.data.pronouns }),
+          ...(parsed.data.groundedIn === undefined ? {} : { groundedIn: parsed.data.groundedIn }),
         });
         return {
           characterId: result.characterId,

@@ -599,7 +599,7 @@ for crew), D-186 (a declared character recipe), D-187 (a saved draft starts a se
   did. Reuses `assignStat`, `slotOptionGroups`, `CREATION_SLOTS`, `problemsByField` and
   `AssetPicker` rather than restating them. `SECTION_ARRIVES_IN.crew` becomes null and the
   placeholder example moves to Starship.
-- [ ] 6.2 Add appearance, backstory/discover-in-play, required background vow, and gear,
+- [x] 6.2 Add appearance, backstory/discover-in-play, required background vow, and gear,
   validated by `validateLaunchCharacterDraft` in both client and command layer. The form says
   in words that an omitted pronoun is not guessed (D-131) and that discover-in-play is an
   explicit state, not a missing required field. Field-level **Roll** for backstory prompts

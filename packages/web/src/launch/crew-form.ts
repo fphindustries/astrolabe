@@ -1,5 +1,6 @@
 import {
   CHARACTER_CREATION,
+  CHARACTER_RECIPE,
   STARFORGED,
   validateLaunchCharacterDraft,
   type AssetId,
@@ -9,7 +10,7 @@ import {
   type LaunchCharacterProblem,
   type StatId,
 } from '@astrolabe/rules';
-import type { CampaignState, CharacterState, LaunchDraftFor } from '@astrolabe/shared';
+import type { CampaignState, CharacterState, EventId, LaunchDraftFor } from '@astrolabe/shared';
 
 import { assignStat, emptyDraft } from '../characters/creation-form.js';
 
@@ -44,6 +45,18 @@ export const STEP_LABELS: Readonly<Record<CrewStep, string>> = {
 /** The slots in `CHARACTER_CREATION`, so the component never reaches into the rules constant. */
 export const CREW_SLOTS: readonly CreationSlot[] = CHARACTER_CREATION.slots;
 
+/**
+ * The table a backstory prompt is rolled from, taken from the declared recipe
+ * rather than named here (D-186, 6.0h).
+ *
+ * The client can point at a table only because the rules declared it for this
+ * exact purpose; naming the string in the web package would be the client
+ * choosing an oracle, which D-65 does not allow.
+ */
+export const BACKSTORY_PROMPT_ORACLE = CHARACTER_RECIPE.rolls.find(
+  (slot) => slot.slot === 'backstory-1',
+)!.oracle;
+
 /** Which step a validation problem belongs to, so the flow can point at it. */
 const STEP_OF_FIELD: Readonly<Record<LaunchCharacterProblem['field'], CrewStep>> = {
   name: 'identity',
@@ -77,6 +90,15 @@ export interface CrewMemberForm {
   readonly vowTitle: string;
   readonly vowRank: ChallengeRank;
   readonly signatureGear: string;
+  /**
+   * Backstory prompts the player rolled, with the event that rolled them.
+   *
+   * Inspiration, not the backstory: the player writes that in their own words,
+   * the way a quest starter is shown beside a truth and never becomes the
+   * answer (D-162). The event ids travel into acceptance as `groundedIn`, so
+   * the accepted character cites what it was built on (A41).
+   */
+  readonly prompts: readonly { readonly eventId: EventId; readonly text: string }[];
 }
 
 export function emptyCrewMember(draftId: string): CrewMemberForm {
@@ -94,6 +116,7 @@ export function emptyCrewMember(draftId: string): CrewMemberForm {
     vowTitle: '',
     vowRank: 'troublesome',
     signatureGear: '',
+    prompts: [],
   };
 }
 
@@ -258,6 +281,14 @@ export function removeHook(member: CrewMemberForm, index: number): CrewMemberFor
 
 export const MAX_HOOKS = 3;
 
+/** Record a rolled prompt as inspiration. The server rolled it; this only keeps it. */
+export function addPrompt(
+  member: CrewMemberForm,
+  prompt: { readonly eventId: EventId; readonly text: string },
+): CrewMemberForm {
+  return { ...member, prompts: [...member.prompts, prompt] };
+}
+
 export function setVow(
   member: CrewMemberForm,
   patch: { readonly title?: string; readonly rank?: ChallengeRank },
@@ -406,6 +437,7 @@ export interface CrewAcceptRequest {
   };
   readonly hooks?: readonly string[];
   readonly pronouns?: string;
+  readonly groundedIn?: readonly EventId[];
 }
 
 /**
@@ -433,6 +465,9 @@ export function toAcceptRequest(member: CrewMemberForm): CrewAcceptRequest | nul
     },
     ...(draft.hooks === undefined ? {} : { hooks: draft.hooks }),
     ...(draft.pronouns === undefined ? {} : { pronouns: draft.pronouns }),
+    ...(member.prompts.length === 0
+      ? {}
+      : { groundedIn: member.prompts.map((prompt) => prompt.eventId) }),
   };
 }
 

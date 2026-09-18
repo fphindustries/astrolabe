@@ -6,8 +6,15 @@ import {
   type ChallengeRank,
   type CharacterDraft,
   type CharacterId,
+  type OracleId,
 } from '@astrolabe/rules';
-import { LOCAL_PLAYER_ID, type Actor, type CampaignId, type CommandId } from '@astrolabe/shared';
+import {
+  LOCAL_PLAYER_ID,
+  type Actor,
+  type CampaignId,
+  type CommandId,
+  type EventId,
+} from '@astrolabe/shared';
 
 import { buildLaunchWorkspace } from '../launch/workspace.js';
 import { project } from '../projection/project.js';
@@ -21,7 +28,7 @@ import {
   reviseCharacter,
   type ReviseCharacterRequest,
 } from './character-commands.js';
-import { saveSharedStarship } from './launch-commands.js';
+import { rollLaunchOracle, saveSharedStarship } from './launch-commands.js';
 import { appendCommand, readEvents } from './event-store.js';
 import { createTestDatabase, hasTestDatabase, type TestDatabase } from './testing.js';
 import { uuidv7 } from './uuid.js';
@@ -134,6 +141,60 @@ describe.skipIf(!hasTestDatabase)('creating a character (task 3.5)', () => {
     ).rejects.toThrow();
 
     expect(Object.keys(project(await readEvents(db.sql, campaignId)).characters)).toEqual([]);
+  });
+
+  it('cites the rolls the player built the character from (6.2, A41)', async () => {
+    // Beat 5: Juno is built by hand, with a rolled backstory prompt for
+    // inspiration. The prompt is not the backstory — the player writes that —
+    // but the roll is what the accepted fact was built on, so it has to be
+    // citable or A41's chip has nothing to resolve.
+    const campaignId = await newCampaign();
+    const rolled = await rollLaunchOracle(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      oracleId: 'oracle:campaign-launch/backstory-prompts' as OracleId,
+    });
+    const rollEventId = (rolled.response as { eventId: EventId }).eventId;
+
+    const { characterId } = await createCharacter(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      draft: draft(),
+      backgroundVow: { title: 'Find the lost survey', rank: 'formidable' },
+      launch: {
+        appearance: 'Sharp-eyed.',
+        backstory: { kind: 'written', text: 'Flew charts nobody else trusted.' },
+      },
+      grantCommandVehicle: false,
+      groundedIn: [rollEventId],
+    });
+
+    const events = await readEvents(db.sql, campaignId);
+    const character = project(events).characters[characterId];
+    // The player wrote the words; the roll is what they drew on.
+    expect(character?.provenance).toBe('player_written');
+    expect(character?.groundedIn).toEqual([rollEventId]);
+    // And 6.0b's resolver turns that into the chip the player reads.
+    expect(buildLaunchWorkspace(events).chips[rollEventId]).toMatchObject({
+      oracleId: 'oracle:campaign-launch/backstory-prompts',
+    });
+  });
+
+  it('leaves a Milestone 1 character with no provenance at all', async () => {
+    // The launch path records it; the legacy creation path is untouched, so a
+    // character created without launch fields still carries neither field.
+    const campaignId = await newCampaign();
+    const { characterId } = await createCharacter(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      draft: draft(),
+    });
+
+    const character = project(await readEvents(db.sql, campaignId)).characters[characterId];
+    expect(Object.hasOwn(character!, 'provenance')).toBe(false);
   });
 
   it('writes the background vow in the same command, owned by the character', async () => {

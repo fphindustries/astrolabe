@@ -168,6 +168,14 @@ export interface CreateCharacterResponse {
 
 export const CreateLaunchCharacterRequestBodySchema = CreateCharacterRequestBodySchema.extend({
   backgroundVow: z.object({ title: z.string().trim().min(1), rank: ChallengeRankSchema }),
+  /**
+   * The `oracle.rolled` events this character was built on (A41).
+   *
+   * Event ids, not oracle ids: the client cites rolls the server already made
+   * and can never name a table of its own. A roll that turns out to be
+   * something else resolves to no chip, so over-citing is harmless.
+   */
+  groundedIn: z.array(EventIdSchema).optional(),
   launch: z.object({
     appearance: z.string().trim().min(1),
     backstory: z.discriminatedUnion('kind', [

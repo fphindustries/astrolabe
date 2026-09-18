@@ -3,7 +3,11 @@ import { useState } from 'react';
 import { CHALLENGE_RANKS, STARFORGED, STAT_IDS, type AssetId, type StatId } from '@astrolabe/rules';
 import type { LaunchWorkspaceResponse } from '@astrolabe/shared';
 
-import { useCreateLaunchCharacter, useReviseLaunchCharacter } from '../api/crew.js';
+import {
+  useCreateLaunchCharacter,
+  useReviseLaunchCharacter,
+  useRollLaunchOracle,
+} from '../api/crew.js';
 import { useSaveLaunchDraft } from '../api/launch.js';
 import { AssetPicker } from '../characters/AssetPicker.js';
 import { ErrorSummary } from '../ui/ErrorSummary.js';
@@ -11,11 +15,13 @@ import { fieldAnchorId } from '../ui/error-summary.js';
 
 import { launchErrorSummary } from './errors.js';
 import {
+  BACKSTORY_PROMPT_ORACLE,
   CREW_SLOTS,
   CREW_STEPS,
   MAX_HOOKS,
   STEP_LABELS,
   addHook,
+  addPrompt,
   emptyCrewMember,
   initialCrewForm,
   isCrewMemberComplete,
@@ -72,7 +78,8 @@ export function CrewSection({
   const saveDraft = useSaveLaunchDraft<'crew'>(campaignId);
   const create = useCreateLaunchCharacter(campaignId);
   const revise = useReviseLaunchCharacter(campaignId);
-  const failure = create.error ?? revise.error ?? saveDraft.error;
+  const rollPrompt = useRollLaunchOracle(campaignId);
+  const failure = create.error ?? revise.error ?? saveDraft.error ?? rollPrompt.error;
 
   const open = crew.find((member) => member.draftId === openId);
   const unsaved = isDirty(crew, baseline);
@@ -153,6 +160,14 @@ export function CrewSection({
           onChange={edit}
           onAccept={handleAccept}
           accepting={create.isPending || revise.isPending}
+          rolling={rollPrompt.isPending}
+          onRollPrompt={() => {
+            const member = open;
+            rollPrompt.mutate(BACKSTORY_PROMPT_ORACLE, {
+              onSuccess: (result) =>
+                edit(addPrompt(member, { eventId: result.eventId, text: result.text })),
+            });
+          }}
         />
       )}
 
@@ -233,6 +248,8 @@ function MemberEditor({
   onChange,
   onAccept,
   accepting,
+  rolling,
+  onRollPrompt,
 }: {
   readonly member: CrewMemberForm;
   readonly step: CrewStep;
@@ -240,6 +257,8 @@ function MemberEditor({
   readonly onChange: (member: CrewMemberForm) => void;
   readonly onAccept: () => void;
   readonly accepting: boolean;
+  readonly rolling: boolean;
+  readonly onRollPrompt: () => void;
 }) {
   const byStep = problemsByStep(member);
   const complete = isCrewMemberComplete(member);
@@ -277,7 +296,14 @@ function MemberEditor({
       {step === 'identity' && <IdentityStep member={member} onChange={onChange} />}
       {step === 'stats' && <StatsStep member={member} onChange={onChange} />}
       {step === 'assets' && <AssetsStep member={member} onChange={onChange} />}
-      {step === 'background' && <BackgroundStep member={member} onChange={onChange} />}
+      {step === 'background' && (
+        <BackgroundStep
+          member={member}
+          onChange={onChange}
+          rolling={rolling}
+          onRollPrompt={onRollPrompt}
+        />
+      )}
       {step === 'review' && <ReviewStep member={member} problems={byStep} />}
 
       <div className={styles.stepActions}>
@@ -402,7 +428,12 @@ function AssetsStep({ member, onChange }: StepProps) {
   );
 }
 
-function BackgroundStep({ member, onChange }: StepProps) {
+function BackgroundStep({
+  member,
+  onChange,
+  rolling,
+  onRollPrompt,
+}: StepProps & { readonly rolling: boolean; readonly onRollPrompt: () => void }) {
   const written = member.backstoryMode === 'written';
   return (
     <div className={styles.fields}>
@@ -448,6 +479,33 @@ function BackgroundStep({ member, onChange }: StepProps) {
             value={member.backstoryText}
             onChange={(event) => onChange({ ...member, backstoryText: event.target.value })}
           />
+        )}
+
+        <button
+          type="button"
+          className={styles.secondary}
+          disabled={rolling}
+          onClick={onRollPrompt}
+        >
+          Roll a backstory prompt
+        </button>
+        {member.prompts.length > 0 && (
+          <div className={styles.prompts}>
+            <h4 className={styles.label} id={`prompts-${member.draftId}`}>
+              Rolled prompts
+            </h4>
+            <p className={styles.help}>
+              Inspiration, not the backstory. Write it in your own words — these stay recorded as
+              what you drew on.
+            </p>
+            <ul className={styles.promptList} aria-labelledby={`prompts-${member.draftId}`}>
+              {member.prompts.map((prompt) => (
+                <li key={prompt.eventId} className={styles.prompt}>
+                  {prompt.text}
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </fieldset>
 

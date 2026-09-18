@@ -6,6 +6,7 @@ import { emptyCampaignState } from './state-fixture.js';
 import {
   CREW_SLOTS,
   addHook,
+  addPrompt,
   chosenAssets,
   emptyCrewMember,
   initialCrewForm,
@@ -126,6 +127,18 @@ describe('the transitions', () => {
     const edited = { ...crew[1]!, name: 'Rook' };
 
     expect(replaceMember(crew, edited).map((member) => member.name)).toEqual(['', 'Rook']);
+  });
+
+  it('keeps a rolled prompt as inspiration, and cites it on acceptance (6.2, A41)', () => {
+    // The prompt is not the backstory — the player writes that — but the roll
+    // is what they drew on, so the accepted character cites it and 6.0b turns
+    // it into a chip. A member who rolled nothing cites nothing.
+    const member = addPrompt(complete(), { eventId: 'evt-roll' as never, text: 'A debt unpaid.' });
+
+    expect(member.prompts).toHaveLength(1);
+    expect(member.backstoryText).toBe('Flew charts nobody else trusted.');
+    expect(toAcceptRequest(member)?.groundedIn).toEqual(['evt-roll']);
+    expect(toAcceptRequest(complete())?.groundedIn).toBeUndefined();
   });
 
   it('stops calling an accepted character unaccepted', () => {

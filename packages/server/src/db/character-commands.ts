@@ -111,6 +111,15 @@ export interface CreateCharacterRequest {
    * command that holds no proposal is refused rather than ignored.
    */
   readonly proposalCommandId?: CommandId;
+  /**
+   * The `oracle.rolled` events this character was built on (A41, D-166).
+   *
+   * A rolled backstory prompt is inspiration, not the backstory — the player
+   * writes that in their own words — but the roll is what the accepted fact
+   * was built from, so it is cited rather than forgotten. The launch
+   * workspace resolves these into the chips a player reads (6.0b).
+   */
+  readonly groundedIn?: readonly EventId[];
 }
 
 export interface CreatedCharacter {
@@ -206,6 +215,11 @@ export async function createCharacter(
         ...(request.launch === undefined
           ? {}
           : {
+              // Recorded on the launch path only: a Milestone 1 character
+              // carries neither field, and 6.0a made both optional so it stays
+              // readable exactly as written.
+              provenance: 'player_written' as const,
+              groundedIn: request.groundedIn ?? [],
               appearance: request.launch.appearance.trim(),
               backstory: request.launch.backstory,
               backgroundVow:
@@ -282,6 +296,8 @@ export interface ReviseCharacterRequest {
   };
   readonly hooks?: readonly string[];
   readonly pronouns?: string;
+  /** The rolls this version was built on (A41). */
+  readonly groundedIn?: readonly EventId[];
 }
 
 /**
@@ -356,7 +372,7 @@ export async function reviseCharacter(
           ...(pronouns !== '' ? { pronouns } : {}),
         },
         provenance: 'player_written',
-        groundedIn: [],
+        groundedIn: request.groundedIn ?? [],
         supersedesEventId: current.eventId,
       },
       sessionId: null,
