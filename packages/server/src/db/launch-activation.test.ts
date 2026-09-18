@@ -51,7 +51,6 @@ const paths = STARFORGED.assets
   .filter((asset) => asset.categoryId === 'path')
   .slice(0, 3)
   .map((asset) => asset.id);
-const starshipAsset = STARFORGED.assets.find((asset) => asset.categoryId === 'command_vehicle')!.id;
 
 describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)', () => {
   let db: TestDatabase;
@@ -118,13 +117,10 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
       commandId: newId<CommandId>(),
       actor: PLAYER,
       starship: {
-        starshipId: newId<EntityId>(),
         name: 'Lantern Wake',
         appearance: 'Old freighter, patched hull',
         history: 'Won in a wager',
         quirks: ['The clocks run slow'],
-        integrity: { value: 5, min: 0, max: 5 },
-        assetId: starshipAsset,
         modules: [],
       },
     });

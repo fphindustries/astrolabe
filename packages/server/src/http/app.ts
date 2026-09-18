@@ -1019,14 +1019,15 @@ export function buildApp({
         return undefined;
       }
       try {
-        await saveSharedStarship(sql, {
+        const result = await saveSharedStarship(sql, {
           campaignId: id,
           commandId: parsed.data.commandId,
           actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
           starship: parsed.data.starship,
         });
         reply.code(201);
-        return { starshipId: parsed.data.starship.starshipId };
+        // The server minted or reused the id (7.0a); the body never carries one.
+        return result.response as SaveSharedStarshipResponse;
       } catch (error) {
         if (error instanceof LaunchRejectedError) {
           reply.code(422);

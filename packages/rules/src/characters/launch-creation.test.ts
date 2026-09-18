@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { STARFORGED } from '../generated/index.js';
-import { validateLaunchCharacterDraft, validateSharedStarship } from './launch-creation.js';
+import {
+  sharedStarshipBaseline,
+  validateLaunchCharacterDraft,
+  validateSharedStarship,
+} from './launch-creation.js';
 
 const paths = STARFORGED.assets
   .filter((asset) => asset.categoryId === 'path')
@@ -44,6 +48,29 @@ describe('launch character and shared starship rules', () => {
         },
         STARFORGED,
         ['vesna'],
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe('sharedStarshipBaseline', () => {
+  it('is the imported Starship asset at integrity 5, and passes its own validator', () => {
+    const baseline = sharedStarshipBaseline(STARFORGED);
+    expect(baseline.assetId).toBe('asset:command-vehicle/starship');
+    expect(baseline.integrity).toEqual({ value: 5, min: 0, max: 5 });
+    expect(
+      validateSharedStarship(
+        {
+          name: 'Lantern Wake',
+          appearance: 'Worn hull',
+          history: 'Salvaged',
+          quirks: ['Late clocks'],
+          integrity: baseline.integrity.value,
+          assetId: baseline.assetId,
+          modules: [],
+        },
+        STARFORGED,
+        [],
       ),
     ).toEqual([]);
   });

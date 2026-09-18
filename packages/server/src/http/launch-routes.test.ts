@@ -8,6 +8,7 @@ import type {
   EntityId,
   LaunchWorkspaceResponse,
   RollLaunchRecipeResponse,
+  SaveSharedStarshipResponse,
 } from '@astrolabe/shared';
 
 import { StubProvider } from '../ai/stub.js';
@@ -185,6 +186,38 @@ describe.skipIf(!hasTestDatabase)('the Campaign Launch routes (3.1–3.9)', () =
     // pass the injected source down rather than reaching for crypto.
     expect(new Set(body.results.map((result) => result.text)).size).toBeGreaterThan(0);
     for (const result of body.results) expect(result.roll).toBe(50);
+  });
+
+  // 7.0a — a body naming its own id, asset or integrity does not get them.
+  it('saves the starship with a server-minted id and the rules asset and integrity', async () => {
+    const id = await campaign();
+    const clientId = newId();
+
+    const response = await post(`/api/campaigns/${id}/launch/starship`, {
+      commandId: newId(),
+      starship: {
+        starshipId: clientId,
+        name: 'Lantern Wake',
+        appearance: 'Old freighter, patched hull',
+        history: 'Won in a wager',
+        quirks: ['The clocks run slow'],
+        integrity: { value: 9, min: 0, max: 99 },
+        assetId: 'asset:module/sensor-array',
+        modules: [],
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    const { starshipId } = response.json() as SaveSharedStarshipResponse;
+    expect(starshipId).not.toBe(clientId);
+    const workspace = (
+      await app.inject({ method: 'GET', url: `/api/campaigns/${id}/launch` })
+    ).json() as LaunchWorkspaceResponse;
+    expect(workspace.state.launch.starship).toMatchObject({
+      starshipId,
+      assetId: starshipAsset,
+      integrity: { value: 5, min: 0, max: 5 },
+    });
   });
 
   it('rejects a body the schema does not accept with 400, not 500', async () => {

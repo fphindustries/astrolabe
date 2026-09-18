@@ -638,7 +638,7 @@ automated), D-193 (the legacy grant is neutralized in projection).
   (3R.1a's pattern). **Before the first schema change lands** (7.0d, 7.0f, 7.0i), update
   `design-event-log.md`: the `creation.proposed` starship arm, `starshipHistory` in §8, and
   the `starship.established` and `character.removed` rows that D-191 corrects.
-  - [ ] **7.0a The server owns the ship's identity and bounds.** `SaveSharedStarshipRequest`
+  - [x] **7.0a The server owns the ship's identity and bounds.** `SaveSharedStarshipRequest`
     takes `starshipId`, `integrity {value,min,max}` and `assetId` from the client. Mint
     `starshipId` on establish and reuse the projected one on revise, so a revision cannot
     split the aggregate. Derive `assetId` and integrity from the rules. Sequence this first,

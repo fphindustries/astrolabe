@@ -89,6 +89,27 @@ export interface SharedStarshipDraft {
   readonly assetId: AssetId;
   readonly modules: readonly InstalledModule[];
 }
+/**
+ * What every starting shared starship is before anyone describes it: the
+ * imported Starship asset and its starting integrity (D-164).
+ *
+ * The server stamps these onto an accepted ship rather than taking them from
+ * the client, so a request cannot pick a different asset or bounds (7.0a).
+ */
+export interface SharedStarshipBaseline {
+  readonly assetId: AssetId;
+  readonly integrity: { readonly value: number; readonly min: number; readonly max: number };
+}
+
+export function sharedStarshipBaseline(ruleset: RulesetForCreation): SharedStarshipBaseline {
+  const starship = ruleset.assets.find(
+    (asset) => asset.categoryId === 'command_vehicle' && asset.name === 'Starship',
+  );
+  if (starship === undefined)
+    throw new Error('The rules data has no Starship command-vehicle asset.');
+  return { assetId: starship.id, integrity: { value: 5, min: 0, max: 5 } };
+}
+
 export type SharedStarshipProblem = {
   readonly code: string;
   readonly field: string;

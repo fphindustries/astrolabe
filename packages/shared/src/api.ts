@@ -315,9 +315,24 @@ export interface ActivateLaunchResponse {
   readonly pendingVow: string;
 }
 
+/**
+ * What the player states about the ship. Its id, asset and integrity are the
+ * server's (7.0a): one campaign has one ship, so the id is minted on
+ * establishment and reused on revision, and the asset and bounds come from the
+ * rules rather than from a request that could name different ones.
+ */
+export const SharedStarshipDetailsSchema = SharedStarshipSchema.pick({
+  name: true,
+  appearance: true,
+  history: true,
+  quirks: true,
+  modules: true,
+});
+export type SharedStarshipDetails = z.infer<typeof SharedStarshipDetailsSchema>;
+
 export const SaveSharedStarshipRequestBodySchema = z.object({
   commandId: CommandIdSchema,
-  starship: SharedStarshipSchema,
+  starship: SharedStarshipDetailsSchema,
 });
 export type SaveSharedStarshipRequestBody = z.infer<typeof SaveSharedStarshipRequestBodySchema>;
 export interface SaveSharedStarshipResponse {

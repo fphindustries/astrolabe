@@ -589,21 +589,15 @@ describe.skipIf(!hasTestDatabase)('revising and removing a crew member (6.0d)', 
   it('surfaces a module orphaned by a removal as a starship blocker, not silently', async () => {
     const { campaignId, characterId } = await withCrew();
     const moduleId = byCategory('module', 1)[0] as AssetId;
-    const starshipAsset = STARFORGED.assets.find(
-      (asset) => asset.categoryId === 'command_vehicle' && asset.name === 'Starship',
-    )!;
     await saveSharedStarship(db.sql, {
       campaignId,
       commandId: newId<CommandId>(),
       actor: PLAYER,
       starship: {
-        starshipId: newId(),
         name: 'Lantern Wake',
         appearance: 'Worn hull.',
         history: 'A salvage hauler.',
         quirks: ['Its clocks run slightly fast.'],
-        integrity: { value: 5, min: 0, max: 5 },
-        assetId: starshipAsset.id,
         modules: [{ assetId: moduleId, ownerCharacterId: characterId }],
       },
     });

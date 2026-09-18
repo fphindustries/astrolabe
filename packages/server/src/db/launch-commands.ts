@@ -3,6 +3,7 @@ import {
   rollOracle,
   rollRecipe,
   REGION_BASELINES,
+  sharedStarshipBaseline,
   STARFORGED,
   validateSharedStarship,
   type CharacterId,
@@ -28,6 +29,7 @@ import type {
   PayloadFor,
   SceneId,
   SessionId,
+  SharedStarshipDetails,
 } from '@astrolabe/shared';
 import type { Sql } from 'postgres';
 
@@ -226,7 +228,7 @@ export interface SaveSharedStarshipRequest {
   readonly campaignId: CampaignId;
   readonly commandId: CommandId;
   readonly actor: Actor;
-  readonly starship: Omit<PayloadFor<'starship.established'>, 'provenance' | 'groundedIn'>;
+  readonly starship: SharedStarshipDetails;
 }
 
 export interface RollLaunchOracleRequest {
@@ -899,23 +901,33 @@ export async function configureLaunchSector(
   });
 }
 
-/** Accept or revise the single campaign-owned starship. */
+/**
+ * Accept or revise the single campaign-owned starship.
+ *
+ * The player states the details; the server supplies the rest (7.0a). The id
+ * is minted once and reused on every revision, so a revision cannot split the
+ * aggregate, and the asset and integrity come from the rules.
+ */
 export async function saveSharedStarship(
   sql: Sql,
   request: SaveSharedStarshipRequest,
 ): Promise<AppendResult> {
   const state = project(await readEvents(sql, request.campaignId));
   requireLaunchOpen(state, 'The starship changes by amendment after launch.');
+  const current = state.launch.starship;
+  const baseline = sharedStarshipBaseline(STARFORGED);
+  const starship = {
+    starshipId: current?.starshipId ?? (uuidv7() as EntityId),
+    name: request.starship.name,
+    appearance: request.starship.appearance,
+    history: request.starship.history,
+    quirks: request.starship.quirks,
+    integrity: baseline.integrity,
+    assetId: baseline.assetId,
+    modules: request.starship.modules,
+  };
   const problems = validateSharedStarship(
-    {
-      name: request.starship.name,
-      appearance: request.starship.appearance,
-      history: request.starship.history,
-      quirks: request.starship.quirks,
-      integrity: request.starship.integrity.value,
-      assetId: request.starship.assetId,
-      modules: request.starship.modules,
-    },
+    { ...starship, integrity: starship.integrity.value },
     STARFORGED,
     Object.keys(state.characters),
   );
@@ -924,32 +936,31 @@ export async function saveSharedStarship(
       'invalid_starship',
       problems.map((problem) => problem.message).join(' '),
     );
-  const current = state.launch.starship;
-  const accepted = {
-    ...request.starship,
-    provenance: 'player_written' as const,
-    groundedIn: [] as readonly EventId[],
-  };
   return appendCommand(sql, {
     campaignId: request.campaignId,
     commandId: request.commandId,
     kind: current === undefined ? 'launch.starship.establish' : 'launch.starship.revise',
     actor: request.actor,
     events:
-      current?.eventId === undefined
-        ? [{ type: 'starship.established', payload: accepted }]
+      current === undefined
+        ? [
+            {
+              type: 'starship.established',
+              payload: { ...starship, provenance: 'player_written', groundedIn: [] },
+            },
+          ]
         : [
             {
               type: 'starship.revised',
               payload: {
-                starship: request.starship,
+                starship,
                 provenance: 'player_written',
                 groundedIn: [],
                 supersedesEventId: current.eventId,
               },
             },
           ],
-    response: { starshipId: request.starship.starshipId },
+    response: { starshipId: starship.starshipId },
   });
 }
 

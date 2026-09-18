@@ -7,6 +7,7 @@ import {
   type CampaignId,
   type CommandId,
   type EntityId,
+  type SharedStarshipDetails,
 } from '@astrolabe/shared';
 
 import { project } from '../projection/project.js';
@@ -83,14 +84,11 @@ describe.skipIf(!hasTestDatabase)('the launch aggregates', () => {
     return characterId;
   }
 
-  const ship = (overrides: Record<string, unknown> = {}) => ({
-    starshipId: newId<EntityId>(),
+  const ship = (overrides: Partial<SharedStarshipDetails> = {}): SharedStarshipDetails => ({
     name: 'Lantern Wake',
     appearance: 'Old freighter, patched hull',
     history: 'Won in a wager',
     quirks: ['The clocks run slow'],
-    integrity: { value: 5, min: 0, max: 5 },
-    assetId: starshipAsset,
     modules: [],
     ...overrides,
   });
@@ -214,18 +212,9 @@ describe.skipIf(!hasTestDatabase)('the launch aggregates', () => {
       expect(character?.assets).not.toContain(starshipAsset);
     });
 
-    it('rejects integrity other than 5, and a module owned by a non-crew member', async () => {
+    it('rejects a module owned by a non-crew member', async () => {
       const campaignId = await campaign();
       await crewMember(campaignId, 'Vesna Kade', 'Map');
-
-      await expect(
-        saveSharedStarship(db.sql, {
-          campaignId,
-          commandId: newId<CommandId>(),
-          actor: PLAYER,
-          starship: ship({ integrity: { value: 4, min: 0, max: 5 } }),
-        }),
-      ).rejects.toThrow(/integrity 5/i);
 
       await expect(
         saveSharedStarship(db.sql, {
@@ -237,6 +226,39 @@ describe.skipIf(!hasTestDatabase)('the launch aggregates', () => {
           }),
         }),
       ).rejects.toThrow(LaunchRejectedError);
+    });
+
+    // 7.0a — the id, asset and integrity are the server's, not the request's.
+    it('mints the ship id once and stamps the rules asset and integrity', async () => {
+      const campaignId = await campaign();
+      await crewMember(campaignId, 'Vesna Kade', 'Map');
+
+      const first = await saveSharedStarship(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        starship: ship(),
+      });
+      const second = await saveSharedStarship(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        starship: ship({ name: 'Second Wake' }),
+      });
+
+      const events = await readEvents(db.sql, campaignId);
+      const established = events.find((event) => event.type === 'starship.established');
+      const revised = events.find((event) => event.type === 'starship.revised');
+      if (established?.type !== 'starship.established' || revised?.type !== 'starship.revised')
+        throw new Error('expected an established and a revised ship');
+      // One aggregate: the revision cannot carry a different id.
+      expect(revised.payload.starship.starshipId).toBe(established.payload.starshipId);
+      expect(first.response).toEqual({ starshipId: established.payload.starshipId });
+      expect(second.response).toEqual(first.response);
+      for (const stamped of [established.payload, revised.payload.starship]) {
+        expect(stamped.assetId).toBe(starshipAsset);
+        expect(stamped.integrity).toEqual({ value: 5, min: 0, max: 5 });
+      }
     });
 
     it('revises in place rather than creating a second ship', async () => {
