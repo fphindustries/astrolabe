@@ -173,3 +173,24 @@
 .secondary {
   composes: secondary from '../ui/controls.module.css';
 }
+
+.blockers {
+  margin: 0;
+  padding-left: var(--space-4);
+  color: var(--outcome-miss);
+  font-size: var(--text-sm);
+}
+
+.history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.historyList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: var(--space-4);
+}

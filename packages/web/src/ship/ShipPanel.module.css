@@ -1,0 +1,91 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.heading,
+.subheading {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+.subheading {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.integrity,
+.empty {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.asset {
+  border-top: 1px solid var(--surface-border);
+  padding-top: var(--space-2);
+}
+
+.toggle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.assetName {
+  color: var(--text-primary);
+}
+
+.tag {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+/* `display: flex` beats the user agent's `[hidden] { display: none }`. */
+.abilities[hidden] {
+  display: none;
+}
+
+.abilities {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ability {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.abilityState {
+  margin-right: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--label-tracking);
+}

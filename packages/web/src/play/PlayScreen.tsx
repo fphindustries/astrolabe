@@ -24,6 +24,8 @@ import { MoveDrawer } from './moves/MoveDrawer.js';
 import { MoveFlowProvider } from './moves/move-flow.js';
 import { NarrationStreamProvider } from './narration/narration-stream.js';
 import { AssetDrawer } from './assets/AssetDrawer.js';
+import { ShipCard } from '../ship/ShipCard.js';
+import { shipView } from '../ship/ship-view.js';
 import { PlayUiProvider, useDrawer, useDrawerActions } from './play-ui.js';
 import styles from './PlayScreen.module.css';
 
@@ -60,6 +62,11 @@ function PlayScreenContent({ campaignId }: { readonly campaignId: string }) {
     Object.values(state.characters).map(toCrewCard),
   );
   const entities = useCampaignState(campaignId, (state) => entityCards(state.entities));
+  // 7.2, D-164: the ship once, at crew level. Only a launched ship has one to
+  // show; a Milestone 1 campaign's ship arrives with 7.3's compatibility.
+  const ship = useCampaignState(campaignId, (state) =>
+    state.launch.starship === undefined ? null : shipView(state),
+  );
   const drawer = useDrawer();
   // D-98: choosing the acting character is the composer's own control, not
   // the crew card's click — that still opens the character drawer.
@@ -105,6 +112,11 @@ function PlayScreenContent({ campaignId }: { readonly campaignId: string }) {
                 onOpen={openCharacterDrawer}
               />
             </div>
+            {ship.data !== null && ship.data !== undefined && (
+              <div className={styles.shipSection}>
+                <ShipCard view={ship.data} onOpenAsset={openAssetDrawer} />
+              </div>
+            )}
             <div className={styles.entitySection}>
               <EntityRail entities={entities.data ?? []} onOpen={openEntityDrawer} />
             </div>

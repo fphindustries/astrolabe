@@ -8,6 +8,8 @@ import { useAiStatus } from '../api/narration.js';
 import { useProposeStarship, useSaveStarship } from '../api/starship.js';
 import { ErrorSummary } from '../ui/ErrorSummary.js';
 import { fieldAnchorId } from '../ui/error-summary.js';
+import { ShipPanel } from '../ship/ShipPanel.js';
+import { blockersByField, shipHistory, shipView } from '../ship/ship-view.js';
 
 import { proposalFailureText } from './CrewProposalPanel.js';
 import { launchErrorSummary } from './errors.js';
@@ -77,6 +79,10 @@ export function StarshipSection({
   const held = found !== null && found.eventId !== dismissed ? found : null;
   const accepted = workspace.state.launch.starship !== undefined;
   const problems = detailProblems(form);
+  // The server's blockers, beside the fields they name (D-176). Before a ship
+  // is accepted the only one is that there is none, which the button says.
+  const blockers = accepted ? blockersByField(workspace.readiness) : {};
+  const history = shipHistory(workspace.state);
 
   const edit = (next: StarshipForm) => {
     setSaved(undefined);
@@ -143,6 +149,9 @@ export function StarshipSection({
         any module a character chose is installed on it under that character’s name.
       </p>
 
+      <ShipPanel view={shipView(workspace.state)} />
+      <FieldBlockers messages={blockers['ship']} />
+
       <GuidePanel
         held={held}
         form={form}
@@ -189,6 +198,7 @@ export function StarshipSection({
           <RollButton field="name" pending={roll.isPending} onRoll={rollField} />
         </div>
         <RolledNote text={rolled.name} />
+        <FieldBlockers messages={blockers['name']} />
       </div>
 
       <div className={styles.field}>
@@ -204,6 +214,7 @@ export function StarshipSection({
           aria-invalid={submitted && form.appearance.trim() === '' ? true : undefined}
           onChange={(event) => edit(setText(form, 'appearance', event.target.value))}
         />
+        <FieldBlockers messages={blockers['appearance']} />
       </div>
 
       <div className={styles.field}>
@@ -222,6 +233,7 @@ export function StarshipSection({
           <RollButton field="history" pending={roll.isPending} onRoll={rollField} />
         </div>
         <RolledNote text={rolled.history} />
+        <FieldBlockers messages={blockers['history']} />
       </div>
 
       <fieldset className={styles.quirks}>
@@ -262,7 +274,29 @@ export function StarshipSection({
             </div>
           );
         })}
+        <FieldBlockers messages={blockers['quirks']} />
       </fieldset>
+
+      {(blockers['integrity'] !== undefined || blockers['assetId'] !== undefined) && (
+        <FieldBlockers
+          messages={[...(blockers['integrity'] ?? []), ...(blockers['assetId'] ?? [])]}
+        />
+      )}
+
+      {history.length > 0 && (
+        <section className={styles.history} aria-labelledby="ship-history-heading">
+          <h3 className={styles.label} id="ship-history-heading">
+            Earlier versions
+          </h3>
+          <ol className={styles.historyList}>
+            {history.map((entry) => (
+              <li key={entry.eventId} className={styles.help}>
+                <strong>{entry.name}</strong> ({entry.provenance}). {entry.summary}
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
 
       {saved !== undefined && (
         <p className={styles.saved} role="status">
@@ -294,6 +328,18 @@ export function StarshipSection({
           : 'Saving keeps your work without making it a campaign fact. Accepting the ship is what completes this section.'}
       </p>
     </div>
+  );
+}
+
+/** The server's word on a field, beside it (D-176). Not a second readiness rule. */
+function FieldBlockers({ messages }: { readonly messages: readonly string[] | undefined }) {
+  if (messages === undefined || messages.length === 0) return null;
+  return (
+    <ul className={styles.blockers}>
+      {messages.map((message) => (
+        <li key={message}>{message}</li>
+      ))}
+    </ul>
   );
 }
 

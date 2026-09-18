@@ -711,7 +711,7 @@ automated), D-193 (the legacy grant is neutralized in projection).
   continue and D-182 precedence apply. Proposal actions are disabled when there is no
   provider, and Write/Roll remain (A42). `SECTION_ARRIVES_IN.starship` becomes null. The
   placeholder example, and the tests that name it, move to Sector.
-- [ ] 7.2 Show integrity from the imported meter, the shared Starship asset with its
+- [x] 7.2 Show integrity from the imported meter, the shared Starship asset with its
   abilities (the first enabled by default), installed modules labelled with their owners,
   and the server's `readiness.sections.starship.blockers` beside the fields they name.
   Show the visible revision history from `starshipHistory`. Nothing here is a second
