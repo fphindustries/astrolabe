@@ -6,6 +6,7 @@ import type { LaunchWorkspaceResponse } from '@astrolabe/shared';
 import {
   useCreateLaunchCharacter,
   useProposeCrewMember,
+  useRemoveLaunchCharacter,
   useReviseLaunchCharacter,
   useRollLaunchOracle,
 } from '../api/crew.js';
@@ -26,6 +27,9 @@ import {
   addHook,
   addPrompt,
   applyProposal,
+  canAddCrew,
+  crewOverview,
+  crewSummary,
   editedFields,
   emptyCrewMember,
   initialCrewForm,
@@ -46,6 +50,7 @@ import {
   toDraftSnapshot,
   type CrewMemberForm,
   type CrewProposal,
+  type CrewOverviewRow,
   type CrewProposalField,
   type CrewStep,
 } from './crew-form.js';
@@ -100,8 +105,10 @@ export function CrewSection({
   const revise = useReviseLaunchCharacter(campaignId);
   const rollPrompt = useRollLaunchOracle(campaignId);
   const propose = useProposeCrewMember(campaignId);
+  const remove = useRemoveLaunchCharacter(campaignId);
   const guide = useAiStatus();
-  const failure = create.error ?? revise.error ?? saveDraft.error ?? rollPrompt.error;
+  const failure =
+    create.error ?? revise.error ?? saveDraft.error ?? rollPrompt.error ?? remove.error;
 
   const open = crew.find((member) => member.draftId === openId);
   const unsaved = isDirty(crew, baseline);
@@ -169,13 +176,28 @@ export function CrewSection({
       )}
 
       <CrewRoster
-        crew={crew}
+        rows={crewOverview(crew, workspace.readiness, workspace.state.launch.crewHistory as never)}
         openId={openId}
+        removing={remove.isPending}
         onOpen={(draftId) => {
           setOpenId(draftId);
           setStep('identity');
         }}
         onAdd={addMember}
+        onRemove={(row, reason) => {
+          setSaved(undefined);
+          const drop = () =>
+            setCrew((current) => {
+              const rest = current.filter((member) => member.draftId !== row.draftId);
+              setOpenId(rest[0]?.draftId);
+              return rest;
+            });
+          // A member nobody accepted exists only in this form and its draft, so
+          // there is no command to send. An accepted one is removed by the
+          // server, append-only, with the reason the log records (A40).
+          if (row.characterId === undefined) drop();
+          else remove.mutate({ characterId: row.characterId, reason }, { onSuccess: drop });
+        }}
       />
 
       {open !== undefined && (
@@ -288,47 +310,136 @@ export function CrewSection({
   );
 }
 
+/**
+ * The crew, one to six (6.4, A27).
+ *
+ * An accepted character's status is the server's, verbatim — the same
+ * readiness the dashboard chip reads, so the two cannot disagree (D-176). A
+ * member who exists only in a draft has no server answer to take, and the row
+ * says which it is showing rather than leaving the reader to guess.
+ */
 function CrewRoster({
-  crew,
+  rows,
   openId,
+  removing,
   onOpen,
   onAdd,
+  onRemove,
 }: {
-  readonly crew: readonly CrewMemberForm[];
+  readonly rows: readonly CrewOverviewRow[];
   readonly openId: string | undefined;
+  readonly removing: boolean;
   readonly onOpen: (draftId: string) => void;
   readonly onAdd: () => void;
+  readonly onRemove: (row: CrewOverviewRow, reason: string) => void;
 }) {
-  const complete = crew.filter(isCrewMemberComplete).length;
+  const complete = rows.filter((row) => row.complete).length;
   return (
     <div className={styles.roster}>
       <h3 className={styles.rosterHeading}>
-        Crew — {complete} of {crew.length} complete
+        Crew — {complete} of {rows.length} complete
       </h3>
       <ul className={styles.rosterList}>
-        {crew.map((member) => (
-          <li key={member.draftId}>
+        {rows.map((row) => (
+          <li key={row.draftId} className={styles.rosterEntry}>
             <button
               type="button"
               className={styles.rosterItem}
-              aria-current={member.draftId === openId ? 'true' : undefined}
-              onClick={() => onOpen(member.draftId)}
+              aria-current={row.draftId === openId ? 'true' : undefined}
+              onClick={() => onOpen(row.draftId)}
             >
-              <span className={styles.rosterName}>{member.name.trim() || 'Unnamed'}</span>
+              <span className={styles.rosterName}>{row.name}</span>
               <span className={styles.rosterState}>
-                {isCrewMemberComplete(member) ? 'Complete' : 'In progress'}
-                {member.characterId === undefined ? ' · not accepted' : ''}
+                {row.statusText}
+                {row.characterId === undefined ? ' · not accepted' : ''}
               </span>
             </button>
+            <RemoveCrewMember row={row} disabled={removing} onRemove={onRemove} />
+            {row.history.length > 0 && (
+              <details className={styles.history}>
+                <summary className={styles.historySummary}>
+                  {row.history.length} earlier {row.history.length === 1 ? 'version' : 'versions'}
+                </summary>
+                <ol className={styles.historyList}>
+                  {row.history.map((entry, index) => (
+                    <li key={index} className={styles.historyEntry}>
+                      <span className={styles.rosterName}>{entry.name}</span>
+                      {entry.backgroundVow !== undefined && (
+                        <span className={styles.rosterState}>{entry.backgroundVow.title}</span>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              </details>
+            )}
           </li>
         ))}
       </ul>
-      <button type="button" className={styles.add} disabled={crew.length >= 6} onClick={onAdd}>
+      <button type="button" className={styles.add} disabled={!canAddCrew(rows)} onClick={onAdd}>
         Add a character
       </button>
-      <p className={styles.rosterNote}>
-        One complete character is the launch minimum. Six is the most this campaign can hold.
-      </p>
+      <p className={styles.rosterNote}>{crewSummary(rows)}</p>
+    </div>
+  );
+}
+
+/**
+ * Removing a crew member before launch (6.0d, A40).
+ *
+ * Append-only, like every other pre-launch change, so the log records why —
+ * which is why this asks for a reason rather than a yes. A member nobody has
+ * accepted needs no reason and no command: they exist only in this form.
+ */
+function RemoveCrewMember({
+  row,
+  disabled,
+  onRemove,
+}: {
+  readonly row: CrewOverviewRow;
+  readonly disabled: boolean;
+  readonly onRemove: (row: CrewOverviewRow, reason: string) => void;
+}) {
+  const [asking, setAsking] = useState(false);
+  const [reason, setReason] = useState('');
+  const reasonId = `remove-reason-${row.draftId}`;
+
+  if (!asking) {
+    return (
+      <button
+        type="button"
+        className={styles.secondary}
+        disabled={disabled}
+        onClick={() => setAsking(true)}
+      >
+        Remove<span className={styles.visuallyHidden}> {row.name}</span>
+      </button>
+    );
+  }
+
+  return (
+    <div className={styles.removing}>
+      <label className={styles.label} htmlFor={reasonId}>
+        Why is {row.name} being removed?
+      </label>
+      <input
+        id={reasonId}
+        className={styles.input}
+        value={reason}
+        onChange={(event) => setReason(event.target.value)}
+      />
+      <div className={styles.actions}>
+        <button
+          type="button"
+          className={styles.primary}
+          disabled={disabled || (row.characterId !== undefined && reason.trim() === '')}
+          onClick={() => onRemove(row, reason.trim())}
+        >
+          Remove {row.name}
+        </button>
+        <button type="button" className={styles.secondary} onClick={() => setAsking(false)}>
+          Keep them
+        </button>
+      </div>
     </div>
   );
 }

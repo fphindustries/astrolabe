@@ -274,3 +274,42 @@
   font-family: var(--font-display);
   font-size: var(--text-md);
 }
+
+.rosterEntry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.removing {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+}
+
+.history {
+  font-size: var(--text-sm);
+}
+
+.historySummary {
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.historyList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-1) 0 0;
+  padding: 0 0 0 var(--space-3);
+  border-left: 2px solid var(--surface-border);
+  list-style: none;
+}
+
+.historyEntry {
+  display: flex;
+  flex-direction: column;
+}

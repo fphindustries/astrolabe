@@ -4,10 +4,11 @@ import {
   STARFORGED,
   validateLaunchCharacterDraft,
   type AssetId,
-  type ChallengeRank,
   type CharacterId,
   STAT_IDS,
+  type ChallengeRank,
   type CreationSlot,
+  type LaunchReadiness,
   type LaunchCharacterProblem,
   type StatId,
 } from '@astrolabe/rules';
@@ -691,4 +692,114 @@ function sameField(a: CrewMemberForm, b: CrewMemberForm, field: CrewProposalFiel
     case 'gear':
       return a.signatureGear === b.signatureGear;
   }
+}
+
+// ---------------------------------------------------------------------------
+// The crew overview (6.4)
+// ---------------------------------------------------------------------------
+
+/** One superseded version of a crew member, as the launch fold kept it (6.0c). */
+export interface CrewHistoryEntry {
+  readonly name: string;
+  readonly callsign: string;
+  readonly appearance?: string;
+  readonly backgroundVow?: { readonly title: string; readonly rank: ChallengeRank };
+  readonly provenance?: string;
+}
+
+export interface CrewOverviewRow {
+  readonly draftId: string;
+  readonly characterId?: CharacterId;
+  readonly name: string;
+  /** What the row says about this member, in words rather than by colour. */
+  readonly statusText: string;
+  readonly complete: boolean;
+  /**
+   * Whether the status came from the server or from the rules run here.
+   *
+   * An accepted character has a server answer and it wins (D-176). A member
+   * who exists only in a draft has none — the server does not know about
+   * unaccepted work — so the same pure validator the server would run is run
+   * here instead. Saying which is what stops the two being confused for each
+   * other later.
+   */
+  readonly statusFrom: 'server' | 'draft';
+  readonly problems: readonly string[];
+  readonly history: readonly CrewHistoryEntry[];
+}
+
+/**
+ * The server's blockers for one accepted crew member.
+ *
+ * `validateLaunchReadiness` paths them as `characters.<id>.<field>`, so this
+ * reads the id back out rather than re-running the rules — the client keeps no
+ * second readiness algorithm (D-176).
+ */
+export function serverProblemsFor(
+  readiness: LaunchReadiness,
+  characterId: string,
+): readonly string[] {
+  return readiness.sections.crew.blockers
+    .filter((blocker) => blocker.path.startsWith(`characters.${characterId}.`))
+    .map((blocker) => blocker.message);
+}
+
+/**
+ * The crew, as the overview reads it (6.4, A27).
+ *
+ * Accepted members take the server's word; unaccepted ones are checked here,
+ * because there is nothing on the server to ask about work that has not been
+ * accepted yet.
+ */
+export function crewOverview(
+  crew: readonly CrewMemberForm[],
+  readiness: LaunchReadiness,
+  history: Readonly<Record<string, readonly CrewHistoryEntry[]>> = {},
+): readonly CrewOverviewRow[] {
+  return crew.map((member) => {
+    const accepted = member.characterId !== undefined;
+    const problems = accepted
+      ? serverProblemsFor(readiness, member.characterId!)
+      : validateCrewMember(member).map((problem) => problem.message);
+    const complete = problems.length === 0;
+    return {
+      draftId: member.draftId,
+      ...(member.characterId === undefined ? {} : { characterId: member.characterId }),
+      name: member.name.trim() === '' ? 'Unnamed' : member.name.trim(),
+      statusText: !accepted
+        ? complete
+          ? 'Ready to accept'
+          : 'In progress'
+        : complete
+          ? 'Complete'
+          : 'Needs attention',
+      complete: complete && accepted,
+      statusFrom: accepted ? 'server' : 'draft',
+      problems,
+      history: (member.characterId === undefined ? [] : history[member.characterId]) ?? [],
+    };
+  });
+}
+
+export const MIN_CREW = 1;
+export const MAX_CREW = 6;
+
+/**
+ * The line beat 5 asks for, in the numbers this campaign actually has.
+ *
+ * "It explains that one complete character is the launch minimum; three is
+ * this campaign's choice, not a global requirement."
+ */
+export function crewSummary(rows: readonly CrewOverviewRow[]): string {
+  const complete = rows.filter((row) => row.complete).length;
+  const room = MAX_CREW - rows.length;
+  const minimum = `One complete character is the launch minimum; ${complete} is this campaign's choice, not a requirement.`;
+  return room > 0
+    ? `${minimum} There is room for ${room} more.`
+    : `${minimum} This campaign is full at ${MAX_CREW}.`;
+}
+
+/** Whether another crew member can be added (A27). */
+export function canAddCrew(rows: readonly CrewOverviewRow[]): boolean {
+  return rows.length < MAX_CREW;
 }

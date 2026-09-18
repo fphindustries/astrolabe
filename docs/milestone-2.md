@@ -611,7 +611,7 @@ for crew), D-186 (a declared character recipe), D-187 (a saved draft starts a se
   (D-185) grounded in `CHARACTER_RECIPE` rolled as its own command (D-186), and acceptance
   generalizes `acceptedProposal` to any target kind. Field-level help (beat 5: hooks and a
   background vow) is the same command with a requested-field list, not a second path.
-- [ ] 6.4 Add the one-to-six crew overview, completion status, revision, and removal before
+- [x] 6.4 Add the one-to-six crew overview, completion status, revision, and removal before
   launch, retaining server-side rules validation. Per-character status from
   `readiness.sections.crew.blockers`, visible revision history from `crewHistory`, and beat
   5's sentence: one complete character is the launch minimum, three is this campaign's choice.

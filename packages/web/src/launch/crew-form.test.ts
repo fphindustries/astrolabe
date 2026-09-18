@@ -7,6 +7,9 @@ import {
   CREW_SLOTS,
   addHook,
   addPrompt,
+  canAddCrew,
+  crewOverview,
+  crewSummary,
   applyProposal,
   chosenAssets,
   editedFields,
@@ -479,5 +482,96 @@ describe('the Guide’s proposal (6.3, D-185)', () => {
     // Appearance is read off the concept, so it cites nothing rather than
     // citing an empty roll.
     expect(proposalGrounding(proposal(), 'appearance')).toEqual([]);
+  });
+});
+
+describe('the crew overview (6.4, A27)', () => {
+  const readiness = (blockers: { path: string; message: string }[] = []) =>
+    ({
+      ready: false,
+      problems: blockers,
+      sections: {
+        foundation: { status: 'complete', blockers: [] },
+        truths: { status: 'complete', blockers: [] },
+        crew: { status: blockers.length === 0 ? 'complete' : 'in_progress', blockers },
+        starship: { status: 'not_started', blockers: [] },
+        sector: { status: 'not_started', blockers: [] },
+        connection_troubles: { status: 'not_started', blockers: [] },
+        incident_launch: { status: 'not_started', blockers: [] },
+      },
+    }) as never;
+
+  const acceptedMember = { ...complete(), characterId: VESNA };
+
+  it('takes the server’s word about an accepted character (D-176)', () => {
+    // The client runs the same validator, but only the server's answer counts
+    // for something it has actually accepted — the two disagreeing is what
+    // D-176 exists to prevent.
+    const rows = crewOverview(
+      [acceptedMember],
+      readiness([
+        {
+          path: `characters.${VESNA}.appearance`,
+          message: 'A launch character needs an appearance.',
+        },
+      ]),
+    );
+
+    expect(rows[0]).toMatchObject({ statusText: 'Needs attention', statusFrom: 'server' });
+    expect(rows[0]?.problems).toEqual(['A launch character needs an appearance.']);
+    expect(rows[0]?.complete).toBe(false);
+  });
+
+  it('checks an unaccepted member here, because the server knows nothing about it', () => {
+    const rows = crewOverview([emptyCrewMember('d')], readiness());
+
+    expect(rows[0]).toMatchObject({ statusText: 'In progress', statusFrom: 'draft' });
+    expect(rows[0]?.problems.length).toBeGreaterThan(0);
+  });
+
+  it('says when unaccepted work is ready to accept, without calling it complete', () => {
+    // "Complete" is a claim about the campaign, and a member nobody has
+    // accepted is not part of it yet.
+    const rows = crewOverview([complete()], readiness());
+
+    expect(rows[0]).toMatchObject({ statusText: 'Ready to accept', complete: false });
+  });
+
+  it('ignores another character’s blockers', () => {
+    const rows = crewOverview(
+      [acceptedMember],
+      readiness([{ path: 'characters.someone-else.name', message: 'Not about Vesna.' }]),
+    );
+
+    expect(rows[0]?.problems).toEqual([]);
+    expect(rows[0]?.statusText).toBe('Complete');
+  });
+
+  it('carries the earlier versions of a revised character (A26, 6.0c)', () => {
+    const rows = crewOverview([acceptedMember], readiness(), {
+      [VESNA]: [{ name: 'An earlier name', callsign: 'Map', provenance: 'guide_proposal' }],
+    });
+
+    expect(rows[0]?.history).toHaveLength(1);
+    expect(rows[0]?.history[0]?.name).toBe('An earlier name');
+  });
+
+  it('states the minimum in this campaign’s own numbers (beat 5)', () => {
+    const three = crewOverview([acceptedMember, acceptedMember, acceptedMember], readiness());
+
+    expect(crewSummary(three)).toContain('One complete character is the launch minimum');
+    expect(crewSummary(three)).toContain('3 is this campaign’s choice'.replace('’', "'"));
+    expect(crewSummary(three)).toContain('room for 3 more');
+  });
+
+  it('stops offering another at six, and says so rather than going quiet', () => {
+    const full = crewOverview(
+      Array.from({ length: 6 }, () => acceptedMember),
+      readiness(),
+    );
+
+    expect(canAddCrew(full)).toBe(false);
+    expect(crewSummary(full)).toContain('full at 6');
+    expect(canAddCrew(crewOverview([acceptedMember], readiness()))).toBe(true);
   });
 });
