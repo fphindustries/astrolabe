@@ -456,6 +456,8 @@ export const RemoveLaunchRouteRequestBodySchema = z.object({
 export type RemoveLaunchRouteRequestBody = z.infer<typeof RemoveLaunchRouteRequestBodySchema>;
 export interface SaveLaunchLocationResponse {
   readonly locationId: EntityId;
+  /** The planet accepted with its settlement, when there was one (8.0f). */
+  readonly planetId?: EntityId;
 }
 
 export const SaveLaunchRouteRequestBodySchema = z.object({

@@ -875,7 +875,7 @@ proposal per object), D-197 (the map is hand-rolled SVG).
   screen says so. Every transition lives in `sector-form.ts`, not the `.tsx`.
   `SECTION_ARRIVES_IN.sector` becomes null, and the placeholder example and the tests that
   name it move to Incident and Launch. Connection and Troubles is half built after 8.5.
-- [ ] 8.2 Build settlement creation and review for manual, oracle, and Guide proposals. Show
+- [x] 8.2 Build settlement creation and review for manual, oracle, and Guide proposals. Show
   the settlement list against the baseline ("2 of 3"). For each settlement, offer Write,
   field Roll, whole Roll (the recipe) and Ask the Guide (whole or per field). Review is
   keep, edit or discard per field, and the proposal id is carried only while the selection

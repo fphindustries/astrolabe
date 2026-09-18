@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import type { LaunchWorkspaceResponse } from '@astrolabe/shared';
 
@@ -8,6 +8,7 @@ import { ErrorSummary } from '../ui/ErrorSummary.js';
 import { fieldAnchorId } from '../ui/error-summary.js';
 
 import { launchErrorSummary } from './errors.js';
+import { SectorPlaces } from './SectorPlaces.js';
 import {
   REGIONS,
   REGION_DESCRIPTIONS,
@@ -53,10 +54,23 @@ export function SectorSection({
   const configure = useConfigureSector(campaignId);
   const failure = configure.error ?? saveDraft.error;
 
-  const edit = (next: SectorForm) => {
+  // The latest form, so a transition applied after the server answers is
+  // applied to what the screen shows now, and what is saved is that result.
+  const latest = useRef(form);
+  latest.current = form;
+  const update = (change: (current: SectorForm) => SectorForm): SectorForm => {
+    const next = change(latest.current);
+    latest.current = next;
+    // Any change makes an earlier "Saved" untrue, wherever on the page it was made.
     setSaved(undefined);
     setForm(next);
+    return next;
   };
+  const edit = (next: SectorForm) => update(() => next);
+  // After an acceptance the draft is saved as the form now stands, so the
+  // accepted object's new id is in it and a reload shows it once (8.2).
+  const persist = (next: SectorForm) =>
+    saveDraft.mutate({ section: 'sector', snapshot: toDraftSnapshot(next) });
 
   const handleSaveDraft = () => {
     saveDraft.mutate(
@@ -114,6 +128,14 @@ export function SectorSection({
         pending={configure.isPending}
         configured={configured}
         onConfigure={handleConfigure}
+      />
+
+      <SectorPlaces
+        campaignId={campaignId}
+        workspace={workspace}
+        form={form}
+        update={update}
+        persist={persist}
       />
 
       {blockers.length > 0 && (

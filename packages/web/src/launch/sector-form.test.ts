@@ -5,7 +5,26 @@ import type { EntityId, EventId } from '@astrolabe/shared';
 import { emptyCampaignState } from './state-fixture.js';
 import {
   EMPTY_SECTOR_FORM,
+  addSettlement,
   applyNameRoll,
+  applySettlementFieldRoll,
+  applySettlementRecipe,
+  discardSettlement,
+  dropSettlementProposal,
+  findSettlement,
+  heldSettlementProposal,
+  markSettlementAccepted,
+  proposedSettlementFields,
+  proposedSettlementGrounding,
+  proposedSettlementValue,
+  setProject,
+  setSettlementLocation,
+  setSettlementText,
+  settlementFieldOracle,
+  settlementProblems,
+  takeSettlementProposal,
+  toSettlementRequest,
+  type HeldSettlementProposal,
   baselineOf,
   headerProblems,
   initialSectorForm,
@@ -199,5 +218,193 @@ describe('Save and continue (8.0i, A23)', () => {
     });
 
     expect(initialSectorForm(state)).toEqual(form);
+  });
+});
+
+describe('settlements (8.2, A32)', () => {
+  const withOne = addSettlement(setRegion(EMPTY_SECTOR_FORM, 'outlands'), 'd-1');
+  const complete = (form: SectorForm) => {
+    let next = setSettlementText(form, 'd-1', 'name', 'Varga Relay');
+    next = setSettlementLocation(next, 'd-1', 'deep_space');
+    next = setSettlementText(next, 'd-1', 'population', 'Dozens');
+    next = setSettlementText(next, 'd-1', 'authority', 'None');
+    return setProject(next, 'd-1', 0, 'Listen to the dark');
+  };
+
+  it('reads each field Roll from the region’s own declared table (3R.5c)', () => {
+    expect(settlementFieldOracle('outlands', 'population')).toBe(
+      'oracle:settlements/population/outlands',
+    );
+    expect(settlementFieldOracle('terminus', 'location')).toBe('oracle:settlements/location');
+  });
+
+  it('turns a rolled location row into the fact’s own word, and keeps the roll', () => {
+    const form = applySettlementFieldRoll(withOne, 'd-1', 'location', {
+      eventId: id(1),
+      text: 'Deep Space',
+    });
+    expect(findSettlement(form, 'd-1')).toMatchObject({ location: 'deep_space', rolls: [id(1)] });
+  });
+
+  it('starts a planet for a planetside settlement, and drops it for deep space (8.0b)', () => {
+    const planetside = setSettlementLocation(withOne, 'd-1', 'planetside');
+    expect(findSettlement(planetside, 'd-1')?.planet).toBeDefined();
+    const deep = setSettlementLocation(planetside, 'd-1', 'deep_space');
+    expect(findSettlement(deep, 'd-1')?.planet).toBeUndefined();
+  });
+
+  it('fills every field from a whole recipe roll, keeping each roll (A41)', () => {
+    const form = applySettlementRecipe(withOne, 'd-1', [
+      { slot: 'name', eventId: id(1), text: 'Bleakhold' },
+      { slot: 'location', eventId: id(2), text: 'Orbital' },
+      { slot: 'population', eventId: id(3), text: 'Thousands' },
+      { slot: 'authority', eventId: id(4), text: 'Corrupt' },
+      { slot: 'project_1', eventId: id(5), text: 'Mining' },
+      { slot: 'project_2', eventId: id(6), text: '[Trade](id:oracle:x)' },
+    ]);
+    expect(findSettlement(form, 'd-1')).toMatchObject({
+      name: 'Bleakhold',
+      location: 'orbital',
+      population: 'Thousands',
+      authority: 'Corrupt',
+      // Datasworn's link markup never reaches the player (5.4's lesson).
+      projects: ['Mining', 'Trade'],
+      rolls: [id(1), id(2), id(3), id(4), id(5), id(6)],
+    });
+  });
+
+  it('names what a settlement still lacks, by the path its field uses', () => {
+    const problems = settlementProblems(findSettlement(withOne, 'd-1')!);
+    expect(problems.map((problem) => problem.path)).toEqual([
+      'sector.settlements.d-1.name',
+      'sector.settlements.d-1.location',
+      'sector.settlements.d-1.population',
+      'sector.settlements.d-1.authority',
+      'sector.settlements.d-1.projects',
+    ]);
+    expect(toSettlementRequest(findSettlement(withOne, 'd-1')!)).toBeNull();
+  });
+
+  it('sends a complete settlement with no id until the server gives one (8.0a)', () => {
+    const body = toSettlementRequest(findSettlement(complete(withOne), 'd-1')!);
+    expect(body).toEqual({
+      location: {
+        kind: 'settlement',
+        name: 'Varga Relay',
+        location: 'deep_space',
+        population: 'Dozens',
+        authority: 'None',
+        projects: ['Listen to the dark'],
+      },
+    });
+
+    const accepted = markSettlementAccepted(complete(withOne), 'd-1', EMBER);
+    expect(toSettlementRequest(findSettlement(accepted, 'd-1')!)?.locationId).toBe(EMBER);
+  });
+
+  it('sends a named planet with its settlement, one decision in one command (8.0f)', () => {
+    let form = setSettlementLocation(complete(withOne), 'd-1', 'orbital');
+    form = {
+      ...form,
+      settlements: form.settlements.map((settlement) => ({
+        ...settlement,
+        planet: { ...settlement.planet!, planetClass: 'ice' as const, name: 'Hollow' },
+      })),
+    };
+    expect(toSettlementRequest(findSettlement(form, 'd-1')!)?.planet).toEqual({
+      details: { kind: 'planet', name: 'Hollow', planetClass: 'ice', details: {} },
+    });
+  });
+
+  it('can forget a settlement never accepted, but not one that was', () => {
+    expect(discardSettlement(withOne, 'd-1').settlements).toEqual([]);
+    const accepted = markSettlementAccepted(withOne, 'd-1', EMBER);
+    expect(discardSettlement(accepted, 'd-1').settlements).toHaveLength(1);
+  });
+});
+
+describe('a settlement proposal (8.2, D-196)', () => {
+  const text = (value: string, n: number) => ({ value, reason: 'The roll.', groundedIn: [id(n)] });
+  const held: HeldSettlementProposal = {
+    eventId: id(9),
+    targetId: 'd-1',
+    rationale: 'The rolls, together.',
+    proposal: {
+      name: text('Deepwater Anchorage', 1),
+      location: { value: 'orbital', reason: 'The roll.', groundedIn: [id(2)] },
+      population: text('Thousands', 3),
+      authority: text('Corporate', 4),
+      projects: [text('Ice mining', 5)],
+      planet: {
+        planetClass: { value: 'ice', reason: 'The roll.', groundedIn: [id(6)] },
+        name: text('Hollow', 7),
+      },
+    },
+  };
+  const base = addSettlement(setRegion(EMPTY_SECTOR_FORM, 'outlands'), 'd-1');
+  const holding = (key: string) =>
+    emptyCampaignState({
+      proposals: {
+        [key]: {
+          targetKind: 'settlement' as const,
+          targetId: key,
+          proposal: held.proposal,
+          rationale: 'r',
+          groundedIn: [],
+          eventId: id(9),
+        },
+      },
+    });
+
+  it('finds a proposal under the draft’s key, or the accepted settlement’s', () => {
+    expect(heldSettlementProposal(holding('d-1'), { draftId: 'd-1' })?.targetId).toBe('d-1');
+    expect(
+      heldSettlementProposal(holding(EMBER), { draftId: 'd-1', locationId: EMBER })?.targetId,
+    ).toBe(EMBER);
+  });
+
+  it('takes the whole proposal, planet included, and carries its id and key', () => {
+    const settlement = findSettlement(takeSettlementProposal(base, 'd-1', held), 'd-1')!;
+    expect(settlement).toMatchObject({
+      name: 'Deepwater Anchorage',
+      location: 'orbital',
+      projects: ['Ice mining'],
+      planet: { planetClass: 'ice', name: 'Hollow' },
+      proposalEventId: id(9),
+      proposalTargetId: 'd-1',
+    });
+    expect(toSettlementRequest(settlement)).toMatchObject({
+      proposalEventId: id(9),
+      proposalTargetId: 'd-1',
+    });
+  });
+
+  it('takes one field, and lets the player drop the link and keep the words', () => {
+    const taken = takeSettlementProposal(base, 'd-1', held, ['name']);
+    expect(findSettlement(taken, 'd-1')).toMatchObject({
+      name: 'Deepwater Anchorage',
+      location: '',
+    });
+    const dropped = findSettlement(dropSettlementProposal(taken, 'd-1'), 'd-1')!;
+    expect(dropped.name).toBe('Deepwater Anchorage');
+    expect(dropped.proposalEventId).toBeUndefined();
+  });
+
+  it('restores the key a saved proposal was made under, from the fold (D-196)', () => {
+    const taken = takeSettlementProposal(base, 'd-1', held);
+    const state = {
+      ...holding('d-1'),
+      launch: {
+        ...holding('d-1').launch,
+        drafts: { sector: { seq: 10, snapshot: toDraftSnapshot(taken) } },
+      },
+    };
+    expect(findSettlement(initialSectorForm(state), 'd-1')?.proposalTargetId).toBe('d-1');
+  });
+
+  it('shows each proposed field with the rolls it cites (A41)', () => {
+    expect(proposedSettlementFields(held.proposal)).toContain('planet');
+    expect(proposedSettlementGrounding(held.proposal, 'planet')).toEqual([id(6), id(7)]);
+    expect(proposedSettlementValue(held.proposal, 'planet')).toEqual(['Hollow, a ice world']);
   });
 });

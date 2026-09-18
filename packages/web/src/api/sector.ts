@@ -1,4 +1,9 @@
-import type { LaunchRecipeSelector } from '@astrolabe/rules';
+import {
+  planetClassFromRow,
+  settlementLocationFromRow,
+  type LaunchRecipeSelector,
+  type LaunchRegion,
+} from '@astrolabe/rules';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type {
   ConfigureLaunchSectorResponse,
@@ -62,10 +67,10 @@ export function useSaveLocation(campaignId: string) {
   const invalidate = useInvalidateCampaign(campaignId);
   return useMutation({
     mutationFn: (body: SaveLocationBody) =>
-      apiPost<SaveLaunchLocationResponse & { readonly planetId?: string }>(
-        `/campaigns/${campaignId}/launch/locations`,
-        { commandId: commandId(), ...body },
-      ),
+      apiPost<SaveLaunchLocationResponse>(`/campaigns/${campaignId}/launch/locations`, {
+        commandId: commandId(),
+        ...body,
+      }),
     onSuccess: invalidate,
   });
 }
@@ -195,6 +200,63 @@ export function useProposeTrouble(campaignId: string) {
         commandId: commandId(),
         ...input,
       }),
+    onSettled: () => {
+      invalidate();
+      void queryClient.invalidateQueries({ queryKey: aiKeys.status });
+    },
+  });
+}
+
+/**
+ * Ask the Guide for one whole settlement (8.2, D-196), rolling first.
+ *
+ * The settlement recipe for the region, then, if its location roll put the
+ * settlement on or above a world, a planet class and that class's shallow
+ * planet (D-173: class before its class-specific recipe). Every roll is its
+ * own recorded command, and the proposal cites them all.
+ */
+export function useAskForSettlement(campaignId: string) {
+  const invalidate = useInvalidateCampaign(campaignId);
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      readonly targetId: string;
+      readonly region: LaunchRegion;
+      readonly projectCount: 1 | 2;
+      readonly fields?: readonly string[];
+    }): Promise<ProposeSettlementResponse> => {
+      const roll = (selector: LaunchRecipeSelector) =>
+        apiPost<RollLaunchRecipeResponse>(`/campaigns/${campaignId}/launch/recipe-rolls`, {
+          commandId: commandId(),
+          selector,
+        });
+      const settlement = await roll({
+        kind: 'settlement',
+        region: input.region,
+        projectCount: input.projectCount,
+      });
+      const ids = settlement.results.map((result) => result.eventId);
+      const location = settlementLocationFromRow(
+        settlement.results.find((result) => result.slot === 'location')?.text ?? '',
+      );
+      if (location === 'planetside' || location === 'orbital') {
+        const rolledClass = await roll({ kind: 'planet_class' });
+        const planetClass = planetClassFromRow(rolledClass.results[0]?.text ?? '');
+        if (planetClass !== undefined) {
+          const planet = await roll({ kind: 'planet', planetClass, depth: 'shallow' });
+          ids.push(
+            ...rolledClass.results.map((result) => result.eventId),
+            ...planet.results.map((result) => result.eventId),
+          );
+        }
+      }
+      return apiPost<ProposeSettlementResponse>(`/campaigns/${campaignId}/settlement-proposals`, {
+        commandId: commandId(),
+        targetId: input.targetId,
+        groundedIn: ids,
+        ...(input.fields === undefined ? {} : { fields: input.fields }),
+      });
+    },
     onSettled: () => {
       invalidate();
       void queryClient.invalidateQueries({ queryKey: aiKeys.status });
