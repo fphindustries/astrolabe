@@ -1024,6 +1024,10 @@ export function buildApp({
           commandId: parsed.data.commandId,
           actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
           starship: parsed.data.starship,
+          ...(parsed.data.proposalEventId === undefined
+            ? {}
+            : { proposalEventId: parsed.data.proposalEventId }),
+          ...(parsed.data.groundedIn === undefined ? {} : { groundedIn: parsed.data.groundedIn }),
         });
         reply.code(201);
         // The server minted or reused the id (7.0a); the body never carries one.

@@ -653,7 +653,7 @@ automated), D-193 (the legacy grant is neutralized in projection).
     in Milestone 2. The new asset field is optional and additive, so existing
     `STARFORGED.assets` consumers (MoveComposer, AssetDrawer, crew form) are untouched.
     Regenerate the artifact with `npm run generate --workspace @astrolabe/rules`.
-  - [ ] **7.0c Proposal-aware acceptance.** Stop hardcoding `player_written` and `groundedIn: []`.
+  - [x] **7.0c Proposal-aware acceptance.** Stop hardcoding `player_written` and `groundedIn: []`.
     Acceptance names the proposal event. The server resolves `causedBy` and decides between
     `guide_proposal` and `guide_proposal_edited` by comparing the proposal with what was
     accepted. Field-level rolls the player kept become `groundedIn`, validated as recorded

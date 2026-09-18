@@ -333,6 +333,10 @@ export type SharedStarshipDetails = z.infer<typeof SharedStarshipDetailsSchema>;
 export const SaveSharedStarshipRequestBodySchema = z.object({
   commandId: CommandIdSchema,
   starship: SharedStarshipDetailsSchema,
+  /** The ship proposal being accepted; the server decides whether it was edited (7.0c). */
+  proposalEventId: EventIdSchema.optional(),
+  /** Field-level rolls the player kept (A41). */
+  groundedIn: z.array(EventIdSchema).optional(),
 });
 export type SaveSharedStarshipRequestBody = z.infer<typeof SaveSharedStarshipRequestBodySchema>;
 export interface SaveSharedStarshipResponse {

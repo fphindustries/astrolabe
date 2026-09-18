@@ -7,9 +7,12 @@ import {
   type CampaignId,
   type CommandId,
   type EntityId,
+  type EventId,
   type SharedStarshipDetails,
+  STARSHIP_PROPOSAL_TARGET,
 } from '@astrolabe/shared';
 
+import { buildLaunchWorkspace } from '../launch/workspace.js';
 import { project } from '../projection/project.js';
 
 import { createCampaign } from './campaign-commands.js';
@@ -20,6 +23,8 @@ import {
   configureLaunchSector,
   establishLaunchConnection,
   LaunchRejectedError,
+  proposeLaunchCreation,
+  rollLaunchRecipe,
   saveLaunchLocation,
   saveLaunchRoute,
   saveSharedStarship,
@@ -259,6 +264,136 @@ describe.skipIf(!hasTestDatabase)('the launch aggregates', () => {
         expect(stamped.assetId).toBe(starshipAsset);
         expect(stamped.integrity).toEqual({ value: 5, min: 0, max: 5 });
       }
+    });
+
+    // 7.0c — acceptance names the proposal; the server decides the rest.
+    describe('accepting a ship proposal', () => {
+      async function proposed(campaignId: CampaignId) {
+        const rolled = await rollLaunchRecipe(db.sql, {
+          campaignId,
+          commandId: newId<CommandId>(),
+          actor: PLAYER,
+          selector: { kind: 'starship', quirkCount: 2 },
+          rng: { next: () => 0 },
+        });
+        const [name, history, quirk1, quirk2] = rolled.events.map((event) => event.id);
+        const result = await proposeLaunchCreation(db.sql, {
+          campaignId,
+          commandId: newId<CommandId>(),
+          actor: PLAYER,
+          targetId: STARSHIP_PROPOSAL_TARGET,
+          rationale: 'Read off the rolls.',
+          groundedIn: [name!, history!, quirk1!, quirk2!],
+          proposal: {
+            targetKind: 'starship',
+            proposal: {
+              name: { value: 'Lantern Wake', reason: 'The rolled name.', groundedIn: [name!] },
+              appearance: { value: 'A patched hull.', reason: 'From the history.' },
+              history: { value: 'Won in a wager.', reason: 'The roll.', groundedIn: [history!] },
+              quirks: [
+                { value: 'Its clocks run slow.', reason: 'The roll.', groundedIn: [quirk1!] },
+                { value: 'The hatch sticks.', reason: 'The roll.', groundedIn: [quirk2!] },
+              ],
+            },
+          },
+        });
+        return { proposalEventId: result.events[0]!.id, name, history, quirk1, quirk2 };
+      }
+      const asProposed = ship({
+        name: 'Lantern Wake',
+        appearance: 'A patched hull.',
+        history: 'Won in a wager.',
+        quirks: ['Its clocks run slow.', 'The hatch sticks.'],
+      });
+
+      it('records an unchanged acceptance as the Guide proposal, caused by it', async () => {
+        const campaignId = await campaign();
+        const { proposalEventId, name, history, quirk1, quirk2 } = await proposed(campaignId);
+
+        const result = await saveSharedStarship(db.sql, {
+          campaignId,
+          commandId: newId<CommandId>(),
+          actor: PLAYER,
+          starship: asProposed,
+          proposalEventId,
+        });
+
+        expect(result.events[0]?.causedBy).toBe(proposalEventId);
+        const events = await readEvents(db.sql, campaignId);
+        expect(project(events).launch.starship).toMatchObject({
+          provenance: 'guide_proposal',
+          groundedIn: [name, history, quirk1, quirk2],
+        });
+        // A41: the rolls resolve to chips the Starship step can show.
+        const chips = buildLaunchWorkspace(events).chips;
+        for (const id of [name, history, quirk1, quirk2]) expect(chips[id!]).toBeDefined();
+      });
+
+      it('records an edit, and cites only the rolls behind the fields kept', async () => {
+        const campaignId = await campaign();
+        const { proposalEventId, name, history, quirk1 } = await proposed(campaignId);
+
+        // Beat 6: keep one quirk, edit the appearance.
+        await saveSharedStarship(db.sql, {
+          campaignId,
+          commandId: newId<CommandId>(),
+          actor: PLAYER,
+          starship: {
+            ...asProposed,
+            appearance: 'Scorched plating.',
+            quirks: ['Its clocks run slow.'],
+          },
+          proposalEventId,
+        });
+
+        expect(project(await readEvents(db.sql, campaignId)).launch.starship).toMatchObject({
+          provenance: 'guide_proposal_edited',
+          groundedIn: [name, history, quirk1],
+        });
+      });
+
+      it('refuses a proposal that is not the held one, and grounding that is not a roll', async () => {
+        const campaignId = await campaign();
+        await proposed(campaignId);
+
+        await expect(
+          saveSharedStarship(db.sql, {
+            campaignId,
+            commandId: newId<CommandId>(),
+            actor: PLAYER,
+            starship: asProposed,
+            proposalEventId: newId<EventId>(),
+          }),
+        ).rejects.toMatchObject({ reason: 'unknown_proposal' });
+
+        await expect(
+          saveSharedStarship(db.sql, {
+            campaignId,
+            commandId: newId<CommandId>(),
+            actor: PLAYER,
+            starship: asProposed,
+            groundedIn: [newId<EventId>()],
+          }),
+        ).rejects.toMatchObject({ reason: 'invalid_grounding' });
+      });
+
+      it('records a written ship with its kept field rolls as player-written', async () => {
+        const campaignId = await campaign();
+        const { quirk1 } = await proposed(campaignId);
+
+        await saveSharedStarship(db.sql, {
+          campaignId,
+          commandId: newId<CommandId>(),
+          actor: PLAYER,
+          starship: ship(),
+          groundedIn: [quirk1!],
+        });
+
+        expect(project(await readEvents(db.sql, campaignId)).launch.starship).toMatchObject({
+          provenance: 'player_written',
+          groundedIn: [quirk1],
+        });
+      });
     });
 
     it('revises in place rather than creating a second ship', async () => {

@@ -17,6 +17,7 @@ import type {
   CampaignId,
   CampaignState,
   CreationProposal,
+  CreationTargetKind,
   EventType,
   LaunchAmendment,
   LaunchAmendmentSubject,
@@ -202,17 +203,13 @@ function acceptedProposal(
       'Only a chosen or written answer can accept a recommendation.',
     );
   }
-  const held = state.launch.proposals[request.truthId];
-  if (
-    held === undefined ||
-    held.eventId !== request.proposalEventId ||
-    held.targetKind !== 'truth'
-  ) {
-    throw new LaunchRejectedError(
-      'unknown_proposal',
-      'That recommendation does not exist for this truth.',
-    );
-  }
+  const held = heldProposal(
+    state,
+    request.truthId,
+    'truth',
+    request.proposalEventId,
+    'That recommendation does not exist for this truth.',
+  );
   const proposal = held.proposal;
   const unchanged =
     proposal.resolution === request.resolution &&
@@ -225,11 +222,86 @@ function acceptedProposal(
   };
 }
 
+type HeldProposal<K extends CreationTargetKind> = Extract<
+  CampaignState['launch']['proposals'][string],
+  { readonly targetKind: K }
+>;
+
+/**
+ * The held proposal a player says they are accepting, checked against the
+ * fold (7.0c). Shared by every section that accepts a proposal by event id,
+ * so "does this proposal exist for this target" has one answer. D-185 said
+ * acceptance would generalize; until 7.0c it was typed to truths alone.
+ */
+function heldProposal<K extends CreationTargetKind>(
+  state: CampaignState,
+  targetId: string,
+  targetKind: K,
+  proposalEventId: EventId,
+  unknown: string,
+): HeldProposal<K> {
+  const held = state.launch.proposals[targetId];
+  if (held === undefined || held.eventId !== proposalEventId || held.targetKind !== targetKind)
+    throw new LaunchRejectedError('unknown_proposal', unknown);
+  return held as HeldProposal<K>;
+}
+
+/**
+ * What accepting a starship proposal records (7.0c, D-166).
+ *
+ * Whether the player edited it is decided here by comparing the accepted
+ * details to the proposed ones, never taken from the client (D-185). The
+ * grounding is the rolls behind each field the player **kept**: a quirk they
+ * replaced with their own words was not built from the roll that suggested it.
+ */
+function acceptedStarshipProposal(
+  state: CampaignState,
+  proposalEventId: EventId,
+  details: SharedStarshipDetails,
+): {
+  eventId: EventId;
+  provenance: 'guide_proposal' | 'guide_proposal_edited';
+  groundedIn: EventId[];
+} {
+  const { proposal } = heldProposal(
+    state,
+    STARSHIP_PROPOSAL_TARGET,
+    'starship',
+    proposalEventId,
+    'That ship proposal does not exist for this campaign.',
+  );
+  const same = (proposed: string, accepted: string) => proposed.trim() === accepted.trim();
+  const keptName = same(proposal.name.value, details.name);
+  const keptHistory = same(proposal.history.value, details.history);
+  const keptQuirks = proposal.quirks.filter((quirk) =>
+    details.quirks.some((accepted) => same(quirk.value, accepted)),
+  );
+  const unchanged =
+    keptName &&
+    keptHistory &&
+    same(proposal.appearance.value, details.appearance) &&
+    keptQuirks.length === proposal.quirks.length &&
+    details.quirks.length === proposal.quirks.length;
+  return {
+    eventId: proposalEventId,
+    provenance: unchanged ? 'guide_proposal' : 'guide_proposal_edited',
+    groundedIn: [
+      ...(keptName ? proposal.name.groundedIn : []),
+      ...(keptHistory ? proposal.history.groundedIn : []),
+      ...keptQuirks.flatMap((quirk) => quirk.groundedIn),
+    ],
+  };
+}
+
 export interface SaveSharedStarshipRequest {
   readonly campaignId: CampaignId;
   readonly commandId: CommandId;
   readonly actor: Actor;
   readonly starship: SharedStarshipDetails;
+  /** The ship proposal being accepted, if any; resolved against the fold (7.0c). */
+  readonly proposalEventId?: EventId;
+  /** Field-level rolls the player kept (A41). Each must be a recorded oracle roll. */
+  readonly groundedIn?: readonly EventId[];
 }
 
 export interface RollLaunchOracleRequest {
@@ -918,8 +990,17 @@ export async function saveSharedStarship(
   sql: Sql,
   request: SaveSharedStarshipRequest,
 ): Promise<AppendResult> {
-  const state = project(await readEvents(sql, request.campaignId));
+  const events = await readEvents(sql, request.campaignId);
+  const state = project(events);
   requireLaunchOpen(state, 'The starship changes by amendment after launch.');
+  const rolls = new Set(
+    events.filter((event) => event.type === 'oracle.rolled').map((event) => event.id),
+  );
+  if ((request.groundedIn ?? []).some((id) => !rolls.has(id)))
+    throw new LaunchRejectedError(
+      'invalid_grounding',
+      'A starship may cite only recorded oracle rolls.',
+    );
   const current = state.launch.starship;
   const baseline = sharedStarshipBaseline(STARFORGED);
   const starship = {
@@ -938,28 +1019,27 @@ export async function saveSharedStarship(
       'invalid_starship',
       problems.map((problem) => problem.message).join(' '),
     );
+  const accepted =
+    request.proposalEventId === undefined
+      ? undefined
+      : acceptedStarshipProposal(state, request.proposalEventId, request.starship);
+  const acceptance = {
+    provenance: accepted?.provenance ?? ('player_written' as const),
+    groundedIn: [...new Set([...(accepted?.groundedIn ?? []), ...(request.groundedIn ?? [])])],
+  };
   return appendCommand(sql, {
     campaignId: request.campaignId,
     commandId: request.commandId,
     kind: current === undefined ? 'launch.starship.establish' : 'launch.starship.revise',
     actor: request.actor,
+    ...(accepted === undefined ? {} : { causedBy: accepted.eventId }),
     events:
       current === undefined
-        ? [
-            {
-              type: 'starship.established',
-              payload: { ...starship, provenance: 'player_written', groundedIn: [] },
-            },
-          ]
+        ? [{ type: 'starship.established', payload: { ...starship, ...acceptance } }]
         : [
             {
               type: 'starship.revised',
-              payload: {
-                starship,
-                provenance: 'player_written',
-                groundedIn: [],
-                supersedesEventId: current.eventId,
-              },
+              payload: { starship, ...acceptance, supersedesEventId: current.eventId },
             },
           ],
     response: { starshipId: starship.starshipId },
