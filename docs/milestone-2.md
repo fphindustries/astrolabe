@@ -793,14 +793,18 @@ proposal per object), D-197 (the map is hand-rolled SVG).
     uses which command: a whole-object **Roll** uses `rollLaunchRecipe`, and a one-field
     **Roll** uses `rollLaunchOracle` against that recipe's own oracle. A starting planet is
     shallow first, then deepened, because the `starting_detail` recipe has no name slot.
-  - [ ] **8.0d Per-field proposals (7.0d's shape).** `SettlementProposalSchema` has no
+  - [x] **8.0d Per-field proposals (7.0d's shape).** `SettlementProposalSchema` has no
     per-field reason or grounding. It has the shape the starship arm had before 7.0d. Name,
     population, authority and each project become `ProposedTextSchema`, and `location`
     becomes `{ value, reason, groundedIn }` over the enum. Add an optional `planet`
     (`planetClass`, `name`) and optional `firstLooks`, which are offered only for the
     starting settlement. `TroubleProposalSchema` becomes `text` as `ProposedTextSchema` under
     the settlement/sector discriminator that the accepted fact already has. The `sector`
-    arm narrows to its `name` (D-196). Update the sample payloads (3R.4e).
+    arm narrows to its `name` (D-196). Update the sample payloads (3R.4e). *Found while
+    implementing:* `launch.proposals` holds one proposal per target, with the newest
+    winning. So a trouble proposal is held under `trouble:sector` or
+    `trouble:<settlementId>`. Keyed by the settlement's own id, it would replace that
+    settlement's proposal. The sample payloads use the truth arm, so none needed changing.
   - [ ] **8.0e Settlement and trouble proposal routes (7.0e's shape).** Add
     `settlement_proposal` and `trouble_proposal` purposes and a context builder in
     `ai/context/sector.ts` over accepted facts only: truths, the sector, and the accepted

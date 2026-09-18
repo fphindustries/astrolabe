@@ -265,26 +265,66 @@ const TruthProposalSchema = z.object({
   text: z.string().optional(),
   questStarter: z.string().optional(),
 });
-/** A settlement is one member of the location union, so it gets its own shape. */
-const SettlementProposalSchema = z.object({
-  id: EntityIdSchema.optional(),
-  name: z.string().optional(),
-  location: z.enum(['planetside', 'orbital', 'deep_space']).optional(),
-  population: z.string().optional(),
-  authority: z.string().optional(),
-  projects: z.array(z.string()).max(2).optional(),
-  firstLooks: z.array(z.string()).max(2).optional(),
+/**
+ * A whole proposed settlement (8.0d, D-166, D-196).
+ *
+ * Per field for the starship's reason (7.0d): beat 7 has the player keep some
+ * of the Guide's settlement and change the rest, and still see what was
+ * proposed and why. Every field but the planet's is read off the settlement
+ * recipe's rolls, so each cites them. Complete rather than partial; field-level
+ * help is the same proposal with the Guide asked to focus on some fields.
+ *
+ * `planet` is for a planetside or orbital settlement, which needs one (D-174).
+ * `firstLooks` is for the starting settlement, which beat 9 zooms into.
+ */
+export const SettlementProposalSchema = z.object({
+  name: ProposedTextSchema,
+  location: z.object({
+    value: z.enum(['planetside', 'orbital', 'deep_space']),
+    reason: z.string().min(1),
+    groundedIn: z.array(EventIdSchema),
+  }),
+  population: ProposedTextSchema,
+  authority: ProposedTextSchema,
+  projects: z.array(ProposedTextSchema).min(1).max(2),
+  planet: z
+    .object({
+      planetClass: z.object({
+        value: z.enum(PLANET_CLASSES),
+        reason: z.string().min(1),
+        groundedIn: z.array(EventIdSchema),
+      }),
+      name: ProposedTextSchema,
+    })
+    .optional(),
+  firstLooks: z.array(ProposedTextSchema).min(1).max(2).optional(),
 });
-const SectorProposalSchema = z.object({
-  name: z.string().optional(),
-  region: RegionSchema.optional(),
-  settlements: z.array(SettlementProposalSchema).optional(),
-});
-const TroubleProposalSchema = z.object({
-  kind: z.enum(['settlement', 'sector']).optional(),
-  ownerId: EntityIdSchema.optional(),
-  text: z.string().optional(),
-});
+export type SettlementProposal = z.infer<typeof SettlementProposalSchema>;
+/**
+ * The sector's own proposal is only its name (D-196): each settlement is a
+ * proposal of its own, accepted on its own path, and passages and layout are
+ * the player's to draw.
+ */
+const SectorProposalSchema = z.object({ name: ProposedTextSchema });
+/** The one `targetId` a sector-name proposal can have; a campaign has one starting sector. */
+export const SECTOR_PROPOSAL_TARGET = 'sector';
+/** Discriminated like the accepted trouble, so the owner rule binds before acceptance too. */
+const TroubleProposalSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('settlement'), ownerId: EntityIdSchema, text: ProposedTextSchema }),
+  z.object({ kind: z.literal('sector'), text: ProposedTextSchema }),
+]);
+/**
+ * The `targetId` a trouble proposal is held under (8.0d).
+ *
+ * Prefixed, because `launch.proposals` is keyed by target with the newest
+ * winning: a settlement trouble keyed by its settlement's own id would replace
+ * a proposal for that settlement, and the other way round.
+ */
+export function troubleProposalTarget(
+  trouble: { readonly kind: 'sector' } | { readonly kind: 'settlement'; readonly ownerId: string },
+): string {
+  return trouble.kind === 'sector' ? 'trouble:sector' : `trouble:${trouble.ownerId}`;
+}
 
 /**
  * One crew member as a draft holds them (6.0e, D-161, D-182, A23).

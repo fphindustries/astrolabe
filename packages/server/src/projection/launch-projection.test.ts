@@ -42,8 +42,11 @@ function launchLog(): LogBuilder {
     })
     .add('creation.proposed', {
       targetKind: 'trouble',
-      targetId: TROUBLE,
-      proposal: { kind: 'sector', text: 'An unaccepted Guide proposal.' },
+      targetId: 'trouble:sector',
+      proposal: {
+        kind: 'sector',
+        text: { value: 'An unaccepted Guide proposal.', reason: 'Because.', groundedIn: [] },
+      },
       rationale: 'Because.',
       groundedIn: [],
     })

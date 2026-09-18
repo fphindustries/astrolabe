@@ -36,7 +36,11 @@ import type {
   SessionId,
   SharedStarshipDetails,
 } from '@astrolabe/shared';
-import { STARSHIP_PROPOSAL_TARGET } from '@astrolabe/shared';
+import {
+  SECTOR_PROPOSAL_TARGET,
+  STARSHIP_PROPOSAL_TARGET,
+  troubleProposalTarget,
+} from '@astrolabe/shared';
 import type { Sql } from 'postgres';
 
 import { project } from '../projection/project.js';
@@ -350,6 +354,28 @@ export async function proposeLaunchCreation(
     throw new LaunchRejectedError(
       'invalid_proposal_target',
       `A starship proposal targets "${STARSHIP_PROPOSAL_TARGET}": a campaign has one ship.`,
+    );
+  if (request.proposal.targetKind === 'sector' && request.targetId !== SECTOR_PROPOSAL_TARGET)
+    throw new LaunchRejectedError(
+      'invalid_proposal_target',
+      `A sector proposal targets "${SECTOR_PROPOSAL_TARGET}": a campaign has one starting sector.`,
+    );
+  if (request.proposal.targetKind === 'trouble') {
+    const target = troubleProposalTarget(request.proposal.proposal);
+    if (request.targetId !== target)
+      throw new LaunchRejectedError(
+        'invalid_proposal_target',
+        `That trouble proposal targets "${target}".`,
+      );
+  }
+  if (
+    request.proposal.targetKind === 'settlement' &&
+    request.proposal.proposal.planet !== undefined &&
+    request.proposal.proposal.location.value === 'deep_space'
+  )
+    throw new LaunchRejectedError(
+      'deep_space_planet',
+      'A deep-space settlement has no planet; only planetside and orbital ones do.',
     );
   if (Object.values(request.proposal.proposal).every((value) => value === undefined))
     throw new LaunchRejectedError('proposal_fields_required', 'A proposal needs content.');

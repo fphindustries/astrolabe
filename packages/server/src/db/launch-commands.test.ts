@@ -4,7 +4,9 @@ import { STARFORGED } from '@astrolabe/rules';
 import {
   DEFAULT_CAMPAIGN_SETTINGS,
   LOCAL_PLAYER_ID,
+  SECTOR_PROPOSAL_TARGET,
   STARSHIP_PROPOSAL_TARGET,
+  troubleProposalTarget,
   type Actor,
   type CampaignId,
   type CommandId,
@@ -261,5 +263,100 @@ describe.skipIf(!hasTestDatabase)('Campaign Launch workspace commands (3.1–3.2
       STARSHIP_PROPOSAL_TARGET
     ];
     expect(held).toMatchObject({ targetKind: 'starship', proposal: proposal.proposal });
+  });
+  // 8.0d — sector proposals are per field, and each kind is keyed where it cannot collide.
+  describe('sector proposals (8.0d, D-196)', () => {
+    const text = (value: string) => ({ value, reason: 'Read off the roll.', groundedIn: [] });
+    const settlementProposal = {
+      targetKind: 'settlement' as const,
+      proposal: {
+        name: text('Deepwater Anchorage'),
+        location: { value: 'orbital' as const, reason: 'The roll.', groundedIn: [] },
+        population: text('Thousands'),
+        authority: text('Corporate'),
+        projects: [text('Ice mining')],
+        planet: {
+          planetClass: { value: 'ice' as const, reason: 'The roll.', groundedIn: [] },
+          name: text('Hollow'),
+        },
+      },
+    };
+    const propose = (
+      campaignId: CampaignId,
+      proposal: Parameters<typeof proposeLaunchCreation>[1]['proposal'],
+      targetId: string,
+    ) =>
+      proposeLaunchCreation(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        proposal,
+        targetId,
+        rationale: 'A place to start.',
+        groundedIn: [],
+      });
+
+    it('holds a whole settlement proposal, field by field, under its draft key', async () => {
+      const campaignId = await campaign();
+      const draftId = 'draft-deepwater';
+
+      await propose(campaignId, settlementProposal, draftId);
+
+      const held = project(await readEvents(db.sql, campaignId)).launch.proposals[draftId];
+      expect(held).toMatchObject({
+        targetKind: 'settlement',
+        proposal: settlementProposal.proposal,
+      });
+    });
+
+    it('refuses a planet on a proposed deep-space settlement', async () => {
+      const campaignId = await campaign();
+      const deepSpace = {
+        ...settlementProposal,
+        proposal: {
+          ...settlementProposal.proposal,
+          location: { value: 'deep_space' as const, reason: 'The roll.', groundedIn: [] },
+        },
+      };
+
+      await expect(propose(campaignId, deepSpace, 'draft-x')).rejects.toMatchObject({
+        reason: 'deep_space_planet',
+      });
+    });
+
+    it('keys the sector name by the fixed target and refuses any other', async () => {
+      const campaignId = await campaign();
+      const name = { targetKind: 'sector' as const, proposal: { name: text('Ashen Anvil') } };
+
+      await expect(propose(campaignId, name, 'my-sector')).rejects.toMatchObject({
+        reason: 'invalid_proposal_target',
+      });
+      await propose(campaignId, name, SECTOR_PROPOSAL_TARGET);
+
+      const held = project(await readEvents(db.sql, campaignId)).launch.proposals[
+        SECTOR_PROPOSAL_TARGET
+      ];
+      expect(held).toMatchObject({ targetKind: 'sector', proposal: name.proposal });
+    });
+
+    it("keys a settlement trouble apart from its settlement's own proposal", async () => {
+      const campaignId = await campaign();
+      const settlementId = newId<EntityId>();
+      const trouble = {
+        targetKind: 'trouble' as const,
+        proposal: { kind: 'settlement' as const, ownerId: settlementId, text: text('Plague') },
+      };
+
+      await expect(propose(campaignId, trouble, settlementId)).rejects.toMatchObject({
+        reason: 'invalid_proposal_target',
+      });
+      await propose(campaignId, settlementProposal, settlementId);
+      await propose(campaignId, trouble, troubleProposalTarget(trouble.proposal));
+
+      // Both are held: the trouble did not replace the settlement's proposal.
+      const proposals = project(await readEvents(db.sql, campaignId)).launch.proposals;
+      expect(proposals[settlementId]?.targetKind).toBe('settlement');
+      expect(proposals[`trouble:${settlementId}`]?.targetKind).toBe('trouble');
+    });
   });
 });
