@@ -1,5 +1,6 @@
 import {
   CHARACTER_CREATION,
+  CHARACTER_RECIPE,
   STARFORGED,
   STARTING_STAT_ARRAY,
   validateCharacterDraft,
@@ -21,30 +22,30 @@ import { renderState } from './render-state.js';
  * rules check out.
  */
 
-/** The oracle tables the server rolls before asking (D-123), in roll order. */
+/**
+ * The oracle tables the server rolls before asking (D-123), in roll order.
+ *
+ * Read from the declared recipe rather than restated (6.0h, D-186). These five
+ * were a second list here, which was sound — the server owned it and a client
+ * could never name a table — but it sat outside `rules`, outside task 1.3's
+ * enumeration and outside the materialization completeness test, which is the
+ * one thing D-166's "the server rolls a declared recipe" exists to guarantee.
+ *
+ * The recipe's slot names *are* the keys a proposal cites, so the schema's
+ * citation enum and `checkCharacterProposal` are both derived from the same
+ * declaration the roll came from. They cannot drift.
+ */
 export const CHARACTER_PROPOSAL_ROLLS: readonly {
   readonly key: string;
   readonly label: string;
   readonly oracleId: OracleId;
-}[] = [
-  { key: 'given-name', label: 'Given name', oracleId: 'oracle:characters/name/given' as OracleId },
-  {
-    key: 'family-name',
-    label: 'Family name',
-    oracleId: 'oracle:characters/name/family-name' as OracleId,
-  },
-  { key: 'callsign', label: 'Callsign', oracleId: 'oracle:characters/name/callsign' as OracleId },
-  {
-    key: 'backstory-1',
-    label: 'Backstory prompt',
-    oracleId: 'oracle:campaign-launch/backstory-prompts' as OracleId,
-  },
-  {
-    key: 'backstory-2',
-    label: 'Backstory prompt',
-    oracleId: 'oracle:campaign-launch/backstory-prompts' as OracleId,
-  },
-];
+}[] = CHARACTER_RECIPE.rolls.map((slot) => ({
+  key: slot.slot,
+  // A slot that declares no words is labelled by its own name, which is what
+  // the chip and the prompt fall back to anyway.
+  label: slot.label ?? slot.slot,
+  oracleId: slot.oracle,
+}));
 
 /** A rolled result, as the prompt and the proposal command see it. */
 export interface RolledForProposal {

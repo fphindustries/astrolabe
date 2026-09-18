@@ -441,6 +441,7 @@ export const LaunchRecipeSelectorSchema = z.discriminatedUnion('kind', [
     planetClass: z.enum(PLANET_CLASSES),
     depth: z.enum(['shallow', 'starting_detail']),
   }),
+  z.object({ kind: z.literal('character') }),
   z.object({ kind: z.literal('starting_connection') }),
   z.object({ kind: z.literal('sector_trouble') }),
   z.object({ kind: z.literal('inciting_incident') }),

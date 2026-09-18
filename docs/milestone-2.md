@@ -551,7 +551,7 @@ Decisions behind this group: D-184 (crew metadata on the character), D-185 (`cre
 for crew), D-186 (a declared character recipe), D-187 (a saved draft starts a section), D-188
 (a revised background vow reaches its track).
 
-- [ ] 6.0 Prerequisites found while planning group 6 (a–g done; h open). Each begins with its failing test
+- [x] 6.0 Prerequisites found while planning group 6. Each begins with its failing test
   (3R.1a's pattern):
   - [x] **6.0a Crew acceptance is readable (D-184).** `CharacterCreatedSchema` gains optional
     `provenance` and `groundedIn`; projection carries `eventId`, `seq`, `provenance` and
@@ -586,9 +586,12 @@ for crew), D-186 (a declared character recipe), D-187 (a saved draft starts a se
   - [x] **6.0g Delete the `rank as never` casts.** `character-commands.ts` types
     `backgroundVow.rank` as `string` and casts twice. `/launch/crew` routes through it, so it
     is a launch command path and 3R.2b's rule applies; D-175 exists to stop this drift.
-  - **6.0h Declare `CHARACTER_RECIPE` (D-186).** Five distinct slots, added to
+  - [x] **6.0h Declare `CHARACTER_RECIPE` (D-186).** Five distinct slots, added to
     `CAMPAIGN_LAUNCH_RECIPE_MATERIALIZATIONS`, `LaunchRecipeSelector` and
-    `materializeLaunchRecipe`; `CHARACTER_PROPOSAL_ROLLS` becomes a read of it.
+    `materializeLaunchRecipe`; `CHARACTER_PROPOSAL_ROLLS` becomes a read of it. The wire
+    schema's selector union needed the same arm — the recipe was otherwise declared and
+    unreachable over HTTP — and `LAUNCH_RECIPE_KINDS` plus a test now stops the two lists
+    drifting again.
 - [ ] 6.1 Refactor character creation into a resumable step flow over the existing draft.
   Identity → Stats → Assets → Background → Review, with **Save and continue** at any step.
   Every transition lives in `crew-form.ts`, not in the `.tsx` — group 5's note is unambiguous

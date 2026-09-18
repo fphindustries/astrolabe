@@ -5,7 +5,15 @@ import { STARFORGED } from '../generated/index.js';
 
 import type { RandomSource } from '../schema/dice.js';
 
-import { NPC_RECIPE, ORACLE_RECIPES, rerollResult, rollRecipe } from './index.js';
+import {
+  CAMPAIGN_LAUNCH_RECIPE_MATERIALIZATIONS,
+  CHARACTER_RECIPE,
+  NPC_RECIPE,
+  ORACLE_RECIPES,
+  materializeLaunchRecipe,
+  rerollResult,
+  rollRecipe,
+} from './index.js';
 
 /** Lands each d100 on the scripted face, in order. */
 function faces(...scripted: number[]): RandomSource & { remaining(): number } {
@@ -97,5 +105,54 @@ describe('oracle recipes (D-65, D-139)', () => {
       rerollResult(rng, 'oracle:characters/goal', tableOf, NPC_RECIPE).map((r) => r.oracleId),
     ).toEqual(['oracle:core/action', 'oracle:core/theme']);
     expect(rng.remaining()).toBe(0);
+  });
+});
+
+describe('the launch character recipe (6.0h, D-186)', () => {
+  it('declares the five rolls a character proposal is grounded in', () => {
+    // D-166 has the server roll a *declared* recipe before the Guide
+    // interprets it. Task 1.3's enumeration omitted a character, so these five
+    // lived as a list in the AI context — server-owned and sound, but outside
+    // `rules` and outside the completeness test above.
+    expect(CHARACTER_RECIPE.rolls.map((slot) => slot.slot)).toEqual([
+      'given-name',
+      'family-name',
+      'callsign',
+      'backstory-1',
+      'backstory-2',
+    ]);
+  });
+
+  it('gives the two backstory prompts a slot each, over the same table', () => {
+    // The trap D-186 names. One slot rolled twice returns two results under a
+    // single name, which would collapse the two keys into one and break both
+    // the proposal schema's citation enum and its grounding check.
+    const backstory = CHARACTER_RECIPE.rolls.filter((slot) => slot.slot.startsWith('backstory-'));
+
+    expect(backstory).toHaveLength(2);
+    expect(new Set(backstory.map((slot) => slot.oracle)).size).toBe(1);
+    expect(new Set(CHARACTER_RECIPE.rolls.map((slot) => slot.slot)).size).toBe(
+      CHARACTER_RECIPE.rolls.length,
+    );
+  });
+
+  it('is a declared materialization, reachable by its selector', () => {
+    expect(CAMPAIGN_LAUNCH_RECIPE_MATERIALIZATIONS).toContain(CHARACTER_RECIPE);
+    expect(materializeLaunchRecipe({ kind: 'character' })).toBe(CHARACTER_RECIPE);
+  });
+
+  it('rolls every slot, so each key the proposal cites has a result', () => {
+    const rolled = rollRecipe(createSeededRandomSource(7), CHARACTER_RECIPE, (oracle) =>
+      STARFORGED.oracles.find((candidate) => candidate.id === oracle),
+    );
+
+    expect(rolled.map((entry) => entry.slot.slot)).toEqual([
+      'given-name',
+      'family-name',
+      'callsign',
+      'backstory-1',
+      'backstory-2',
+    ]);
+    for (const entry of rolled) expect(entry.results.length).toBeGreaterThan(0);
   });
 });

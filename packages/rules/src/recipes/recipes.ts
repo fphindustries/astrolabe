@@ -104,6 +104,57 @@ export function buildPlanetRecipe(planetClass: string, depth: PlanetDepth): Orac
           ],
   };
 }
+/**
+ * The rolls a Guide-proposed launch character is built from (D-186).
+ *
+ * Task 1.3's enumeration omitted a character, so these five lived as a list in
+ * `ai/context/creation.ts`. Nothing about that was unsound — the list was
+ * server-owned and a client could never name a table — but it sat outside
+ * `rules` and outside the materialization completeness test, which is the one
+ * thing D-166's "the server rolls a declared recipe" is supposed to guarantee.
+ *
+ * **The slot names are the proposal's roll keys**, which is why they are
+ * kebab-case where every other recipe here is snake_case: the character
+ * proposal schema enumerates these exact strings as the values a field may
+ * cite, and `checkCharacterProposal` validates against them. Renaming them
+ * would change the AI contract to buy consistency, which is the wrong trade.
+ *
+ * **Two backstory slots, one table.** A single slot rolled twice returns two
+ * results under one name, which would collapse `backstory-1` and `backstory-2`
+ * into one key and break both the citation enum and the grounding check. Two
+ * slots over the same oracle is the correct declaration, not a duplicate.
+ */
+export const CHARACTER_RECIPE: OracleRecipe = {
+  id: 'recipe:campaign-launch/character',
+  label: 'a crew member',
+  entityKind: 'character',
+  rolls: [
+    {
+      slot: 'given-name',
+      oracle: 'oracle:characters/name/given',
+      name: true,
+      label: 'Given name',
+    },
+    {
+      slot: 'family-name',
+      oracle: 'oracle:characters/name/family-name',
+      name: true,
+      label: 'Family name',
+    },
+    { slot: 'callsign', oracle: 'oracle:characters/name/callsign', label: 'Callsign' },
+    {
+      slot: 'backstory-1',
+      oracle: 'oracle:campaign-launch/backstory-prompts',
+      label: 'Backstory prompt',
+    },
+    {
+      slot: 'backstory-2',
+      oracle: 'oracle:campaign-launch/backstory-prompts',
+      label: 'Backstory prompt',
+    },
+  ],
+};
+
 export const STARTING_CONNECTION_RECIPE: OracleRecipe = {
   id: 'recipe:campaign-launch/connection',
   label: 'a local connection',
@@ -132,6 +183,7 @@ export const CAMPAIGN_LAUNCH_RECIPE_MATERIALIZATIONS: readonly OracleRecipe[] = 
   ...PLANET_CLASSES.flatMap((planetClass) =>
     (['shallow', 'starting_detail'] as const).map((depth) => buildPlanetRecipe(planetClass, depth)),
   ),
+  CHARACTER_RECIPE,
   STARTING_CONNECTION_RECIPE,
   SECTOR_TROUBLE_RECIPE,
   INCITING_INCIDENT_RECIPE,
@@ -150,10 +202,30 @@ export const ORACLE_RECIPES: ReadonlyMap<RecipeId, OracleRecipe> = new Map(
  * enforces both: a caller cannot name a table that is not in a recipe, and
  * cannot roll a materialization the rules do not declare.
  */
+/**
+ * Every kind of launch recipe a caller may ask for, as a value.
+ *
+ * The selector union below is the type; this is the same list the wire schema
+ * has to agree with, and `recipes.test.ts` asserts that it does. Without it
+ * the two are hand-maintained in parallel — which is how `character` was
+ * declared in the rules and left unreachable over HTTP, the same
+ * declared-but-unreadable shape this group keeps finding.
+ */
+export const LAUNCH_RECIPE_KINDS = [
+  'starship',
+  'settlement',
+  'planet',
+  'character',
+  'starting_connection',
+  'sector_trouble',
+  'inciting_incident',
+] as const;
+
 export type LaunchRecipeSelector =
   | { readonly kind: 'starship'; readonly quirkCount: 1 | 2 }
   | { readonly kind: 'settlement'; readonly region: LaunchRegion; readonly projectCount: 1 | 2 }
   | { readonly kind: 'planet'; readonly planetClass: PlanetClass; readonly depth: PlanetDepth }
+  | { readonly kind: 'character' }
   | { readonly kind: 'starting_connection' }
   | { readonly kind: 'sector_trouble' }
   | { readonly kind: 'inciting_incident' };
@@ -167,6 +239,8 @@ export function materializeLaunchRecipe(selector: LaunchRecipeSelector): OracleR
       return buildSettlementRecipe(selector.region, selector.projectCount);
     case 'planet':
       return buildPlanetRecipe(selector.planetClass, selector.depth);
+    case 'character':
+      return CHARACTER_RECIPE;
     case 'starting_connection':
       return STARTING_CONNECTION_RECIPE;
     case 'sector_trouble':
