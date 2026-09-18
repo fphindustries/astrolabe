@@ -859,6 +859,15 @@ proposal per object), D-197 (the map is hand-rolled SVG).
     other settlements and locations by name, the passages, and both troubles. Resolve a
     scene location against the launch locations. Assert that each one arrives. This is
     owned here rather than in 9.5 because it reads group 8's facts.
+  - [x] **8.0k Amendments keep the same contract (7.0j's finding, applied to group 8).**
+    Found after 8.0a–j landed, by the same route 7.0j was found. The `sector`, `location`
+    and `trouble` arms of `launch.fact_amended` took the fact's id from the request, so a
+    post-launch amendment could record a sector, location or trouble id the campaign never
+    had in its visible history (A40), the very ids 8.0a and 8.0f made the server's.
+    `amendLaunchFact` now stamps each id from the event it supersedes. A location keeps its
+    kind and a trouble its owner, for the reason a revision does: other facts rest on what
+    they are. Amendments project into `launch.amendments` and never back into the sector's
+    facts, so this was a history defect rather than a split aggregate.
 - [ ] 8.1 Add region and sector-name selection with the required baseline visible. Offer
   Write, Roll (the sector-name recipe) and field-level Guide help for the name. Show the
   baseline with its citation and D-180's sentence: it is a floor, not a quota. A revised
@@ -899,7 +908,13 @@ proposal per object), D-197 (the map is hand-rolled SVG).
   planet is deepened (8.3). Sector trouble is the Troubles half of Connection and Troubles
   (D-194): roll the sector-trouble recipe, have the Guide interpret it against the accepted
   truths, then accept, edit or write. The connection half remains a labelled placeholder
-  naming group 9.
+  naming group 9. **This is the first half-built section**; every earlier group flipped a
+  whole section. The section screen shows the Troubles editor, then the placeholder for the
+  connection alone. `SECTION_ARRIVES_IN.connection_troubles` becomes the connection's
+  placeholder note rather than null, and group 4's two placeholder properties survive. The
+  next useful action still points here while the connection is missing. The status is the
+  server's for the whole section (D-176), so it reads In progress with the sector trouble
+  accepted and the connection absent.
 - [ ] 8.6 Add whole-sector orchestration that still reviews objects one at a time (D-196).
   One command rolls the sector-name recipe and the region's baseline count of settlement
   recipes. For each planetside or orbital result, it rolls a planet class and then the

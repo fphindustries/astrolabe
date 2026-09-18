@@ -1184,7 +1184,7 @@ export async function amendLaunchFact(
   const reason = request.reason.trim();
   if (reason === '')
     throw new LaunchRejectedError('amendment_reason_required', 'An amendment needs a reason.');
-  const amendment = stampedAmendment(state, request.amendment);
+  const amendment = stampedAmendment(state, request.amendment, target!);
   return appendCommand(sql, {
     campaignId: request.campaignId,
     commandId: request.commandId,
@@ -1208,7 +1208,17 @@ export async function amendLaunchFact(
  * the current value, not the starting one, because an amendment corrects the
  * words and must not undo damage play has since recorded.
  */
-function stampedAmendment(state: CampaignState, amendment: LaunchAmendment): LaunchAmendment {
+function stampedAmendment(
+  state: CampaignState,
+  amendment: LaunchAmendment,
+  target: AstrolabeEvent,
+): LaunchAmendment {
+  if (
+    amendment.subject === 'sector' ||
+    amendment.subject === 'location' ||
+    amendment.subject === 'trouble'
+  )
+    return stampedSectorAmendment(amendment, target);
   if (amendment.subject !== 'starship') return amendment;
   const current = state.launch.starship;
   if (current === undefined)
@@ -1231,6 +1241,66 @@ function stampedAmendment(state: CampaignState, amendment: LaunchAmendment): Lau
       assetId: current.assetId,
     },
   };
+}
+
+/**
+ * A sector, location or trouble amendment, keeping the fact's own identity
+ * (8.0k; 7.0j's contract, applied to group 8's aggregates).
+ *
+ * The id is read off the event the amendment supersedes, never the request:
+ * 8.0a made the sector's and each location's id the server's, and 8.0f made
+ * the trouble's, so an amendment that could name another id would record a
+ * fact the campaign never had in its visible history (A40). A location keeps
+ * its kind and a trouble its owner for the reason a revision does: other
+ * facts rest on what they are. An amendment corrects words; changing what a
+ * thing is, or whose trouble it is, is a different fact.
+ */
+function stampedSectorAmendment(
+  amendment: Extract<LaunchAmendment, { readonly subject: 'sector' | 'location' | 'trouble' }>,
+  target: AstrolabeEvent,
+): LaunchAmendment {
+  const kindChanged = (was: string, now: string) =>
+    new LaunchRejectedError(
+      'amendment_kind_changed',
+      `That fact is a ${was}; an amendment cannot make it a ${now}.`,
+    );
+  switch (amendment.subject) {
+    case 'sector':
+      if (target.type !== 'sector.configured') throw new Error('subject was checked against type');
+      return {
+        subject: 'sector',
+        replacement: { sectorId: target.payload.sectorId, name: amendment.replacement.name },
+      };
+    case 'location': {
+      if (target.type !== 'location.added' && target.type !== 'location.revised')
+        throw new Error('subject was checked against type');
+      if (amendment.replacement.kind !== target.payload.kind)
+        throw kindChanged(target.payload.kind, amendment.replacement.kind);
+      return {
+        subject: 'location',
+        replacement: { ...amendment.replacement, id: target.payload.id },
+      };
+    }
+    case 'trouble': {
+      if (target.type !== 'trouble.established' && target.type !== 'trouble.revised')
+        throw new Error('subject was checked against type');
+      const was = target.payload;
+      if (amendment.replacement.kind !== was.kind)
+        throw kindChanged(`${was.kind} trouble`, `${amendment.replacement.kind} trouble`);
+      return {
+        subject: 'trouble',
+        replacement:
+          was.kind === 'settlement'
+            ? {
+                kind: 'settlement',
+                troubleId: was.troubleId,
+                ownerId: was.ownerId,
+                text: amendment.replacement.text,
+              }
+            : { kind: 'sector', troubleId: was.troubleId, text: amendment.replacement.text },
+      };
+    }
+  }
 }
 
 /**

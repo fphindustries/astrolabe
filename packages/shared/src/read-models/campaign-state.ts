@@ -378,8 +378,13 @@ export interface LaunchState {
   /**
    * Each location's superseded versions, oldest first (8.0h, A40), and a
    * removed location's final version, so what was removed stays answerable
-   * as `crewHistory` keeps a removed crew member's. Bounded as the other
-   * histories are, by deliberate pre-activation acts of one local user.
+   * as `crewHistory` keeps a removed crew member's. **Less tightly bounded
+   * than the other histories**, and said so rather than claimed by analogy:
+   * truths are fourteen and crew at most six, but A31 makes the sector's
+   * baseline a floor, so locations have no cap, and removed ones stay here.
+   * What bounds it is only that each entry is a deliberate pre-activation act
+   * of one local user. If that stops being obviously small, the answer is a
+   * history endpoint, not a bigger state payload (`truthHistory`'s rule).
    */
   readonly locationHistory: Readonly<Record<EntityId, readonly Accepted<'location.added'>[]>>;
   readonly routes: readonly Accepted<'route.added'>[];

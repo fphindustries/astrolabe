@@ -7,7 +7,9 @@ import {
   type Actor,
   type CampaignId,
   type CommandId,
+  type AstrolabeEvent,
   type EntityId,
+  type EventId,
 } from '@astrolabe/shared';
 
 import { buildLaunchWorkspace } from '../launch/workspace.js';
@@ -186,7 +188,6 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
       actor: PLAYER,
       trouble: {
         kind: 'settlement',
-
         ownerId: emberHold,
         text: 'The dock crews have not been paid in three cycles.',
       },
@@ -197,7 +198,6 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
       actor: PLAYER,
       trouble: {
         kind: 'sector',
-
         text: 'The relay grid is failing, one node at a time.',
       },
     });
@@ -391,6 +391,82 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
       },
     });
     await expect(amend('  ')).rejects.toMatchObject({ reason: 'invalid_starship' });
+  });
+
+  // 8.0k — the sector's aggregates keep 8.0a's and 8.0f's contract when amended.
+  it('stamps a sector, location or trouble amendment with the fact’s own identity', async () => {
+    const { campaignId } = await readyCampaign();
+    await activateLaunch(db.sql, { campaignId, commandId: newId<CommandId>(), actor: PLAYER });
+    const events = await readEvents(db.sql, campaignId);
+    const of = <T extends AstrolabeEvent['type']>(type: T) =>
+      events.find((event) => event.type === type) as Extract<AstrolabeEvent, { type: T }>;
+    const sector = of('sector.configured');
+    const location = of('location.added');
+    const trouble = events.find(
+      (event) => event.type === 'trouble.established' && event.payload.kind === 'settlement',
+    ) as Extract<AstrolabeEvent, { type: 'trouble.established' }>;
+    const amend = (amendment: Parameters<typeof amendLaunchFact>[1]['amendment'], id: EventId) =>
+      amendLaunchFact(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        amendment,
+        reason: 'The chart had it wrong.',
+        supersedesEventId: id,
+      });
+
+    await amend(
+      { subject: 'sector', replacement: { sectorId: newId(), name: 'Ashen Reach' } },
+      sector.id,
+    );
+    await amend(
+      {
+        subject: 'location',
+        replacement: {
+          kind: 'settlement',
+          id: newId(),
+          name: 'Ember Hold Station',
+          location: 'deep_space',
+          population: 'Hundreds',
+          authority: 'Corporate',
+          projects: ['Rebuilding the relay'],
+        },
+      },
+      location.id,
+    );
+    await amend(
+      {
+        subject: 'trouble',
+        replacement: { kind: 'settlement', troubleId: newId(), ownerId: newId(), text: 'Worse.' },
+      },
+      trouble.id,
+    );
+
+    const [sectorAmended, locationAmended, troubleAmended] = project(
+      await readEvents(db.sql, campaignId),
+    ).launch.amendments;
+    expect(sectorAmended?.replacement).toMatchObject({ sectorId: sector.payload.sectorId });
+    expect(locationAmended?.replacement).toMatchObject({
+      id: location.payload.id,
+      name: 'Ember Hold Station',
+    });
+    if (trouble.payload.kind !== 'settlement') throw new Error('expected a settlement trouble');
+    expect(troubleAmended?.replacement).toMatchObject({
+      troubleId: trouble.payload.troubleId,
+      ownerId: trouble.payload.ownerId,
+      text: 'Worse.',
+    });
+
+    // What a location is stays what it is.
+    await expect(
+      amend(
+        {
+          subject: 'location',
+          replacement: { kind: 'other', id: newId(), name: 'X', description: 'Y' },
+        },
+        location.id,
+      ),
+    ).rejects.toMatchObject({ reason: 'amendment_kind_changed' });
   });
 
   it('refuses an amendment whose subject contradicts the event it supersedes', async () => {
