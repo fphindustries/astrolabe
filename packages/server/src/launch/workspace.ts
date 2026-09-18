@@ -3,6 +3,7 @@ import {
   validateLaunchReadiness,
   type LaunchReadiness,
   type LaunchReadinessInput,
+  type LaunchSection,
 } from '@astrolabe/rules';
 import type {
   AstrolabeEvent,
@@ -193,6 +194,10 @@ function readinessInput(state: CampaignState): LaunchReadinessInput {
   );
   return {
     campaignName: state.campaign?.name ?? '',
+    // D-187. The keys are exactly the sections with a saved snapshot, which is
+    // the fold's own answer to "has the player done work here" — readiness
+    // stays pure and derives nothing about storage itself.
+    draftedSections: Object.keys(state.launch.drafts) as LaunchSection[],
     // D-181. Only the accepted foundation counts: a saved draft is not canon
     // (D-161), so a premise still sitting in a draft does not clear the blocker.
     ...(state.launch.foundation === undefined ? {} : { premise: state.launch.foundation.premise }),

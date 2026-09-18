@@ -551,7 +551,7 @@ Decisions behind this group: D-184 (crew metadata on the character), D-185 (`cre
 for crew), D-186 (a declared character recipe), D-187 (a saved draft starts a section), D-188
 (a revised background vow reaches its track).
 
-- [ ] 6.0 Prerequisites found while planning group 6 (a–e done; f–h open). Each begins with its failing test
+- [ ] 6.0 Prerequisites found while planning group 6 (a–f done; g–h open). Each begins with its failing test
   (3R.1a's pattern):
   - [x] **6.0a Crew acceptance is readable (D-184).** `CharacterCreatedSchema` gains optional
     `provenance` and `groundedIn`; projection carries `eventId`, `seq`, `provenance` and
@@ -578,10 +578,11 @@ for crew), D-186 (a declared character recipe), D-187 (a saved draft starts a se
     across saves, and is the proposal `targetId` D-185 defines. Precedence is decided **per
     crew member**, as group 5 decided it per truth. The inner `min(1)` constraints drop, as
     the `connection_troubles` arm already does deliberately: a draft is incomplete by nature.
-  - **6.0f `sectionStarted` honours drafts (D-187).** `LaunchReadinessInput.draftedSections`,
+  - [x] **6.0f `sectionStarted` honours drafts (D-187).** `LaunchReadinessInput.draftedSections`,
     supplied by the workspace from the projected drafts. This changes status for all seven
-    sections, so assertions of `not_started` where a draft exists need updating in
-    `ready.test.ts` and `dashboard.test.ts`.
+    sections. The test churn predicted here did not materialise: `draftedSections` is
+    optional, so every existing caller and fixture is unaffected, and no existing test saved
+    a draft and then asserted `not_started`.
   - **6.0g Delete the `rank as never` casts.** `character-commands.ts` types
     `backgroundVow.rank` as `string` and casts twice. `/launch/crew` routes through it, so it
     is a launch command path and 3R.2b's rule applies; D-175 exists to stop this drift.

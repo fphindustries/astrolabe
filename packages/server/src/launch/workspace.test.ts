@@ -374,3 +374,41 @@ describe('a crew member cites its rolls too (6.0b, D-184)', () => {
     expect(workspace.chips[firstRoll]?.rowText).toBe('Vesna');
   });
 });
+
+describe('a saved draft reaches readiness (6.0f, D-187)', () => {
+  it('reports a section with only a saved draft as in progress', () => {
+    // The seam this group keeps finding holes in: the rule is in `rules` and
+    // means nothing unless this layer carries the fact across. Trouble was
+    // projected and read by nobody once already.
+    const before = buildLaunchWorkspace([]);
+    expect(before.readiness.sections.crew.status).toBe('not_started');
+
+    const workspace = buildLaunchWorkspace([
+      testEvent(
+        'launch.draft_saved',
+        { section: 'crew', snapshot: { characters: [{ draftId: 'draft-rook', name: 'Rook' }] } },
+        { seq: 1 },
+      ),
+    ]);
+
+    expect(workspace.readiness.sections.crew.status).toBe('in_progress');
+    // And still blocked: a draft starts a section, never completes one.
+    expect(workspace.readiness.sections.crew.blockers.map((blocker) => blocker.code)).toContain(
+      'crew_count_invalid',
+    );
+    expect(workspace.readiness.ready).toBe(false);
+  });
+
+  it('leaves the sections with no draft alone', () => {
+    const workspace = buildLaunchWorkspace([
+      testEvent(
+        'launch.draft_saved',
+        { section: 'crew', snapshot: { characters: [{ draftId: 'draft-rook' }] } },
+        { seq: 1 },
+      ),
+    ]);
+
+    expect(workspace.readiness.sections.starship.status).toBe('not_started');
+    expect(workspace.readiness.sections.sector.status).toBe('not_started');
+  });
+});

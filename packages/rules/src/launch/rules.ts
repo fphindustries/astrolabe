@@ -126,6 +126,20 @@ export interface LaunchReadinessInput {
   readonly sector?: LaunchSector;
   readonly connection?: LaunchConnection;
   readonly incident?: LaunchIncident;
+  /**
+   * The sections that have a saved draft (D-187).
+   *
+   * A draft **starts** a section and never completes one. D-161 makes it
+   * durable and not canon, so it clears no blocker; only an accepted fact
+   * does. Without this, a player who saved a half-built character and reopened
+   * the workspace read "Crew — Not started" beside their own saved work, which
+   * is worse for Crew than anywhere else: a truth is accepted the moment it is
+   * decided, while a character sits in a draft for its entire build.
+   *
+   * Supplied by the caller from the projected drafts, so this stays pure and
+   * the client keeps no second readiness rule of its own (D-176).
+   */
+  readonly draftedSections?: readonly LaunchSection[];
 }
 export interface LaunchReadiness {
   readonly ready: boolean;
@@ -279,6 +293,8 @@ export function validateLaunchReadiness(
   return { ready: problems.length === 0, problems, sections };
 }
 function sectionStarted(section: LaunchSection, input: LaunchReadinessInput): boolean {
+  // D-187: saved work starts a section, whatever has been accepted in it.
+  if (input.draftedSections?.includes(section) === true) return true;
   return {
     foundation: input.campaignName !== '',
     truths: input.truths.length > 0,

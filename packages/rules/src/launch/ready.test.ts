@@ -271,3 +271,50 @@ describe('launch readiness can be satisfied', () => {
     expect(codes).toContain('starting_planet_detail_missing');
   });
 });
+
+describe('a saved draft starts a section (6.0f, D-187)', () => {
+  const empty = (): LaunchReadinessInput => ({
+    campaignName: '',
+    truths: [],
+    characters: [],
+  });
+  const check = (input: LaunchReadinessInput) =>
+    validateLaunchReadiness(input, STARFORGED.truths, STARFORGED);
+
+  it('reads a section with nothing in it as not started', () => {
+    const sections = check(empty()).sections;
+
+    expect(sections.crew.status).toBe('not_started');
+    expect(sections.starship.status).toBe('not_started');
+  });
+
+  it('reads a section with a saved draft as in progress', () => {
+    // Crew is the case this exists for. A truth is accepted the moment it is
+    // decided, but a character sits in a draft for its entire build — so a
+    // player who saved a half-built Rook and reopened the workspace read
+    // "Crew — Not started" beside their own saved work.
+    const sections = check({ ...empty(), draftedSections: ['crew'] }).sections;
+
+    expect(sections.crew.status).toBe('in_progress');
+    // Only the section that has one.
+    expect(sections.starship.status).toBe('not_started');
+  });
+
+  it('does not let a draft complete a section', () => {
+    // The bound. D-161 makes a draft durable and not canon, so it clears no
+    // blocker; only an accepted fact does. A draft that could complete a
+    // section would let an unaccepted form pass readiness.
+    const drafted = check({ ...empty(), draftedSections: ['crew', 'starship'] });
+
+    expect(drafted.ready).toBe(false);
+    expect(drafted.sections.crew.blockers.map((blocker) => blocker.code)).toContain(
+      'crew_count_invalid',
+    );
+  });
+
+  it('leaves a section its accepted facts already started alone', () => {
+    const accepted = check({ ...readyInput(), draftedSections: [] });
+
+    expect(accepted.sections.crew.status).toBe('complete');
+  });
+});
