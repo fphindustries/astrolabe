@@ -375,7 +375,7 @@ export async function readNarrativeEvents(
        and command_id not in (
          select id from commands
           where campaign_id = ${campaignId}
-            and (kind = any(${[...PROPOSAL_COMMAND_KINDS]}) or kind like ${LAUNCH_PROPOSAL_PREFIX})
+            and (kind = any(${[...PROPOSAL_COMMAND_KINDS]}) or kind like ${LAUNCH_COMMAND_PREFIX})
        )
        ${options.sessionId === undefined ? sql`` : sql`and session_id = ${options.sessionId}`}
        ${options.before === undefined ? sql`` : sql`and seq < ${options.before}`}
@@ -419,17 +419,23 @@ export const PROPOSAL_COMMAND_KINDS = [
 ] as const;
 
 /**
- * Every Campaign Launch proposal command, by prefix.
+ * Every Campaign Launch command, by prefix.
  *
- * `proposeLaunchCreation` mints its kind from the target
- * (`launch.propose.${'<targetKind>'}`), so there are eight of them and a list
- * would go stale the next time a target kind is added. Matching the prefix
- * excludes all of them and cannot drift. Belt and braces today — a launch
- * proposal is written before `session.began`, and the narrative log is
- * session-scoped — but the rule is "a proposal is not a beat", not "a
- * proposal happens to be unreachable".
+ * This was `launch.propose.%`, because `proposeLaunchCreation` mints its kind
+ * from the target and a list of eight would go stale. Broadened in 6.3, when
+ * moving the character rolls into their own command (D-186) made a launch
+ * oracle roll show up in the narrative log as an unexplained beat. It had
+ * always been able to: `launch.recipe.roll.*` and `launch.oracle.roll` write
+ * `oracle.rolled`, which is a narrative type, and only the *proposal* kinds
+ * were excluded. Nothing had noticed because every other launch roll happened
+ * to be read back session-scoped.
+ *
+ * The rule is the one the narrower prefix already stated — setting a campaign
+ * up is not a beat of playing it — and every command that does it is named
+ * `launch.*`. Accepting a character is not (`character.create`), and should
+ * not be: a crew member joining is a fact about the campaign.
  */
-const LAUNCH_PROPOSAL_PREFIX = 'launch.propose.%';
+const LAUNCH_COMMAND_PREFIX = 'launch.%';
 
 const AMENDMENT_TYPES = [
   'event.voided',

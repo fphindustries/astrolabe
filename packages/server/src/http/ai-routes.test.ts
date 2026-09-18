@@ -269,8 +269,28 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
     });
   });
 
-  it('proposes a character from a concept, and accepting it keeps the hooks (3.3, D-124)', async () => {
-    const { campaignId } = await moveMade();
+  it('proposes a character from a concept, and accepting it keeps the hooks (3.3, D-124, D-189)', async () => {
+    // A campaign still in Campaign Launch, not one in play: asking the Guide
+    // for a character grounds itself in a declared launch recipe, which a
+    // campaign with a session refuses (D-178, D-189). The manual path is what
+    // remains available in play.
+    const campaignId = newId<CampaignId>();
+    await appendCommand(db.sql, {
+      campaignId,
+      commandId: newId(),
+      kind: 'campaign.create',
+      actor: PLAYER,
+      createCampaign: { name: 'Lantern Wake' },
+      events: [
+        {
+          type: 'campaign.created',
+          payload: {
+            name: 'Lantern Wake',
+            settings: { narrationLatitude: 'color', narrationLength: 'standard', rerollCap: 2 },
+          },
+        },
+      ],
+    });
     ai.enqueue({
       kind: 'structured',
       value: {
@@ -292,20 +312,43 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
           { text: 'She owes a rival.', reason: 'Prompt.', groundedIn: ['backstory-2'] },
         ],
         pronouns: { value: null, reason: 'The concept states none.' },
+        appearance: { value: 'A worn flight jacket.', reason: 'A working pilot.' },
+        backstory: {
+          kind: 'written',
+          text: 'She flew the last shuttle out.',
+          reason: 'From the prompts.',
+          groundedIn: ['backstory-1', 'backstory-2'],
+        },
+        signatureGear: { value: null, reason: 'Nothing the concept names.' },
       },
     });
     const proposalCommandId = newId<CommandId>();
 
+    // D-186: the recipe is rolled by its own command, and the proposal cites it.
+    const rolled = await app.inject({
+      method: 'POST',
+      url: `/api/campaigns/${campaignId}/launch/recipe-rolls`,
+      payload: { commandId: newId<CommandId>(), selector: { kind: 'character' } },
+    });
+    expect(rolled.statusCode).toBe(201);
+    const groundedIn = rolled.json().results.map((result: { eventId: string }) => result.eventId);
+
     const proposed = await app.inject({
       method: 'POST',
       url: `/api/campaigns/${campaignId}/character-proposals`,
-      payload: { commandId: proposalCommandId, concept: 'A pilot who answers every call.' },
+      payload: {
+        commandId: proposalCommandId,
+        concept: 'A pilot who answers every call.',
+        targetId: 'draft-vesna',
+        groundedIn,
+      },
     });
     expect(proposed.statusCode).toBe(201);
     const body = proposed.json();
     expect(body).toMatchObject({ ok: true, proposal: { callsign: { value: 'Lantern' } } });
     expect(body.rolls).toHaveLength(5);
-    // A session is open here, but a proposal is not a beat of it.
+    // A proposal belongs to no session. Before launch there is none to belong
+    // to, which is the point D-189 settles — this is where crew is built.
     const proposalEvents = (await readEvents(db.sql, campaignId)).filter(
       (e) => e.commandId === proposalCommandId,
     );

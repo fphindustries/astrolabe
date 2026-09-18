@@ -90,6 +90,20 @@ interface ProposalSpec<T, E extends EventType> {
   readonly kind: string;
   readonly contentType: E;
   readonly rolls: readonly ProposalRollSpec[];
+  /**
+   * Rolls made by an earlier command, rather than by this one (D-186).
+   *
+   * Crew grounds its proposal in `CHARACTER_RECIPE`, and a declared recipe is
+   * rolled by `rollLaunchRecipe` — its own command, with its own
+   * `oracle.rolled` events. When these are supplied this command rolls nothing
+   * and writes no roll events: they exist already, and re-rolling would ground
+   * the Guide in dice the player never saw.
+   */
+  readonly provided?: readonly (ProposalRollSpec & {
+    readonly eventId: EventId;
+    readonly roll: number;
+    readonly rowText: string;
+  })[];
   build(
     state: CampaignState,
     rolled: readonly RolledForProposal[],
@@ -142,14 +156,16 @@ async function runProposal<T, E extends EventType>(
   const envelope = { ...envelopeOf(request.campaignId, state), sessionId: null, sceneId: null };
 
   const rng = request.rng ?? cryptoRandomSource();
-  const rolled = spec.rolls.map((roll) => {
-    const table = STARFORGED.oracles.find((t) => t.id === roll.oracleId);
-    if (table === undefined) {
-      throw new Error(`Proposal oracle "${roll.oracleId}" is not in the ruleset.`);
-    }
-    const result = rollOracle(rng, table);
-    return { ...roll, eventId: uuidv7() as EventId, roll: result.roll, rowText: result.row.text };
-  });
+  const rolled =
+    spec.provided ??
+    spec.rolls.map((roll) => {
+      const table = STARFORGED.oracles.find((t) => t.id === roll.oracleId);
+      if (table === undefined) {
+        throw new Error(`Proposal oracle "${roll.oracleId}" is not in the ruleset.`);
+      }
+      const result = rollOracle(rng, table);
+      return { ...roll, eventId: uuidv7() as EventId, roll: result.roll, rowText: result.row.text };
+    });
   const eventIdOf = (key: string): EventId => {
     const found = rolled.find((r) => r.key === key);
     if (found === undefined) {
@@ -162,7 +178,8 @@ async function runProposal<T, E extends EventType>(
   const outcome = await generateValidated(ai, aiRequest, schema, check);
   recordStatus(status, outcome);
 
-  const rollEvents: NewEvent<'oracle.rolled'>[] = rolled.map((r) => ({
+  // Nothing to write when the rolls were made by an earlier command.
+  const rollEvents: NewEvent<'oracle.rolled'>[] = (spec.provided ? [] : rolled).map((r) => ({
     id: r.eventId,
     type: 'oracle.rolled',
     payload: { oracleId: r.oracleId, roll: r.roll, rowText: r.rowText },
@@ -199,17 +216,25 @@ async function runProposal<T, E extends EventType>(
 /** What a proposal command wrote, read back — the same answer on a replay. */
 function outcomeFrom<E extends EventType>(
   events: readonly AstrolabeEvent[],
-  spec: Pick<ProposalSpec<unknown, E>, 'contentType' | 'rolls'>,
+  spec: Pick<ProposalSpec<unknown, E>, 'contentType' | 'rolls' | 'provided'>,
 ): ProposalOutcome<E> {
-  const rolls: ProposalRoll[] = events
-    .filter((event) => event.type === 'oracle.rolled')
-    .map((event, i) => ({
-      eventId: event.id,
-      oracleId: event.payload.oracleId,
-      label: spec.rolls[i]?.label ?? event.payload.oracleId,
-      roll: event.payload.roll,
-      rowText: event.payload.rowText,
-    }));
+  const rolls: ProposalRoll[] = spec.provided
+    ? spec.provided.map((roll) => ({
+        eventId: roll.eventId,
+        oracleId: roll.oracleId,
+        label: roll.label,
+        roll: roll.roll,
+        rowText: roll.rowText,
+      }))
+    : events
+        .filter((event) => event.type === 'oracle.rolled')
+        .map((event, i) => ({
+          eventId: event.id,
+          oracleId: event.payload.oracleId,
+          label: spec.rolls[i]?.label ?? event.payload.oracleId,
+          roll: event.payload.roll,
+          rowText: event.payload.rowText,
+        }));
   const content = events.find((event) => event.type === spec.contentType);
   if (content !== undefined) {
     return { ok: true, event: content as AstrolabeEvent & { readonly type: E }, rolls };
@@ -231,6 +256,62 @@ function outcomeFrom<E extends EventType>(
 
 export interface ProposeCharacterRequest extends ProposalRequest {
   readonly concept: string;
+  /**
+   * What this proposal is about (D-185): the crew member's `draftId` while
+   * they are being built, or their `characterId` once accepted and being
+   * revised. A character loaded from server state never saw a draft id.
+   */
+  readonly targetId: string;
+  /** The `oracle.rolled` events from this campaign's character recipe roll. */
+  readonly groundedIn: readonly EventId[];
+  /**
+   * The fields the player asked for help with (beat 5).
+   *
+   * Steering only. The Guide still answers with a complete build, because a
+   * half-built proposal is not something a review screen can show beside what
+   * the player already has, and the screen applies only the fields that were
+   * asked for. Deliberately not recorded on the event: what the player did
+   * with the proposal is a fact about the acceptance, not about the proposal.
+   */
+  readonly fields?: readonly string[];
+}
+
+/**
+ * Match the cited roll events to the recipe's slots, in the recipe's order.
+ *
+ * The client sends event ids and nothing else, so it cannot mislabel a roll:
+ * which slot each one fills is decided here, by walking the declared slots and
+ * taking the next unused event on that table. Two backstory slots share one
+ * oracle, so order is what separates them — which is exactly why D-186 made
+ * them two slots rather than one rolled twice.
+ */
+function rollsForCharacterProposal(
+  events: readonly AstrolabeEvent[],
+  groundedIn: readonly EventId[],
+): readonly (ProposalRollSpec & {
+  readonly eventId: EventId;
+  readonly roll: number;
+  readonly rowText: string;
+})[] {
+  const cited = groundedIn
+    .map((id) => events.find((event) => event.id === id))
+    .filter((event) => event?.type === 'oracle.rolled');
+  const taken = new Set<EventId>();
+  return CHARACTER_PROPOSAL_ROLLS.flatMap((slot) => {
+    const event = cited.find(
+      (candidate) => candidate!.payload.oracleId === slot.oracleId && !taken.has(candidate!.id),
+    );
+    if (event === undefined) return [];
+    taken.add(event.id);
+    return [
+      {
+        ...slot,
+        eventId: event.id,
+        roll: event.payload.roll,
+        rowText: event.payload.rowText,
+      },
+    ];
+  });
 }
 
 export async function proposeCharacter(
@@ -243,45 +324,85 @@ export async function proposeCharacter(
   if (concept.length === 0) {
     throw new AiRequestRefusedError('no_concept', 'Describe the character first.');
   }
-  const keys = CHARACTER_PROPOSAL_ROLLS.map((roll) => roll.key);
+  const provided = rollsForCharacterProposal(
+    await readEvents(sql, request.campaignId),
+    request.groundedIn,
+  );
+  if (provided.length === 0) {
+    throw new AiRequestRefusedError(
+      'no_campaign',
+      'Roll the character prompts before asking the Guide.',
+    );
+  }
+  const keys = provided.map((roll) => roll.key);
 
-  const outcome = await runProposal<CharacterProposalOutput, 'character.proposed'>(
+  const outcome = await runProposal<CharacterProposalOutput, 'creation.proposed'>(
     sql,
     ai,
     request,
     {
       kind: PROPOSAL_COMMAND_KINDS[0],
-      contentType: 'character.proposed',
+      contentType: 'creation.proposed',
       rolls: CHARACTER_PROPOSAL_ROLLS,
+      provided,
       build: (state, rolled) => ({
-        request: buildCharacterProposalRequest(state, concept, rolled),
+        request: buildCharacterProposalRequest(state, concept, rolled, request.fields),
         schema: characterProposalSchema(keys),
         check: (value) => checkCharacterProposal(value, keys, concept),
       }),
       toPayload: (value, eventIdOf) => ({
-        concept,
-        name: { ...value.name, groundedIn: value.name.groundedIn.map(eventIdOf) },
-        callsign: { ...value.callsign, groundedIn: value.callsign.groundedIn.map(eventIdOf) },
-        stats: value.stats,
-        assets: value.assets,
-        backgroundVow: value.backgroundVow,
-        hooks: value.hooks.map((hook) => ({ ...hook, groundedIn: hook.groundedIn.map(eventIdOf) })),
-        ...(value.pronouns.value !== null
-          ? { pronouns: { value: value.pronouns.value, reason: value.pronouns.reason } }
-          : {}),
+        targetKind: 'character',
+        targetId: request.targetId,
+        rationale: value.stats.reason,
+        groundedIn: [...request.groundedIn],
+        proposal: {
+          concept,
+          name: { ...value.name, groundedIn: value.name.groundedIn.map(eventIdOf) },
+          callsign: { ...value.callsign, groundedIn: value.callsign.groundedIn.map(eventIdOf) },
+          appearance: value.appearance,
+          backstory: {
+            value:
+              value.backstory.kind === 'written'
+                ? { kind: 'written' as const, text: value.backstory.text ?? '' }
+                : { kind: 'discover_in_play' as const },
+            reason: value.backstory.reason,
+            groundedIn: value.backstory.groundedIn.map(eventIdOf),
+          },
+          stats: value.stats,
+          assets: value.assets,
+          backgroundVow: value.backgroundVow,
+          hooks: value.hooks.map((hook) => ({
+            ...hook,
+            groundedIn: hook.groundedIn.map(eventIdOf),
+          })),
+          ...(value.pronouns.value !== null
+            ? { pronouns: { value: value.pronouns.value, reason: value.pronouns.reason } }
+            : {}),
+          ...(value.signatureGear.value !== null
+            ? {
+                signatureGear: {
+                  value: value.signatureGear.value,
+                  reason: value.signatureGear.reason,
+                },
+              }
+            : {}),
+        },
       }),
     },
     status,
   );
 
-  return outcome.ok
-    ? {
-        ok: true,
-        proposalEventId: outcome.event.id,
-        proposal: outcome.event.payload,
-        rolls: outcome.rolls,
-      }
-    : outcome;
+  if (!outcome.ok) return outcome;
+  const payload = outcome.event.payload;
+  if (payload.targetKind !== 'character') {
+    throw new Error('A character proposal wrote a different target kind.');
+  }
+  return {
+    ok: true,
+    proposalEventId: outcome.event.id,
+    proposal: payload.proposal,
+    rolls: outcome.rolls,
+  };
 }
 
 // ---------------------------------------------------------------------------

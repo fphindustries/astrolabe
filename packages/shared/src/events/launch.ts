@@ -37,6 +37,72 @@ export const LaunchCharacterSchema = CharacterCreatedSchema.extend({
   backgroundVow: z.object({ title: z.string().min(1), rank: ChallengeRankSchema }),
   signatureGear: z.string().min(1).optional(),
 });
+/**
+ * One proposed field: the Guide's value, why, and the rolls behind it (A41).
+ *
+ * `creation.proposed`'s other arms carry a single rationale for the whole
+ * object, which is enough for a truth or a trouble. A character is not: beat 3
+ * has the player keep seven proposed fields, change one, and still see "the
+ * proposal's original choice and reason" for the field they changed. That is
+ * per field or it is nothing.
+ */
+const ProposedTextSchema = z.object({
+  value: z.string().min(1),
+  reason: z.string().min(1),
+  groundedIn: z.array(EventIdSchema),
+});
+
+/**
+ * A proposed field with a reason and no grounding.
+ *
+ * Appearance, pronouns and signature gear are read off the player's concept
+ * rather than off a table — there is no roll for them to cite, and an empty
+ * `groundedIn` would suggest the Guide looked for one and found nothing.
+ */
+const ProposedNoteSchema = z.object({
+  value: z.string().min(1),
+  reason: z.string().min(1),
+});
+
+/**
+ * A whole proposed crew member (D-185, 6.3).
+ *
+ * Complete rather than partial: this is the whole-object path D-166 names, and
+ * the player edits it in the review screen before any of it is accepted. The
+ * two optional fields are optional in the fiction — D-131 lets pronouns go
+ * unrecorded, and signature gear is a note, not a requirement.
+ */
+export const CharacterProposalSchema = z.object({
+  concept: z.string().min(1),
+  name: ProposedTextSchema,
+  callsign: ProposedTextSchema,
+  pronouns: ProposedNoteSchema.optional(),
+  appearance: ProposedNoteSchema,
+  backstory: z.object({
+    value: BackstorySchema,
+    reason: z.string().min(1),
+    groundedIn: z.array(EventIdSchema),
+  }),
+  stats: z.object({ value: CharacterStatsSchema, reason: z.string().min(1) }),
+  assets: z.array(z.object({ assetId: AssetIdSchema, reason: z.string().min(1) })),
+  backgroundVow: z.object({
+    title: z.string().min(1),
+    rank: ChallengeRankSchema,
+    reason: z.string().min(1),
+  }),
+  hooks: z
+    .array(
+      z.object({
+        text: z.string().min(1),
+        reason: z.string().min(1),
+        groundedIn: z.array(EventIdSchema),
+      }),
+    )
+    .min(1)
+    .max(3),
+  signatureGear: ProposedNoteSchema.optional(),
+});
+
 export const SharedStarshipSchema = z.object({
   starshipId: EntityIdSchema,
   name: z.string().min(1),
@@ -294,7 +360,7 @@ export const LaunchDraftSavedSchema = DraftSnapshotSchema;
  */
 export const CreationProposalSchema = z.discriminatedUnion('targetKind', [
   z.object({ targetKind: z.literal('truth'), proposal: TruthProposalSchema }),
-  z.object({ targetKind: z.literal('character'), proposal: LaunchCharacterSchema.partial() }),
+  z.object({ targetKind: z.literal('character'), proposal: CharacterProposalSchema }),
   z.object({ targetKind: z.literal('starship'), proposal: SharedStarshipSchema.partial() }),
   z.object({ targetKind: z.literal('settlement'), proposal: SettlementProposalSchema }),
   z.object({ targetKind: z.literal('sector'), proposal: SectorProposalSchema }),

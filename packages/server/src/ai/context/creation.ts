@@ -85,9 +85,12 @@ The build:
 - Assets: exactly three. Two must be paths. The third may be a module, support vehicle, companion or another path. Never a deed. The crew's starship is granted separately and does not count. Use only asset ids from the catalogue.
 - A background vow: one sentence the character has sworn, with a challenge rank (troublesome, dangerous, formidable, extreme or epic).
 - A name, a callsign, and two or three backstory hooks.
+- An appearance: a sentence on what someone notices first.
+- A backstory: either "written" with the text, or "discover_in_play" with no text, when the concept says the character's past is deliberately unknown. Discovering it in play is a real choice, not an empty field — take it when the player's concept points that way, and say so in the reason.
+- Signature gear: a short note on something they carry, or null if nothing suggests itself. It is optional.
 - Pronouns: only if the player's concept states them, copied as written; otherwise null. Never choose pronouns for the character. Unless the concept states them, refer to the character by name or callsign in hooks and reasons.
 
-Grounding: the server has rolled oracle results for the name, callsign and backstory. Build the name, callsign and hooks from those results. You may choose between them, combine them or adapt them to the concept, and the player's own words take precedence where they already give a name. List, for each of those fields, the keys of the rolls you drew on. Every hook cites at least one roll. A name or callsign the player already wrote in the concept is kept exactly as written and cites none. Do not invent other named people, places or factions.
+Grounding: the server has rolled oracle results for the name, callsign and backstory. Build the name, callsign, backstory and hooks from those results. You may choose between them, combine them or adapt them to the concept, and the player's own words take precedence where they already give a name. List, for each of those fields, the keys of the rolls you drew on. Every hook cites at least one roll. A name or callsign the player already wrote in the concept is kept exactly as written and cites none. Do not invent other named people, places or factions.
 
 Every field has a reason: one short sentence tying it to the concept or the roll. Keep the player's concept at the centre; do not decide the character's feelings or inner life beyond what the player described.`;
 
@@ -96,6 +99,7 @@ export function buildCharacterProposalRequest(
   state: CampaignState,
   concept: string,
   rolls: readonly RolledForProposal[],
+  fields?: readonly string[],
 ): AiRequest {
   const context = renderState(state);
   const user = [
@@ -144,6 +148,16 @@ export function characterProposalSchema(rollKeys: readonly string[]) {
       .min(2)
       .max(3),
     pronouns: z.object({ value: z.string().min(1).max(40).nullable(), reason }),
+    // The Campaign Launch fields (6.3, A28). Beat 3 has the player keep the
+    // proposed appearance and backstory, so the Guide has to offer them.
+    appearance: z.object({ value: z.string().min(1).max(400), reason }),
+    backstory: z.object({
+      kind: z.enum(['written', 'discover_in_play']),
+      text: z.string().min(1).max(1200).optional(),
+      reason,
+      groundedIn: cites,
+    }),
+    signatureGear: z.object({ value: z.string().min(1).max(200).nullable(), reason }),
   });
 }
 
@@ -180,9 +194,18 @@ export function checkCharacterProposal(
     const words = wordsOf(text);
     return words.join('').length >= 2 && words.every((word) => conceptWords.has(word));
   };
+  // A written backstory is built from the rolled prompts, so it cites one; an
+  // explicit mystery is a decision about the character and cites nothing.
+  if (value.backstory.kind === 'written' && (value.backstory.text ?? '').trim() === '') {
+    problems.push('A written backstory needs its text.');
+  }
+  if (value.backstory.kind === 'discover_in_play' && value.backstory.text !== undefined) {
+    problems.push('A backstory discovered in play carries no text; leave it out.');
+  }
   const grounded = [
     ['name', value.name.groundedIn, inConcept(value.name.value)],
     ['callsign', value.callsign.groundedIn, inConcept(value.callsign.value)],
+    ['backstory', value.backstory.groundedIn, value.backstory.kind === 'discover_in_play'],
     ...value.hooks.map((hook, i) => [`hook ${i + 1}`, hook.groundedIn, false] as const),
   ] as const;
   // D-131: pronouns are only ever the player's own words.

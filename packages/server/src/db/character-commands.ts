@@ -107,8 +107,10 @@ export interface CreateCharacterRequest {
   };
   /**
    * D-124: the proposal command this character was accepted from. Resolved
-   * here to its `character.proposed` event, which becomes the cause; a
-   * command that holds no proposal is refused rather than ignored.
+   * here to the `creation.proposed` event it holds, which becomes the cause;
+   * a command that holds no proposal is refused rather than ignored. A
+   * Milestone 1 campaign's `character.proposed` is still accepted, because
+   * D-185 keeps that type readable forever — it is simply no longer written.
    */
   readonly proposalCommandId?: CommandId;
   /**
@@ -171,7 +173,11 @@ export async function createCharacter(
   if (request.proposalCommandId !== undefined) {
     const proposal = (
       await readEventsByCommand(sql, request.campaignId, request.proposalCommandId)
-    ).find((event) => event.type === 'character.proposed');
+    ).find(
+      (event) =>
+        event.type === 'character.proposed' ||
+        (event.type === 'creation.proposed' && event.payload.targetKind === 'character'),
+    );
     if (proposal === undefined) {
       throw new UnknownProposalError();
     }

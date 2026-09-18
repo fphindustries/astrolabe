@@ -444,6 +444,9 @@ export function registerAiRoutes(
             commandId: parsedBody.data.commandId,
             actor: PLAYER,
             concept: parsedBody.data.concept,
+            targetId: parsedBody.data.targetId,
+            groundedIn: parsedBody.data.groundedIn,
+            ...(parsedBody.data.fields === undefined ? {} : { fields: parsedBody.data.fields }),
           },
           status,
         );

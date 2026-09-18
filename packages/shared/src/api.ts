@@ -946,6 +946,12 @@ export interface AiStatusResponse {
 export const ProposeCharacterRequestBodySchema = z.object({
   commandId: CommandIdSchema,
   concept: z.string().trim().min(1).max(2000),
+  /** D-185: the crew member's draft id while building, character id when revising. */
+  targetId: z.string().min(1),
+  /** The `oracle.rolled` events from this campaign's character recipe roll (D-186). */
+  groundedIn: z.array(EventIdSchema).min(1),
+  /** Beat 5: the fields the player wants help with. Steering only, never stored. */
+  fields: z.array(z.string().min(1)).optional(),
 });
 
 export type ProposeCharacterRequestBody = z.infer<typeof ProposeCharacterRequestBodySchema>;
@@ -1073,7 +1079,10 @@ export type ProposeCharacterResponse =
   | {
       readonly ok: true;
       readonly proposalEventId: EventId;
-      readonly proposal: PayloadFor<'character.proposed'>;
+      readonly proposal: Extract<
+        PayloadFor<'creation.proposed'>,
+        { readonly targetKind: 'character' }
+      >['proposal'];
       readonly rolls: readonly ProposalRoll[];
     }
   | {
