@@ -109,7 +109,6 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
         appearance: 'Weathered flight jacket',
         backstory: { kind: 'discover_in_play' },
       },
-      grantCommandVehicle: false,
     });
 
     await saveSharedStarship(db.sql, {

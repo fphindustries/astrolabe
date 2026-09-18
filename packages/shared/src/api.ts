@@ -146,7 +146,6 @@ export const CreateCharacterRequestBodySchema = z.object({
     assets: z.array(AssetIdSchema),
   }),
   backgroundVow: z.object({ title: z.string().min(1), rank: ChallengeRankSchema }).optional(),
-  grantCommandVehicle: z.boolean().optional(),
   /** D-124: backstory hooks, proposed or written by hand. */
   hooks: z.array(z.string().trim().min(1)).max(3).optional(),
   /** D-131: free text; blank means not recorded. */
@@ -198,9 +197,7 @@ export type CreateLaunchCharacterRequestBody = z.infer<
  * client that could name what it supersedes could rewrite a different
  * revision's place in the chain.
  */
-export const ReviseLaunchCharacterRequestBodySchema = CreateLaunchCharacterRequestBodySchema.omit({
-  grantCommandVehicle: true,
-});
+export const ReviseLaunchCharacterRequestBodySchema = CreateLaunchCharacterRequestBodySchema;
 export type ReviseLaunchCharacterRequestBody = z.infer<
   typeof ReviseLaunchCharacterRequestBodySchema
 >;

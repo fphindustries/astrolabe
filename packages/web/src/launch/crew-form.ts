@@ -220,9 +220,10 @@ function fromDraft(member: DraftMember, base: CrewMemberForm): CrewMemberForm {
  *
  * Never a legality decision of its own: `validateLaunchCharacterDraft` is what
  * decides whether a set is valid, and this only has to put each asset
- * somewhere the picker can show it. An asset no slot accepts — a Milestone 1
- * character's granted Starship (D-171) — is deliberately dropped, so the form
- * shows the three slots the launch rules recognise.
+ * somewhere the picker can show it. An asset no slot accepts is dropped, so
+ * the form shows the three slots the launch rules recognise. (A Milestone 1
+ * character's granted Starship never arrives here: the fold keeps it off
+ * `assets` since 7.3, D-193.)
  */
 function slotSelectionsOf(assets: readonly AssetId[]): Record<string, AssetId | undefined> {
   const byId = new Map(STARFORGED.assets.map((asset) => [asset.id, asset]));

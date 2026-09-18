@@ -56,7 +56,7 @@ export interface RolledForProposal {
 
 const CHOOSABLE_CATEGORIES = new Set(CHARACTER_CREATION.slots.flatMap((slot) => slot.allows));
 
-/** Every asset a creation slot can hold: no deeds, no starship (it is granted). */
+/** Every asset a creation slot can hold: no deeds, no starship (it is the crew's, D-164). */
 export const SELECTABLE_ASSETS = STARFORGED.assets.filter((asset) =>
   CHOOSABLE_CATEGORIES.has(asset.categoryId),
 );
@@ -82,7 +82,7 @@ export const CREATION_RULES = `You help a player create a character for Ironswor
 
 The build:
 - Stats: edge, heart, iron, shadow and wits take the values ${STARTING_STAT_ARRAY.join(', ')}, one value each, in whatever order fits the concept. That is exactly ${describeStatArray()}; check the count before answering.
-- Assets: exactly three. Two must be paths. The third may be a module, support vehicle, companion or another path. Never a deed. The crew's starship is granted separately and does not count. Use only asset ids from the catalogue.
+- Assets: exactly three. Two must be paths. The third may be a module, support vehicle, companion or another path. Never a deed. The crew's starship is shared by the whole crew, is not one of the character's assets, and does not count. Use only asset ids from the catalogue.
 - A background vow: one sentence the character has sworn, with a challenge rank (troublesome, dangerous, formidable, extreme or epic).
 - A name, a callsign, and two or three backstory hooks.
 - An appearance: a sentence on what someone notices first.

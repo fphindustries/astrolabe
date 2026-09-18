@@ -71,25 +71,22 @@ describe('the creation slots (D-89)', () => {
     expect(final?.clause).toBeUndefined();
   });
 
-  it('never lets a slot accept a command vehicle: the starship is granted, not chosen', () => {
+  it('never lets a slot accept a command vehicle: the starship is the crew’s, not chosen', () => {
     for (const slot of CHARACTER_CREATION.slots) {
       expect(slot.allows).not.toContain('command_vehicle');
     }
-  });
-
-  it('grants the command vehicle outside the slots', () => {
-    expect(CHARACTER_CREATION.grants.map((g) => g.category)).toEqual(['command_vehicle']);
   });
 
   it('forbids deeds', () => {
     expect(CHARACTER_CREATION.forbidden.map((f) => f.category)).toEqual(['deed']);
   });
 
-  it('covers every imported category as granted, forbidden or slot-eligible', () => {
+  it('covers every imported category as crew-owned, forbidden or slot-eligible', () => {
     // A future Datasworn category should surface here rather than silently
-    // being unselectable.
+    // being unselectable. The command vehicle is the crew's shared ship
+    // (D-164); since 7.3 no character is granted one (D-193).
     const accounted = new Set([
-      ...CHARACTER_CREATION.grants.map((g) => g.category),
+      'command_vehicle',
       ...CHARACTER_CREATION.forbidden.map((f) => f.category),
       ...CHARACTER_CREATION.slots.flatMap((s) => s.allows),
     ]);

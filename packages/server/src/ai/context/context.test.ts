@@ -1,4 +1,4 @@
-import type { MoveId, OracleId } from '@astrolabe/rules';
+import type { CharacterId, MoveId, OracleId } from '@astrolabe/rules';
 import type { AstrolabeEvent, CampaignSettings, EventId } from '@astrolabe/shared';
 import { describe, expect, it } from 'vitest';
 
@@ -23,7 +23,7 @@ import {
   buildRevisionRequest,
   GUIDE_RULES,
 } from './prompt.js';
-import { renderState } from './render-state.js';
+import { LEGACY_STARSHIP_LINE, renderState } from './render-state.js';
 
 const FACE_DANGER = 'move:adventure/face-danger' as MoveId;
 const PAY_THE_PRICE = 'move:fate/pay-the-price' as MoveId;
@@ -665,6 +665,23 @@ describe('renderState (task 7.4)', () => {
 
   it('says nothing about a ship a campaign never established', () => {
     expect(renderState(project(goldenSessionPrelude().build()))).not.toContain('starship');
+  });
+
+  // D-193's interim line: a Milestone 1 crew's granted ship, said once.
+  it('carries a Milestone 1 crew’s granted ship once, at crew level, not on each sheet', () => {
+    const text = renderState(
+      project(
+        goldenSessionPrelude()
+          .add('character.created', {
+            ...character('aaaa6666-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as CharacterId, 'Juno Marr', 3),
+            assets: ['asset:path/gearhead' as never, 'asset:command-vehicle/starship' as never],
+          })
+          .build(),
+      ),
+    );
+
+    expect(text).toContain(LEGACY_STARSHIP_LINE);
+    expect(text).not.toMatch(/assets: [^\n]*Starship/);
   });
 
   it('carries a Milestone 1 campaign’s truths too, through the same read (D-183)', () => {

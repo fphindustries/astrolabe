@@ -104,8 +104,9 @@ describe.skipIf(!hasTestDatabase)('creating a character (task 3.5)', () => {
     expect(character?.momentum.max).toBe(10);
     expect(character?.meters.health).toMatchObject({ value: 5, min: 0, max: 5 });
     expect(character?.markedImpacts).toBe(0);
-    // The three chosen slots, plus the granted starship (D-89).
-    expect(character?.assets).toEqual([...REAL_ASSETS, STARSHIP]);
+    // The three chosen slots and nothing else: the starship is the crew's,
+    // not a per-character grant, since 7.3 (D-164, D-193).
+    expect(character?.assets).toEqual(REAL_ASSETS);
   });
 
   it('trims the name and callsign it stores', async () => {
@@ -168,7 +169,6 @@ describe.skipIf(!hasTestDatabase)('creating a character (task 3.5)', () => {
         appearance: 'Sharp-eyed.',
         backstory: { kind: 'written', text: 'Flew charts nobody else trusted.' },
       },
-      grantCommandVehicle: false,
       groundedIn: [rollEventId],
     });
 
@@ -316,48 +316,31 @@ describe.skipIf(!hasTestDatabase)('creating a character (task 3.5)', () => {
     expect(characters.map((c) => c.callsign).sort()).toEqual(['Juno', 'Rook', 'Vesna']);
   });
 
-  describe('the starship grant (D-89)', () => {
-    it('grants the command vehicle without it occupying a slot', async () => {
+  describe('the starship is not a character asset (7.3, D-164, D-193)', () => {
+    it('grants no command vehicle', async () => {
       const campaignId = await newCampaign();
       const { characterId } = await createCharacter(db.sql, {
         campaignId,
         commandId: newId<CommandId>(),
         actor: PLAYER,
         draft: draft(),
-      });
-
-      const assets = project(await readEvents(db.sql, campaignId)).characters[characterId]?.assets;
-      expect(assets).toContain(STARSHIP);
-      // The three chosen, plus the granted starship.
-      expect(assets).toHaveLength(4);
-    });
-
-    it('does not duplicate a starship the client sent back with the sheet', async () => {
-      const campaignId = await newCampaign();
-      const { characterId } = await createCharacter(db.sql, {
-        campaignId,
-        commandId: newId<CommandId>(),
-        actor: PLAYER,
-        draft: draft({ assets: [...REAL_ASSETS, STARSHIP] }),
-      });
-
-      const assets = project(await readEvents(db.sql, campaignId)).characters[characterId]?.assets;
-      expect(assets?.filter((a) => a === STARSHIP)).toHaveLength(1);
-    });
-
-    it('can be declined, since ownership is narrative', async () => {
-      const campaignId = await newCampaign();
-      const { characterId } = await createCharacter(db.sql, {
-        campaignId,
-        commandId: newId<CommandId>(),
-        actor: PLAYER,
-        draft: draft(),
-        grantCommandVehicle: false,
       });
 
       const assets = project(await readEvents(db.sql, campaignId)).characters[characterId]?.assets;
       expect(assets).not.toContain(STARSHIP);
       expect(assets).toHaveLength(3);
+    });
+
+    it('refuses a starship sent as one of the character’s own assets', async () => {
+      const campaignId = await newCampaign();
+      await expect(
+        createCharacter(db.sql, {
+          campaignId,
+          commandId: newId<CommandId>(),
+          actor: PLAYER,
+          draft: draft({ assets: [...REAL_ASSETS, STARSHIP] }),
+        }),
+      ).rejects.toThrow(CharacterRejectedError);
     });
 
     it('rejects a deed in a slot (D-89)', async () => {
@@ -422,7 +405,6 @@ describe.skipIf(!hasTestDatabase)('revising and removing a crew member (6.0d)', 
       draft: draft(),
       backgroundVow: VOW,
       launch: LAUNCH,
-      grantCommandVehicle: false,
     });
     return { campaignId, characterId };
   }
@@ -511,7 +493,6 @@ describe.skipIf(!hasTestDatabase)('revising and removing a crew member (6.0d)', 
       commandId: newId<CommandId>(),
       actor: PLAYER,
       draft: draft(),
-      grantCommandVehicle: false,
     });
 
     const { vowTrackId } = await revise(campaignId, characterId);
@@ -600,7 +581,6 @@ describe.skipIf(!hasTestDatabase)('revising and removing a crew member (6.0d)', 
       draft: draft({ assets: withModule }),
       backgroundVow: VOW,
       launch: LAUNCH,
-      grantCommandVehicle: false,
     });
     const installed = async () =>
       installedModules(
@@ -638,7 +618,6 @@ describe.skipIf(!hasTestDatabase)('revising and removing a crew member (6.0d)', 
         draft: draft({ name, callsign: name.split(' ')[0]!, assets: withModule }),
         backgroundVow: VOW,
         launch: LAUNCH,
-        grantCommandVehicle: false,
       });
     const events = await readEvents(db.sql, campaignId);
     const juno = Object.values(project(events).characters).find((c) => c.name === 'Juno Marr')!;

@@ -94,6 +94,12 @@ export interface CharacterState {
   readonly impacts: Readonly<Record<ImpactId, true>>;
   readonly markedImpacts: number;
   readonly assets: readonly AssetId[];
+  /**
+   * D-193: this character's `character.created` carried Milestone 1's granted
+   * Starship (D-89). It is not in `assets`: the ship is the crew's, so the
+   * fold moves the grant here rather than showing a second, per-character ship.
+   */
+  readonly legacyStarshipGrant?: true;
   readonly bonusNextMove?: BonusNextMove;
   /** The vows this character swore, in the order they were sworn. */
   readonly vowTrackIds: readonly TrackId[];

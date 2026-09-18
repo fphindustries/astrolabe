@@ -146,6 +146,14 @@ export interface StarshipIntegrity {
   readonly max: number;
 }
 /**
+ * The imported Starship's id: the asset Milestone 1 granted every character
+ * (D-89) and the crew's shared ship since (D-164). A constant, so projection
+ * can recognise a legacy grant without reading rules data (D-193); a test
+ * holds it to the imported asset.
+ */
+export const STARSHIP_ASSET_ID = 'asset:command-vehicle/starship' as AssetId;
+
+/**
  * What every starting shared starship is before anyone describes it: the
  * imported Starship asset and its starting integrity (D-164).
  *

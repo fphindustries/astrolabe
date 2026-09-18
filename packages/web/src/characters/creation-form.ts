@@ -4,7 +4,6 @@ import {
   STAT_IDS,
   type Asset,
   type AssetCategory,
-  type AssetId,
   type CharacterDraft,
   type CharacterProblem,
   type CreationSlot,
@@ -107,20 +106,6 @@ export function slotOptionGroups(
     });
   }
   return groups;
-}
-
-export interface GrantedAssetView {
-  readonly id: AssetId;
-  readonly name: string;
-}
-
-/** The assets granted outright (the starship, D-89) — shown, never chosen. */
-export function grantedAssetViews(
-  ruleset: Pick<RulesetForCreation, 'assets'>,
-  grantedIds: readonly AssetId[],
-): readonly GrantedAssetView[] {
-  const assetById = new Map(ruleset.assets.map((asset) => [asset.id, asset]));
-  return grantedIds.map((id) => ({ id, name: assetById.get(id)?.name ?? id }));
 }
 
 /** The slots in `CHARACTER_CREATION`, exposed for the picker to iterate — no other file should reach into the rules constant directly. */

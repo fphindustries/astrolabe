@@ -442,7 +442,6 @@ describe.skipIf(!hasTestDatabase)('character proposals (task 3.3, D-123, D-124)'
         backstory: kept.proposal.backstory.value,
       },
       hooks: kept.proposal.hooks.map((hook) => hook.text),
-      grantCommandVehicle: false,
       proposalCommandId: keptCommand,
     } as const;
 

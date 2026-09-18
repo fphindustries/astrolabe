@@ -3,7 +3,6 @@ import { useState, type FormEvent, type ReactNode } from 'react';
 import {
   STARFORGED,
   STAT_IDS,
-  grantedAssets,
   validateCharacterDraft,
   type AssetId,
   type CharacterDraft,
@@ -19,13 +18,7 @@ import { navigate } from '../app/location.js';
 import { describeFailure } from '../play/narration/frames.js';
 import { formatTokens, totalTokens } from '../play/tokens.js';
 
-import {
-  CREATION_SLOTS,
-  assignStat,
-  emptyDraft,
-  grantedAssetViews,
-  problemsByField,
-} from './creation-form.js';
+import { CREATION_SLOTS, assignStat, emptyDraft, problemsByField } from './creation-form.js';
 import { AssetPicker } from './AssetPicker.js';
 import {
   MAX_HOOKS,
@@ -39,8 +32,6 @@ import {
   type ProposedField,
 } from './proposal.js';
 import styles from './CharacterCreationScreen.module.css';
-
-const GRANTED = grantedAssetViews(STARFORGED, grantedAssets(STARFORGED));
 
 const EMPTY_FORM: CreationForm = {
   name: '',
@@ -72,8 +63,8 @@ interface HeldProposal {
  * Nothing is written until the player creates the character, and the form
  * stays usable while a proposal is on its way.
  *
- * No `grantCommandVehicle` toggle: manual and concept-first creation both
- * always grant the starship (D-124).
+ * No starship here: since 7.3 it is the crew's shared ship, never a
+ * per-character grant (D-164, D-193).
  */
 export function CharacterCreationScreen({ campaignId }: { readonly campaignId: string }) {
   const [form, setForm] = useState<CreationForm>(EMPTY_FORM);
@@ -325,14 +316,6 @@ export function CharacterCreationScreen({ campaignId }: { readonly campaignId: s
               }
             />
           ))}
-          <div className={styles.granted}>
-            <span className={styles.label}>Granted</span>
-            <ul className={styles.grantedList}>
-              {GRANTED.map((asset) => (
-                <li key={asset.id}>{asset.name}</li>
-              ))}
-            </ul>
-          </div>
           {note('assets')}
           <FieldErrors messages={fieldProblems.assets} />
         </section>

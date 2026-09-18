@@ -16,7 +16,6 @@ import {
   createCampaign,
   swearIncitingVow,
 } from '../db/campaign-commands.js';
-import { createCharacter } from '../db/character-commands.js';
 import { decideTruth } from '../db/launch-commands.js';
 import { appendCommand } from '../db/event-store.js';
 import { beginSession, endSession, proposeSessionSummary } from '../db/session-commands.js';
@@ -25,6 +24,7 @@ import { applyMoveChoice, invokeMove } from '../db/move-commands.js';
 import { prepareBeatNarration, runBeatNarration } from '../db/narration-commands.js';
 
 import { fixtureUuid } from './ids.js';
+import { createLegacyCharacter } from './legacy-character.js';
 import { actionRoll } from './loaded-dice.js';
 
 /**
@@ -156,6 +156,9 @@ export async function playSessionOne(
   }
 
   // --- The crew and the vow ----------------------------------------------
+  // A Milestone 1 crew, written as Milestone 1 wrote it: each character
+  // carries the granted Starship (D-89), which the fold keeps off their sheet
+  // and the crew shares (D-193). 10.1 rebuilds this on a launched ship.
   const character = async (
     name: string,
     callsign: string,
@@ -163,14 +166,12 @@ export async function playSessionOne(
     assets: readonly string[],
     pronouns?: string,
   ) =>
-    (
-      await createCharacter(sql, {
-        ...base,
-        commandId: key(`character:${callsign}`),
-        draft: { name, callsign, stats, assets: assets as readonly AssetId[] },
-        ...(pronouns !== undefined ? { pronouns } : {}),
-      })
-    ).characterId;
+    createLegacyCharacter(sql, {
+      ...base,
+      commandId: key(`character:${callsign}`),
+      draft: { name, callsign, stats, assets: assets as readonly AssetId[] },
+      ...(pronouns !== undefined ? { pronouns } : {}),
+    });
   // D-131: the golden session calls Vesna "her" (Beat 5) and never gives
   // Rook's or Juno's pronouns, so theirs stay unrecorded.
   const vesna = await character(

@@ -4,6 +4,7 @@ import {
   duplicateModuleHolders,
   installedModules,
   sharedStarshipBaseline,
+  STARSHIP_ASSET_ID,
   validateLaunchCharacterDraft,
   validateSharedStarship,
 } from './launch-creation.js';
@@ -68,6 +69,8 @@ describe('sharedStarshipBaseline', () => {
   it('is the imported Starship asset at integrity 5, and passes its own validator', () => {
     const baseline = sharedStarshipBaseline(STARFORGED);
     expect(baseline.assetId).toBe('asset:command-vehicle/starship');
+    // D-193's constant is the imported asset, not a second spelling of it.
+    expect(STARSHIP_ASSET_ID).toBe(baseline.assetId);
     expect(baseline.integrity).toEqual({ value: 5, min: 0, max: 5 });
     expect(
       validateSharedStarship(

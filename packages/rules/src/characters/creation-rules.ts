@@ -5,7 +5,9 @@ import type { AssetCategory, AssetCategoryId } from '../schema/assets.js';
  * check buried in a form.
  *
  * Creation is **three slots, not a quota**: two base paths and one final
- * asset. The starship sits outside them entirely.
+ * asset. The starship sits outside them entirely: it is the crew's shared
+ * aggregate (D-164), never a character's asset, and since 7.3 no longer a
+ * per-character grant either (D-171, D-193).
  *
  * Like `MoveAutomation`, this is hand-authored — Datasworn ships the assets
  * a character is made of, not the procedure for making one. Where the rule
@@ -30,16 +32,8 @@ export interface CreationSlot {
   readonly citation?: string;
 }
 
-export interface CreationGrant {
-  readonly category: AssetCategoryId;
-  readonly reason: string;
-  readonly clause: { readonly category: AssetCategoryId; readonly text: string };
-}
-
 export interface CharacterCreationRules {
   readonly slots: readonly CreationSlot[];
-  /** Categories granted outright, occupying no slot. */
-  readonly grants: readonly CreationGrant[];
   /** Categories that may never be chosen at creation. */
   readonly forbidden: readonly {
     readonly category: AssetCategoryId;
@@ -73,16 +67,6 @@ export const CHARACTER_CREATION: CharacterCreationRules = {
       // A third path is allowed here, so a character ends with two or three.
       allows: ['module', 'support_vehicle', 'companion', 'path'],
       citation: 'Ironsworn: Starforged Rulebook, pp. 104–110',
-    },
-  ],
-  grants: [
-    {
-      category: 'command_vehicle',
-      reason: 'Every character begins the campaign with the crew’s starship.',
-      clause: {
-        category: 'command_vehicle',
-        text: 'It is a default asset for your character, taken when you begin your campaign',
-      },
     },
   ],
   forbidden: [
@@ -129,9 +113,6 @@ export function assetCreationTraceProblems(
     } else if (slot.citation === undefined) {
       problems.push(`slot ${slot.id}: neither a clause nor a citation`);
     }
-  }
-  for (const grant of rules.grants) {
-    check(grant.clause, `grant ${grant.category}`);
   }
   for (const entry of rules.forbidden) {
     check(entry.clause, `forbidden ${entry.category}`);

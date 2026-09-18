@@ -20,6 +20,10 @@ import type { CampaignState } from '@astrolabe/shared';
  */
 export const TRUTH_LEFT_OPEN = 'deliberately left open — do not settle it';
 
+/** D-193: how a Milestone 1 campaign's ship reaches world context. */
+export const LEGACY_STARSHIP_LINE =
+  "The crew's shared starship: one Starship command vehicle, shared by the whole crew.";
+
 /**
  * The crew's ship in one line, or undefined before it is established.
  *
@@ -98,6 +102,12 @@ export function renderState(state: CampaignState): string {
   const ship = renderStarship(state);
   if (ship !== undefined) {
     sections.push(`The crew's shared starship: ${ship}.`);
+  } else if (Object.values(state.characters).some((c) => c.legacyStarshipGrant === true)) {
+    // D-193's interim line: a Milestone 1 campaign's ship was a granted asset
+    // on every character, which the fold no longer lists among their assets.
+    // Until 10.1 rebuilds the fixtures on a launched ship, say it once here so
+    // the Guide does not lose the ship the crew flies.
+    sections.push(LEGACY_STARSHIP_LINE);
   }
 
   const tracks = Object.values(state.tracks).map((t) =>

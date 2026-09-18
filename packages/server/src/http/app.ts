@@ -870,7 +870,6 @@ export function buildApp({
               ? {}
               : { signatureGear: parsed.data.launch.signatureGear }),
           },
-          grantCommandVehicle: false,
           ...(parsed.data.hooks === undefined ? {} : { hooks: parsed.data.hooks }),
           ...(parsed.data.pronouns === undefined ? {} : { pronouns: parsed.data.pronouns }),
           ...(parsed.data.proposalCommandId === undefined
@@ -1175,15 +1174,8 @@ export function buildApp({
         reply.code(400);
         return undefined;
       }
-      const {
-        commandId,
-        draft,
-        backgroundVow,
-        grantCommandVehicle,
-        hooks,
-        pronouns,
-        proposalCommandId,
-      } = parsedBody.data;
+      const { commandId, draft, backgroundVow, hooks, pronouns, proposalCommandId } =
+        parsedBody.data;
 
       try {
         const created = await createCharacter(sql, {
@@ -1192,7 +1184,6 @@ export function buildApp({
           actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
           draft,
           ...(backgroundVow !== undefined ? { backgroundVow } : {}),
-          ...(grantCommandVehicle !== undefined ? { grantCommandVehicle } : {}),
           ...(hooks !== undefined ? { hooks } : {}),
           ...(pronouns !== undefined ? { pronouns } : {}),
           ...(proposalCommandId !== undefined ? { proposalCommandId } : {}),

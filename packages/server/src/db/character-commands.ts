@@ -1,7 +1,6 @@
 import {
   STARFORGED,
   STARTING_MOMENTUM,
-  grantedAssets,
   startingMeters,
   validateCharacterDraft,
   validateLaunchCharacterDraft,
@@ -89,13 +88,6 @@ export interface CreateCharacterRequest {
    * vow in play.
    */
   readonly backgroundVow?: { readonly title: string; readonly rank: ChallengeRank };
-  /**
-   * D-89: the starship is a default asset and occupies no slot. Set false
-   * for a character the fiction says has no ship of their own — ownership
-   * is narrative and changes nothing mechanically, so this only affects
-   * whether the asset appears on their sheet.
-   */
-  readonly grantCommandVehicle?: boolean;
   /** D-124: backstory hooks, proposed or written by hand. Blank ones are dropped. */
   readonly hooks?: readonly string[];
   /** D-131: the player's words. Blank means not recorded; the event schema caps the length. */
@@ -143,12 +135,17 @@ export async function createCharacter(
   sql: Sql,
   request: CreateCharacterRequest,
 ): Promise<CreatedCharacter> {
-  const problems = validateCharacterDraft(request.draft, STARFORGED);
-  if (problems.length > 0) {
-    throw new CharacterRejectedError(problems);
-  }
-
-  if (request.launch !== undefined) {
+  // A launch character is judged by the launch validator alone, which runs
+  // the same base checks: judging it by the Milestone 1 one first threw a
+  // `CharacterRejectedError` the launch route does not map, a 500 for what is
+  // a 422 refusal. The retired Starship grant hid that for a command vehicle;
+  // a bad stat array always hit it (found in 7.3).
+  if (request.launch === undefined) {
+    const problems = validateCharacterDraft(request.draft, STARFORGED);
+    if (problems.length > 0) {
+      throw new CharacterRejectedError(problems);
+    }
+  } else {
     const launchProblems = validateLaunchCharacterDraft(
       {
         ...request.draft,
@@ -168,8 +165,6 @@ export async function createCharacter(
     );
     if (launchProblems.length > 0) throw new LaunchCharacterRejectedError(launchProblems);
   }
-
-  const granted = request.grantCommandVehicle === false ? [] : grantedAssets(STARFORGED);
 
   let causedBy: EventId | undefined;
   let proposed:
@@ -219,10 +214,9 @@ export async function createCharacter(
         // read rules content.
         meters: startingMeters(STARFORGED.gameRules),
         momentum: STARTING_MOMENTUM,
-        // The chosen slots plus anything granted outright (D-89). Granted
-        // assets are deduplicated against the draft, so a client that sends
-        // the starship back with the rest of the sheet is not penalised.
-        assets: [...new Set([...request.draft.assets, ...granted])],
+        // The chosen slots only. The starship was granted here until 7.3; it
+        // is the crew's shared aggregate now (D-164, D-193).
+        assets: request.draft.assets,
         ...(hooks.length > 0 ? { hooks } : {}),
         ...(pronouns !== '' ? { pronouns } : {}),
         ...(request.launch === undefined

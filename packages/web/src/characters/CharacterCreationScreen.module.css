@@ -69,18 +69,6 @@
   text-transform: capitalize;
 }
 
-.granted {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.grantedList {
-  margin: 0;
-  padding-left: var(--space-4);
-  color: var(--text-secondary);
-}
-
 .checkboxLabel {
   display: flex;
   align-items: center;

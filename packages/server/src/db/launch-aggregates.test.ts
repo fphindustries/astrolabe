@@ -83,7 +83,6 @@ describe.skipIf(!hasTestDatabase)('the launch aggregates', () => {
       },
       backgroundVow: { title: 'Find the lost colony', rank: 'formidable' },
       launch: { appearance: 'Weathered jacket', backstory: { kind: 'discover_in_play' } },
-      grantCommandVehicle: false,
     });
     return characterId;
   }
@@ -696,7 +695,6 @@ describe.skipIf(!hasTestDatabase)('the launch aggregates', () => {
             assets: paths,
           },
           launch: { appearance: 'Weathered jacket', backstory: { kind: 'discover_in_play' } },
-          grantCommandVehicle: false,
         }),
       ).rejects.toThrow(LaunchCharacterRejectedError);
     });
@@ -717,7 +715,6 @@ describe.skipIf(!hasTestDatabase)('the launch aggregates', () => {
           },
           backgroundVow: { title: 'Find the lost colony', rank: 'formidable' },
           launch: { appearance: '  ', backstory: { kind: 'discover_in_play' } },
-          grantCommandVehicle: false,
         }),
       ).rejects.toThrow(/appearance/i);
     });

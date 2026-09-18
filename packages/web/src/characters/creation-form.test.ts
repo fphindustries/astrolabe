@@ -4,10 +4,8 @@ import {
   STARFORGED,
   STARTING_STAT_ARRAY,
   STAT_IDS,
-  grantedAssets,
   matchesStatArray,
   validateCharacterDraft,
-  type AssetId,
   type CharacterProblem,
 } from '@astrolabe/rules';
 
@@ -15,7 +13,6 @@ import {
   CREATION_SLOTS,
   assignStat,
   emptyDraft,
-  grantedAssetViews,
   problemsByField,
   slotOptionGroups,
 } from './creation-form.js';
@@ -92,20 +89,6 @@ describe('slotOptionGroups', () => {
 
     const groups = slotOptionGroups(finalSlot, STARFORGED);
     expect(groups.map((group) => group.category.id).sort()).toEqual([...finalSlot.allows].sort());
-  });
-});
-
-describe('grantedAssetViews', () => {
-  it('resolves the granted asset ids to names', () => {
-    const grantedIds = grantedAssets(STARFORGED);
-    const views = grantedAssetViews(STARFORGED, grantedIds);
-    expect(views).toHaveLength(grantedIds.length);
-    expect(views.every((view) => view.name.length > 0)).toBe(true);
-  });
-
-  it('falls back to the id for an unknown asset', () => {
-    const views = grantedAssetViews(STARFORGED, ['asset:nonexistent' as AssetId]);
-    expect(views).toEqual([{ id: 'asset:nonexistent', name: 'asset:nonexistent' }]);
   });
 });
 

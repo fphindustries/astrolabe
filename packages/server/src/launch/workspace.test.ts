@@ -412,3 +412,42 @@ describe('a saved draft reaches readiness (6.0f, D-187)', () => {
     expect(workspace.readiness.sections.sector.status).toBe('not_started');
   });
 });
+
+// 7.3, D-193: a Milestone 1 character carries the granted Starship in its
+// `character.created` forever. Finish campaign launch (A43) must still be
+// able to reach `ready`, so the grant cannot be a launch blocker.
+describe('a legacy granted Starship (7.3, D-193)', () => {
+  const ROOK = 'aaaa7777-bbbb-4aaa-8aaa-aaaaaaaaaaaa' as CharacterId;
+  const legacyCharacter = {
+    characterId: ROOK,
+    name: 'Rook Ilari',
+    callsign: 'Rook',
+    stats: { edge: 2, heart: 1, iron: 3, shadow: 1, wits: 2 },
+    meters: {
+      health: { value: 5, min: 0, max: 5 },
+      spirit: { value: 5, min: 0, max: 5 },
+      supply: { value: 5, min: 0, max: 5 },
+    },
+    momentum: 2,
+    assets: [
+      'asset:path/veteran',
+      'asset:path/armored',
+      'asset:path/gunner',
+      'asset:command-vehicle/starship',
+    ] as never,
+  };
+
+  it('is not a crew blocker, and is not one of the character’s own assets', () => {
+    const workspace = buildLaunchWorkspace([
+      testEvent('character.created', legacyCharacter, { seq: 1 }),
+    ]);
+
+    const codes = workspace.readiness.sections.crew.blockers.map((blocker) => blocker.code);
+    expect(codes).not.toContain('forbidden_category');
+    expect(codes).not.toContain('category_not_allowed');
+    expect(codes).not.toContain('too_many_assets');
+    const rook = workspace.state.characters[ROOK];
+    expect(rook?.assets).not.toContain('asset:command-vehicle/starship');
+    expect(rook?.legacyStarshipGrant).toBe(true);
+  });
+});

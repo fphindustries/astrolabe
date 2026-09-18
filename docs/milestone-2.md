@@ -718,7 +718,7 @@ automated), D-193 (the legacy grant is neutralized in projection).
   readiness algorithm (D-176). In play, the ship appears once as a crew-level panel, not
   under each character, with its abilities as Reference (D-192). Each module is labelled
   with its owner and usable by the crew (D-190).
-- [ ] 7.3 Remove the per-character grant in one change: `CHARACTER_CREATION.grants`,
+- [x] 7.3 Remove the per-character grant in one change: `CHARACTER_CREATION.grants`,
   `grantedAssets`, the `grantCommandVehicle` flag and its call sites, and
   `CharacterCreationScreen`'s `GRANTED`. Update the creation prompt's "granted separately"
   line. Apply D-193: `legacyStarshipGrant` in the `character.created` arm,
@@ -1015,3 +1015,45 @@ implementation note.
   launch with its blockers grouped and linked; a blank premise raising the error summary and
   its link reaching the field by keyboard alone; and the `session-1` fixture opening directly
   in play (A43).
+- **Group 7 complete.** The shared starship, and the Milestone 1 per-character grant retired.
+  Planning found the group-4-to-6 shape again: the aggregate was written and projected, and
+  what would let a player build it with help or see where it came from was missing. Six
+  questions were asked rather than assumed, recorded as D-190 to D-193, and one item (7.0j)
+  was found after 7.0 had landed.
+  - **Every module is `shared: true` in the imported data (D-190).** Read literally, D-164's
+    exception described an empty set and contradicted beat 6. `shared` says who may use a
+    module; ownership says whose slot holds it. Both hold.
+  - **Installed modules are derived, not stored (D-191).** The ship's stored list could name
+    a module nobody held and keep one after its holder was revised or removed.
+    `installedModules` derives it from the crew in creation order. `module_owner_unknown` is
+    unreachable by construction, and a module two members hold is a Crew blocker on the
+    later one.
+  - **The server owns the ship's id, asset and integrity (7.0a, 7.0b, 7.0j).** Integrity is
+    read from the imported `integrity` meter, which the adapter had been dropping. The
+    amendment path is held to the same contract, and it stamps the *current* integrity,
+    because an amendment corrects words, not damage.
+  - **Acceptance names the proposal (7.0c).** `acceptedProposal`'s lookup became
+    `heldProposal`, generic over target kind, and the starship uses it. Crew keeps its
+    `proposalCommandId` path because its proposal key changes from `draftId` to
+    `characterId` on acceptance (D-185), so the fold is not keyed for it. Two mechanisms
+    remain, and this note is why.
+  - **A latent 500 on the launch crew route (found in 7.3).** `createCharacter` ran the
+    Milestone 1 validator before the launch one, and the route does not map the error it
+    throws. The Starship grant hid this for a command vehicle, but a bad stat array always
+    hit it. A launch character is now judged by the launch validator alone.
+  - **The fixtures still write the legacy grant, deliberately (D-193).** `createCharacter`
+    no longer writes it, so `fixtures/legacy-character.ts` writes Milestone 1's
+    `character.created` as it was. The built-in fixtures are what prove the compatibility
+    path runs on real legacy data until 10.1 rebuilds them on a launched ship. In their
+    world context the Starship moves from each sheet to one crew line, and the play screen
+    shows it once, as the crew's.
+  - **Browser.** Walked at 1280x720 on the dev stub: proposal, take, edit, accept (the
+    server recorded `guide_proposal_edited` with three kept rolls), field roll, save, reload
+    (the newer draft wins), error summary, ship panel, play card, drawer. **Not explained:**
+    under the Vite dev server, a tab sometimes froze on first paint after HMR edits. The
+    same pages never froze on the production build served from `:3000`, including all three
+    fixtures reloaded in turn. Rendering the components in isolation, in the page and in
+    Node, took milliseconds. Watch for it in 10.4; it is recorded here rather than guessed
+    at.
+  Verified with Postgres: 122 files, 1435 tests, zero skipped files. typecheck, lint,
+  format:check and the web build clean.

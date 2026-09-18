@@ -1,4 +1,9 @@
-import { applyMomentumDelta, momentumMax, momentumResetValue } from '@astrolabe/rules';
+import {
+  applyMomentumDelta,
+  momentumMax,
+  momentumResetValue,
+  STARSHIP_ASSET_ID,
+} from '@astrolabe/rules';
 import type { CharacterId, ImpactId, MeterId, TrackId } from '@astrolabe/rules';
 import type {
   AstrolabeEvent,
@@ -108,7 +113,14 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
         momentum: { value: payload.momentum, max: 0, resetValue: 0, lastChangedBy: by },
         impacts: {},
         markedImpacts: 0,
-        assets: payload.assets,
+        // D-193: a Milestone 1 character's granted Starship is the crew's ship,
+        // not one of their assets. The event keeps it forever; the fold moves
+        // it to a flag, so readiness, the crew form, the move composer and
+        // world context all see one answer.
+        assets: payload.assets.filter((asset) => asset !== STARSHIP_ASSET_ID),
+        ...(payload.assets.includes(STARSHIP_ASSET_ID)
+          ? { legacyStarshipGrant: true as const }
+          : {}),
         vowTrackIds: [],
         hooks: payload.hooks ?? [],
         pronouns: payload.pronouns ?? null,
@@ -441,7 +453,10 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
         name: event.payload.character.name,
         callsign: event.payload.character.callsign,
         stats: event.payload.character.stats,
-        assets: event.payload.character.assets,
+        // `...current` keeps a legacy grant's flag; the revision's own assets
+        // are filtered the same way, though the launch validator already
+        // refuses a character-owned command vehicle (D-171).
+        assets: event.payload.character.assets.filter((asset) => asset !== STARSHIP_ASSET_ID),
         hooks: event.payload.character.hooks ?? [],
         pronouns: event.payload.character.pronouns ?? null,
         appearance: event.payload.character.appearance,

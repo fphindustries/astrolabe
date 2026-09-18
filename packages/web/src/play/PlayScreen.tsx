@@ -62,10 +62,13 @@ function PlayScreenContent({ campaignId }: { readonly campaignId: string }) {
     Object.values(state.characters).map(toCrewCard),
   );
   const entities = useCampaignState(campaignId, (state) => entityCards(state.entities));
-  // 7.2, D-164: the ship once, at crew level. Only a launched ship has one to
-  // show; a Milestone 1 campaign's ship arrives with 7.3's compatibility.
+  // 7.2, D-164: the ship once, at crew level — a launched ship, or the one a
+  // Milestone 1 crew was granted, which the fold keeps off each sheet (D-193).
   const ship = useCampaignState(campaignId, (state) =>
-    state.launch.starship === undefined ? null : shipView(state),
+    state.launch.starship !== undefined ||
+    Object.values(state.characters).some((c) => c.legacyStarshipGrant === true)
+      ? shipView(state)
+      : null,
   );
   const drawer = useDrawer();
   // D-98: choosing the acting character is the composer's own control, not
