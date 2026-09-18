@@ -30228,6 +30228,25 @@
           "module"
         ]
       },
+      "conditionMeters": [
+        {
+          "key": "integrity",
+          "label": "integrity",
+          "min": 0,
+          "max": 5,
+          "value": 5,
+          "impacts": [
+            {
+              "key": "battered",
+              "label": "battered"
+            },
+            {
+              "key": "cursed",
+              "label": "cursed"
+            }
+          ]
+        }
+      ],
       "abilities": [
         {
           "id": "0",
@@ -30272,6 +30291,16 @@
       "name": "Banshee",
       "countAsImpact": false,
       "shared": false,
+      "conditionMeters": [
+        {
+          "key": "health",
+          "label": "health",
+          "min": 0,
+          "max": 4,
+          "value": 4,
+          "impacts": []
+        }
+      ],
       "abilities": [
         {
           "id": "0",
@@ -30322,6 +30351,16 @@
       "name": "Combat Bot",
       "countAsImpact": false,
       "shared": false,
+      "conditionMeters": [
+        {
+          "key": "health",
+          "label": "health",
+          "min": 0,
+          "max": 5,
+          "value": 5,
+          "impacts": []
+        }
+      ],
       "abilities": [
         {
           "id": "0",
@@ -30368,6 +30407,16 @@
       "name": "Glowcat",
       "countAsImpact": false,
       "shared": false,
+      "conditionMeters": [
+        {
+          "key": "health",
+          "label": "health",
+          "min": 0,
+          "max": 3,
+          "value": 3,
+          "impacts": []
+        }
+      ],
       "abilities": [
         {
           "id": "0",
@@ -30413,6 +30462,16 @@
       "name": "Protocol Bot",
       "countAsImpact": false,
       "shared": false,
+      "conditionMeters": [
+        {
+          "key": "health",
+          "label": "health",
+          "min": 0,
+          "max": 3,
+          "value": 3,
+          "impacts": []
+        }
+      ],
       "abilities": [
         {
           "id": "0",
@@ -30451,6 +30510,16 @@
       "name": "Rockhorn",
       "countAsImpact": false,
       "shared": false,
+      "conditionMeters": [
+        {
+          "key": "health",
+          "label": "health",
+          "min": 0,
+          "max": 5,
+          "value": 5,
+          "impacts": []
+        }
+      ],
       "abilities": [
         {
           "id": "0",
@@ -30494,6 +30563,16 @@
       "name": "Sidekick",
       "countAsImpact": false,
       "shared": false,
+      "conditionMeters": [
+        {
+          "key": "health",
+          "label": "health",
+          "min": 0,
+          "max": 4,
+          "value": 4,
+          "impacts": []
+        }
+      ],
       "abilities": [
         {
           "id": "0",
@@ -30539,6 +30618,16 @@
       "name": "Sprite",
       "countAsImpact": false,
       "shared": false,
+      "conditionMeters": [
+        {
+          "key": "health",
+          "label": "health",
+          "min": 0,
+          "max": 2,
+          "value": 2,
+          "impacts": []
+        }
+      ],
       "abilities": [
         {
           "id": "0",
@@ -30581,6 +30670,16 @@
       "name": "Survey Bot",
       "countAsImpact": false,
       "shared": false,
+      "conditionMeters": [
+        {
+          "key": "health",
+          "label": "health",
+          "min": 0,
+          "max": 3,
+          "value": 3,
+          "impacts": []
+        }
+      ],
       "abilities": [
         {
           "id": "0",
@@ -30628,6 +30727,16 @@
       "name": "Symbiote",
       "countAsImpact": false,
       "shared": false,
+      "conditionMeters": [
+        {
+          "key": "health",
+          "label": "health",
+          "min": 0,
+          "max": 2,
+          "value": 2,
+          "impacts": []
+        }
+      ],
       "abilities": [
         {
           "id": "0",
@@ -30666,6 +30775,16 @@
       "name": "Utility Bot",
       "countAsImpact": false,
       "shared": false,
+      "conditionMeters": [
+        {
+          "key": "health",
+          "label": "health",
+          "min": 0,
+          "max": 4,
+          "value": 4,
+          "impacts": []
+        }
+      ],
       "abilities": [
         {
           "id": "0",
@@ -30708,6 +30827,16 @@
       "name": "Voidglider",
       "countAsImpact": false,
       "shared": false,
+      "conditionMeters": [
+        {
+          "key": "health",
+          "label": "health",
+          "min": 0,
+          "max": 4,
+          "value": 4,
+          "impacts": []
+        }
+      ],
       "abilities": [
         {
           "id": "0",
@@ -31102,6 +31231,16 @@
       "name": "Expanded Hold",
       "countAsImpact": false,
       "shared": true,
+      "conditionMeters": [
+        {
+          "key": "cargo",
+          "label": "cargo",
+          "min": 0,
+          "max": 3,
+          "value": 0,
+          "impacts": []
+        }
+      ],
       "abilities": [
         {
           "id": "0",
@@ -31314,6 +31453,16 @@
       "name": "Missile Array",
       "countAsImpact": false,
       "shared": true,
+      "conditionMeters": [
+        {
+          "key": "ammo",
+          "label": "ammo",
+          "min": 0,
+          "max": 5,
+          "value": 5,
+          "impacts": []
+        }
+      ],
       "abilities": [
         {
           "id": "0",
@@ -31549,6 +31698,16 @@
       "name": "Shields",
       "countAsImpact": false,
       "shared": true,
+      "conditionMeters": [
+        {
+          "key": "shields",
+          "label": "shields",
+          "min": 0,
+          "max": 4,
+          "value": 0,
+          "impacts": []
+        }
+      ],
       "abilities": [
         {
           "id": "0",
@@ -31769,6 +31928,16 @@
       "countAsImpact": false,
       "requirement": "If you wield a power bow...",
       "shared": false,
+      "conditionMeters": [
+        {
+          "key": "ammo",
+          "label": "ammo",
+          "min": 0,
+          "max": 6,
+          "value": 6,
+          "impacts": []
+        }
+      ],
       "abilities": [
         {
           "id": "0",
@@ -32117,6 +32286,16 @@
       "name": "Courier",
       "countAsImpact": false,
       "shared": false,
+      "conditionMeters": [
+        {
+          "key": "safety",
+          "label": "safety",
+          "min": 0,
+          "max": 5,
+          "value": 0,
+          "impacts": []
+        }
+      ],
       "abilities": [
         {
           "id": "0",
@@ -32421,6 +32600,16 @@
       "name": "Firebrand",
       "countAsImpact": false,
       "shared": false,
+      "conditionMeters": [
+        {
+          "key": "fire",
+          "label": "fire",
+          "min": 0,
+          "max": 5,
+          "value": 0,
+          "impacts": []
+        }
+      ],
       "abilities": [
         {
           "id": "0",
@@ -33717,6 +33906,21 @@
       "name": "Exosuit",
       "countAsImpact": false,
       "shared": true,
+      "conditionMeters": [
+        {
+          "key": "integrity",
+          "label": "integrity",
+          "min": 0,
+          "max": 6,
+          "value": 6,
+          "impacts": [
+            {
+              "key": "battered",
+              "label": "battered"
+            }
+          ]
+        }
+      ],
       "abilities": [
         {
           "id": "0",
@@ -33757,6 +33961,21 @@
       "name": "Hoverbike",
       "countAsImpact": false,
       "shared": true,
+      "conditionMeters": [
+        {
+          "key": "integrity",
+          "label": "integrity",
+          "min": 0,
+          "max": 3,
+          "value": 3,
+          "impacts": [
+            {
+              "key": "battered",
+              "label": "battered"
+            }
+          ]
+        }
+      ],
       "abilities": [
         {
           "id": "0",
@@ -33797,6 +34016,21 @@
       "name": "Rover",
       "countAsImpact": false,
       "shared": true,
+      "conditionMeters": [
+        {
+          "key": "integrity",
+          "label": "integrity",
+          "min": 0,
+          "max": 5,
+          "value": 5,
+          "impacts": [
+            {
+              "key": "battered",
+              "label": "battered"
+            }
+          ]
+        }
+      ],
       "abilities": [
         {
           "id": "0",
@@ -33843,6 +34077,21 @@
       "name": "Service Pod",
       "countAsImpact": false,
       "shared": true,
+      "conditionMeters": [
+        {
+          "key": "integrity",
+          "label": "integrity",
+          "min": 0,
+          "max": 4,
+          "value": 4,
+          "impacts": [
+            {
+              "key": "battered",
+              "label": "battered"
+            }
+          ]
+        }
+      ],
       "abilities": [
         {
           "id": "0",
@@ -33886,6 +34135,21 @@
       "name": "Shuttle",
       "countAsImpact": false,
       "shared": true,
+      "conditionMeters": [
+        {
+          "key": "integrity",
+          "label": "integrity",
+          "min": 0,
+          "max": 4,
+          "value": 4,
+          "impacts": [
+            {
+              "key": "battered",
+              "label": "battered"
+            }
+          ]
+        }
+      ],
       "abilities": [
         {
           "id": "0",
@@ -33930,6 +34194,21 @@
       "name": "Skiff",
       "countAsImpact": false,
       "shared": true,
+      "conditionMeters": [
+        {
+          "key": "integrity",
+          "label": "integrity",
+          "min": 0,
+          "max": 4,
+          "value": 4,
+          "impacts": [
+            {
+              "key": "battered",
+              "label": "battered"
+            }
+          ]
+        }
+      ],
       "abilities": [
         {
           "id": "0",
@@ -33976,6 +34255,21 @@
       "name": "Snub Fighter",
       "countAsImpact": false,
       "shared": true,
+      "conditionMeters": [
+        {
+          "key": "integrity",
+          "label": "integrity",
+          "min": 0,
+          "max": 4,
+          "value": 4,
+          "impacts": [
+            {
+              "key": "battered",
+              "label": "battered"
+            }
+          ]
+        }
+      ],
       "abilities": [
         {
           "id": "0",

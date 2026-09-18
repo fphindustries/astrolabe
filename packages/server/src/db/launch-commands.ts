@@ -926,11 +926,7 @@ export async function saveSharedStarship(
     assetId: baseline.assetId,
     modules: request.starship.modules,
   };
-  const problems = validateSharedStarship(
-    { ...starship, integrity: starship.integrity.value },
-    STARFORGED,
-    Object.keys(state.characters),
-  );
+  const problems = validateSharedStarship(starship, STARFORGED, Object.keys(state.characters));
   if (problems.length > 0)
     throw new LaunchRejectedError(
       'invalid_starship',

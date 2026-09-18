@@ -85,9 +85,15 @@ export interface SharedStarshipDraft {
   readonly appearance: string;
   readonly history: string;
   readonly quirks: readonly string[];
-  readonly integrity: number;
+  readonly integrity: StarshipIntegrity;
   readonly assetId: AssetId;
   readonly modules: readonly InstalledModule[];
+}
+
+export interface StarshipIntegrity {
+  readonly value: number;
+  readonly min: number;
+  readonly max: number;
 }
 /**
  * What every starting shared starship is before anyone describes it: the
@@ -98,16 +104,26 @@ export interface SharedStarshipDraft {
  */
 export interface SharedStarshipBaseline {
   readonly assetId: AssetId;
-  readonly integrity: { readonly value: number; readonly min: number; readonly max: number };
+  readonly integrity: StarshipIntegrity;
 }
 
+/**
+ * Read from the imported asset (7.0b): the Starship's `integrity` condition
+ * meter, which Datasworn declares as 0–5 starting at 5. Nothing here writes
+ * the number itself, so the validator and the stamped ship cite one rule.
+ */
 export function sharedStarshipBaseline(ruleset: RulesetForCreation): SharedStarshipBaseline {
   const starship = ruleset.assets.find(
     (asset) => asset.categoryId === 'command_vehicle' && asset.name === 'Starship',
   );
   if (starship === undefined)
     throw new Error('The rules data has no Starship command-vehicle asset.');
-  return { assetId: starship.id, integrity: { value: 5, min: 0, max: 5 } };
+  const meter = starship.conditionMeters?.find((candidate) => candidate.key === 'integrity');
+  if (meter === undefined) throw new Error('The imported Starship has no integrity meter.');
+  return {
+    assetId: starship.id,
+    integrity: { value: meter.value, min: meter.min, max: meter.max },
+  };
 }
 
 export type SharedStarshipProblem = {
@@ -151,11 +167,16 @@ export function validateSharedStarship(
       field: 'quirks',
       message: 'Choose one or two distinct starship quirks.',
     });
-  if (draft.integrity !== 5)
+  const baseline = sharedStarshipBaseline(ruleset);
+  if (
+    draft.integrity.value !== baseline.integrity.value ||
+    draft.integrity.min !== baseline.integrity.min ||
+    draft.integrity.max !== baseline.integrity.max
+  )
     problems.push({
       code: 'integrity_invalid',
       field: 'integrity',
-      message: 'A starting starship has integrity 5.',
+      message: `A starting starship has integrity ${baseline.integrity.value} of ${baseline.integrity.max}.`,
     });
   const starship = ruleset.assets.find((asset) => asset.id === draft.assetId);
   if (starship?.categoryId !== 'command_vehicle' || starship.name !== 'Starship')

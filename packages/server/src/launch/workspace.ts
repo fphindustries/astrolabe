@@ -211,7 +211,7 @@ function readinessInput(state: CampaignState): LaunchReadinessInput {
             appearance: ship.appearance,
             history: ship.history,
             quirks: ship.quirks,
-            integrity: ship.integrity.value,
+            integrity: ship.integrity,
             assetId: ship.assetId,
             modules: ship.modules,
           },

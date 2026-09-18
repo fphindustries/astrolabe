@@ -54,7 +54,7 @@ function readyInput(): LaunchReadinessInput {
       appearance: 'Old freighter',
       history: 'Won in a wager',
       quirks: ['Slow clocks'],
-      integrity: 5,
+      integrity: { value: 5, min: 0, max: 5 },
       assetId: starshipAsset,
       modules: [],
     },

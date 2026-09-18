@@ -42,7 +42,7 @@ describe('launch character and shared starship rules', () => {
           appearance: 'Old freighter',
           history: 'Won in a wager',
           quirks: ['Slow clocks'],
-          integrity: 5,
+          integrity: { value: 5, min: 0, max: 5 },
           assetId: starship,
           modules: [{ assetId: moduleId, ownerCharacterId: 'vesna' }],
         },
@@ -65,7 +65,7 @@ describe('sharedStarshipBaseline', () => {
           appearance: 'Worn hull',
           history: 'Salvaged',
           quirks: ['Late clocks'],
-          integrity: baseline.integrity.value,
+          integrity: baseline.integrity,
           assetId: baseline.assetId,
           modules: [],
         },
@@ -73,5 +73,45 @@ describe('sharedStarshipBaseline', () => {
         [],
       ),
     ).toEqual([]);
+  });
+
+  // 7.0b — the number is the imported meter's, and every bound is checked.
+  it('reads integrity from the imported condition meter, impacts included', () => {
+    const starship = STARFORGED.assets.find((asset) => asset.categoryId === 'command_vehicle');
+    expect(starship?.conditionMeters).toEqual([
+      {
+        key: 'integrity',
+        label: 'integrity',
+        min: 0,
+        max: 5,
+        value: 5,
+        impacts: [
+          { key: 'battered', label: 'battered' },
+          { key: 'cursed', label: 'cursed' },
+        ],
+      },
+    ]);
+  });
+
+  it.each([
+    ['a different starting value', { value: 4, min: 0, max: 5 }],
+    ['a raised maximum', { value: 5, min: 0, max: 99 }],
+    ['a raised minimum', { value: 5, min: 1, max: 5 }],
+  ])('refuses %s', (_label, integrity) => {
+    const baseline = sharedStarshipBaseline(STARFORGED);
+    const codes = validateSharedStarship(
+      {
+        name: 'Lantern Wake',
+        appearance: 'Worn hull',
+        history: 'Salvaged',
+        quirks: ['Late clocks'],
+        integrity,
+        assetId: baseline.assetId,
+        modules: [],
+      },
+      STARFORGED,
+      [],
+    ).map((problem) => problem.code);
+    expect(codes).toEqual(['integrity_invalid']);
   });
 });

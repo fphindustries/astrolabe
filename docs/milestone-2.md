@@ -645,7 +645,7 @@ automated), D-193 (the legacy grant is neutralized in projection).
     because 7.0c–e key off it. There is exactly one ship, and no id exists before
     establishment, so a starship proposal's `targetId` is the fixed `'starship'` rather than
     a client-minted id (D-185's `draftId` problem avoided rather than repeated).
-  - [ ] **7.0b Integrity is traced to the imported rule.** The adapter drops Datasworn's
+  - [x] **7.0b Integrity is traced to the imported rule.** The adapter drops Datasworn's
     `controls`. Import the command vehicle's `integrity` condition meter (min 0, max 5,
     value 5) into the asset schema, regenerate the artifact, and have `validateSharedStarship`
     read it instead of the literal `5`. Check `min`/`max` too; today a client can send

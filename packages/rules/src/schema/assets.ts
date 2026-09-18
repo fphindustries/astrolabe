@@ -61,8 +61,28 @@ export interface Asset {
   /** Usable by the whole crew: the starship, every module, every support vehicle. */
   readonly shared: boolean;
   readonly attachments?: AssetAttachments;
+  /**
+   * The asset's condition meters, as Datasworn declares them: the Starship's
+   * integrity, a companion's health, a vehicle's integrity. Imported so a
+   * starting value is traced to its rule rather than written as a literal
+   * (7.0b). Absent when the asset has none. Impacts are data only: nothing
+   * marks them in Milestone 2.
+   */
+  readonly conditionMeters?: readonly AssetConditionMeter[];
   readonly abilities: readonly AssetAbility[];
   readonly source: Provenance;
+}
+
+export interface AssetConditionMeter {
+  /** Datasworn's control key, e.g. `integrity`, `health`. */
+  readonly key: string;
+  readonly label: string;
+  readonly min: number;
+  readonly max: number;
+  /** The value the asset starts at. */
+  readonly value: number;
+  /** Impacts nested under the meter, e.g. the Starship's `battered` and `cursed`. */
+  readonly impacts: readonly { readonly key: string; readonly label: string }[];
 }
 
 export interface AssetAbility {
