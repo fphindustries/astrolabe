@@ -90,7 +90,9 @@ export interface InstalledModule {
  * owner. Nothing is stored on the ship, so revising or removing a character
  * changes the ship with no second write.
  *
- * `crew` is in creation order. When two members hold the same module, the
+ * `crew` must be in creation order; the server passes
+ * `Object.values(state.characters)`, whose insertion order the projection keeps
+ * across revisions. When two members hold the same module, the
  * earlier one's is installed; the later one is a Crew blocker
  * (`duplicateModuleHolders`), because one ship cannot install a module twice.
  */
@@ -133,11 +135,7 @@ function isModule(assetId: AssetId, ruleset: RulesetForCreation): boolean {
   return ruleset.assets.find((asset) => asset.id === assetId)?.categoryId === 'module';
 }
 
-export interface SharedStarshipDraft {
-  readonly name: string;
-  readonly appearance: string;
-  readonly history: string;
-  readonly quirks: readonly string[];
+export interface SharedStarshipDraft extends StarshipDetails {
   readonly integrity: StarshipIntegrity;
   readonly assetId: AssetId;
 }
@@ -184,40 +182,60 @@ export type SharedStarshipProblem = {
   readonly message: string;
 };
 
-export function validateSharedStarship(
-  draft: SharedStarshipDraft,
-  ruleset: RulesetForCreation,
+/** What the player states about a ship: its name, appearance, history and quirks. */
+export interface StarshipDetails {
+  readonly name: string;
+  readonly appearance: string;
+  readonly history: string;
+  readonly quirks: readonly string[];
+}
+
+/**
+ * The checks on what the player states, apart from the starting bounds.
+ * Shared by acceptance and by a post-launch amendment (7.0j), which corrects
+ * the words and must not reset an integrity play has since changed.
+ */
+export function validateStarshipDetails(
+  details: StarshipDetails,
 ): readonly SharedStarshipProblem[] {
   const problems: SharedStarshipProblem[] = [];
-  if (draft.name.trim() === '')
+  if (details.name.trim() === '')
     problems.push({
       code: 'name_required',
       field: 'name',
       message: 'The shared starship needs a name.',
     });
-  if (draft.appearance.trim() === '')
+  if (details.appearance.trim() === '')
     problems.push({
       code: 'appearance_required',
       field: 'appearance',
       message: 'The shared starship needs an appearance.',
     });
-  if (draft.history.trim() === '')
+  if (details.history.trim() === '')
     problems.push({
       code: 'history_required',
       field: 'history',
       message: 'The shared starship needs a history.',
     });
   if (
-    draft.quirks.length < 1 ||
-    draft.quirks.length > 2 ||
-    draft.quirks.some((q) => q.trim() === '') ||
-    new Set(draft.quirks).size !== draft.quirks.length
+    details.quirks.length < 1 ||
+    details.quirks.length > 2 ||
+    details.quirks.some((q) => q.trim() === '') ||
+    new Set(details.quirks).size !== details.quirks.length
   )
     problems.push({
       code: 'quirks_invalid',
       field: 'quirks',
       message: 'Choose one or two distinct starship quirks.',
     });
+  return problems;
+}
+
+export function validateSharedStarship(
+  draft: SharedStarshipDraft,
+  ruleset: RulesetForCreation,
+): readonly SharedStarshipProblem[] {
+  const problems: SharedStarshipProblem[] = [...validateStarshipDetails(draft)];
   const baseline = sharedStarshipBaseline(ruleset);
   if (
     draft.integrity.value !== baseline.integrity.value ||

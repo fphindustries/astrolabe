@@ -543,7 +543,12 @@ export const LaunchAmendmentSchema = z.discriminatedUnion('subject', [
     replacement: z.object({ truthId: OracleIdSchema, text: z.string().min(1) }),
   }),
   z.object({ subject: z.literal('character'), replacement: LaunchCharacterSchema }),
-  z.object({ subject: z.literal('starship'), replacement: SharedStarshipSchema }),
+  // Shaped like the fact as it is now projected: no stored module list (D-191).
+  // The server stamps the id, asset and integrity rather than taking them (7.0j).
+  z.object({
+    subject: z.literal('starship'),
+    replacement: SharedStarshipSchema.omit({ modules: true }),
+  }),
   z.object({
     subject: z.literal('sector'),
     replacement: z.object({ sectorId: EntityIdSchema, name: z.string().min(1) }),

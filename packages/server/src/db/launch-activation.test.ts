@@ -350,6 +350,49 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
     });
   });
 
+  // 7.0j — the amendment path keeps 7.0a's and 7.0b's contract.
+  it('stamps a starship amendment with the ship’s own id, asset and integrity', async () => {
+    const { campaignId } = await readyCampaign();
+    await activateLaunch(db.sql, { campaignId, commandId: newId<CommandId>(), actor: PLAYER });
+    const events = await readEvents(db.sql, campaignId);
+    const established = events.find((event) => event.type === 'starship.established')!;
+    const ship = project(events).launch.starship!;
+    const amend = (name: string) =>
+      amendLaunchFact(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        amendment: {
+          subject: 'starship',
+          replacement: {
+            starshipId: newId<EntityId>(),
+            name,
+            appearance: ship.appearance,
+            history: ship.history,
+            quirks: [...ship.quirks],
+            integrity: { value: 9, min: 0, max: 99 },
+            assetId: 'asset:module/sensor-array' as never,
+          },
+        },
+        reason: 'The registry had it wrong.',
+        supersedesEventId: established.id,
+      });
+
+    await amend('Lantern Wake II');
+
+    const [amended] = project(await readEvents(db.sql, campaignId)).launch.amendments;
+    expect(amended).toMatchObject({
+      subject: 'starship',
+      replacement: {
+        name: 'Lantern Wake II',
+        starshipId: ship.starshipId,
+        assetId: ship.assetId,
+        integrity: ship.integrity,
+      },
+    });
+    await expect(amend('  ')).rejects.toMatchObject({ reason: 'invalid_starship' });
+  });
+
   it('refuses an amendment whose subject contradicts the event it supersedes', async () => {
     const { campaignId } = await readyCampaign();
     await activateLaunch(db.sql, { campaignId, commandId: newId<CommandId>(), actor: PLAYER });

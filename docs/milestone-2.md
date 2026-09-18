@@ -74,7 +74,7 @@ Criteria continue Milestone 1's numbering.
 | A27 | Campaign Launch supports one to six characters and requires at least one complete character. The golden launch creates Vesna, Rook, and Juno. | 3–5 |
 | A28 | A complete character records identity, appearance, legal starting assets and stats, starting meters and momentum, backstory or an explicit mystery, a background vow, and optional signature gear. | 3–5 |
 | A29 | Concept-first and step-by-step creation edit the same draft. A proposal never becomes a character until the player reviews and accepts it. | 3–5 |
-| A30 | The campaign has one shared command starship with integrity 5; its shared abilities are available to the crew, while an attached non-shared module retains its owning character. | 6 |
+| A30 | The campaign has one shared command starship with integrity 5; its shared abilities are available to the crew, while an attached non-shared module retains its owning character. *Read with D-190: every module is shared for use and keeps the character who holds it as its owner; D-192 bounds "available" to shown, not automated.* | 6 |
 | A31 | The chosen sector region determines the required settlement and passage baseline. Readiness enforces the baseline as a floor and permits additional custom content. Enforcing it is Astrolabe's deliberate choice, stricter than the rulebook, which offers the counts as a recommendation for the Chapter 2 exercise (D-180). | 7 |
 | A32 | Every required settlement has a name, location type, population, authority, and one or two projects, created manually, by server rolls, or from a reviewed Guide proposal. | 7 |
 | A33 | Planets are generated only to the depth Chapter 2 calls for: shallow details for associated settlements and fuller detail for the starting settlement's planet. Stars are optional. | 7–8 |
@@ -695,6 +695,13 @@ automated), D-193 (the legacy grant is neutralized in projection).
     `module_duplicate` moves to the Crew section, reported on the later-created of two
     characters holding the same module (D-191). Assert that revising Vesna's final asset, or
     removing her, updates the ship with no second write.
+  - [x] **7.0j Amendments keep the same contract.** Found after 7.0a–i landed: the
+    `starship` arm of `launch.fact_amended` took a full client-supplied ship, so a
+    post-launch amendment could record a different id, any integrity, or a module list.
+    The arm is now the fact as projected (no modules), and `amendLaunchFact` stamps the
+    id, asset and **current** integrity from the projected ship and checks the details
+    through `validateStarshipDetails`, the checks acceptance uses. Current rather than
+    starting integrity, because an amendment corrects words and must not undo damage.
 - [ ] 7.1 Add the Starship step with Write, Roll, field-level Guide help, and a whole-ship
   proposal for name, appearance, history, and one or two quirks. Every transition lives in
   `starship-form.ts`, not the `.tsx` (the lesson from groups 5 and 6). That covers the

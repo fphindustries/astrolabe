@@ -6,6 +6,7 @@ import {
   sharedStarshipBaseline,
   STARFORGED,
   validateSharedStarship,
+  validateStarshipDetails,
   type CharacterId,
   type LaunchRecipeSelector,
   type OracleId,
@@ -762,6 +763,7 @@ export async function amendLaunchFact(
   const reason = request.reason.trim();
   if (reason === '')
     throw new LaunchRejectedError('amendment_reason_required', 'An amendment needs a reason.');
+  const amendment = stampedAmendment(state, request.amendment);
   return appendCommand(sql, {
     campaignId: request.campaignId,
     commandId: request.commandId,
@@ -770,11 +772,44 @@ export async function amendLaunchFact(
     events: [
       {
         type: 'launch.fact_amended',
-        payload: { ...request.amendment, reason, supersedesEventId: target!.id },
+        payload: { ...amendment, reason, supersedesEventId: target!.id },
       },
     ],
     response: { subject, supersedesEventId: target!.id },
   });
+}
+
+/**
+ * The amendment as recorded (7.0j). A starship amendment corrects what the
+ * player stated, so its words are checked as acceptance checks them, and the
+ * id, asset and integrity come from the projected ship rather than the
+ * request: the same contract 7.0a gives `saveSharedStarship`. Integrity is
+ * the current value, not the starting one, because an amendment corrects the
+ * words and must not undo damage play has since recorded.
+ */
+function stampedAmendment(state: CampaignState, amendment: LaunchAmendment): LaunchAmendment {
+  if (amendment.subject !== 'starship') return amendment;
+  const current = state.launch.starship;
+  if (current === undefined)
+    throw new LaunchRejectedError('invalid_amendment_target', 'There is no ship to amend.');
+  const problems = validateStarshipDetails(amendment.replacement);
+  if (problems.length > 0)
+    throw new LaunchRejectedError(
+      'invalid_starship',
+      problems.map((problem) => problem.message).join(' '),
+    );
+  return {
+    subject: 'starship',
+    replacement: {
+      starshipId: current.starshipId,
+      name: amendment.replacement.name,
+      appearance: amendment.replacement.appearance,
+      history: amendment.replacement.history,
+      quirks: amendment.replacement.quirks,
+      integrity: current.integrity,
+      assetId: current.assetId,
+    },
+  };
 }
 
 /**
