@@ -90,16 +90,17 @@ describe('the launch dashboard view model', () => {
     // Someone drove the API directly, or a legacy campaign already carries the
     // facts. A placeholder reports the truth about the campaign, not about
     // whether group 4 built its form.
-    // Sector is the example now that Starship has its editor; it moves again
-    // when group 8 lands.
+    // Incident and Launch is the example now that Starting Sector has its
+    // editor; Connection and Troubles is half built after 8.5, so it would not
+    // be a whole placeholder to point at.
     const { cards } = buildDashboard(
       'c1',
-      readiness({ sector: { status: 'complete', blockers: [] } }),
+      readiness({ incident_launch: { status: 'complete', blockers: [] } }),
     );
-    const sector = cards.find((card) => card.section === 'sector')!;
+    const incident = cards.find((card) => card.section === 'incident_launch')!;
 
-    expect(sector).toMatchObject({ statusText: 'Complete', implemented: false });
-    expect(sector.arrivesIn).toBe('Starting Sector (group 8)');
+    expect(incident).toMatchObject({ statusText: 'Complete', implemented: false });
+    expect(incident.arrivesIn).toBe('Incident and Launch (group 9)');
   });
 
   it('points at the first unfinished section, and says start or continue', () => {

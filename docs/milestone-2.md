@@ -868,7 +868,7 @@ proposal per object), D-197 (the map is hand-rolled SVG).
     kind and a trouble its owner, for the reason a revision does: other facts rest on what
     they are. Amendments project into `launch.amendments` and never back into the sector's
     facts, so this was a history defect rather than a split aggregate.
-- [ ] 8.1 Add region and sector-name selection with the required baseline visible. Offer
+- [x] 8.1 Add region and sector-name selection with the required baseline visible. Offer
   Write, Roll (the sector-name recipe) and field-level Guide help for the name. Show the
   baseline with its citation and D-180's sentence: it is a floor, not a quota. A revised
   region changes the baseline and does not re-roll populations already accepted, and the
