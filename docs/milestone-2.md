@@ -661,7 +661,7 @@ automated), D-193 (the legacy grant is neutralized in projection).
     `state.launch.proposals`, and crew's `readEventsByCommand`. D-185 said it would
     generalize and it did not. Generalize `acceptedProposal` over the projected proposals
     (it is already projected for A41) and state why in the note.
-  - [ ] **7.0d A per-field starship proposal.** The `starship` arm of `creation.proposed` is
+  - [x] **7.0d A per-field starship proposal.** The `starship` arm of `creation.proposed` is
     `SharedStarshipSchema.partial()`, so the proposal has no per-field reason or grounding. It
     has the same shape as the character arm before 6.3. Add `StarshipProposalSchema`: name,
     history and each quirk as `ProposedTextSchema` (value, reason, the rolls behind it), and

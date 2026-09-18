@@ -268,15 +268,15 @@ discriminants listed here.
 | Type | Payload responsibility |
 |---|---|
 | `launch.draft_saved` | `{ section, snapshot }`, where `section` discriminates a closed union of Foundation, Truths, Crew, Starship, Sector, Connection/Troubles, and Incident/Launch snapshot schemas. It is resumable setup, not canon. |
-| `creation.proposed` | `{ targetKind, targetId, proposal, rationale, groundedIn }`; `targetKind` selects a closed schema for truth, character, starship, settlement, sector, connection, trouble, or incident. Oracle rolls and the AI accounting event remain separate and are referenced by id. |
+| `creation.proposed` | `{ targetKind, targetId, proposal, rationale, groundedIn }`; `targetKind` selects a closed schema for truth, character, starship, settlement, sector, connection, trouble, or incident. Oracle rolls and the AI accounting event remain separate and are referenced by id. The **starship** arm is per field (7.0d), like the character arm: name, history and each quirk carry `{ value, reason, groundedIn }`, and appearance carries `{ value, reason }`. Beat 6 has the player keep one proposed quirk and edit the appearance while still seeing what was proposed and why. Its `targetId` is the fixed `'starship'`, because a campaign has one ship and no id exists before establishment. |
 | `campaign.foundation_set` | Accepted premise and launch settings, with provenance and optional `supersedesEventId`. |
 | `truth.decided` | Truth id, `resolution: selected | rolled | custom | leave_open`, resolved option/subchoice or custom text, quest-starter reference, grounding, and optional `supersedesEventId`. |
 | `character.created` | The complete accepted launch character snapshot, including appearance, backstory state, background vow, gear, rules-derived starting state, assets, and provenance. The launch fields, `provenance` and `groundedIn` are all **optional**, so an existing v1 event stays readable as written and **no upcaster is owed** (D-184); readiness still reports what must be completed. Projection supplies `eventId` and `seq` for every character, legacy or not, because the fold always knows both. |
 | `character.revised` | Complete replacement snapshot plus `characterId`, `supersedesEventId`, and provenance. |
-| `character.removed` | `characterId`, `supersedesEventId`, and reason; valid only before activation. Projection drops the character, takes their own vow tracks with them, and appends their final version to `crewHistory` so what was removed stays answerable (A40). A module still naming them as owner is **not** refused here: it surfaces as `module_owner_unknown` from the starship validator, which blocks launch until the player resolves it. |
+| `character.removed` | `characterId`, `supersedesEventId`, and reason; valid only before activation. Projection drops the character, takes their own vow tracks with them, and appends their final version to `crewHistory` so what was removed stays answerable (A40). Their modules leave the ship with them: installed modules are derived from the crew (D-191), so nothing can still name them as owner. |
 | `track.revised` | `{ trackId, title, rank? }` (D-188). A track's own words, and only those — progress, kind and owner are untouched. Written in the same command as `character.revised` when a background vow's title or rank changed, because D-105 made the vow and its track one decision and `track.created` cannot be undone before a session exists. Not a launch event: ordinary track rules, including voidability. |
-| `starship.established` | Shared starship id, details, integrity and bounds, shared Starship asset snapshot, installed module references with owners, and provenance. |
-| `starship.revised` | Complete replacement ship snapshot and `supersedesEventId`. |
+| `starship.established` | Shared starship id, details (name, appearance, history, one or two quirks), integrity and bounds, the Starship asset id, and provenance. The id, asset and integrity are the server's: the id is minted once, and the asset and integrity come from the imported Starship and its `integrity` meter (7.0a, 7.0b). Installed modules are **not** a fact of the ship. They are derived from the crew's module-category assets, each owned by the character whose slot holds it (D-190, D-191). The `modules` member written by earlier events stays readable and is ignored. |
+| `starship.revised` | Complete replacement ship snapshot, with the same `starshipId`, and `supersedesEventId`. Projection appends the superseded version to `starshipHistory` (7.0f). |
 | `sector.configured` | Sector id, name, region, snapshotted baseline requirements, optional star reference, and provenance. |
 | `location.added`, `location.revised`, `location.removed` | Typed settlement, planet, star, or other-location snapshot; revisions/removals name the superseded event and are rejected when retained facts reference the location. |
 | `route.added`, `route.revised`, `route.removed` | Passage endpoints, including a typed off-map endpoint; revisions/removals name the superseded event. |
@@ -505,7 +505,8 @@ interface CharacterState {
   meters: Record<MeterId, { value, min, max, lastChangedBy: Provenance }>;  // bounds snapshotted at creation
   momentum: { value, max, resetValue, lastChangedBy: Provenance };          // value stored; max and reset derived
   impacts: Record<ImpactId, boolean>;
-  assets: AssetRef[];
+  assets: AssetRef[];                     // a legacy granted Starship is not here (D-193)
+  legacyStarshipGrant?: true;             // D-193: the character.created payload carried the M1 grant
   bonusNextMove?: { amount, excludes?, sourceEventId };                     // Beat 5's +1, consumed by the next roll
   vowTrackIds: TrackId[];
 }
@@ -530,6 +531,7 @@ interface LaunchState {
   drafts: Partial<Record<LaunchSection, TypedLaunchDraft>>;
   foundation?: CampaignFoundation;
   starship?: SharedStarshipState;
+  starshipHistory: SharedStarshipState[];  // superseded versions, oldest first (7.0f)
   sector?: StartingSectorState;
   connection?: ConnectionState;
   troubles: TroubleState[];

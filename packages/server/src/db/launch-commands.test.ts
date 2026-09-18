@@ -4,6 +4,7 @@ import { STARFORGED } from '@astrolabe/rules';
 import {
   DEFAULT_CAMPAIGN_SETTINGS,
   LOCAL_PLAYER_ID,
+  STARSHIP_PROPOSAL_TARGET,
   type Actor,
   type CampaignId,
   type CommandId,
@@ -204,13 +205,61 @@ describe.skipIf(!hasTestDatabase)('Campaign Launch workspace commands (3.1–3.2
       campaignId,
       commandId: newId<CommandId>(),
       actor: PLAYER,
-      proposal: { targetKind: 'starship', proposal: { name: 'Lantern Wake' } },
-      targetId: 'shared-starship',
+      proposal: {
+        targetKind: 'starship',
+        proposal: {
+          name: { value: 'Lantern Wake', reason: 'The rolled name.', groundedIn: [roll.id] },
+          appearance: { value: 'A patched hull.', reason: 'Read off the history.' },
+          history: { value: 'Won in a wager.', reason: 'Written.', groundedIn: [] },
+          quirks: [{ value: 'The clocks run slow.', reason: 'Written.', groundedIn: [] }],
+        },
+      },
+      targetId: STARSHIP_PROPOSAL_TARGET,
       rationale: 'The oracle result fits the campaign premise.',
       groundedIn: [roll.id],
     });
     const events = await readEvents(db.sql, campaignId);
     expect(events.some((event) => event.type === 'creation.proposed')).toBe(true);
     expect(project(events).launch.starship).toBeUndefined();
+  });
+
+  // 7.0d — one ship, so one key; and a proposal is per field, not a partial ship.
+  it('keys a starship proposal by the fixed target and refuses any other', async () => {
+    const campaignId = await campaign();
+    const proposal = {
+      targetKind: 'starship' as const,
+      proposal: {
+        name: { value: 'Lantern Wake', reason: 'Written.', groundedIn: [] },
+        appearance: { value: 'A patched hull.', reason: 'Written.' },
+        history: { value: 'Won in a wager.', reason: 'Written.', groundedIn: [] },
+        quirks: [{ value: 'The clocks run slow.', reason: 'Written.', groundedIn: [] }],
+      },
+    };
+
+    await expect(
+      proposeLaunchCreation(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        proposal,
+        targetId: newId<EntityId>(),
+        rationale: 'A ship.',
+        groundedIn: [],
+      }),
+    ).rejects.toMatchObject({ reason: 'invalid_proposal_target' });
+
+    await proposeLaunchCreation(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      proposal,
+      targetId: STARSHIP_PROPOSAL_TARGET,
+      rationale: 'A ship.',
+      groundedIn: [],
+    });
+    const held = project(await readEvents(db.sql, campaignId)).launch.proposals[
+      STARSHIP_PROPOSAL_TARGET
+    ];
+    expect(held).toMatchObject({ targetKind: 'starship', proposal: proposal.proposal });
   });
 });

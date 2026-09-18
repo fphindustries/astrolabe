@@ -103,6 +103,30 @@ export const CharacterProposalSchema = z.object({
   signatureGear: ProposedNoteSchema.optional(),
 });
 
+/**
+ * A whole proposed ship (7.0d, D-166).
+ *
+ * Per field for beat 6's reason: the player keeps one proposed quirk and
+ * edits the appearance, and still sees what the Guide proposed and why. Name,
+ * history and quirks are read off the starship recipe's rolls, so each cites
+ * them; appearance is read off the concept and the history, and has no roll.
+ * Complete rather than partial, like the character arm: field-level help is
+ * the same proposal with the Guide asked to focus on some fields (6.3).
+ */
+export const StarshipProposalSchema = z.object({
+  name: ProposedTextSchema,
+  appearance: ProposedNoteSchema,
+  history: ProposedTextSchema,
+  quirks: z.array(ProposedTextSchema).min(1).max(2),
+});
+export type StarshipProposal = z.infer<typeof StarshipProposalSchema>;
+/**
+ * The one `targetId` a starship proposal can have. A campaign has one ship, and
+ * no ship id exists until it is established, so the proposal is keyed by what
+ * it is rather than by an id the client would have to invent (7.0a).
+ */
+export const STARSHIP_PROPOSAL_TARGET = 'starship';
+
 export const SharedStarshipSchema = z.object({
   starshipId: EntityIdSchema,
   name: z.string().min(1),
@@ -361,7 +385,7 @@ export const LaunchDraftSavedSchema = DraftSnapshotSchema;
 export const CreationProposalSchema = z.discriminatedUnion('targetKind', [
   z.object({ targetKind: z.literal('truth'), proposal: TruthProposalSchema }),
   z.object({ targetKind: z.literal('character'), proposal: CharacterProposalSchema }),
-  z.object({ targetKind: z.literal('starship'), proposal: SharedStarshipSchema.partial() }),
+  z.object({ targetKind: z.literal('starship'), proposal: StarshipProposalSchema }),
   z.object({ targetKind: z.literal('settlement'), proposal: SettlementProposalSchema }),
   z.object({ targetKind: z.literal('sector'), proposal: SectorProposalSchema }),
   z.object({ targetKind: z.literal('connection'), proposal: ConnectionSchema.partial() }),

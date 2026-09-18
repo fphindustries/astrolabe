@@ -31,6 +31,7 @@ import type {
   SessionId,
   SharedStarshipDetails,
 } from '@astrolabe/shared';
+import { STARSHIP_PROPOSAL_TARGET } from '@astrolabe/shared';
 import type { Sql } from 'postgres';
 
 import { project } from '../projection/project.js';
@@ -269,6 +270,11 @@ export async function proposeLaunchCreation(
   const rationale = request.rationale.trim();
   if (rationale === '')
     throw new LaunchRejectedError('proposal_fields_required', 'A proposal needs a rationale.');
+  if (request.proposal.targetKind === 'starship' && request.targetId !== STARSHIP_PROPOSAL_TARGET)
+    throw new LaunchRejectedError(
+      'invalid_proposal_target',
+      `A starship proposal targets "${STARSHIP_PROPOSAL_TARGET}": a campaign has one ship.`,
+    );
   if (Object.values(request.proposal.proposal).every((value) => value === undefined))
     throw new LaunchRejectedError('proposal_fields_required', 'A proposal needs content.');
   return appendCommand(sql, {
