@@ -6,6 +6,15 @@ import { emptyCampaignState } from './state-fixture.js';
 import {
   EMPTY_SECTOR_FORM,
   addSettlement,
+  applyPlanetClassRoll,
+  applyPlanetFieldRoll,
+  applyPlanetRecipe,
+  applyStarRoll,
+  isStartingSettlement,
+  planetFieldOracle,
+  setPlanetClass,
+  setStar,
+  toStarRequest,
   applyNameRoll,
   applySettlementFieldRoll,
   applySettlementRecipe,
@@ -406,5 +415,76 @@ describe('a settlement proposal (8.2, D-196)', () => {
     expect(proposedSettlementFields(held.proposal)).toContain('planet');
     expect(proposedSettlementGrounding(held.proposal, 'planet')).toEqual([id(6), id(7)]);
     expect(proposedSettlementValue(held.proposal, 'planet')).toEqual(['Hollow, a ice world']);
+  });
+});
+
+describe('planets and the star (8.3, A33, D-195)', () => {
+  const orbital = setSettlementLocation(
+    addSettlement(setRegion(EMPTY_SECTOR_FORM, 'outlands'), 'd-1'),
+    'd-1',
+    'orbital',
+  );
+
+  it('reads each planet Roll from its class’s own table, shallow or detailed (D-173)', () => {
+    expect(planetFieldOracle('ice', 'name')).toBe('oracle:planets/ice/name');
+    expect(planetFieldOracle('ice', 'observedFromSpace')).toBe(
+      'oracle:planets/ice/observed-from-space',
+    );
+  });
+
+  it('reads a rolled class from the row’s linked table, and keeps the roll', () => {
+    const form = applyPlanetClassRoll(orbital, 'd-1', {
+      eventId: id(1),
+      text: '[Ice World](id:oracle:planets/ice)',
+    });
+    expect(findSettlement(form, 'd-1')?.planet).toMatchObject({
+      planetClass: 'ice',
+      rolls: [id(1)],
+    });
+  });
+
+  it('drops the rolls behind a planet when its class changes: they read another table', () => {
+    let form = applyPlanetClassRoll(orbital, 'd-1', { eventId: id(1), text: 'Ice World' });
+    form = applyPlanetFieldRoll(form, 'd-1', 'name', { eventId: id(2), text: 'Hollow' });
+    form = setPlanetClass(form, 'd-1', 'jungle');
+    expect(findSettlement(form, 'd-1')?.planet).toMatchObject({
+      planetClass: 'jungle',
+      name: 'Hollow',
+      rolls: [],
+    });
+  });
+
+  it('fills the starting detail from its recipe, slot by slot', () => {
+    const form = applyPlanetRecipe(orbital, 'd-1', [
+      { slot: 'atmosphere', eventId: id(3), text: 'Thin' },
+      { slot: 'observed_from_space', eventId: id(4), text: 'Glittering rings' },
+      { slot: 'feature', eventId: id(5), text: 'Ice caves' },
+    ]);
+    expect(findSettlement(form, 'd-1')?.planet).toMatchObject({
+      atmosphere: 'Thin',
+      observedFromSpace: 'Glittering rings',
+      feature: 'Ice caves',
+      rolls: [id(3), id(4), id(5)],
+    });
+  });
+
+  it('knows the starting settlement by the server’s selection, never by the form', () => {
+    const settlement = { ...findSettlement(orbital, 'd-1')!, locationId: EMBER };
+    expect(isStartingSettlement(emptyCampaignState(), settlement)).toBe(false);
+    expect(
+      isStartingSettlement(emptyCampaignState({ startingSettlementId: EMBER }), settlement),
+    ).toBe(true);
+  });
+
+  it('describes the star from a roll, and sends it only once it has a name', () => {
+    const rolled = applyStarRoll(EMPTY_SECTOR_FORM, {
+      eventId: id(1),
+      text: 'Smoldering red star',
+    });
+    expect(toStarRequest(rolled.star)).toBeNull();
+    expect(toStarRequest(setStar(rolled, 'name', 'Cinder').star)).toEqual({
+      location: { kind: 'star', name: 'Cinder', details: { description: 'Smoldering red star' } },
+      groundedIn: [id(1)],
+    });
   });
 });

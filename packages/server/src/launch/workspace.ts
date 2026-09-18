@@ -230,7 +230,6 @@ function readinessInput(state: CampaignState): LaunchReadinessInput {
               ? { startingSettlementId: state.launch.startingSettlementId }
               : {}),
             ...(sectorTrouble !== undefined ? { sectorTrouble: sectorTrouble.text } : {}),
-            ...(sector.starId !== undefined ? { star: sector.starId } : {}),
           },
         }),
     ...(connection === undefined

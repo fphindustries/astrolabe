@@ -883,7 +883,7 @@ proposal per object), D-197 (the map is hand-rolled SVG).
   description. Removal shows the server's refusal when a fact still references the
   location. Show the `readiness.sections.sector.blockers` beside the fields they name, and
   show visible history from 8.0h. Nothing here is a second readiness algorithm (D-176).
-- [ ] 8.3 Add progressive planet details and optional star generation. A planetside or
+- [x] 8.3 Add progressive planet details and optional star generation. A planetside or
   orbital settlement shows its planet inside the settlement: choose or roll the class, then
   write or roll the name (shallow). The starting settlement's planet is deepened with
   atmosphere, observed from space and a feature, and every other planet stays shallow

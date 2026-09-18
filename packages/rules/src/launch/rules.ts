@@ -98,7 +98,6 @@ export interface LaunchSector {
   readonly routes: readonly LaunchRoute[];
   readonly startingSettlementId?: string;
   readonly sectorTrouble?: string;
-  readonly star?: string;
 }
 export interface LaunchConnection {
   readonly npcName: string;

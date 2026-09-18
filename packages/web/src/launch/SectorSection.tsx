@@ -8,6 +8,7 @@ import { ErrorSummary } from '../ui/ErrorSummary.js';
 import { fieldAnchorId } from '../ui/error-summary.js';
 
 import { launchErrorSummary } from './errors.js';
+import { StarFields } from './SectorDetails.js';
 import { SectorPlaces } from './SectorPlaces.js';
 import {
   REGIONS,
@@ -125,6 +126,7 @@ export function SectorSection({
         form={form}
         submitted={submitted}
         onEdit={edit}
+        update={update}
         pending={configure.isPending}
         configured={configured}
         onConfigure={handleConfigure}
@@ -186,6 +188,7 @@ function SectorHeader({
   form,
   submitted,
   onEdit,
+  update,
   pending,
   configured,
   onConfigure,
@@ -194,6 +197,7 @@ function SectorHeader({
   readonly form: SectorForm;
   readonly submitted: boolean;
   readonly onEdit: (next: SectorForm) => void;
+  readonly update: (change: (current: SectorForm) => SectorForm) => SectorForm;
   readonly pending: boolean;
   readonly configured: boolean;
   readonly onConfigure: () => void;
@@ -276,6 +280,8 @@ function SectorHeader({
         </div>
         {rolled !== undefined && <p className={styles.rolled}>Rolled {rolled}</p>}
       </div>
+
+      <StarFields campaignId={campaignId} form={form} update={update} configured={configured} />
 
       <div className={styles.actions}>
         <button type="button" className={styles.primary} disabled={pending} onClick={onConfigure}>

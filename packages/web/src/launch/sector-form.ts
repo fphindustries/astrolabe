@@ -1,6 +1,8 @@
 import {
   REGION_BASELINES,
+  buildPlanetRecipe,
   buildSettlementRecipe,
+  planetClassFromRow,
   settlementLocationFromRow,
   withoutLinks,
   type LaunchReadiness,
@@ -995,4 +997,161 @@ export function settlementProgress(
     accepted,
     required: region === '' ? undefined : REGION_BASELINES[region].settlements,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Planets and the star (8.3, A33, D-195)
+// ---------------------------------------------------------------------------
+
+export type PlanetTextField = 'name' | 'atmosphere' | 'observedFromSpace' | 'feature';
+
+export const PLANET_FIELD_LABELS: Readonly<Record<PlanetTextField, string>> = {
+  name: 'Name',
+  atmosphere: 'Atmosphere',
+  observedFromSpace: 'Observed from space',
+  feature: 'Planetside feature',
+};
+
+/** The class-specific table behind a planet field's one-field Roll (D-173). */
+export function planetFieldOracle(planetClass: PlanetClass, field: PlanetTextField): OracleId {
+  const depth = field === 'name' ? 'shallow' : 'starting_detail';
+  const slot = field === 'observedFromSpace' ? 'observed_from_space' : field;
+  const found = buildPlanetRecipe(planetClass, depth).rolls.find((roll) => roll.slot === slot);
+  if (found === undefined) throw new Error(`The planet recipe declares no "${slot}" slot.`);
+  return found.oracle;
+}
+
+const replacePlanet = (
+  form: SectorForm,
+  draftId: string,
+  change: (planet: PlanetForm) => PlanetForm,
+): SectorForm =>
+  replaceSettlement(form, draftId, (settlement) =>
+    settlement.planet === undefined
+      ? settlement
+      : { ...settlement, planet: change(settlement.planet) },
+  );
+
+export function setPlanetText(
+  form: SectorForm,
+  draftId: string,
+  field: PlanetTextField,
+  text: string,
+): SectorForm {
+  return replacePlanet(form, draftId, (planet) => ({ ...planet, [field]: text }));
+}
+
+/**
+ * Choose the planet's class. Its tables are the class's own, so a name or
+ * detail rolled for another class no longer describes this world: its rolls
+ * go with the change of class.
+ */
+export function setPlanetClass(
+  form: SectorForm,
+  draftId: string,
+  planetClass: PlanetClass,
+): SectorForm {
+  return replacePlanet(form, draftId, (planet) =>
+    planet.planetClass === planetClass ? planet : { ...planet, planetClass, rolls: [] },
+  );
+}
+
+/** A class roll lands (8.0c): the class is read from the row's linked table id. */
+export function applyPlanetClassRoll(
+  form: SectorForm,
+  draftId: string,
+  roll: { readonly eventId: EventId; readonly text: string },
+): SectorForm {
+  const planetClass = planetClassFromRow(roll.text);
+  if (planetClass === undefined) return form;
+  return replacePlanet(setPlanetClass(form, draftId, planetClass), draftId, (planet) => ({
+    ...planet,
+    rolls: [...planet.rolls, roll.eventId],
+  }));
+}
+
+/** A one-field planet roll lands: the row becomes the field, the roll its citation. */
+export function applyPlanetFieldRoll(
+  form: SectorForm,
+  draftId: string,
+  field: PlanetTextField,
+  roll: { readonly eventId: EventId; readonly text: string },
+): SectorForm {
+  return replacePlanet(
+    setPlanetText(form, draftId, field, withoutLinks(roll.text).trim()),
+    draftId,
+    (planet) => ({
+      ...planet,
+      rolls: [...new Set([...planet.rolls, roll.eventId])],
+    }),
+  );
+}
+
+const PLANET_SLOTS: Readonly<Record<string, PlanetTextField>> = {
+  name: 'name',
+  atmosphere: 'atmosphere',
+  observed_from_space: 'observedFromSpace',
+  feature: 'feature',
+};
+
+/** A planet recipe lands, shallow or the starting detail (A33): each slot fills its field. */
+export function applyPlanetRecipe(
+  form: SectorForm,
+  draftId: string,
+  results: readonly { readonly slot: string; readonly eventId: EventId; readonly text: string }[],
+): SectorForm {
+  let next = form;
+  for (const result of results) {
+    const field = PLANET_SLOTS[result.slot];
+    if (field !== undefined) next = applyPlanetFieldRoll(next, draftId, field, result);
+  }
+  return next;
+}
+
+/**
+ * Whether this settlement's planet is the starting one, and so the one planet
+ * deepened past shallow (A33). Every other planet stays shallow.
+ */
+export function isStartingSettlement(state: CampaignState, settlement: SettlementForm): boolean {
+  return (
+    settlement.locationId !== undefined &&
+    state.launch.startingSettlementId === settlement.locationId
+  );
+}
+
+export function setStar(form: SectorForm, field: 'name' | 'description', text: string): SectorForm {
+  return { ...form, star: { ...form.star, [field]: text } };
+}
+
+/** A stellar-object roll lands (8.0c): it describes the star; its name is the player's. */
+export function applyStarRoll(
+  form: SectorForm,
+  roll: { readonly eventId: EventId; readonly text: string },
+): SectorForm {
+  return {
+    ...form,
+    star: {
+      ...form.star,
+      description: withoutLinks(roll.text).trim(),
+      rolls: [...new Set([...form.star.rolls, roll.eventId])],
+    },
+  };
+}
+
+/** The star as the location command takes it, or `null` until it has a name. */
+export function toStarRequest(star: StarForm): SettlementRequestBody | null {
+  if (star.name.trim() === '') return null;
+  return {
+    ...(star.locationId === undefined ? {} : { locationId: star.locationId }),
+    location: {
+      kind: 'star',
+      name: star.name.trim(),
+      details: star.description.trim() === '' ? {} : { description: star.description.trim() },
+    },
+    ...(star.rolls.length > 0 ? { groundedIn: [...star.rolls] } : {}),
+  };
+}
+
+export function markStarAccepted(form: SectorForm, locationId: EntityId): SectorForm {
+  return { ...form, star: { ...form.star, locationId } };
 }

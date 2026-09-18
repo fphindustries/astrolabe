@@ -14,6 +14,7 @@ import { ErrorSummary } from '../ui/ErrorSummary.js';
 import { fieldAnchorId } from '../ui/error-summary.js';
 
 import { proposalFailureText } from './CrewProposalPanel.js';
+import { PlanetFields } from './SectorDetails.js';
 import {
   LOCATION_LABELS,
   PROPOSED_FIELD_LABELS,
@@ -28,6 +29,7 @@ import {
   forgetOther,
   forgetSettlement,
   heldSettlementProposal,
+  isStartingSettlement,
   markOtherAccepted,
   markSettlementAccepted,
   proposedSettlementFields,
@@ -409,6 +411,13 @@ function SettlementEditor({
         </div>
         {rolled.location !== undefined && <p className={styles.rolled}>Rolled {rolled.location}</p>}
       </fieldset>
+
+      <PlanetFields
+        campaignId={campaignId}
+        settlement={settlement}
+        starting={isStartingSettlement(workspace.state, settlement)}
+        update={edit}
+      />
 
       <TextField
         id={at('population')}
