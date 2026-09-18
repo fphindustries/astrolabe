@@ -475,3 +475,29 @@ describe('a crew draft holds work in progress (6.0e, A23, D-161)', () => {
     expect(Object.hasOwn(stored, 'momentum')).toBe(false);
   });
 });
+
+describe('the starship draft (7.0g)', () => {
+  it('accepts a blank quirk, which a draft is allowed to have', () => {
+    const parsed = PAYLOAD_SCHEMAS['launch.draft_saved'].safeParse({
+      section: 'starship',
+      snapshot: { starship: { name: 'Lantern Wake', quirks: ['Late clocks', ''] } },
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it('still parses a snapshot saved in the earlier, fuller shape', () => {
+    const parsed = PAYLOAD_SCHEMAS['launch.draft_saved'].safeParse({
+      section: 'starship',
+      snapshot: {
+        starship: {
+          starshipId: STATION,
+          name: 'Lantern Wake',
+          integrity: { value: 5, min: 0, max: 5 },
+          assetId: 'asset:command-vehicle/starship',
+          modules: [],
+        },
+      },
+    });
+    expect(parsed.success).toBe(true);
+  });
+});

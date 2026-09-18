@@ -223,6 +223,27 @@ describe.skipIf(!hasTestDatabase)('Campaign Launch workspace commands (3.1–3.2
     expect(project(events).launch.starship).toBeUndefined();
   });
 
+  // 7.0g — a half-built ship saves and comes back (A23).
+  it('saves an incomplete starship draft and restores it', async () => {
+    const campaignId = await campaign();
+    const draft = {
+      name: 'Lantern Wake',
+      appearance: '',
+      quirks: ['Its clocks run slow.', ''],
+    };
+
+    await saveLaunchDraft(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      draft: { section: 'starship', snapshot: { starship: draft } },
+    });
+
+    expect(project(await readEvents(db.sql, campaignId)).launch.drafts.starship).toMatchObject({
+      snapshot: { starship: draft },
+    });
+  });
+
   // 7.0d — one ship, so one key; and a proposal is per field, not a partial ship.
   it('keys a starship proposal by the fixed target and refuses any other', async () => {
     const campaignId = await campaign();

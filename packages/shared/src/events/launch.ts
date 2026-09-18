@@ -312,6 +312,25 @@ const CrewDraftMemberSchema = z.object({
   signatureGear: z.string().optional(),
 });
 
+/**
+ * The ship as the player left it (7.0g, A23). Loose, as the crew draft is
+ * (6.0e): a draft is incomplete by nature, so a blank quirk the player has not
+ * filled in yet is saved rather than refused. Only what the player states is
+ * here: the id, asset and integrity are the server's (7.0a), and installed
+ * modules come from the crew (D-191). The proposal being worked from and the
+ * field rolls kept so far are carried so resuming does not lose provenance.
+ * Keyed under `starship` as before, and non-strict, so a snapshot saved in the
+ * earlier shape still parses.
+ */
+const StarshipDraftSchema = z.object({
+  name: z.string().optional(),
+  appearance: z.string().optional(),
+  history: z.string().optional(),
+  quirks: z.array(z.string()).max(2).optional(),
+  proposalEventId: EventIdSchema.optional(),
+  groundedIn: z.array(EventIdSchema).optional(),
+});
+
 const DraftSnapshotSchema = z.discriminatedUnion('section', [
   z.object({
     section: z.literal('foundation'),
@@ -343,7 +362,7 @@ const DraftSnapshotSchema = z.discriminatedUnion('section', [
   }),
   z.object({
     section: z.literal('starship'),
-    snapshot: z.object({ starship: SharedStarshipSchema.partial().optional() }),
+    snapshot: z.object({ starship: StarshipDraftSchema.optional() }),
   }),
   z.object({
     section: z.literal('sector'),
