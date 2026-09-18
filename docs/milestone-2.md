@@ -702,7 +702,7 @@ automated), D-193 (the legacy grant is neutralized in projection).
     id, asset and **current** integrity from the projected ship and checks the details
     through `validateStarshipDetails`, the checks acceptance uses. Current rather than
     starting integrity, because an amendment corrects words and must not undo damage.
-- [ ] 7.1 Add the Starship step with Write, Roll, field-level Guide help, and a whole-ship
+- [x] 7.1 Add the Starship step with Write, Roll, field-level Guide help, and a whole-ship
   proposal for name, appearance, history, and one or two quirks. Every transition lives in
   `starship-form.ts`, not the `.tsx` (the lesson from groups 5 and 6). That covers the
   quirk count, keeping or discarding a proposed field, and carrying the proposal id only

@@ -90,16 +90,16 @@ describe('the launch dashboard view model', () => {
     // Someone drove the API directly, or a legacy campaign already carries the
     // facts. A placeholder reports the truth about the campaign, not about
     // whether group 4 built its form.
-    // Starship is the example now that Crew has its editor; it moves again
-    // when group 7 lands.
+    // Sector is the example now that Starship has its editor; it moves again
+    // when group 8 lands.
     const { cards } = buildDashboard(
       'c1',
-      readiness({ starship: { status: 'complete', blockers: [] } }),
+      readiness({ sector: { status: 'complete', blockers: [] } }),
     );
-    const starship = cards.find((card) => card.section === 'starship')!;
+    const sector = cards.find((card) => card.section === 'sector')!;
 
-    expect(starship).toMatchObject({ statusText: 'Complete', implemented: false });
-    expect(starship.arrivesIn).toBe('Starship (group 7)');
+    expect(sector).toMatchObject({ statusText: 'Complete', implemented: false });
+    expect(sector.arrivesIn).toBe('Starting Sector (group 8)');
   });
 
   it('points at the first unfinished section, and says start or continue', () => {

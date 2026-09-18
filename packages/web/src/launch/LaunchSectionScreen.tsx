@@ -8,6 +8,7 @@ import { CrewSection } from './CrewSection.js';
 import { FoundationSection } from './FoundationSection.js';
 import { SectionPlaceholder } from './SectionPlaceholder.js';
 import { SectionStatusChip } from './SectionStatusChip.js';
+import { StarshipSection } from './StarshipSection.js';
 import { TruthsSection } from './TruthsSection.js';
 import { launchOverviewPath } from './sections.js';
 import styles from './LaunchSectionScreen.module.css';
@@ -51,6 +52,8 @@ export function LaunchSectionScreen({
         <TruthsSection campaignId={campaignId} workspace={workspace} />
       ) : section === 'crew' ? (
         <CrewSection campaignId={campaignId} workspace={workspace} />
+      ) : section === 'starship' ? (
+        <StarshipSection campaignId={campaignId} workspace={workspace} />
       ) : (
         <SectionPlaceholder card={card} />
       )}
