@@ -844,7 +844,7 @@ proposal per object), D-197 (the map is hand-rolled SVG).
     goes into its history, as `character.removed` does (6.0d). Project the starting
     selection's `eventId`, and have `setStartingSettlement` fill the `supersedesEventId` it
     has never written.
-  - [ ] **8.0i The sector draft admits work in progress (A23; 6.0e and 7.0g's shape).** The
+  - [x] **8.0i The sector draft admits work in progress (A23; 6.0e and 7.0g's shape).** The
     arm is `{ name?, region? }`, so a half-built settlement cannot be saved. It gains loose
     `settlements[]` entries: `draftId`, an optional `locationId`, the settlement fields, an
     optional planet, first looks and trouble text, and the proposal and kept rolls. It also

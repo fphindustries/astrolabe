@@ -405,6 +405,48 @@ const StarshipDraftSchema = z.object({
   groundedIn: z.array(EventIdSchema).optional(),
 });
 
+/**
+ * One settlement as the sector draft holds it (8.0i, A23).
+ *
+ * Loose, as the crew and ship drafts are (6.0e, 7.0g): a settlement the player
+ * has started and not finished is saved rather than refused. `draftId` keys it
+ * across saves and is the proposal target while it is being built (D-196);
+ * `locationId` names the accepted settlement a draft revises. The planet, the
+ * starting settlement's first looks and trouble, and the proposal being worked
+ * from with the rolls kept so far are carried, so resuming loses none of them.
+ */
+const SectorDraftSettlementSchema = z.object({
+  draftId: z.string().min(1),
+  locationId: EntityIdSchema.optional(),
+  name: z.string().optional(),
+  location: z.enum(['planetside', 'orbital', 'deep_space']).optional(),
+  population: z.string().optional(),
+  authority: z.string().optional(),
+  projects: z.array(z.string()).max(2).optional(),
+  planet: z
+    .object({
+      locationId: EntityIdSchema.optional(),
+      planetClass: z.enum(PLANET_CLASSES).optional(),
+      name: z.string().optional(),
+      atmosphere: z.string().optional(),
+      observedFromSpace: z.string().optional(),
+      feature: z.string().optional(),
+    })
+    .optional(),
+  firstLooks: z.array(z.string()).max(2).optional(),
+  trouble: z.string().optional(),
+  proposalEventId: EventIdSchema.optional(),
+  groundedIn: z.array(EventIdSchema).optional(),
+});
+
+/** A known non-settlement location being written, such as Kessel Drift (8.0i). */
+const SectorDraftOtherSchema = z.object({
+  draftId: z.string().min(1),
+  locationId: EntityIdSchema.optional(),
+  name: z.string().optional(),
+  description: z.string().optional(),
+});
+
 const DraftSnapshotSchema = z.discriminatedUnion('section', [
   z.object({
     section: z.literal('foundation'),
@@ -440,7 +482,24 @@ const DraftSnapshotSchema = z.discriminatedUnion('section', [
   }),
   z.object({
     section: z.literal('sector'),
-    snapshot: z.object({ name: z.string().optional(), region: RegionSchema.optional() }),
+    // 8.0i: the sector's work in progress. Passages and layout are accepted
+    // when the player acts, as a truth is, so they are not here. Every member
+    // is optional, so a snapshot saved as `{ name, region }` still parses.
+    snapshot: z.object({
+      name: z.string().optional(),
+      region: RegionSchema.optional(),
+      nameProposalEventId: EventIdSchema.optional(),
+      nameGroundedIn: z.array(EventIdSchema).optional(),
+      star: z
+        .object({
+          locationId: EntityIdSchema.optional(),
+          name: z.string().optional(),
+          description: z.string().optional(),
+        })
+        .optional(),
+      settlements: z.array(SectorDraftSettlementSchema).optional(),
+      others: z.array(SectorDraftOtherSchema).optional(),
+    }),
   }),
   z.object({
     section: z.literal('connection_troubles'),

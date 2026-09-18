@@ -886,3 +886,64 @@ describe('the sector revision chains are readable (8.0h, A40)', () => {
     expect(events.reduce(applyEvent, emptyState())).toEqual(project(events));
   });
 });
+
+describe('a sector draft comes back the way it was saved (8.0i, A23, D-182)', () => {
+  const sectorLog = () =>
+    new LogBuilder().add('campaign.created', {
+      name: 'Lantern Wake',
+      settings: { narrationLatitude: 'color', narrationLength: 'standard', rerollCap: 2 },
+    });
+
+  it('restores a half-built settlement, its planet and a location, unaccepted', () => {
+    const snapshot = {
+      name: 'Ashen Anvil',
+      region: 'outlands' as const,
+      settlements: [
+        {
+          draftId: 'draft-deepwater',
+          name: 'Deepwater Anchorage',
+          location: 'orbital' as const,
+          projects: ['Ice mining', ''],
+          planet: { planetClass: 'ice' as const, name: '' },
+        },
+      ],
+      others: [{ draftId: 'draft-drift', name: 'Kessel Drift' }],
+    };
+    const builder = sectorLog().add('launch.draft_saved', { section: 'sector', snapshot });
+
+    const state = project(builder.build());
+
+    expect(state.launch.drafts.sector?.snapshot).toEqual(snapshot);
+    // A draft is durable and not canon (D-161): nothing became a location.
+    expect(state.launch.locations).toEqual({});
+    expect(state.launch.sector).toBeUndefined();
+  });
+
+  it('still reads a snapshot saved in the earlier name-and-region shape', () => {
+    const builder = sectorLog().add('launch.draft_saved', {
+      section: 'sector',
+      snapshot: { name: 'Lantern Reach', region: 'expanse' },
+    });
+
+    expect(project(builder.build()).launch.drafts.sector?.snapshot).toEqual({
+      name: 'Lantern Reach',
+      region: 'expanse',
+    });
+  });
+
+  it('orders the draft against each accepted settlement on its own', () => {
+    // D-182 per settlement, as per truth and per crew member: one snapshot
+    // holds the whole sector, so accepting one settlement must not discard the
+    // others' in-progress work. The read that makes that possible is the
+    // draft's one `seq` against each location's own.
+    const builder = launchLog().add('launch.draft_saved', {
+      section: 'sector',
+      snapshot: { settlements: [{ draftId: 'draft-x', locationId: SETTLEMENT as never }] },
+    });
+
+    const state = project(builder.build());
+    expect(state.launch.locations[SETTLEMENT as never]!.seq).toBeLessThan(
+      state.launch.drafts.sector!.seq,
+    );
+  });
+});
