@@ -4,6 +4,7 @@ import {
   CAMPAIGN_LAUNCH_RECIPE_MATERIALIZATIONS,
   STARFORGED,
   materializeLaunchRecipe,
+  planetClassFromRow,
   type LaunchRecipeSelector,
 } from '@astrolabe/rules';
 import { LOCAL_PLAYER_ID, type Actor, type CampaignId, type CommandId } from '@astrolabe/shared';
@@ -145,6 +146,27 @@ describe.skipIf(!hasTestDatabase)('rolling a declared launch recipe (3.4, 3.5, D
     expect((await roll(campaignId, { kind: 'sector_trouble' })).results).toHaveLength(1);
     expect((await roll(campaignId, { kind: 'inciting_incident' })).results).toHaveLength(1);
   });
+
+  it('rolls the sector recipes 8.0c declared: name, starting settlement, planet class, star', async () => {
+    const campaignId = await campaign();
+
+    expect((await roll(campaignId, { kind: 'sector_name' })).results.map((r) => r.slot)).toEqual([
+      'prefix',
+      'suffix',
+    ]);
+    const start = await roll(campaignId, { kind: 'starting_settlement', firstLookCount: 2 });
+    expect(start.results.map((r) => r.slot)).toEqual(['first_look_1', 'first_look_2', 'trouble']);
+    // Each result is its own recorded roll, so a proposal can cite it (A41).
+    const rolled = (await readEvents(db.sql, campaignId)).filter((e) => e.type === 'oracle.rolled');
+    expect(rolled.map((event) => event.id)).toEqual(
+      expect.arrayContaining(start.results.map((r) => r.eventId)),
+    );
+    const planetClass = await roll(campaignId, { kind: 'planet_class' });
+    expect(planetClassFromRow(planetClass.results[0]!.text)).toBeDefined();
+    expect((await roll(campaignId, { kind: 'star' })).results[0]?.oracleId).toBe(
+      'oracle:space/stellar-object',
+    );
+  });
 });
 
 describe('every declared materialization is rollable', () => {
@@ -166,6 +188,11 @@ describe('every declared materialization is rollable', () => {
       { kind: 'starting_connection' },
       { kind: 'sector_trouble' },
       { kind: 'inciting_incident' },
+      { kind: 'sector_name' },
+      { kind: 'starting_settlement', firstLookCount: 1 },
+      { kind: 'starting_settlement', firstLookCount: 2 },
+      { kind: 'planet_class' },
+      { kind: 'star' },
     ];
 
     for (const selector of selectors)

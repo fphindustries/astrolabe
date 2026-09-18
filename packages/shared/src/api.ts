@@ -478,6 +478,13 @@ export const LaunchRecipeSelectorSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('starting_connection') }),
   z.object({ kind: z.literal('sector_trouble') }),
   z.object({ kind: z.literal('inciting_incident') }),
+  z.object({ kind: z.literal('sector_name') }),
+  z.object({
+    kind: z.literal('starting_settlement'),
+    firstLookCount: z.union([z.literal(1), z.literal(2)]),
+  }),
+  z.object({ kind: z.literal('planet_class') }),
+  z.object({ kind: z.literal('star') }),
 ]);
 export const RollLaunchRecipeRequestBodySchema = z.object({
   commandId: CommandIdSchema,

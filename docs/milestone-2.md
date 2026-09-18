@@ -781,7 +781,7 @@ proposal per object), D-197 (the map is hand-rolled SVG).
     `PLANET_CLASSES`. No seeded fixture writes a planet, so no upcaster is owed (3R.4's
     reasoning). A `planetId` is refused on a `deep_space` settlement. `starId` must name an
     accepted `kind: 'star'` location (D-195).
-  - [ ] **8.0c Declare the recipes Chapter 2 rolls and nothing declares (D-173).** Add
+  - [x] **8.0c Declare the recipes Chapter 2 rolls and nothing declares (D-173).** Add
     `SECTOR_NAME_RECIPE` (prefix, suffix), `buildStartingSettlementRecipe(firstLookCount)`
     (one or two first looks plus settlement trouble), `PLANET_CLASS_RECIPE` and
     `STAR_RECIPE` (stellar object). Add them to `CAMPAIGN_LAUNCH_RECIPE_MATERIALIZATIONS`,

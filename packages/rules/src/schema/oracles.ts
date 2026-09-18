@@ -50,7 +50,9 @@ export interface OracleRecipe {
     | 'connection'
     | 'trouble'
     | 'incident'
-    | 'character';
+    | 'character'
+    | 'sector'
+    | 'star';
   readonly rolls: readonly OracleRecipeSlot[];
 }
 
