@@ -24,6 +24,8 @@ import {
   establishLaunchConnection,
   LaunchRejectedError,
   proposeLaunchCreation,
+  removeLaunchLocation,
+  removeLaunchRoute,
   rollLaunchRecipe,
   saveLaunchLocation,
   saveLaunchRoute,
@@ -642,6 +644,103 @@ describe.skipIf(!hasTestDatabase)('the launch aggregates', () => {
       await configure(star);
 
       expect(project(await readEvents(db.sql, campaignId)).launch.sector?.starId).toBe(star);
+    });
+
+    it('removes a location with a reason, and its map position with it (8.0g)', async () => {
+      const campaignId = await campaign();
+      await sector(campaignId);
+      const drift = await addLocation(campaignId, {
+        kind: 'other',
+        name: 'Kessel Drift',
+        description: 'A slow river of broken ice',
+      });
+      await setSectorLayout(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        coordinates: { [drift]: { x: 5, y: 5 } },
+      });
+      const remove = (reason: string) =>
+        removeLaunchLocation(db.sql, {
+          campaignId,
+          commandId: newId<CommandId>(),
+          actor: PLAYER,
+          locationId: drift,
+          reason,
+        });
+
+      await expect(remove('  ')).rejects.toMatchObject({ reason: 'removal_reason_required' });
+      await remove('It belongs to the next sector over.');
+
+      const state = project(await readEvents(db.sql, campaignId));
+      expect(state.launch.locations[drift]).toBeUndefined();
+      expect(state.launch.layout[drift]).toBeUndefined();
+    });
+
+    it('refuses to remove a location another fact rests on, saying which (8.0g)', async () => {
+      const campaignId = await campaign();
+      await sector(campaignId);
+      const planet = await addLocation(campaignId, {
+        kind: 'planet',
+        name: 'Hollow',
+        planetClass: 'ice',
+        details: {},
+      });
+      const ember = await addLocation(campaignId, {
+        ...settlement('Ember Hold'),
+        location: 'orbital',
+        planetId: planet,
+      });
+      const still = await addLocation(campaignId, settlement('Still Harbor'));
+      await saveLaunchRoute(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        route: { from: ember, to: still },
+      });
+      await setStartingSettlement(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        settlementId: ember,
+      });
+      const remove = (locationId: EntityId) =>
+        removeLaunchLocation(db.sql, {
+          campaignId,
+          commandId: newId<CommandId>(),
+          actor: PLAYER,
+          locationId,
+          reason: 'Not needed.',
+        });
+
+      await expect(remove(planet)).rejects.toThrow(/the planet of Ember Hold/);
+      await expect(remove(ember)).rejects.toThrow(/passage.*the starting settlement/);
+      await expect(remove(still)).rejects.toMatchObject({ reason: 'location_referenced' });
+    });
+
+    it('removes a passage named either way round, and refuses one that is not there (8.0g)', async () => {
+      const campaignId = await campaign();
+      await sector(campaignId);
+      const a = await addLocation(campaignId, settlement('A'));
+      const b = await addLocation(campaignId, settlement('B'));
+      await saveLaunchRoute(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        route: { from: a, to: b },
+      });
+      const remove = () =>
+        removeLaunchRoute(db.sql, {
+          campaignId,
+          commandId: newId<CommandId>(),
+          actor: PLAYER,
+          route: { from: b, to: a },
+          reason: 'Drawn by mistake.',
+        });
+
+      await remove();
+      expect(project(await readEvents(db.sql, campaignId)).launch.routes).toEqual([]);
+      await expect(remove()).rejects.toMatchObject({ reason: 'unknown_route' });
     });
 
     it('selects a starting settlement, and refuses one that is not a settlement (A35)', async () => {

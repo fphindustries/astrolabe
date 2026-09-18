@@ -27,6 +27,8 @@ export {
   establishLaunchConnection,
   acceptLaunchIncident,
   amendLaunchFact,
+  removeLaunchLocation,
+  removeLaunchRoute,
   saveLaunchLocation,
   saveLaunchRoute,
   setStartingSettlement,

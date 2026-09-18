@@ -1043,6 +1043,112 @@ function acceptedSettlementProposal(
   };
 }
 
+export interface RemoveLaunchLocationRequest {
+  readonly campaignId: CampaignId;
+  readonly commandId: CommandId;
+  readonly actor: Actor;
+  readonly locationId: EntityId;
+  readonly reason: string;
+}
+
+/**
+ * Remove a sector node before launch (8.0g, the missing half of 3R.9a).
+ *
+ * Append-only like everything else before activation (A40): the removal names
+ * the fact it supersedes and says why. A node another accepted fact still rests
+ * on is refused with what rests on it, rather than removed and left for
+ * readiness to report as a dangling reference the player never chose.
+ */
+export async function removeLaunchLocation(
+  sql: Sql,
+  request: RemoveLaunchLocationRequest,
+): Promise<AppendResult> {
+  const state = project(await readEvents(sql, request.campaignId));
+  requireLaunchOpen(state, 'Locations change by amendment after launch.');
+  const current = state.launch.locations[request.locationId];
+  if (current === undefined)
+    throw new LaunchRejectedError('unknown_location', 'That location is not in the sector.');
+  const reason = request.reason.trim();
+  if (reason === '')
+    throw new LaunchRejectedError('removal_reason_required', 'A removal needs a reason.');
+  const references = locationReferences(state, request.locationId);
+  if (references.length > 0)
+    throw new LaunchRejectedError(
+      'location_referenced',
+      `${current.name} is still ${references.join(', ')}. Change that first.`,
+    );
+  return appendCommand(sql, {
+    campaignId: request.campaignId,
+    commandId: request.commandId,
+    kind: 'launch.location.remove',
+    actor: request.actor,
+    events: [
+      {
+        type: 'location.removed',
+        payload: { locationId: request.locationId, supersedesEventId: current.eventId, reason },
+      },
+    ],
+    response: { locationId: request.locationId },
+  });
+}
+
+/** What still rests on a location, in words for the refusal (8.0g). */
+function locationReferences(state: CampaignState, locationId: EntityId): string[] {
+  const launch = state.launch;
+  const nameOf = (id: EntityId) => launch.locations[id]?.name ?? 'a location';
+  const references: string[] = [];
+  const passages = launch.routes.filter(
+    (route) => route.from === locationId || route.to === locationId,
+  ).length;
+  if (passages > 0)
+    references.push(passages === 1 ? 'an end of a passage' : `an end of ${passages} passages`);
+  if (launch.startingSettlementId === locationId) references.push('the starting settlement');
+  if (
+    Object.values(launch.troubles).some(
+      (trouble) => trouble.kind === 'settlement' && trouble.ownerId === locationId,
+    )
+  )
+    references.push('troubled by a settlement trouble');
+  for (const location of Object.values(launch.locations))
+    if (location.kind === 'settlement' && location.planetId === locationId)
+      references.push(`the planet of ${nameOf(location.id)}`);
+  if (launch.sector?.starId === locationId) references.push("the sector's star");
+  return references;
+}
+
+export interface RemoveLaunchRouteRequest {
+  readonly campaignId: CampaignId;
+  readonly commandId: CommandId;
+  readonly actor: Actor;
+  /** The passage, named by its endpoints either way round (D-174). */
+  readonly route: { readonly from: EntityId; readonly to: LaunchRouteEndpoint };
+  readonly reason: string;
+}
+
+/** Remove a passage before launch (8.0g); it is named as it would be added. */
+export async function removeLaunchRoute(
+  sql: Sql,
+  request: RemoveLaunchRouteRequest,
+): Promise<AppendResult> {
+  const state = project(await readEvents(sql, request.campaignId));
+  requireLaunchOpen(state, 'Routes change by amendment after launch.');
+  const key = routeKey(request.route);
+  const current = state.launch.routes.find((route) => routeKey(route) === key);
+  if (current === undefined)
+    throw new LaunchRejectedError('unknown_route', 'That passage is not in the sector.');
+  const reason = request.reason.trim();
+  if (reason === '')
+    throw new LaunchRejectedError('removal_reason_required', 'A removal needs a reason.');
+  return appendCommand(sql, {
+    campaignId: request.campaignId,
+    commandId: request.commandId,
+    kind: 'launch.route.remove',
+    actor: request.actor,
+    events: [{ type: 'route.removed', payload: { supersedesEventId: current.eventId, reason } }],
+    response: { from: current.from },
+  });
+}
+
 /** Post-launch canon changes are explicit amendments, never draft rewrites. */
 export async function amendLaunchFact(
   sql: Sql,

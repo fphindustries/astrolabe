@@ -439,6 +439,21 @@ export const SaveLaunchLocationRequestBodySchema = z.object({
   ...AcceptanceRequestFields,
 });
 export type SaveLaunchLocationRequestBody = z.infer<typeof SaveLaunchLocationRequestBodySchema>;
+
+/** `DELETE /campaigns/:id/launch/locations/:locationId` (8.0g). */
+export const RemoveLaunchLocationRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  reason: z.string().trim().min(1),
+});
+export type RemoveLaunchLocationRequestBody = z.infer<typeof RemoveLaunchLocationRequestBodySchema>;
+
+/** `DELETE /campaigns/:id/launch/routes` (8.0g): the passage is named by its endpoints. */
+export const RemoveLaunchRouteRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  route: LaunchRouteSchema,
+  reason: z.string().trim().min(1),
+});
+export type RemoveLaunchRouteRequestBody = z.infer<typeof RemoveLaunchRouteRequestBodySchema>;
 export interface SaveLaunchLocationResponse {
   readonly locationId: EntityId;
 }

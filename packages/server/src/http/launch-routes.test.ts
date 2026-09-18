@@ -482,6 +482,21 @@ describe.skipIf(!hasTestDatabase)('the Campaign Launch routes (3.1–3.9)', () =
     expect(state.launch.startingSettlementId).toBe(ember);
     expect(state.launch.layout[ember]).toEqual({ x: 4, y: 9 });
     expect(state.launch.routes).toHaveLength(1);
+
+    // 8.0g: removal over HTTP. A node a passage rests on is refused with a
+    // reason; the passage goes first, then the node can.
+    const remove = (url: string, body: Record<string, unknown>) =>
+      app.inject({ method: 'DELETE', url, payload: { commandId: newId(), ...body } });
+    const refused = await remove(`/api/campaigns/${id}/launch/locations/${ember}`, {
+      reason: 'Not needed.',
+    });
+    expect(refused.statusCode).toBe(422);
+    expect(refused.json()).toMatchObject({ reason: 'location_referenced' });
+    const passage = await remove(`/api/campaigns/${id}/launch/routes`, {
+      route: { from: ember, to: { kind: 'off_map', label: 'The Drift' } },
+      reason: 'Drawn by mistake.',
+    });
+    expect(passage.statusCode).toBe(200);
   });
 
   describe('revising and removing a crew member over HTTP (6.0d)', () => {

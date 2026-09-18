@@ -578,7 +578,11 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
       // shaped like nothing else in `locations`, and every reader had to
       // remember to filter it out by guessing at its fields.
       const { [event.payload.locationId]: _removed, ...locations } = state.launch.locations;
-      return { ...state, launch: { ...state.launch, locations } };
+      // Its map position goes with it (8.0g). Left behind, the client's next
+      // complete-layout write would name a node the command no longer knows,
+      // and be refused for a position the player never saw.
+      const { [event.payload.locationId]: _placed, ...layout } = state.launch.layout;
+      return { ...state, launch: { ...state.launch, locations, layout } };
     }
     case 'route.added':
     case 'route.revised':

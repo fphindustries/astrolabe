@@ -22,6 +22,9 @@ import {
   EstablishLaunchConnectionRequestBodySchema,
   AcceptLaunchIncidentRequestBodySchema,
   AmendLaunchFactRequestBodySchema,
+  EntityIdSchema,
+  RemoveLaunchLocationRequestBodySchema,
+  RemoveLaunchRouteRequestBodySchema,
   SaveLaunchLocationRequestBodySchema,
   SaveLaunchRouteRequestBodySchema,
   SetStartingSettlementRequestBodySchema,
@@ -121,6 +124,8 @@ import {
   establishLaunchConnection,
   acceptLaunchIncident,
   amendLaunchFact,
+  removeLaunchLocation,
+  removeLaunchRoute,
   saveLaunchLocation,
   saveLaunchRoute,
   setStartingSettlement,
@@ -188,6 +193,10 @@ export interface BuildAppOptions {
 
 interface CampaignParams {
   readonly id: string;
+}
+
+interface LocationParams extends CampaignParams {
+  locationId: string;
 }
 
 interface CrewParams extends CampaignParams {
@@ -705,6 +714,73 @@ export function buildApp({
         });
         reply.code(201);
         return { from: parsed.data.route.from };
+      } catch (error) {
+        if (error instanceof LaunchRejectedError) {
+          reply.code(422);
+          return { problem: error.message, reason: error.reason };
+        }
+        throw error;
+      }
+    },
+  );
+
+  // 8.0g: remove a node or a passage before launch. Append-only (A40): the
+  // reason is required, and the removal is an event rather than a deletion.
+  app.delete<{ Params: LocationParams }>(
+    '/api/campaigns/:id/launch/locations/:locationId',
+    async (
+      request,
+      reply,
+    ): Promise<{ locationId: string } | { problem: string; reason: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) return undefined;
+      const locationId = EntityIdSchema.safeParse(request.params.locationId);
+      const parsed = RemoveLaunchLocationRequestBodySchema.safeParse(request.body);
+      if (!locationId.success || !parsed.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        const result = await removeLaunchLocation(sql, {
+          campaignId: id,
+          commandId: parsed.data.commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          locationId: locationId.data,
+          reason: parsed.data.reason,
+        });
+        return result.response as { locationId: string };
+      } catch (error) {
+        if (error instanceof LaunchRejectedError) {
+          reply.code(422);
+          return { problem: error.message, reason: error.reason };
+        }
+        throw error;
+      }
+    },
+  );
+
+  app.delete<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/launch/routes',
+    async (
+      request,
+      reply,
+    ): Promise<{ from: string } | { problem: string; reason: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = RemoveLaunchRouteRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        const result = await removeLaunchRoute(sql, {
+          campaignId: id,
+          commandId: parsed.data.commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          route: parsed.data.route,
+          reason: parsed.data.reason,
+        });
+        return result.response as { from: string };
       } catch (error) {
         if (error instanceof LaunchRejectedError) {
           reply.code(422);

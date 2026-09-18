@@ -830,7 +830,7 @@ proposal per object), D-197 (the map is hand-rolled SVG).
     settlement, so the owner now names the trouble and the server keeps its id. A second
     write revises the first instead of adding a trouble that readiness would silently map
     over.
-  - [ ] **8.0g Removal commands (the missing half of 3R.9a).** Add `removeLaunchLocation`
+  - [x] **8.0g Removal commands (the missing half of 3R.9a).** Add `removeLaunchLocation`
     and `removeLaunchRoute`, with routes, guarded by `requireLaunchOpen`. A location
     removal is refused while a retained fact references it: a route, the starting-settlement
     selection, a trouble's `ownerId`, a settlement's `planetId`, or `sector.starId`. The
