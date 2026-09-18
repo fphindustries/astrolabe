@@ -36,8 +36,9 @@ describe('the launch section catalogue', () => {
     // count drops by one each time a group lands.
     expect(SECTION_ARRIVES_IN.foundation).toBeNull();
     expect(SECTION_ARRIVES_IN.truths).toBeNull();
+    expect(SECTION_ARRIVES_IN.crew).toBeNull();
     const pending = LAUNCH_SECTION_ORDER.filter((section) => SECTION_ARRIVES_IN[section] !== null);
-    expect(pending).toHaveLength(5);
+    expect(pending).toHaveLength(4);
     for (const section of pending) expect(SECTION_ARRIVES_IN[section]).toMatch(/group \d/);
   });
 

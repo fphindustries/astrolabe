@@ -592,7 +592,7 @@ for crew), D-186 (a declared character recipe), D-187 (a saved draft starts a se
     schema's selector union needed the same arm — the recipe was otherwise declared and
     unreachable over HTTP — and `LAUNCH_RECIPE_KINDS` plus a test now stops the two lists
     drifting again.
-- [ ] 6.1 Refactor character creation into a resumable step flow over the existing draft.
+- [x] 6.1 Refactor character creation into a resumable step flow over the existing draft.
   Identity → Stats → Assets → Background → Review, with **Save and continue** at any step.
   Every transition lives in `crew-form.ts`, not in the `.tsx` — group 5's note is unambiguous
   that logic in a `.tsx` is logic nothing checks, and crew has more transitions than truths

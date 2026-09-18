@@ -90,14 +90,16 @@ describe('the launch dashboard view model', () => {
     // Someone drove the API directly, or a legacy campaign already carries the
     // facts. A placeholder reports the truth about the campaign, not about
     // whether group 4 built its form.
+    // Starship is the example now that Crew has its editor; it moves again
+    // when group 7 lands.
     const { cards } = buildDashboard(
       'c1',
-      readiness({ crew: { status: 'complete', blockers: [] } }),
+      readiness({ starship: { status: 'complete', blockers: [] } }),
     );
-    const crew = cards.find((card) => card.section === 'crew')!;
+    const starship = cards.find((card) => card.section === 'starship')!;
 
-    expect(crew).toMatchObject({ statusText: 'Complete', implemented: false });
-    expect(crew.arrivesIn).toBe('Crew (group 6)');
+    expect(starship).toMatchObject({ statusText: 'Complete', implemented: false });
+    expect(starship.arrivesIn).toBe('Starship (group 7)');
   });
 
   it('points at the first unfinished section, and says start or continue', () => {

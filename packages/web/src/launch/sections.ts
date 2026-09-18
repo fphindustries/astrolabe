@@ -52,7 +52,7 @@ export const SECTION_SUMMARIES: Readonly<Record<LaunchSection, string>> = {
 export const SECTION_ARRIVES_IN: Readonly<Record<LaunchSection, string | null>> = {
   foundation: null,
   truths: null,
-  crew: 'Crew (group 6)',
+  crew: null,
   starship: 'Starship (group 7)',
   sector: 'Starting Sector (group 8)',
   connection_troubles: 'Connection and Troubles (group 9)',

@@ -4,6 +4,7 @@ import type { LaunchWorkspaceResponse } from '@astrolabe/shared';
 import { Link } from '../app/routes.js';
 
 import { buildSectionCard } from './dashboard.js';
+import { CrewSection } from './CrewSection.js';
 import { FoundationSection } from './FoundationSection.js';
 import { SectionPlaceholder } from './SectionPlaceholder.js';
 import { SectionStatusChip } from './SectionStatusChip.js';
@@ -48,6 +49,8 @@ export function LaunchSectionScreen({
         <FoundationSection campaignId={campaignId} workspace={workspace} />
       ) : section === 'truths' ? (
         <TruthsSection campaignId={campaignId} workspace={workspace} />
+      ) : section === 'crew' ? (
+        <CrewSection campaignId={campaignId} workspace={workspace} />
       ) : (
         <SectionPlaceholder card={card} />
       )}

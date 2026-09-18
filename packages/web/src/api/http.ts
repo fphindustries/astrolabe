@@ -37,7 +37,15 @@ export const apiPost = <T>(path: string, body: unknown) => send<T>('POST', path,
  */
 export const apiPut = <T>(path: string, body: unknown) => send<T>('PUT', path, body);
 
-async function send<T>(method: 'POST' | 'PUT', path: string, body: unknown): Promise<T> {
+/**
+ * DELETE with a body, which is unusual and deliberate: removing a crew member
+ * before launch is append-only like every other launch change (A40), so the
+ * command carries the reason the log has to record. The verb says what the
+ * caller means; the body says why.
+ */
+export const apiDelete = <T>(path: string, body: unknown) => send<T>('DELETE', path, body);
+
+async function send<T>(method: 'POST' | 'PUT' | 'DELETE', path: string, body: unknown): Promise<T> {
   const response = await fetch(`/api${path}`, {
     method,
     headers: { accept: 'application/json', 'content-type': 'application/json' },
