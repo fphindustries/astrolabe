@@ -803,3 +803,37 @@ export function crewSummary(rows: readonly CrewOverviewRow[]): string {
 export function canAddCrew(rows: readonly CrewOverviewRow[]): boolean {
   return rows.length < MAX_CREW;
 }
+
+/** A crew member who was removed before launch, and their last version (A40). */
+export interface RemovedCrewMember {
+  readonly characterId: string;
+  readonly name: string;
+  readonly reasonKnown: boolean;
+  readonly versions: readonly CrewHistoryEntry[];
+}
+
+/**
+ * The crew members this campaign removed (6.4, A40, D-184).
+ *
+ * `crewHistory` keeps every superseded version, and a removal adds the final
+ * one — so a character who is gone still has a history and nobody left to
+ * attach it to. Without this the record was kept and unreadable, which is the
+ * failure this whole group keeps finding, arriving in the UI rather than in the
+ * fold.
+ *
+ * Removal is append-only (A40), so this is a record of what happened, not an
+ * undo. The reason is in the log; the overview shows that there was one.
+ */
+export function removedCrew(
+  characters: Readonly<Record<string, unknown>>,
+  history: Readonly<Record<string, readonly CrewHistoryEntry[]>>,
+): readonly RemovedCrewMember[] {
+  return Object.entries(history)
+    .filter(([characterId]) => characters[characterId] === undefined)
+    .map(([characterId, versions]) => ({
+      characterId,
+      name: versions.at(-1)?.name ?? 'Unnamed',
+      reasonKnown: true,
+      versions,
+    }));
+}

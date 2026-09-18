@@ -10,6 +10,7 @@ import {
   canAddCrew,
   crewOverview,
   crewSummary,
+  removedCrew,
   applyProposal,
   chosenAssets,
   editedFields,
@@ -573,5 +574,42 @@ describe('the crew overview (6.4, A27)', () => {
     expect(canAddCrew(full)).toBe(false);
     expect(crewSummary(full)).toContain('full at 6');
     expect(canAddCrew(crewOverview([acceptedMember], readiness()))).toBe(true);
+  });
+});
+
+describe('crew members who were removed (6.4, A40)', () => {
+  it('lists the ones no character answers to any more', () => {
+    // A removal keeps the final version in `crewHistory` and takes the
+    // character away, so the record had nobody left to hang it on. Kept and
+    // unreadable is the failure this group keeps finding.
+    const removed = removedCrew(
+      { 'char-live': {} },
+      {
+        'char-live': [{ name: 'An earlier Vesna', callsign: 'Map' }],
+        'char-gone': [{ name: 'Rook Ilari', callsign: 'Rook' }],
+      },
+    );
+
+    expect(removed.map((entry) => entry.name)).toEqual(['Rook Ilari']);
+    expect(removed[0]?.characterId).toBe('char-gone');
+  });
+
+  it('names them by their last version, which is what was removed', () => {
+    const removed = removedCrew(
+      {},
+      {
+        'char-gone': [
+          { name: 'A first draft', callsign: 'X' },
+          { name: 'Rook Ilari', callsign: 'Rook' },
+        ],
+      },
+    );
+
+    expect(removed[0]?.name).toBe('Rook Ilari');
+    expect(removed[0]?.versions).toHaveLength(2);
+  });
+
+  it('is empty when nobody has been removed', () => {
+    expect(removedCrew({ 'char-live': {} }, { 'char-live': [] })).toEqual([]);
   });
 });

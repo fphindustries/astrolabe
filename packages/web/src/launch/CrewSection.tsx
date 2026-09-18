@@ -30,6 +30,7 @@ import {
   canAddCrew,
   crewOverview,
   crewSummary,
+  removedCrew,
   editedFields,
   emptyCrewMember,
   initialCrewForm,
@@ -51,6 +52,7 @@ import {
   type CrewMemberForm,
   type CrewProposal,
   type CrewOverviewRow,
+  type RemovedCrewMember,
   type CrewProposalField,
   type CrewStep,
 } from './crew-form.js';
@@ -177,6 +179,10 @@ export function CrewSection({
 
       <CrewRoster
         rows={crewOverview(crew, workspace.readiness, workspace.state.launch.crewHistory as never)}
+        removed={removedCrew(
+          workspace.state.characters,
+          workspace.state.launch.crewHistory as never,
+        )}
         openId={openId}
         removing={remove.isPending}
         onOpen={(draftId) => {
@@ -320,6 +326,7 @@ export function CrewSection({
  */
 function CrewRoster({
   rows,
+  removed,
   openId,
   removing,
   onOpen,
@@ -327,6 +334,7 @@ function CrewRoster({
   onRemove,
 }: {
   readonly rows: readonly CrewOverviewRow[];
+  readonly removed: readonly RemovedCrewMember[];
   readonly openId: string | undefined;
   readonly removing: boolean;
   readonly onOpen: (draftId: string) => void;
@@ -379,6 +387,23 @@ function CrewRoster({
         Add a character
       </button>
       <p className={styles.rosterNote}>{crewSummary(rows)}</p>
+      {removed.length > 0 && (
+        <details className={styles.history}>
+          <summary className={styles.historySummary}>
+            {removed.length} removed from this crew
+          </summary>
+          <ol className={styles.historyList}>
+            {removed.map((entry) => (
+              <li key={entry.characterId} className={styles.historyEntry}>
+                <span className={styles.rosterName}>{entry.name}</span>
+                <span className={styles.rosterState}>
+                  Removed before launch. The log records why.
+                </span>
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
     </div>
   );
 }
