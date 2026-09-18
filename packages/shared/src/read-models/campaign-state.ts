@@ -293,6 +293,9 @@ export interface SavedDraft<S extends LaunchSection> {
   readonly seq: number;
 }
 
+/** An accepted ship as projected: no stored module list (D-191). */
+export type AcceptedStarship = Omit<Accepted<'starship.established'>, 'modules'>;
+
 /**
  * Campaign Launch facts, and only facts (D-176).
  *
@@ -344,7 +347,12 @@ export interface LaunchState {
    * revision is a deliberate pre-activation act by one local user.
    */
   readonly crewHistory: Readonly<Record<CharacterId, readonly SupersededCharacter[]>>;
-  readonly starship?: Accepted<'starship.established'>;
+  /**
+   * The ship without the `modules` list older events carried: installed
+   * modules are derived from the crew (D-191), so the projected fact has no
+   * member a consumer could mistake for them.
+   */
+  readonly starship?: AcceptedStarship;
   /**
    * Superseded versions of the ship, oldest first, beside the current one
    * (7.0f, A40). `truthHistory`'s and `crewHistory`'s job for the one ship:
@@ -353,7 +361,7 @@ export interface LaunchState {
    * so a list rather than a map; bounded the same way, by deliberate
    * pre-activation revisions from one local user.
    */
-  readonly starshipHistory: readonly Accepted<'starship.established'>[];
+  readonly starshipHistory: readonly AcceptedStarship[];
   readonly sector?: Accepted<'sector.configured'>;
   readonly locations: Readonly<Record<EntityId, Accepted<'location.added'>>>;
   readonly routes: readonly Accepted<'route.added'>[];

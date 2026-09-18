@@ -719,7 +719,6 @@ describe('the starship revision chain is readable (7.0f, A40)', () => {
     quirks: ['Its clocks run slow.'],
     integrity: { value: 5, min: 0, max: 5 },
     assetId: 'asset:command-vehicle/starship' as never,
-    modules: [],
   });
   const shipLog = () =>
     new LogBuilder()
@@ -762,6 +761,16 @@ describe('the starship revision chain is readable (7.0f, A40)', () => {
       eventId: established.id,
       provenance: 'guide_proposal',
     });
+  });
+
+  it('reads a module list an earlier event stored, and drops it (D-191)', () => {
+    const builder = new LogBuilder().add('starship.established', {
+      ...ship('First Wake'),
+      modules: [{ assetId: 'asset:module/sensor-array' as never, ownerCharacterId: VESNA }],
+      ...acceptance,
+    });
+
+    expect(project(builder.build()).launch.starship).not.toHaveProperty('modules');
   });
 
   it('folds the same incrementally as from cold', () => {

@@ -2,6 +2,7 @@ import type { SettingTruth } from '../schema/truths.js';
 import type { RulesetForCreation } from '../characters/creation.js';
 import {
   validateLaunchCharacterDraft,
+  duplicateModuleHolders,
   validateSharedStarship,
   type LaunchCharacterDraft,
   type SharedStarshipDraft,
@@ -121,6 +122,7 @@ export interface LaunchReadinessInput {
    */
   readonly premise?: string;
   readonly truths: readonly TruthDecision[];
+  /** In creation order: D-191 installs a module held twice from the earlier holder. */
   readonly characters: readonly { readonly id: string; readonly draft: LaunchCharacterDraft }[];
   readonly starship?: SharedStarshipDraft;
   readonly sector?: LaunchSector;
@@ -219,10 +221,26 @@ export function validateLaunchReadiness(
     for (const problem of validateLaunchCharacterDraft(character.draft, ruleset))
       add('crew', problem.code, `characters.${character.id}.${problem.field}`, problem.message);
   const crewIds = input.characters.map((character) => character.id);
+  // D-191: one ship installs a module once, so a second holder is a Crew
+  // problem, reported on the later character where the choice was made.
+  const crewAssets = input.characters.map((character) => ({
+    id: character.id,
+    assets: character.draft.assets,
+  }));
+  for (const duplicate of duplicateModuleHolders(crewAssets, ruleset)) {
+    const module = ruleset.assets.find((asset) => asset.id === duplicate.assetId)?.name;
+    const owner = input.characters.find((c) => c.id === duplicate.installedBy)?.draft.name;
+    add(
+      'crew',
+      'module_duplicate',
+      `characters.${duplicate.characterId}.assets`,
+      `${module ?? duplicate.assetId} is already installed by ${owner ?? 'another crew member'}; the ship cannot install it twice.`,
+    );
+  }
   if (!input.starship)
     add('starship', 'starship_missing', 'starship', 'Campaign Launch needs a shared starship.');
   else
-    for (const problem of validateSharedStarship(input.starship, ruleset, crewIds))
+    for (const problem of validateSharedStarship(input.starship, ruleset))
       add('starship', problem.code, `starship.${problem.field}`, problem.message);
   validateSector(input.sector, add);
   if (!input.connection)

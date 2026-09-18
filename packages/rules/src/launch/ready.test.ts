@@ -56,7 +56,6 @@ function readyInput(): LaunchReadinessInput {
       quirks: ['Slow clocks'],
       integrity: { value: 5, min: 0, max: 5 },
       assetId: starshipAsset,
-      modules: [],
     },
     sector: {
       region: 'expanse',

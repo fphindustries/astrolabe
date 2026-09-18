@@ -48,7 +48,6 @@ const paths = STARFORGED.assets
   .slice(0, 3)
   .map((asset) => asset.id);
 const starshipAsset = STARFORGED.assets.find((asset) => asset.categoryId === 'command_vehicle')!.id;
-const moduleAsset = STARFORGED.assets.find((asset) => asset.categoryId === 'module')!.id;
 
 describe.skipIf(!hasTestDatabase)('the launch aggregates', () => {
   let db: TestDatabase;
@@ -94,7 +93,6 @@ describe.skipIf(!hasTestDatabase)('the launch aggregates', () => {
     appearance: 'Old freighter, patched hull',
     history: 'Won in a wager',
     quirks: ['The clocks run slow'],
-    modules: [],
     ...overrides,
   });
 
@@ -188,24 +186,27 @@ describe.skipIf(!hasTestDatabase)('the launch aggregates', () => {
 
   // 3R.7d — the shared starship (A30, D-164, D-171)
   describe('the shared starship', () => {
-    it('is one campaign aggregate at integrity 5, with modules keeping their owner', async () => {
+    it('is one campaign aggregate at integrity 5, storing no module list (D-191)', async () => {
       const campaignId = await campaign();
-      const vesna = await crewMember(campaignId, 'Vesna Kade', 'Map');
+      await crewMember(campaignId, 'Vesna Kade', 'Map');
 
       await saveSharedStarship(db.sql, {
         campaignId,
         commandId: newId<CommandId>(),
         actor: PLAYER,
-        starship: ship({ modules: [{ assetId: moduleAsset, ownerCharacterId: vesna }] }),
+        starship: ship(),
       });
 
-      const state = project(await readEvents(db.sql, campaignId));
+      const events = await readEvents(db.sql, campaignId);
+      const state = project(events);
       expect(state.launch.starship).toMatchObject({
         name: 'Lantern Wake',
         integrity: { value: 5 },
-        // D-164: the module is installed on the shared ship but keeps its owner.
-        modules: [{ assetId: moduleAsset, ownerCharacterId: vesna }],
       });
+      // Installed modules come from the crew, so the ship states none.
+      expect(state.launch.starship).not.toHaveProperty('modules');
+      const established = events.find((event) => event.type === 'starship.established');
+      expect(established?.payload).not.toHaveProperty('modules');
     });
 
     it('does not grant a per-character Starship asset to a launch character (D-171)', async () => {
@@ -215,22 +216,6 @@ describe.skipIf(!hasTestDatabase)('the launch aggregates', () => {
       const character = project(await readEvents(db.sql, campaignId)).characters[vesna];
       expect(character?.assets).toEqual(paths);
       expect(character?.assets).not.toContain(starshipAsset);
-    });
-
-    it('rejects a module owned by a non-crew member', async () => {
-      const campaignId = await campaign();
-      await crewMember(campaignId, 'Vesna Kade', 'Map');
-
-      await expect(
-        saveSharedStarship(db.sql, {
-          campaignId,
-          commandId: newId<CommandId>(),
-          actor: PLAYER,
-          starship: ship({
-            modules: [{ assetId: moduleAsset, ownerCharacterId: newId<CharacterId>() }],
-          }),
-        }),
-      ).rejects.toThrow(LaunchRejectedError);
     });
 
     // 7.0a — the id, asset and integrity are the server's, not the request's.

@@ -112,7 +112,6 @@ describe.skipIf(!hasTestDatabase)('proposing the shared starship (7.0e)', () => 
         appearance: result.proposal.appearance.value,
         history: result.proposal.history.value,
         quirks: result.proposal.quirks.map((quirk) => quirk.value),
-        modules: [],
       },
       proposalEventId: result.proposalEventId,
     });

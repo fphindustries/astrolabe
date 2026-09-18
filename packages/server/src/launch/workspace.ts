@@ -213,7 +213,6 @@ function readinessInput(state: CampaignState): LaunchReadinessInput {
             quirks: ship.quirks,
             integrity: ship.integrity,
             assetId: ship.assetId,
-            modules: ship.modules,
           },
         }),
     ...(sector === undefined

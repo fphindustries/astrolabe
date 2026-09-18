@@ -686,7 +686,7 @@ automated), D-193 (the legacy grant is neutralized in projection).
     launched campaign would be narrated by a Guide that does not know the *Lantern Wake* by
     name. This is D-183's defect again. Render name, appearance, history, quirks, integrity
     and installed modules with their owners. Assert that each one arrives.
-  - [ ] **7.0i Installed modules are derived from the crew (D-190, D-191).** Take `modules`
+  - [x] **7.0i Installed modules are derived from the crew (D-190, D-191).** Take `modules`
     out of the accepted payload's inputs and out of the request body. Derive the list and
     its owners in the read layer from the crew's module-category assets. `starship.established`
     events already written with a `modules` list stay readable, but the list is ignored.

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import {
+  installedModules,
   STARFORGED,
   type AssetId,
   type ChallengeRank,
@@ -28,7 +29,7 @@ import {
   reviseCharacter,
   type ReviseCharacterRequest,
 } from './character-commands.js';
-import { rollLaunchOracle, saveSharedStarship } from './launch-commands.js';
+import { rollLaunchOracle } from './launch-commands.js';
 import { appendCommand, readEvents } from './event-store.js';
 import { createTestDatabase, hasTestDatabase, type TestDatabase } from './testing.js';
 import { uuidv7 } from './uuid.js';
@@ -586,22 +587,32 @@ describe.skipIf(!hasTestDatabase)('revising and removing a crew member (6.0d)', 
     ).toContain('crew_count_invalid');
   });
 
-  it('surfaces a module orphaned by a removal as a starship blocker, not silently', async () => {
-    const { campaignId, characterId } = await withCrew();
+  // D-191: the ship's modules are the crew's, so changing the crew changes the
+  // ship with no second write, and nothing can be left naming a missing owner.
+  it('installs a held module on the ship, and revising or removing its holder takes it off', async () => {
     const moduleId = byCategory('module', 1)[0] as AssetId;
-    await saveSharedStarship(db.sql, {
+    const withModule = [...byCategory('path', 2), moduleId];
+    const campaignId = await newCampaign();
+    const { characterId } = await createCharacter(db.sql, {
       campaignId,
       commandId: newId<CommandId>(),
       actor: PLAYER,
-      starship: {
-        name: 'Lantern Wake',
-        appearance: 'Worn hull.',
-        history: 'A salvage hauler.',
-        quirks: ['Its clocks run slightly fast.'],
-        modules: [{ assetId: moduleId, ownerCharacterId: characterId }],
-      },
+      draft: draft({ assets: withModule }),
+      backgroundVow: VOW,
+      launch: LAUNCH,
+      grantCommandVehicle: false,
     });
+    const installed = async () =>
+      installedModules(
+        Object.values(project(await readEvents(db.sql, campaignId)).characters),
+        STARFORGED,
+      );
+    expect(await installed()).toEqual([{ assetId: moduleId, ownerCharacterId: characterId }]);
 
+    await revise(campaignId, characterId, { draft: draft() });
+    expect(await installed()).toEqual([]);
+
+    await revise(campaignId, characterId, { draft: draft({ assets: withModule }) });
     await removeCharacter(db.sql, {
       campaignId,
       commandId: newId<CommandId>(),
@@ -609,9 +620,32 @@ describe.skipIf(!hasTestDatabase)('revising and removing a crew member (6.0d)', 
       characterId,
       reason: 'Replaced.',
     });
-
+    expect(await installed()).toEqual([]);
     const blockers = buildLaunchWorkspace(await readEvents(db.sql, campaignId)).readiness.sections
       .starship.blockers;
-    expect(blockers.map((blocker) => blocker.code)).toContain('module_owner_unknown');
+    expect(blockers.map((blocker) => blocker.code)).not.toContain('module_owner_unknown');
+  });
+
+  it('reports a module two crew members hold as a Crew blocker on the later one', async () => {
+    const moduleId = byCategory('module', 1)[0] as AssetId;
+    const withModule = [...byCategory('path', 2), moduleId];
+    const campaignId = await newCampaign();
+    for (const name of ['Vesna Kade', 'Juno Marr'])
+      await createCharacter(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        draft: draft({ name, callsign: name.split(' ')[0]!, assets: withModule }),
+        backgroundVow: VOW,
+        launch: LAUNCH,
+        grantCommandVehicle: false,
+      });
+    const events = await readEvents(db.sql, campaignId);
+    const juno = Object.values(project(events).characters).find((c) => c.name === 'Juno Marr')!;
+
+    const crew = buildLaunchWorkspace(events).readiness.sections.crew.blockers;
+    expect(crew.filter((blocker) => blocker.code === 'module_duplicate')).toEqual([
+      expect.objectContaining({ path: `characters.${juno.id}.assets` }),
+    ]);
   });
 });

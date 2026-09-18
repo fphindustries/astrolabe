@@ -135,7 +135,14 @@ export const SharedStarshipSchema = z.object({
   quirks: TextListSchema.min(1).max(2),
   integrity: z.object({ value: z.int(), min: z.int(), max: z.int() }),
   assetId: AssetIdSchema,
-  modules: z.array(z.object({ assetId: AssetIdSchema, ownerCharacterId: CharacterIdSchema })),
+  /**
+   * Written by events before D-191 and ignored since: installed modules are
+   * derived from the crew (`installedModules`), not stated on the ship. Kept
+   * optional so those events stay readable; projection drops it.
+   */
+  modules: z
+    .array(z.object({ assetId: AssetIdSchema, ownerCharacterId: CharacterIdSchema }))
+    .optional(),
 });
 const RegionSchema = z.enum(['terminus', 'outlands', 'expanse']);
 export const LaunchLocationSchema = z.discriminatedUnion('kind', [

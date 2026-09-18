@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { STARFORGED } from '../generated/index.js';
 import {
+  duplicateModuleHolders,
+  installedModules,
   sharedStarshipBaseline,
   validateLaunchCharacterDraft,
   validateSharedStarship,
@@ -31,25 +33,34 @@ describe('launch character and shared starship rules', () => {
       ),
     ).toBe(true);
   });
-  it('owns modules on the shared Starship', () => {
-    const starship =
-      STARFORGED.assets.find((asset) => asset.categoryId === 'command_vehicle')?.id ??
-      ('asset:command-vehicle/starship' as never);
+  // D-190, D-191: modules come from the crew, each owned by its holder.
+  it('installs each module a crew member holds, owned by that member', () => {
+    const second = STARFORGED.assets.filter((asset) => asset.categoryId === 'module')[1]!.id;
     expect(
-      validateSharedStarship(
-        {
-          name: 'Lantern Wake',
-          appearance: 'Old freighter',
-          history: 'Won in a wager',
-          quirks: ['Slow clocks'],
-          integrity: { value: 5, min: 0, max: 5 },
-          assetId: starship,
-          modules: [{ assetId: moduleId, ownerCharacterId: 'vesna' }],
-        },
+      installedModules(
+        [
+          { id: 'vesna', assets: [...paths.slice(0, 2), moduleId] },
+          { id: 'rook', assets: paths },
+          { id: 'juno', assets: [...paths.slice(0, 2), second] },
+        ],
         STARFORGED,
-        ['vesna'],
       ),
-    ).toEqual([]);
+    ).toEqual([
+      { assetId: moduleId, ownerCharacterId: 'vesna' },
+      { assetId: second, ownerCharacterId: 'juno' },
+    ]);
+  });
+  it('installs a module held twice once, from the earlier holder, and names the later', () => {
+    const crew = [
+      { id: 'vesna', assets: [...paths.slice(0, 2), moduleId] },
+      { id: 'juno', assets: [...paths.slice(0, 2), moduleId] },
+    ];
+    expect(installedModules(crew, STARFORGED)).toEqual([
+      { assetId: moduleId, ownerCharacterId: 'vesna' },
+    ]);
+    expect(duplicateModuleHolders(crew, STARFORGED)).toEqual([
+      { characterId: 'juno', assetId: moduleId, installedBy: 'vesna' },
+    ]);
   });
 });
 
@@ -67,10 +78,8 @@ describe('sharedStarshipBaseline', () => {
           quirks: ['Late clocks'],
           integrity: baseline.integrity,
           assetId: baseline.assetId,
-          modules: [],
         },
         STARFORGED,
-        [],
       ),
     ).toEqual([]);
   });
@@ -107,10 +116,8 @@ describe('sharedStarshipBaseline', () => {
         quirks: ['Late clocks'],
         integrity,
         assetId: baseline.assetId,
-        modules: [],
       },
       STARFORGED,
-      [],
     ).map((problem) => problem.code);
     expect(codes).toEqual(['integrity_invalid']);
   });

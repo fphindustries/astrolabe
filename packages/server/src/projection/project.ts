@@ -509,7 +509,7 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
         ...state,
         launch: {
           ...state.launch,
-          starship: { ...event.payload, eventId: event.id, seq: event.seq },
+          starship: { ...withoutModules(event.payload), eventId: event.id, seq: event.seq },
         },
       };
     case 'starship.revised':
@@ -526,7 +526,7 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
           // The revision nests the ship and keeps its acceptance alongside, so
           // both halves are carried; the projected fact has one shape either way.
           starship: {
-            ...event.payload.starship,
+            ...withoutModules(event.payload.starship),
             provenance: event.payload.provenance,
             groundedIn: event.payload.groundedIn,
             ...(event.payload.supersedesEventId === undefined
@@ -899,3 +899,13 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 export type { CharacterId, EntityId, TrackId };
+
+/**
+ * A ship without the module list events before D-191 carried. Installed
+ * modules are derived from the crew, so the stored list is read and dropped
+ * rather than projected beside the derived one.
+ */
+function withoutModules<T extends { readonly modules?: unknown }>(ship: T): Omit<T, 'modules'> {
+  const { modules: _stored, ...rest } = ship;
+  return rest;
+}

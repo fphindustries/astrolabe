@@ -484,7 +484,8 @@ export const EVENT_TYPE_META: MetaTable = {
     mutatesState: true,
     voidable: false,
     introduces: (p) => [entity(p.starshipId)],
-    references: (p) => p.modules.map((m) => character(m.ownerCharacterId)),
+    // Only events written before D-191 name module owners; later ones name none.
+    references: (p) => (p.modules ?? []).map((m) => character(m.ownerCharacterId)),
   },
   'starship.revised': {
     narrative: false,
@@ -494,7 +495,7 @@ export const EVENT_TYPE_META: MetaTable = {
     introduces: none,
     references: (p) => [
       entity(p.starship.starshipId),
-      ...p.starship.modules.map((m) => character(m.ownerCharacterId)),
+      ...(p.starship.modules ?? []).map((m) => character(m.ownerCharacterId)),
     ],
   },
   'sector.configured': {

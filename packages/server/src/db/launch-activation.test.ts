@@ -121,7 +121,6 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
         appearance: 'Old freighter, patched hull',
         history: 'Won in a wager',
         quirks: ['The clocks run slow'],
-        modules: [],
       },
     });
 

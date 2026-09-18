@@ -80,6 +80,59 @@ export interface InstalledModule {
   readonly assetId: AssetId;
   readonly ownerCharacterId: string;
 }
+
+/**
+ * The modules installed on the shared ship, derived from the crew (D-191).
+ *
+ * A module is installed because a crew member's starting-asset slot holds
+ * it, and that character is its owner (D-190). Every module in the imported
+ * data is `shared`, which says the whole crew may use it, not that it has no
+ * owner. Nothing is stored on the ship, so revising or removing a character
+ * changes the ship with no second write.
+ *
+ * `crew` is in creation order. When two members hold the same module, the
+ * earlier one's is installed; the later one is a Crew blocker
+ * (`duplicateModuleHolders`), because one ship cannot install a module twice.
+ */
+export function installedModules(
+  crew: readonly { readonly id: string; readonly assets: readonly AssetId[] }[],
+  ruleset: RulesetForCreation,
+): readonly InstalledModule[] {
+  const installed = new Map<AssetId, InstalledModule>();
+  for (const member of crew)
+    for (const assetId of member.assets)
+      if (isModule(assetId, ruleset) && !installed.has(assetId))
+        installed.set(assetId, { assetId, ownerCharacterId: member.id });
+  return [...installed.values()];
+}
+
+/**
+ * Crew members holding a module an earlier member already installed (D-191).
+ * Reported under Crew, on the later member, where the choice was made.
+ */
+export function duplicateModuleHolders(
+  crew: readonly { readonly id: string; readonly assets: readonly AssetId[] }[],
+  ruleset: RulesetForCreation,
+): readonly {
+  readonly characterId: string;
+  readonly assetId: AssetId;
+  readonly installedBy: string;
+}[] {
+  const installed = installedModules(crew, ruleset);
+  return crew.flatMap((member) =>
+    member.assets.flatMap((assetId) => {
+      const owner = installed.find((module) => module.assetId === assetId)?.ownerCharacterId;
+      return owner !== undefined && owner !== member.id
+        ? [{ characterId: member.id, assetId, installedBy: owner }]
+        : [];
+    }),
+  );
+}
+
+function isModule(assetId: AssetId, ruleset: RulesetForCreation): boolean {
+  return ruleset.assets.find((asset) => asset.id === assetId)?.categoryId === 'module';
+}
+
 export interface SharedStarshipDraft {
   readonly name: string;
   readonly appearance: string;
@@ -87,7 +140,6 @@ export interface SharedStarshipDraft {
   readonly quirks: readonly string[];
   readonly integrity: StarshipIntegrity;
   readonly assetId: AssetId;
-  readonly modules: readonly InstalledModule[];
 }
 
 export interface StarshipIntegrity {
@@ -135,7 +187,6 @@ export type SharedStarshipProblem = {
 export function validateSharedStarship(
   draft: SharedStarshipDraft,
   ruleset: RulesetForCreation,
-  crewIds: readonly string[],
 ): readonly SharedStarshipProblem[] {
   const problems: SharedStarshipProblem[] = [];
   if (draft.name.trim() === '')
@@ -185,29 +236,5 @@ export function validateSharedStarship(
       field: 'assetId',
       message: 'Use the imported Starship command-vehicle asset.',
     });
-  const seen = new Set<AssetId>();
-  const crew = new Set(crewIds);
-  for (const module of draft.modules) {
-    const asset = ruleset.assets.find((candidate) => candidate.id === module.assetId);
-    if (asset?.categoryId !== 'module' || !starship?.attachments?.categories.includes('module'))
-      problems.push({
-        code: 'module_invalid',
-        field: 'modules',
-        message: `"${module.assetId}" is not an attachable module.`,
-      });
-    if (seen.has(module.assetId))
-      problems.push({
-        code: 'module_duplicate',
-        field: 'modules',
-        message: 'A module can only be installed once.',
-      });
-    seen.add(module.assetId);
-    if (!crew.has(module.ownerCharacterId))
-      problems.push({
-        code: 'module_owner_unknown',
-        field: 'modules',
-        message: 'Every installed module needs a crew owner.',
-      });
-  }
   return problems;
 }
