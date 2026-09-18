@@ -8,6 +8,8 @@ import {
   type ChallengeRank,
   type CharacterDraft,
   type CharacterId,
+  type AssetId,
+  type Backstory,
   type CharacterProblem,
   type TrackId,
 } from '@astrolabe/rules';
@@ -170,6 +172,8 @@ export async function createCharacter(
   const granted = request.grantCommandVehicle === false ? [] : grantedAssets(STARFORGED);
 
   let causedBy: EventId | undefined;
+  let proposed:
+    Extract<PayloadFor<'creation.proposed'>, { readonly targetKind: 'character' }> | undefined;
   if (request.proposalCommandId !== undefined) {
     const proposal = (
       await readEventsByCommand(sql, request.campaignId, request.proposalCommandId)
@@ -182,6 +186,9 @@ export async function createCharacter(
       throw new UnknownProposalError();
     }
     causedBy = proposal.id;
+    if (proposal.type === 'creation.proposed' && proposal.payload.targetKind === 'character') {
+      proposed = proposal.payload;
+    }
   }
   const hooks = (request.hooks ?? []).map((hook) => hook.trim()).filter((hook) => hook !== '');
   const pronouns = request.pronouns?.trim() ?? '';
@@ -224,7 +231,21 @@ export async function createCharacter(
               // Recorded on the launch path only: a Milestone 1 character
               // carries neither field, and 6.0a made both optional so it stays
               // readable exactly as written.
-              provenance: 'player_written' as const,
+              provenance:
+                proposed === undefined
+                  ? ('player_written' as const)
+                  : proposalProvenance(proposed, {
+                      name: request.draft.name.trim(),
+                      callsign: request.draft.callsign.trim(),
+                      stats: request.draft.stats,
+                      assets: request.draft.assets,
+                      appearance: request.launch.appearance.trim(),
+                      backstory: request.launch.backstory,
+                      backgroundVow: request.backgroundVow ?? { title: '', rank: 'troublesome' },
+                      hooks,
+                      pronouns,
+                      signatureGear: request.launch.signatureGear?.trim() ?? '',
+                    }),
               groundedIn: request.groundedIn ?? [],
               appearance: request.launch.appearance.trim(),
               backstory: request.launch.backstory,
@@ -499,4 +520,55 @@ function meterSnapshots(character: CharacterState): PayloadFor<'character.create
     max: character.meters[meter].max,
   });
   return { health: of('health'), spirit: of('spirit'), supply: of('supply') };
+}
+
+/**
+ * Whether the accepted character is the Guide's proposal or the player's edit
+ * of it (D-185, A41).
+ *
+ * Decided here by comparing, not taken from the client: whether the player
+ * changed something is a fact about the player, and a screen has every
+ * incentive to get it wrong by accident. This is `acceptedProposal`'s rule for
+ * truths, applied to the one target whose proposal has more than one field.
+ *
+ * Only the fields the proposal actually offered are compared. The Guide leaves
+ * pronouns null unless the concept stated them (D-131), and a player who then
+ * writes their own has not edited anything the Guide proposed.
+ */
+function proposalProvenance(
+  proposal: Extract<PayloadFor<'creation.proposed'>, { readonly targetKind: 'character' }>,
+  accepted: {
+    readonly name: string;
+    readonly callsign: string;
+    readonly stats: Readonly<Record<string, number>>;
+    readonly assets: readonly AssetId[];
+    readonly appearance: string;
+    readonly backstory: Backstory;
+    readonly backgroundVow: { readonly title: string; readonly rank: ChallengeRank };
+    readonly hooks: readonly string[];
+    readonly pronouns: string;
+    readonly signatureGear: string;
+  },
+): 'guide_proposal' | 'guide_proposal_edited' {
+  const offered = proposal.proposal;
+  const sameBackstory =
+    offered.backstory.value.kind === accepted.backstory.kind &&
+    (accepted.backstory.kind === 'discover_in_play' ||
+      (offered.backstory.value.kind === 'written' &&
+        offered.backstory.value.text === accepted.backstory.text));
+  const unchanged =
+    offered.name.value === accepted.name &&
+    offered.callsign.value === accepted.callsign &&
+    offered.appearance.value === accepted.appearance &&
+    sameBackstory &&
+    JSON.stringify(offered.stats.value) === JSON.stringify(accepted.stats) &&
+    JSON.stringify(offered.assets.map((asset) => asset.assetId)) ===
+      JSON.stringify([...accepted.assets]) &&
+    offered.backgroundVow.title === accepted.backgroundVow.title &&
+    offered.backgroundVow.rank === accepted.backgroundVow.rank &&
+    JSON.stringify(offered.hooks.map((hook) => hook.text)) ===
+      JSON.stringify([...accepted.hooks]) &&
+    (offered.pronouns === undefined || offered.pronouns.value === accepted.pronouns) &&
+    (offered.signatureGear === undefined || offered.signatureGear.value === accepted.signatureGear);
+  return unchanged ? 'guide_proposal' : 'guide_proposal_edited';
 }

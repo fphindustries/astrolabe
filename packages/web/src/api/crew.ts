@@ -39,6 +39,12 @@ export interface AcceptCrewMemberInput {
   readonly pronouns?: string;
   /** The `oracle.rolled` events this character was built on (A41). */
   readonly groundedIn?: readonly string[];
+  /**
+   * The command that holds the Guide's proposal, when this character came from
+   * one (D-124, D-185). The server resolves it to the proposal event, records
+   * that as the cause, and decides for itself whether the player edited it.
+   */
+  readonly proposalCommandId?: string;
 }
 
 export function useCreateLaunchCharacter(campaignId: string) {

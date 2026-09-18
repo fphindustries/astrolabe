@@ -27,6 +27,8 @@ import { uuidv7 } from './uuid.js';
 
 const PLAYER: Actor = { kind: 'player', playerId: LOCAL_PLAYER_ID };
 const newId = <T>(): T => uuidv7() as T;
+const companionAsset = STARFORGED.assets.find((asset) => asset.categoryId === 'companion')!.id;
+
 const CONCEPT =
   'A former evacuation pilot who still flies toward the distress calls everyone else ignores.';
 
@@ -401,6 +403,67 @@ describe.skipIf(!hasTestDatabase)('character proposals (task 3.3, D-123, D-124)'
     const events = await readEvents(db.sql, campaignId);
     expect(events).toHaveLength(6);
     expect(events.filter((event) => event.type === 'ai.completed')).toEqual([]);
+  });
+
+  it('records a kept proposal as the Guide’s, and an edited one as edited (6.3, D-185)', async () => {
+    // The distinction A41's badge exists for, decided by comparing rather than
+    // taken from the client: whether the player changed something is a fact
+    // about the player.
+    const campaignId = await campaign();
+    const ai = () =>
+      new StubProvider({ responses: [{ kind: 'structured', value: goodProposal() }] });
+
+    const keptCommand = newId<CommandId>();
+    const kept = await proposeCharacter(db.sql, ai(), {
+      campaignId,
+      commandId: keptCommand,
+      actor: PLAYER,
+      concept: CONCEPT,
+      targetId: 'draft-kept',
+      groundedIn: await groundRolls(campaignId),
+    });
+    if (!kept.ok) throw new Error('Expected a proposal.');
+
+    const asProposed = {
+      campaignId,
+      actor: PLAYER,
+      draft: {
+        name: kept.proposal.name.value,
+        callsign: kept.proposal.callsign.value,
+        stats: kept.proposal.stats.value,
+        assets: kept.proposal.assets.map((asset) => asset.assetId),
+      },
+      backgroundVow: {
+        title: kept.proposal.backgroundVow.title,
+        rank: kept.proposal.backgroundVow.rank,
+      },
+      launch: {
+        appearance: kept.proposal.appearance.value,
+        backstory: kept.proposal.backstory.value,
+      },
+      hooks: kept.proposal.hooks.map((hook) => hook.text),
+      grantCommandVehicle: false,
+      proposalCommandId: keptCommand,
+    } as const;
+
+    const unedited = await createCharacter(db.sql, {
+      ...asProposed,
+      commandId: newId<CommandId>(),
+    });
+    const edited = await createCharacter(db.sql, {
+      ...asProposed,
+      commandId: newId<CommandId>(),
+      // Beat 3: he changes the final asset and keeps everything else.
+      draft: {
+        ...asProposed.draft,
+        assets: [...asProposed.draft.assets.slice(0, 2), companionAsset],
+      },
+      proposalCommandId: keptCommand,
+    });
+
+    const state = project(await readEvents(db.sql, campaignId));
+    expect(state.characters[unedited.characterId]?.provenance).toBe('guide_proposal');
+    expect(state.characters[edited.characterId]?.provenance).toBe('guide_proposal_edited');
   });
 
   it('accepts a proposal through createCharacter, naming it as the cause and keeping the hooks', async () => {

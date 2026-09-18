@@ -241,6 +241,19 @@ const STUB_CHARACTER_PROPOSAL = {
     },
   ],
   pronouns: { value: null, reason: 'Stub proposal: the concept states none.' },
+  // The Campaign Launch fields (6.3). Without these the stubbed launch path
+  // fails its own schema, which is the one path the golden launch runs on.
+  appearance: {
+    value: 'Stub proposal: a jacket worn through at the elbows.',
+    reason: 'Stub proposal: a working spacer.',
+  },
+  backstory: {
+    kind: 'written',
+    text: 'Stub backstory, built from both prompts.',
+    reason: 'Stub proposal: the two backstory rolls.',
+    groundedIn: ['backstory-1', 'backstory-2'],
+  },
+  signatureGear: { value: null, reason: 'Stub proposal: nothing the concept names.' },
 };
 
 /**

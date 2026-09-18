@@ -88,6 +88,7 @@ export function CrewSection({
         readonly draftId: string;
         readonly proposal: CrewProposal;
         readonly applied: readonly CrewProposalField[];
+        readonly commandId: string;
         readonly prompts: readonly { readonly eventId: string; readonly text: string }[];
       }
     | undefined
@@ -131,16 +132,25 @@ export function CrewSection({
     if (request === null) return;
     setSaved(undefined);
     const accepted = 'Accepted. This character is now part of the crew.';
+    // Naming the proposal is what lets the server record whose answer this is
+    // (D-185): it compares what it proposed to what arrived and decides.
+    const fromProposal =
+      held?.draftId === open.draftId && held.applied.length > 0
+        ? { proposalCommandId: held.commandId }
+        : {};
     if (open.characterId === undefined) {
-      create.mutate(request, {
-        // The id has to come back into the form, or the roster keeps calling an
-        // accepted character "not accepted" and a second Accept creates a
-        // duplicate instead of revising. Found in the browser.
-        onSuccess: (response) => {
-          setCrew((current) => replaceMember(current, markAccepted(open, response.characterId)));
-          setSaved(accepted);
+      create.mutate(
+        { ...request, ...fromProposal },
+        {
+          // The id has to come back into the form, or the roster keeps calling an
+          // accepted character "not accepted" and a second Accept creates a
+          // duplicate instead of revising. Found in the browser.
+          onSuccess: (response) => {
+            setCrew((current) => replaceMember(current, markAccepted(open, response.characterId)));
+            setSaved(accepted);
+          },
         },
-      });
+      );
     } else {
       revise.mutate(
         { characterId: open.characterId, ...request },
@@ -204,6 +214,7 @@ export function CrewSection({
                   }
                   setHeld({
                     draftId: member.draftId,
+                    commandId: result.commandId,
                     proposal: result.response.proposal,
                     applied: [],
                     prompts: result.response.rolls.map((roll) => ({
