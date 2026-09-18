@@ -667,7 +667,7 @@ automated), D-193 (the legacy grant is neutralized in projection).
     history and each quirk as `ProposedTextSchema` (value, reason, the rolls behind it), and
     appearance as `ProposedNoteSchema`. Beat 6 has the player keep one quirk and edit the
     appearance, and still see the original. Update sample payloads (3R.4e).
-  - [ ] **7.0e A starship proposal route.** Add a `starship_proposal` purpose, a context
+  - [x] **7.0e A starship proposal route.** Add a `starship_proposal` purpose, a context
     builder in `ai/context/starship.ts` over accepted facts only (truths, crew backgrounds,
     no drafts, D-161), a `proposeStarship` command, `POST /starship-proposals` beside
     `/truth-proposals`, the structured arm in `create-provider.ts`, and a dev-stub answer

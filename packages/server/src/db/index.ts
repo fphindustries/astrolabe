@@ -114,6 +114,7 @@ export {
 export {
   proposeCharacter,
   proposeIncidents,
+  proposeStarship,
   proposeTruth,
   type ProposalRequest,
   type ProposalRollSpec,

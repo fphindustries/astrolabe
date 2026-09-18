@@ -11,8 +11,10 @@ import type {
   ProposalRoll,
   ProposeCharacterResponse,
   ProposeIncidentsResponse,
+  ProposeStarshipResponse,
   ProposeTruthResponse,
 } from '@astrolabe/shared';
+import { STARSHIP_PROPOSAL_TARGET } from '@astrolabe/shared';
 import type { Sql } from 'postgres';
 import type * as z from 'zod';
 
@@ -31,6 +33,13 @@ import {
   type IncidentProposalOutput,
   type RolledForProposal,
 } from '../ai/context/index.js';
+import {
+  buildStarshipProposalRequest,
+  checkStarshipProposal,
+  starshipProposalRolls,
+  starshipProposalSchema,
+  type StarshipProposalOutput,
+} from '../ai/context/starship.js';
 import {
   buildTruthProposalRequest,
   checkTruthProposal,
@@ -58,6 +67,7 @@ import {
   recordStatus,
   withEnvelope,
 } from './narration-commands.js';
+import { launchClosedReason } from './launch-commands.js';
 import { uuidv7 } from './uuid.js';
 
 /**
@@ -285,9 +295,10 @@ export interface ProposeCharacterRequest extends ProposalRequest {
  * oracle, so order is what separates them — which is exactly why D-186 made
  * them two slots rather than one rolled twice.
  */
-function rollsForCharacterProposal(
+function rollsForProposal(
   events: readonly AstrolabeEvent[],
   groundedIn: readonly EventId[],
+  slots: readonly ProposalRollSpec[],
 ): readonly (ProposalRollSpec & {
   readonly eventId: EventId;
   readonly roll: number;
@@ -297,7 +308,7 @@ function rollsForCharacterProposal(
     .map((id) => events.find((event) => event.id === id))
     .filter((event) => event?.type === 'oracle.rolled');
   const taken = new Set<EventId>();
-  return CHARACTER_PROPOSAL_ROLLS.flatMap((slot) => {
+  return slots.flatMap((slot) => {
     const event = cited.find(
       (candidate) => candidate!.payload.oracleId === slot.oracleId && !taken.has(candidate!.id),
     );
@@ -324,9 +335,10 @@ export async function proposeCharacter(
   if (concept.length === 0) {
     throw new AiRequestRefusedError('no_concept', 'Describe the character first.');
   }
-  const provided = rollsForCharacterProposal(
+  const provided = rollsForProposal(
     await readEvents(sql, request.campaignId),
     request.groundedIn,
+    CHARACTER_PROPOSAL_ROLLS,
   );
   if (provided.length === 0) {
     throw new AiRequestRefusedError(
@@ -540,5 +552,99 @@ export async function proposeTruth(
     proposalEventId: outcome.event.id,
     truthId: request.truthId,
     proposal: payload,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// The shared starship (task 7.0e)
+// ---------------------------------------------------------------------------
+
+export interface ProposeStarshipRequest extends ProposalRequest {
+  /** The `oracle.rolled` events from this campaign's starship recipe roll (D-186's shape). */
+  readonly groundedIn: readonly EventId[];
+  /** The fields the player asked for help with. Steering only, never stored (6.3). */
+  readonly fields?: readonly string[];
+}
+
+/**
+ * Ask the Guide for the crew's ship (7.0e, D-164, D-166).
+ *
+ * The client rolls `{ kind: 'starship', quirkCount }` through
+ * `rollLaunchRecipe` and cites the results; which slot each fills is decided
+ * here, as for crew, so the client cannot mislabel a roll. The quirk count is
+ * how many quirk rolls were cited. A proposal missing any slot is refused
+ * before the Guide is asked, rather than asking it to ground a field in
+ * nothing.
+ */
+export async function proposeStarship(
+  sql: Sql,
+  ai: AiProvider,
+  request: ProposeStarshipRequest,
+  status?: AiStatus,
+): Promise<ProposeStarshipResponse> {
+  const events = await readEvents(sql, request.campaignId);
+  const closed = launchClosedReason(project(events));
+  if (closed !== undefined)
+    throw new AiRequestRefusedError(closed, 'Campaign Launch is closed for this campaign.');
+  const cited = request.groundedIn.flatMap((id) => {
+    const event = events.find((candidate) => candidate.id === id);
+    return event?.type === 'oracle.rolled' ? [event] : [];
+  });
+  const quirkOracle = starshipProposalRolls(1).find((slot) => slot.key === 'quirk_1')!.oracleId;
+  const quirkCount =
+    cited.filter((event) => event.payload.oracleId === quirkOracle).length >= 2 ? 2 : 1;
+  const slots = starshipProposalRolls(quirkCount);
+  const provided = rollsForProposal(events, request.groundedIn, slots);
+  if (provided.length !== slots.length) {
+    throw new AiRequestRefusedError(
+      'no_rolls',
+      'Roll the starship prompts before asking the Guide.',
+    );
+  }
+  const keys = slots.map((slot) => slot.key);
+
+  const outcome = await runProposal<StarshipProposalOutput, 'creation.proposed'>(
+    sql,
+    ai,
+    request,
+    {
+      kind: PROPOSAL_COMMAND_KINDS[3],
+      contentType: 'creation.proposed',
+      rolls: slots,
+      provided,
+      build: (state, rolled) => ({
+        request: buildStarshipProposalRequest(state, rolled, request.fields),
+        schema: starshipProposalSchema(keys, quirkCount),
+        check: (value) => checkStarshipProposal(value, keys),
+      }),
+      toPayload: (value, eventIdOf) => ({
+        targetKind: 'starship',
+        targetId: STARSHIP_PROPOSAL_TARGET,
+        rationale: value.reason,
+        groundedIn: provided.map((roll) => roll.eventId),
+        proposal: {
+          name: { ...value.name, groundedIn: value.name.groundedIn.map(eventIdOf) },
+          appearance: value.appearance,
+          history: { ...value.history, groundedIn: value.history.groundedIn.map(eventIdOf) },
+          quirks: value.quirks.map((quirk) => ({
+            ...quirk,
+            groundedIn: quirk.groundedIn.map(eventIdOf),
+          })),
+        },
+      }),
+    },
+    status,
+  );
+
+  if (!outcome.ok) return outcome;
+  const payload = outcome.event.payload;
+  if (payload.targetKind !== 'starship') {
+    throw new Error('A starship proposal wrote a different target kind.');
+  }
+  return {
+    ok: true,
+    proposalEventId: outcome.event.id,
+    proposal: payload.proposal,
+    rolls: outcome.rolls,
   };
 }

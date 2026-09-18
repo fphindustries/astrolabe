@@ -975,6 +975,16 @@ export const ProposeCharacterRequestBodySchema = z.object({
 
 export type ProposeCharacterRequestBody = z.infer<typeof ProposeCharacterRequestBodySchema>;
 
+/** 7.0e: ask the Guide for the crew's ship, grounded in a starship recipe roll. */
+export const ProposeStarshipRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  /** The `oracle.rolled` events from this campaign's starship recipe roll. */
+  groundedIn: z.array(EventIdSchema).min(1),
+  /** The fields the player wants help with. Steering only, never stored. */
+  fields: z.array(z.string().min(1)).optional(),
+});
+export type ProposeStarshipRequestBody = z.infer<typeof ProposeStarshipRequestBodySchema>;
+
 /** One server-rolled oracle result a proposal was grounded in (D-123). */
 export interface ProposalRoll {
   readonly eventId: EventId;
@@ -1085,6 +1095,24 @@ export type ProposeIncidentsResponse =
       readonly ok: true;
       readonly proposalEventId: EventId;
       readonly proposal: PayloadFor<'incident.proposed'>;
+      readonly rolls: readonly ProposalRoll[];
+    }
+  | {
+      readonly ok: false;
+      readonly errorKind: AiErrorKind;
+      readonly message: string;
+      readonly rolls: readonly ProposalRoll[];
+    };
+
+/** The Guide's ship. Not canon: accepted through `saveSharedStarship` (7.0c). */
+export type ProposeStarshipResponse =
+  | {
+      readonly ok: true;
+      readonly proposalEventId: EventId;
+      readonly proposal: Extract<
+        PayloadFor<'creation.proposed'>,
+        { readonly targetKind: 'starship' }
+      >['proposal'];
       readonly rolls: readonly ProposalRoll[];
     }
   | {

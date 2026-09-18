@@ -8,6 +8,7 @@ import {
   ProposeAmountRequestBodySchema,
   ProposeCharacterRequestBodySchema,
   ProposeIncidentsRequestBodySchema,
+  ProposeStarshipRequestBodySchema,
   ProposeTruthRequestBodySchema,
   SuggestMoveRequestBodySchema,
   SuggestActionsRequestBodySchema,
@@ -29,6 +30,7 @@ import {
   type ProposeAmountResponse,
   type ProposeCharacterResponse,
   type ProposeIncidentsResponse,
+  type ProposeStarshipResponse,
   type ProposeTruthResponse,
   type SuggestMoveResponse,
   type CheckTriggerResponse,
@@ -49,6 +51,7 @@ import {
   proposeAmount,
   proposeCharacter,
   proposeIncidents,
+  proposeStarship,
   proposeTruth,
   suggestMove,
   suggestActions,
@@ -522,6 +525,45 @@ export function registerAiRoutes(
         );
         // The same contract as every other proposal (D-116): a provider
         // failure is an outcome the screen renders, not an exception.
+        reply.code(201);
+        return result;
+      } catch (error) {
+        return refusal(error, reply);
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/starship-proposals',
+    async (
+      request,
+      reply,
+    ): Promise<ProposeStarshipResponse | NarrationRefusalResponse | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
+        return undefined;
+      }
+      const parsedBody = ProposeStarshipRequestBodySchema.safeParse(request.body);
+      if (!parsedBody.success) {
+        reply.code(400);
+        return undefined;
+      }
+
+      try {
+        const result = await proposeStarship(
+          sql,
+          ai,
+          {
+            ...dice,
+            campaignId: id,
+            commandId: parsedBody.data.commandId,
+            actor: PLAYER,
+            groundedIn: parsedBody.data.groundedIn,
+            ...(parsedBody.data.fields === undefined ? {} : { fields: parsedBody.data.fields }),
+          },
+          status,
+        );
+        // The same contract as every other proposal (D-116).
         reply.code(201);
         return result;
       } catch (error) {

@@ -189,6 +189,9 @@ function devStubResponse(
       },
     };
   }
+  if (mode === 'structured' && request.purpose === 'starship_proposal') {
+    return { kind: 'structured', value: stubStarshipProposal(request.user) };
+  }
   if (mode === 'structured') {
     return {
       kind: 'error',
@@ -199,6 +202,30 @@ function devStubResponse(
   return {
     kind: 'text',
     text: 'Stub narration: the moment resolves as the dice said, described in a few plain sentences.',
+  };
+}
+
+/**
+ * A ship that cites every roll it was given (7.0e), so the stubbed launch
+ * reaches an acceptance. The quirk count is read off the rolls in the prompt,
+ * because the schema demands exactly as many quirks as were rolled.
+ */
+function stubStarshipProposal(user: string) {
+  const quirkKeys = ['quirk_1', 'quirk_2'].filter((key) => user.includes(`- ${key} (`));
+  return {
+    name: { value: 'Stub Wake', reason: 'Stub proposal: the name roll.', groundedIn: ['name'] },
+    appearance: { value: 'A patched, dependable hull.', reason: 'Stub proposal: its history.' },
+    history: {
+      value: 'Stub history, read off the roll.',
+      reason: 'Stub proposal: the history roll.',
+      groundedIn: ['history'],
+    },
+    quirks: quirkKeys.map((key, index) => ({
+      value: `Stub quirk ${index + 1}.`,
+      reason: 'Stub proposal: the quirk roll.',
+      groundedIn: [key],
+    })),
+    reason: 'Stub proposal: the ship as the rolls describe it.',
   };
 }
 

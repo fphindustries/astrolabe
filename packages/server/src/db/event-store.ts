@@ -416,6 +416,7 @@ export const PROPOSAL_COMMAND_KINDS = [
   'character.propose',
   'campaign.propose_incidents',
   'launch.propose.truth',
+  'launch.propose.starship',
 ] as const;
 
 /**

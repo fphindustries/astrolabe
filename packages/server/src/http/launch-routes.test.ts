@@ -220,6 +220,31 @@ describe.skipIf(!hasTestDatabase)('the Campaign Launch routes (3.1–3.9)', () =
     });
   });
 
+  // 7.0e — the Guide's ship, over HTTP: 201 with rolls, 422 without them.
+  it('asks the Guide for a ship grounded in a recipe roll, and refuses one without', async () => {
+    const id = await campaign();
+    const rolled = (
+      await post(`/api/campaigns/${id}/launch/recipe-rolls`, {
+        commandId: newId(),
+        selector: { kind: 'starship', quirkCount: 2 },
+      })
+    ).json() as RollLaunchRecipeResponse;
+    const eventIds = rolled.results.map((result) => result.eventId);
+
+    const asked = await post(`/api/campaigns/${id}/starship-proposals`, {
+      commandId: newId(),
+      groundedIn: eventIds,
+    });
+    expect(asked.statusCode).toBe(201);
+
+    const refused = await post(`/api/campaigns/${id}/starship-proposals`, {
+      commandId: newId(),
+      groundedIn: eventIds.slice(0, 1),
+    });
+    expect(refused.statusCode).toBe(422);
+    expect(refused.json()).toMatchObject({ reason: 'no_rolls' });
+  });
+
   it('rejects a body the schema does not accept with 400, not 500', async () => {
     const id = await campaign();
 
