@@ -262,6 +262,7 @@ function MemberEditor({
 }) {
   const byStep = problemsByStep(member);
   const complete = isCrewMemberComplete(member);
+  const panelId = `crew-step-${member.draftId}`;
 
   return (
     <section
@@ -293,18 +294,26 @@ function MemberEditor({
         </ol>
       </nav>
 
-      {step === 'identity' && <IdentityStep member={member} onChange={onChange} />}
-      {step === 'stats' && <StatsStep member={member} onChange={onChange} />}
-      {step === 'assets' && <AssetsStep member={member} onChange={onChange} />}
-      {step === 'background' && (
-        <BackgroundStep
-          member={member}
-          onChange={onChange}
-          rolling={rolling}
-          onRollPrompt={onRollPrompt}
-        />
-      )}
-      {step === 'review' && <ReviewStep member={member} problems={byStep} />}
+      {/* A named region with a visible heading, so which step you are on is
+          not carried by the tab's colour alone, and so a reader who moves into
+          the panel is told where they landed rather than inferring it. */}
+      <div className={styles.panel} role="group" aria-labelledby={panelId}>
+        <h4 className={styles.panelHeading} id={panelId}>
+          {STEP_LABELS[step]}
+        </h4>
+        {step === 'identity' && <IdentityStep member={member} onChange={onChange} />}
+        {step === 'stats' && <StatsStep member={member} onChange={onChange} />}
+        {step === 'assets' && <AssetsStep member={member} onChange={onChange} />}
+        {step === 'background' && (
+          <BackgroundStep
+            member={member}
+            onChange={onChange}
+            rolling={rolling}
+            onRollPrompt={onRollPrompt}
+          />
+        )}
+        {step === 'review' && <ReviewStep member={member} problems={byStep} />}
+      </div>
 
       <div className={styles.stepActions}>
         <button

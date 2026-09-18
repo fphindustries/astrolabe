@@ -262,3 +262,15 @@
   background: var(--surface-sunken);
   font-size: var(--text-sm);
 }
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.panelHeading {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+}
