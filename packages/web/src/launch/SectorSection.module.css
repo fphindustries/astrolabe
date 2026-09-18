@@ -265,3 +265,65 @@
   padding: var(--space-3);
   border-left: 3px solid var(--surface-border-strong);
 }
+
+/* 8.4: the map. Positions are presentation only (A34). */
+.map {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  touch-action: none;
+}
+
+.mapPassage {
+  stroke: var(--text-secondary);
+  stroke-width: 2;
+}
+
+.mapExit {
+  stroke: var(--text-muted);
+  stroke-width: 2;
+  stroke-dasharray: 6 6;
+}
+
+.mapExitLabel,
+.mapLabel {
+  fill: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 18px;
+}
+
+.mapExitLabel {
+  fill: var(--text-muted);
+}
+
+.mapNode {
+  cursor: grab;
+  outline: none;
+}
+
+.mapNode:focus-visible circle,
+.mapNode:focus-visible rect {
+  stroke: var(--provenance-ai);
+  stroke-width: 4;
+}
+
+.mapSettlement {
+  fill: var(--provenance-ai-soft);
+  stroke: var(--provenance-ai);
+  stroke-width: 2;
+}
+
+.mapOther {
+  fill: var(--surface-1);
+  stroke: var(--text-secondary);
+  stroke-width: 2;
+}
+
+.pair {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}

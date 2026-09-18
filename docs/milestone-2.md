@@ -889,7 +889,7 @@ proposal per object), D-197 (the map is hand-rolled SVG).
   atmosphere, observed from space and a feature, and every other planet stays shallow
   (A33). The star is optional and belongs to the sector (D-195). It is written or rolled in
   the sector's details, and it is not a map node.
-- [ ] 8.4 Build the accessible node-and-passage map, off-map exits, persisted presentation
+- [x] 8.4 Build the accessible node-and-passage map, off-map exits, persisted presentation
   layout, and non-visual equivalent controls/list. The map is hand-rolled SVG (D-197).
   Settlements and other locations are nodes, and passages are edges. An off-map exit is
   drawn at the map edge nearest its node, labelled, and has no coordinates of its own.

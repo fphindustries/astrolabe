@@ -9,6 +9,7 @@ import { fieldAnchorId } from '../ui/error-summary.js';
 
 import { launchErrorSummary } from './errors.js';
 import { StarFields } from './SectorDetails.js';
+import { SectorMap } from './SectorMap.js';
 import { SectorPlaces } from './SectorPlaces.js';
 import {
   REGIONS,
@@ -139,6 +140,8 @@ export function SectorSection({
         update={update}
         persist={persist}
       />
+
+      <SectorMap campaignId={campaignId} workspace={workspace} />
 
       {blockers.length > 0 && (
         <section className={styles.panelPlain} aria-labelledby="sector-blockers-heading">
