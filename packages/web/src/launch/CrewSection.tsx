@@ -20,6 +20,7 @@ import {
   initialCrewForm,
   isCrewMemberComplete,
   isDirty,
+  markAccepted,
   problemsByStep,
   removeHook,
   replaceMember,
@@ -29,6 +30,7 @@ import {
   setStat,
   setVow,
   stepAt,
+  stepBadgeLabel,
   toAcceptRequest,
   toDraftSnapshot,
   type CrewMemberForm,
@@ -100,9 +102,26 @@ export function CrewSection({
     const request = toAcceptRequest(open);
     if (request === null) return;
     setSaved(undefined);
-    const onSuccess = () => setSaved('Accepted. This character is now part of the crew.');
-    if (open.characterId === undefined) create.mutate(request, { onSuccess });
-    else revise.mutate({ characterId: open.characterId, ...request }, { onSuccess });
+    const accepted = 'Accepted. This character is now part of the crew.';
+    if (open.characterId === undefined) {
+      create.mutate(request, {
+        // The id has to come back into the form, or the roster keeps calling an
+        // accepted character "not accepted" and a second Accept creates a
+        // duplicate instead of revising. Found in the browser.
+        onSuccess: (response) => {
+          setCrew((current) => replaceMember(current, markAccepted(open, response.characterId)));
+          setSaved(accepted);
+        },
+      });
+    } else {
+      revise.mutate(
+        { characterId: open.characterId, ...request },
+        {
+          onSuccess: () =>
+            setSaved('Saved. The earlier version stays in this character’s history.'),
+        },
+      );
+    }
   };
 
   return (
@@ -243,8 +262,10 @@ function MemberEditor({
                 {STEP_LABELS[candidate]}
                 {byStep[candidate].length > 0 && (
                   <span className={styles.stepBadge}>
-                    {byStep[candidate].length}
-                    <span className={styles.visuallyHidden}> problems on this step</span>
+                    <span aria-hidden="true">{byStep[candidate].length}</span>
+                    <span className={styles.visuallyHidden}>
+                      {stepBadgeLabel(byStep[candidate].length)}
+                    </span>
                   </span>
                 )}
               </button>

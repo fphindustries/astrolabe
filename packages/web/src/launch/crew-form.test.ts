@@ -11,6 +11,7 @@ import {
   initialCrewForm,
   isCrewMemberComplete,
   isDirty,
+  markAccepted,
   problemsByStep,
   removeHook,
   replaceMember,
@@ -20,6 +21,7 @@ import {
   setStat,
   setVow,
   stepAt,
+  stepBadgeLabel,
   toAcceptRequest,
   toDraftSnapshot,
   type CrewMemberForm,
@@ -124,6 +126,22 @@ describe('the transitions', () => {
     const edited = { ...crew[1]!, name: 'Rook' };
 
     expect(replaceMember(crew, edited).map((member) => member.name)).toEqual(['', 'Rook']);
+  });
+
+  it('stops calling an accepted character unaccepted', () => {
+    // Found in the browser: accepting wrote the character and the roster still
+    // said "not accepted", because the id never came back into the form. The
+    // label was the visible half — the dangerous half was that a second Accept
+    // would have created a duplicate instead of revising.
+    const accepted = markAccepted(complete(), VESNA);
+
+    expect(accepted.characterId).toBe(VESNA);
+    expect(accepted.name).toBe('Vesna Kade');
+  });
+
+  it('counts one problem as a problem', () => {
+    expect(stepBadgeLabel(1)).toBe('1 problem on this step');
+    expect(stepBadgeLabel(2)).toBe('2 problems on this step');
   });
 
   it('stops at either end of the step flow rather than running off it', () => {

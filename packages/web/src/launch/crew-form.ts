@@ -269,6 +269,30 @@ export function setVow(
   };
 }
 
+/**
+ * Record that the server accepted this member, so the form stops offering to
+ * create them again.
+ *
+ * Found in the browser: accepting wrote the character, the section went
+ * `complete`, and the roster still read "not accepted" — because `crew` is
+ * React state seeded once and the accepted `characterId` never came back into
+ * it. The label was the visible half; the dangerous half was that pressing
+ * Accept a second time would have created a *duplicate* character instead of
+ * revising the first.
+ *
+ * Re-seeding the whole crew from the server was the other option and is wrong:
+ * one snapshot holds every member, so it would discard a neighbour's unsaved
+ * edits — the same reason D-182 decides precedence per member.
+ */
+export function markAccepted(member: CrewMemberForm, characterId: CharacterId): CrewMemberForm {
+  return { ...member, characterId };
+}
+
+/** "1 problem", not "1 problems". */
+export function stepBadgeLabel(count: number): string {
+  return `${count} ${count === 1 ? 'problem' : 'problems'} on this step`;
+}
+
 /** Replace one member in the crew, by the key that identifies it. */
 export function replaceMember(
   crew: readonly CrewMemberForm[],
