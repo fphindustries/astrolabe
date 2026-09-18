@@ -736,14 +736,176 @@ proposed only from the declared starship recipe (D-164). The Guide chooses no ta
 
 ### 8. Starting sector
 
-- [ ] 8.1 Add region and sector-name selection with the required baseline visible.
-- [ ] 8.2 Build settlement creation and review for manual, oracle, and Guide proposals.
-- [ ] 8.3 Add progressive planet details and optional star generation.
+Planning group 8 found the same shape of defect for the fourth time, and more of it. **The
+sector aggregate is written and projected, but everything that would let a player build it
+with help, correct it, resume it, or see where it came from is missing below the client.**
+Every sector command hardcodes `player_written` with no grounding. The client supplies the
+sector's id and its baseline, and every location's id. No declared recipe covers first
+looks, settlement trouble, planet class, the star or the sector name, although all of them
+are in the frozen data. There is no settlement or trouble proposal route. `location.removed`
+and `route.removed` have schemas and projection arms, and no command appends either. The
+sector draft holds only a name and a region. And `renderState` does not know the sector.
+8.0 fixes these before the editor is built.
+
+Decisions behind this group: D-194 (sector trouble is edited in Connection and Troubles),
+D-195 (the optional star belongs to the sector), D-196 (a whole-sector proposal is one
+proposal per object), D-197 (the map is hand-rolled SVG).
+
+- [ ] 8.0 Prerequisites found while planning group 8. Each starts with its failing test
+  (3R.1a's pattern). **Before the first schema change lands** (8.0b, 8.0d, 8.0h, 8.0i),
+  update `design-event-log.md`: the settlement, trouble and sector arms of
+  `creation.proposed`, the sector draft arm, the history reads in §8, the `sector.configured`
+  row (server-minted id and derived baseline), and `starting_settlement.selected`'s
+  supersession as written.
+  - [ ] **8.0a The server owns sector and location identity (7.0a's shape).**
+    `configureLaunchSector` mints `sectorId` on configure and reuses the projected one on
+    revise, so a revision cannot split the aggregate. It derives `baseline` from
+    `REGION_BASELINES` instead of checking a client copy: the field records the region's
+    rule (D-180), so the server should write it. `saveLaunchLocation` mints the id on add. A
+    revision names an existing projected id, and an id the fold does not hold is refused.
+    A settlement being built has no id yet, so it is keyed by a `draftId` (D-185's shape).
+    The client mints it for a settlement the player starts, and 8.6's orchestration mints
+    it for a settlement the Guide proposes. **The proposal target is the key the proposal
+    was made under**: the `draftId` before acceptance, and the `locationId` for field help
+    on an accepted settlement. Acceptance names that target alongside the proposal event.
+    Then `heldProposal` resolves every settlement proposal, whichever path made it, and
+    the key change at acceptance does not force the second mechanism crew needed (group
+    7's note). The sector name has one fixed target, `'sector'` (7.0a's shape). Do this
+    first, because 8.0d–i depend on it.
+  - [ ] **8.0b The command enforces what readiness already assumes.** `saveLaunchRoute`
+    accepts any id in `state.launch.locations`, but `validateSector` counts only settlements
+    and `kind: 'other'` as endpoints. A route to a planet is accepted and then blocked as
+    `route_endpoint_unknown`. D-165 settles which is right: settlement and other-location
+    nodes are the map, and planets and the star are details. The route command and
+    `setSectorLayout` refuse planets and stars. `planetClass` narrows from `string` to
+    `PLANET_CLASSES`. No seeded fixture writes a planet, so no upcaster is owed (3R.4's
+    reasoning). A `planetId` is refused on a `deep_space` settlement. `starId` must name an
+    accepted `kind: 'star'` location (D-195).
+  - [ ] **8.0c Declare the recipes Chapter 2 rolls and nothing declares (D-173).** Add
+    `SECTOR_NAME_RECIPE` (prefix, suffix), `buildStartingSettlementRecipe(firstLookCount)`
+    (one or two first looks plus settlement trouble), `PLANET_CLASS_RECIPE` and
+    `STAR_RECIPE` (stellar object). Add them to `CAMPAIGN_LAUNCH_RECIPE_MATERIALIZATIONS`,
+    `LaunchRecipeSelector`, `LAUNCH_RECIPE_KINDS` and the wire schema, where 6.0h's drift
+    test catches a missing arm. Add two rules-owned row readers:
+    `settlementLocationFromRow` (`Deep Space` → `deep_space`) and `planetClassFromRow`. The
+    class row is Datasworn link markup, `[Desert World](id:oracle:planets/desert)`, so the
+    reader takes the linked id, not the words. As 3R.5c requires, state which interaction
+    uses which command: a whole-object **Roll** uses `rollLaunchRecipe`, and a one-field
+    **Roll** uses `rollLaunchOracle` against that recipe's own oracle. A starting planet is
+    shallow first, then deepened, because the `starting_detail` recipe has no name slot.
+  - [ ] **8.0d Per-field proposals (7.0d's shape).** `SettlementProposalSchema` has no
+    per-field reason or grounding. It has the shape the starship arm had before 7.0d. Name,
+    population, authority and each project become `ProposedTextSchema`, and `location`
+    becomes `{ value, reason, groundedIn }` over the enum. Add an optional `planet`
+    (`planetClass`, `name`) and optional `firstLooks`, which are offered only for the
+    starting settlement. `TroubleProposalSchema` becomes `text` as `ProposedTextSchema` under
+    the settlement/sector discriminator that the accepted fact already has. The `sector`
+    arm narrows to its `name` (D-196). Update the sample payloads (3R.4e).
+  - [ ] **8.0e Settlement and trouble proposal routes (7.0e's shape).** Add
+    `settlement_proposal` and `trouble_proposal` purposes and a context builder in
+    `ai/context/sector.ts` over accepted facts only: truths, the sector, and the accepted
+    settlements, so a proposal does not duplicate them. No drafts (D-161). Add
+    `proposeSettlement` and `proposeTrouble`, `POST /settlement-proposals` and
+    `/trouble-proposals`, the structured arms in `create-provider.ts`, and dev-stub answers
+    (A42's stubbed path). The grounding check refuses any field that cites no roll from its
+    recipe. Field-level help is the same command with a requested-field list (6.3's shape).
+    A trouble proposal carries the accepted truths, so beat 9's "can coexist with the
+    selected truths" has something to be checked against.
+  - [ ] **8.0f Proposal-aware acceptance (7.0c again).** `configureLaunchSector`,
+    `saveLaunchLocation` and `saveLaunchTrouble` stop hardcoding `player_written` and
+    `groundedIn: []`. Acceptance names the proposal event, and `heldProposal` resolves it,
+    so there is still one mechanism. The server decides `guide_proposal` or
+    `guide_proposal_edited` by comparing the proposal with what was accepted. The rolls
+    behind the fields the player kept become `groundedIn`, and field rolls are validated as
+    recorded `oracle.rolled` events. `saveLaunchRoute` stays `player_written`, because
+    nothing proposes a passage (D-196). **A settlement and its planet are one decision**, so
+    one command writes both `location.added` events (D-105's rule). Otherwise the player
+    must accept a planet before the settlement that is the reason for it.
+  - [ ] **8.0g Removal commands (the missing half of 3R.9a).** Add `removeLaunchLocation`
+    and `removeLaunchRoute`, with routes, guarded by `requireLaunchOpen`. A location
+    removal is refused while a retained fact references it: a route, the starting-settlement
+    selection, a trouble's `ownerId`, a settlement's `planetId`, or `sector.starId`. The
+    `design-event-log.md` row already says this, and nothing implements it. The
+    `location.removed` projection arm also drops the location's layout coordinate.
+    Otherwise the client's next complete-layout write is refused as
+    `unknown_layout_location`.
+  - [ ] **8.0h The sector's revision chains are readable (A40).** Add `sectorHistory`,
+    `locationHistory` by id, and `troubleHistory` by id, oldest first, in the shape of
+    `truthHistory`, `crewHistory` and `starshipHistory`. A removed location's final version
+    goes into its history, as `character.removed` does (6.0d). Project the starting
+    selection's `eventId`, and have `setStartingSettlement` fill the `supersedesEventId` it
+    has never written.
+  - [ ] **8.0i The sector draft admits work in progress (A23; 6.0e and 7.0g's shape).** The
+    arm is `{ name?, region? }`, so a half-built settlement cannot be saved. It gains loose
+    `settlements[]` entries: `draftId`, an optional `locationId`, the settlement fields, an
+    optional planet, first looks and trouble text, and the proposal and kept rolls. It also
+    gains loose other locations and a loose star. Routes and layout are accepted when the
+    player acts, as a truth is, so they are not in the draft. D-182's precedence applies
+    **per settlement**, as it applied per truth and per crew member.
+  - [ ] **8.0j Play context knows the sector (D-183 and 7.0h, a third time).**
+    `renderState` reads no `launch.locations`, and it resolves a scene's location only
+    against `state.entities`. Activation opens Session 1's scene at a launch location id,
+    so the Guide would narrate beat 12 at no place and in a sector it has never been told
+    about. Render the sector's name and region, the starting settlement and its planet, the
+    other settlements and locations by name, the passages, and both troubles. Resolve a
+    scene location against the launch locations. Assert that each one arrives. This is
+    owned here rather than in 9.5 because it reads group 8's facts.
+- [ ] 8.1 Add region and sector-name selection with the required baseline visible. Offer
+  Write, Roll (the sector-name recipe) and field-level Guide help for the name. Show the
+  baseline with its citation and D-180's sentence: it is a floor, not a quota. A revised
+  region changes the baseline and does not re-roll populations already accepted, and the
+  screen says so. Every transition lives in `sector-form.ts`, not the `.tsx`.
+  `SECTION_ARRIVES_IN.sector` becomes null, and the placeholder example and the tests that
+  name it move to Incident and Launch. Connection and Troubles is half built after 8.5.
+- [ ] 8.2 Build settlement creation and review for manual, oracle, and Guide proposals. Show
+  the settlement list against the baseline ("2 of 3"). For each settlement, offer Write,
+  field Roll, whole Roll (the recipe) and Ask the Guide (whole or per field). Review is
+  keep, edit or discard per field, and the proposal id is carried only while the selection
+  is still the Guide's (7.1). Other locations (Kessel Drift) take a written name and
+  description. Removal shows the server's refusal when a fact still references the
+  location. Show the `readiness.sections.sector.blockers` beside the fields they name, and
+  show visible history from 8.0h. Nothing here is a second readiness algorithm (D-176).
+- [ ] 8.3 Add progressive planet details and optional star generation. A planetside or
+  orbital settlement shows its planet inside the settlement: choose or roll the class, then
+  write or roll the name (shallow). The starting settlement's planet is deepened with
+  atmosphere, observed from space and a feature, and every other planet stays shallow
+  (A33). The star is optional and belongs to the sector (D-195). It is written or rolled in
+  the sector's details, and it is not a map node.
 - [ ] 8.4 Build the accessible node-and-passage map, off-map exits, persisted presentation
-  layout, and non-visual equivalent controls/list.
+  layout, and non-visual equivalent controls/list. The map is hand-rolled SVG (D-197).
+  Settlements and other locations are nodes, and passages are edges. An off-map exit is
+  drawn at the map edge nearest its node, labelled, and has no coordinates of its own.
+  Nodes move by pointer drag and by arrow keys. Positions stay local until **Save and
+  continue** or leaving the map, which writes one `sector.layout_changed`, never one per
+  pointer move. Default placement for a node with no coordinates, keyboard steps and
+  clamping live in `sector-map.ts` as pure, tested functions. The list view can create,
+  inspect and remove every passage and exit without dragging. The screen states that
+  layout has no distance or travel meaning (A34). Planets and the star appear in the
+  detail drawer.
 - [ ] 8.5 Add starting-settlement selection, first looks, settlement trouble, and sector
-  trouble.
-- [ ] 8.6 Add whole-sector orchestration that still reviews objects one at a time.
+  trouble. Once the start is selected, the player rolls the starting-settlement recipe, or
+  writes the details. Selecting does not roll by itself. The Guide interprets
+  the first looks and the trouble, and the player edits the interpretation without
+  changing the rolls. The chips stay with the accepted words (beat 9, A41). The starting
+  planet is deepened (8.3). Sector trouble is the Troubles half of Connection and Troubles
+  (D-194): roll the sector-trouble recipe, have the Guide interpret it against the accepted
+  truths, then accept, edit or write. The connection half remains a labelled placeholder
+  naming group 9.
+- [ ] 8.6 Add whole-sector orchestration that still reviews objects one at a time (D-196).
+  One command rolls the sector-name recipe and the region's baseline count of settlement
+  recipes. For each planetside or orbital result, it rolls a planet class and then the
+  shallow planet recipe. It appends one `creation.proposed` for the name and one per
+  settlement. The player reviews each through 8.2's panel and accepts, edits or discards
+  it. The command never proposes passages or layout. Beat 7's mix of one written, one
+  rolled and one proposed settlement is reached by discarding proposals, not by a special
+  mode. The action is disabled when there is no provider, and Write and Roll remain (A42).
+
+**Scope fences.** Travel time, distance and movement derived from map placement (D-165) are
+out. So are generating planets beyond A33's depth, generating a sector for any region other
+than the starting one, and a general exploration starmap. `REGION_BASELINES` stays scoped to
+launch (D-180). The Milestone 1 `/sector/locations` and `/sector/routes` routes are untouched,
+because group 10 owns their removal. The connection is group 9's. The Guide chooses no table:
+every roll it cites comes from a declared recipe.
 
 ### 9. Connection, incident, and launch
 
