@@ -551,7 +551,7 @@ Decisions behind this group: D-184 (crew metadata on the character), D-185 (`cre
 for crew), D-186 (a declared character recipe), D-187 (a saved draft starts a section), D-188
 (a revised background vow reaches its track).
 
-- [ ] 6.0 Prerequisites found while planning group 6 (a–d done; e–h open). Each begins with its failing test
+- [ ] 6.0 Prerequisites found while planning group 6 (a–e done; f–h open). Each begins with its failing test
   (3R.1a's pattern):
   - [x] **6.0a Crew acceptance is readable (D-184).** `CharacterCreatedSchema` gains optional
     `provenance` and `groundedIn`; projection carries `eventId`, `seq`, `provenance` and
@@ -571,7 +571,7 @@ for crew), D-186 (a declared character recipe), D-187 (a saved draft starts a se
     leaves void no job here). A removal that orphans an installed module surfaces as
     `module_owner_unknown` from the existing `validateSharedStarship` rather than silently —
     assert it.
-  - **6.0e Crew draft identity (D-182, D-185, A23).** The crew draft arm becomes
+  - [x] **6.0e Crew draft identity (D-182, D-185, A23).** The crew draft arm becomes
     `{ characters: Array<{ draftId, characterId?, …loose fields }> }`. 3R.4d typed this
     snapshot but gave an in-progress character no stable key, so nothing could correlate a
     saved draft to the crew member it belongs to. `draftId` is minted client-side, stable

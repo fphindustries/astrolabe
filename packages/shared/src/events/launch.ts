@@ -11,7 +11,7 @@ import {
   TrackIdSchema,
 } from '../ids.js';
 import { CampaignSettingsSchema } from './campaign.js';
-import { CharacterCreatedSchema } from './character.js';
+import { CharacterCreatedSchema, CharacterStatsSchema } from './character.js';
 import { AcceptanceSchema } from './provenance.js';
 import { ChallengeRankSchema } from './track.js';
 
@@ -175,6 +175,53 @@ const TroubleProposalSchema = z.object({
   text: z.string().optional(),
 });
 
+/**
+ * One crew member as a draft holds them (6.0e, D-161, D-182, A23).
+ *
+ * Not `LaunchCharacterSchema.partial()`, which this was, for three reasons.
+ *
+ * **It had no identity.** A character being built has no `characterId` yet, so
+ * nothing could tell one half-built crew member from another across saves, and
+ * D-182's precedence — which it names Crew as the reason for — had nothing to
+ * compare a draft member against. `draftId` is minted by the client, stays
+ * stable across saves, and is also the `targetId` a Guide proposal for this
+ * member is keyed by while it is being built (D-185); once accepted,
+ * `characterId` names the character the draft revises.
+ *
+ * **It was too strict to hold work.** A draft is incomplete by nature, so a
+ * field the player has started and not finished is an empty string, not a
+ * validation failure. The `connection_troubles` arm already keeps its shape
+ * loose deliberately, and this is the same call for the same reason: refusing
+ * a half-typed name would make **Save and continue** fail exactly when it is
+ * most wanted.
+ *
+ * **It carried what the server derives.** Meters and momentum come from the
+ * rules at acceptance (D-105). They are simply not named here, so they are
+ * stripped rather than refused, and nothing downstream can mistake a draft for
+ * a source of a character's starting health.
+ */
+const CrewDraftMemberSchema = z.object({
+  draftId: z.string().min(1),
+  characterId: CharacterIdSchema.optional(),
+  name: z.string().optional(),
+  callsign: z.string().optional(),
+  pronouns: z.string().max(40).optional(),
+  stats: CharacterStatsSchema.optional(),
+  assets: z.array(AssetIdSchema).optional(),
+  hooks: z.array(z.string()).max(3).optional(),
+  appearance: z.string().optional(),
+  backstory: z
+    .discriminatedUnion('kind', [
+      z.object({ kind: z.literal('written'), text: z.string() }),
+      z.object({ kind: z.literal('discover_in_play') }),
+    ])
+    .optional(),
+  backgroundVow: z
+    .object({ title: z.string().optional(), rank: ChallengeRankSchema.optional() })
+    .optional(),
+  signatureGear: z.string().optional(),
+});
+
 const DraftSnapshotSchema = z.discriminatedUnion('section', [
   z.object({
     section: z.literal('foundation'),
@@ -202,7 +249,7 @@ const DraftSnapshotSchema = z.discriminatedUnion('section', [
   }),
   z.object({
     section: z.literal('crew'),
-    snapshot: z.object({ characters: z.array(LaunchCharacterSchema.partial()) }),
+    snapshot: z.object({ characters: z.array(CrewDraftMemberSchema) }),
   }),
   z.object({
     section: z.literal('starship'),

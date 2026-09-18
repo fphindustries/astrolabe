@@ -639,3 +639,72 @@ describe('a revised vow reaches its track (6.0d, D-188)', () => {
     expect(project(builder.build()).tracks[VOW as never]?.title).toBe('Find the lost survey');
   });
 });
+
+describe('a crew draft comes back the way it was saved (6.0e, A23, D-182)', () => {
+  const crewLog = () =>
+    new LogBuilder().add('campaign.created', {
+      name: 'Lantern Wake',
+      settings: { narrationLatitude: 'color', narrationLength: 'standard', rerollCap: 2 },
+    });
+
+  it('restores a half-built crew member, unaccepted', () => {
+    const builder = crewLog().add('launch.draft_saved', {
+      section: 'crew',
+      snapshot: {
+        characters: [
+          { draftId: 'draft-vesna', name: 'Vesna Kade', appearance: '' },
+          { draftId: 'draft-rook', name: 'Rook' },
+        ],
+      },
+    });
+
+    const state = project(builder.build());
+
+    expect(state.launch.drafts.crew?.snapshot.characters).toEqual([
+      { draftId: 'draft-vesna', name: 'Vesna Kade', appearance: '' },
+      { draftId: 'draft-rook', name: 'Rook' },
+    ]);
+    // A draft is durable and not canon (D-161): nothing became a character.
+    expect(Object.keys(state.characters)).toEqual([]);
+  });
+
+  it('orders the draft against each accepted crew member on its own', () => {
+    // D-182 names Crew as the reason a draft is not cleared on acceptance: one
+    // snapshot holds the whole crew, so accepting one member must not discard
+    // in-progress edits to the others. Precedence is therefore per member —
+    // the draft's single `seq` against each character's own — and this is the
+    // read that makes it possible.
+    const builder = crewLog()
+      .add('launch.draft_saved', {
+        section: 'crew',
+        snapshot: { characters: [{ draftId: 'draft-vesna', name: 'Vesna half-typed' }] },
+      })
+      .add('character.created', {
+        ...character(VESNA, 'Vesna Kade', 2),
+        appearance: 'Sharp-eyed.',
+        backstory: { kind: 'written' as const, text: 'Flew charts nobody trusted.' },
+        backgroundVow: { title: 'Find the lost survey', rank: 'formidable' as const },
+      });
+
+    const state = project(builder.build());
+
+    expect(state.launch.drafts.crew!.seq).toBeLessThan(state.characters[VESNA]!.seq);
+  });
+
+  it('keeps only the latest snapshot, as every section does', () => {
+    const builder = crewLog()
+      .add('launch.draft_saved', {
+        section: 'crew',
+        snapshot: { characters: [{ draftId: 'draft-vesna', name: 'First' }] },
+      })
+      .add('launch.draft_saved', {
+        section: 'crew',
+        snapshot: { characters: [{ draftId: 'draft-vesna', name: 'Second' }] },
+      });
+
+    const drafts = project(builder.build()).launch.drafts;
+
+    expect(drafts.crew?.snapshot.characters).toHaveLength(1);
+    expect(drafts.crew?.snapshot.characters[0]?.name).toBe('Second');
+  });
+});
