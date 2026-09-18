@@ -708,3 +708,69 @@ describe('a crew draft comes back the way it was saved (6.0e, A23, D-182)', () =
     expect(drafts.crew?.snapshot.characters[0]?.name).toBe('Second');
   });
 });
+
+describe('the starship revision chain is readable (7.0f, A40)', () => {
+  const SHIP = 'aaaa8888-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const ship = (name: string) => ({
+    starshipId: SHIP as never,
+    name,
+    appearance: 'A patched hull.',
+    history: 'Won in a wager.',
+    quirks: ['Its clocks run slow.'],
+    integrity: { value: 5, min: 0, max: 5 },
+    assetId: 'asset:command-vehicle/starship' as never,
+    modules: [],
+  });
+  const shipLog = () =>
+    new LogBuilder()
+      .add('campaign.created', {
+        name: 'Lantern Wake',
+        settings: { narrationLatitude: 'color', narrationLength: 'standard', rerollCap: 2 },
+      })
+      .add('starship.established', {
+        ...ship('First Wake'),
+        provenance: 'guide_proposal',
+        groundedIn: [],
+      });
+  const revise = (builder: LogBuilder, name: string) =>
+    builder.add('starship.revised', {
+      starship: ship(name),
+      ...acceptance,
+      supersedesEventId: builder.last().id as never,
+    });
+
+  it('starts empty, and a ship never revised has no history', () => {
+    expect(emptyState().launch.starshipHistory).toEqual([]);
+    expect(project(shipLog().build()).launch.starshipHistory).toEqual([]);
+  });
+
+  it('keeps every superseded version, oldest first, with its own acceptance', () => {
+    const builder = shipLog();
+    const established = builder.last();
+    revise(builder, 'Second Wake');
+    revise(builder, 'Lantern Wake');
+
+    const state = project(builder.build());
+
+    expect(state.launch.starship?.name).toBe('Lantern Wake');
+    expect(state.launch.starshipHistory.map((entry) => entry.name)).toEqual([
+      'First Wake',
+      'Second Wake',
+    ]);
+    // The superseded version keeps the provenance it was accepted with.
+    expect(state.launch.starshipHistory[0]).toMatchObject({
+      eventId: established.id,
+      provenance: 'guide_proposal',
+    });
+  });
+
+  it('folds the same incrementally as from cold', () => {
+    const builder = shipLog();
+    revise(builder, 'Second Wake');
+    const events = builder.build();
+
+    const incremental = events.reduce(applyEvent, emptyState());
+
+    expect(incremental.launch.starshipHistory).toEqual(project(events).launch.starshipHistory);
+  });
+});

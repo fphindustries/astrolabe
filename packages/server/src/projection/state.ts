@@ -32,6 +32,7 @@ export function emptyState(): CampaignState {
       truthDecisions: {},
       truthHistory: {},
       crewHistory: {},
+      starshipHistory: [],
       locations: {},
       routes: [],
       layout: {},

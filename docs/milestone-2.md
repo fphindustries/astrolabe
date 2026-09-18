@@ -675,7 +675,7 @@ automated), D-193 (the legacy grant is neutralized in projection).
     `rollLaunchRecipe` and passes the event ids as `groundedIn` (D-186's shape). Field-level
     help is the same command with a requested-field list (6.3's shape). The grounding check
     refuses a proposal whose name, history or quirk cites no roll from the recipe.
-  - [ ] **7.0f The starship revision chain is readable.** Add `LaunchState.starshipHistory`,
+  - [x] **7.0f The starship revision chain is readable.** Add `LaunchState.starshipHistory`,
     oldest first, written by the `starship.revised` arm. It has the same shape as
     `truthHistory` and `crewHistory` (A40; beat 6 tests "ship proposal and revision").
   - [ ] **7.0g The starship draft admits incomplete work.** The draft arm is

@@ -345,6 +345,15 @@ export interface LaunchState {
    */
   readonly crewHistory: Readonly<Record<CharacterId, readonly SupersededCharacter[]>>;
   readonly starship?: Accepted<'starship.established'>;
+  /**
+   * Superseded versions of the ship, oldest first, beside the current one
+   * (7.0f, A40). `truthHistory`'s and `crewHistory`'s job for the one ship:
+   * `starship.revised` is projected latest-wins, so without this the earlier
+   * version beat 6's revision replaces is written and unreadable. One ship,
+   * so a list rather than a map; bounded the same way, by deliberate
+   * pre-activation revisions from one local user.
+   */
+  readonly starshipHistory: readonly Accepted<'starship.established'>[];
   readonly sector?: Accepted<'sector.configured'>;
   readonly locations: Readonly<Record<EntityId, Accepted<'location.added'>>>;
   readonly routes: readonly Accepted<'route.added'>[];

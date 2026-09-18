@@ -517,6 +517,12 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
         ...state,
         launch: {
           ...state.launch,
+          // 7.0f: the version this replaces stays readable, with its own
+          // acceptance rather than the revision's.
+          starshipHistory:
+            state.launch.starship === undefined
+              ? state.launch.starshipHistory
+              : [...state.launch.starshipHistory, state.launch.starship],
           // The revision nests the ship and keeps its acceptance alongside, so
           // both halves are carried; the projected fact has one shape either way.
           starship: {

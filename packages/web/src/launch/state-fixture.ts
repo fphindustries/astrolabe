@@ -24,6 +24,7 @@ export function emptyCampaignState(launch: Partial<LaunchState> = {}): CampaignS
       truthDecisions: {},
       truthHistory: {},
       crewHistory: {},
+      starshipHistory: [],
       locations: {},
       routes: [],
       layout: {},
