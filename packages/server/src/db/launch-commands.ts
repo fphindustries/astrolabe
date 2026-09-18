@@ -614,6 +614,11 @@ export async function setSectorLayout(
       'Map layout may only position accepted locations.',
     );
   }
+  if (placed.some((id) => !isMapNode(state, id)))
+    throw new LaunchRejectedError(
+      'not_a_map_node',
+      'Planets and stars appear in location details, not on the map (D-165).',
+    );
   return appendCommand(sql, {
     campaignId: request.campaignId,
     commandId: request.commandId,
@@ -645,6 +650,14 @@ export async function saveLaunchRoute(
       'A route must end at an accepted location or exit.',
     );
   }
+  if (
+    !isMapNode(state, request.route.from) ||
+    (typeof request.route.to === 'string' && !isMapNode(state, request.route.to))
+  )
+    throw new LaunchRejectedError(
+      'not_a_map_node',
+      'Passages connect settlements and other locations; planets and stars are details (D-165).',
+    );
   // D-174: a passage is undirected, and two passages are the same passage
   // whichever way round they are stated. Comparing `to` with `===` missed an
   // off-map exit entirely, because that endpoint is an object and no two are
@@ -669,6 +682,19 @@ export async function saveLaunchRoute(
     ],
     response: { from: request.route.from },
   });
+}
+
+/**
+ * Whether a location is a node on the sector map (D-165, 8.0b).
+ *
+ * Settlements and other locations are the map; a planet belongs to its
+ * settlement and the star to the sector, and both are shown as details.
+ * Readiness counts only these as passage endpoints, so a command that accepted
+ * a passage to a planet would record a fact that readiness then blocks.
+ */
+function isMapNode(state: CampaignState, id: EntityId): boolean {
+  const kind = state.launch.locations[id]?.kind;
+  return kind === 'settlement' || kind === 'other';
 }
 
 /** An undirected, structural identity for a passage. */
@@ -709,16 +735,19 @@ export async function saveLaunchLocation(
       `That location is a ${previous.kind}; a revision cannot make it a ${request.location.kind}.`,
     );
   const locationId = request.locationId ?? (uuidv7() as EntityId);
-  if (
-    request.location.kind === 'settlement' &&
-    request.location.planetId !== undefined &&
-    (state.launch.locations[request.location.planetId] as { readonly kind?: string } | undefined)
-      ?.kind !== 'planet'
-  ) {
-    throw new LaunchRejectedError(
-      'unknown_planet',
-      'A planetside settlement must reference an accepted planet.',
-    );
+  if (request.location.kind === 'settlement' && request.location.planetId !== undefined) {
+    // A deep-space settlement has no world, so a planet link would be a fact
+    // readiness never reads and the screen could never explain (8.0b).
+    if (request.location.location === 'deep_space')
+      throw new LaunchRejectedError(
+        'deep_space_planet',
+        'A deep-space settlement has no planet; only planetside and orbital ones do.',
+      );
+    if (state.launch.locations[request.location.planetId]?.kind !== 'planet')
+      throw new LaunchRejectedError(
+        'unknown_planet',
+        'A planetside settlement must reference an accepted planet.',
+      );
   }
   const payload: PayloadFor<'location.added'> = {
     ...request.location,
@@ -998,6 +1027,12 @@ export async function configureLaunchSector(
 ): Promise<AppendResult> {
   const state = project(await readEvents(sql, request.campaignId));
   requireLaunchOpen(state, 'The sector changes by amendment after launch.');
+  // D-195: the optional star belongs to the sector, and is an accepted star.
+  if (
+    request.sector.starId !== undefined &&
+    state.launch.locations[request.sector.starId]?.kind !== 'star'
+  )
+    throw new LaunchRejectedError('unknown_star', "The sector's star must be an accepted star.");
   const previous = state.launch.sector;
   const sectorId = previous?.sectorId ?? (uuidv7() as EntityId);
   const { settlements, passages } = REGION_BASELINES[request.sector.region];

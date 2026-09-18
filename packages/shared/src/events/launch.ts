@@ -1,5 +1,7 @@
 import * as z from 'zod';
 
+import { PLANET_CLASSES } from '@astrolabe/rules';
+
 import {
   AssetIdSchema,
   CharacterIdSchema,
@@ -165,7 +167,8 @@ const LOCATION_DETAIL_ARMS = [
   z.object({
     kind: z.literal('planet'),
     name: z.string().min(1),
-    planetClass: z.string().min(1),
+    // One of Chapter 2's eleven classes, since each names its own tables (8.0b).
+    planetClass: z.enum(PLANET_CLASSES),
     /**
      * The three fields Chapter 2's starting-planet depth calls for (A33,
      * D-174). Named rather than an open string map, because readiness reads

@@ -273,6 +273,13 @@ describe.skipIf(!hasTestDatabase)('the Campaign Launch routes (3.1–3.9)', () =
 
     expect(response.statusCode).toBe(422);
     expect(response.json()).toMatchObject({ reason: 'unknown_location' });
+
+    // A planet class outside Chapter 2's eleven is refused by the body schema (8.0b).
+    const swamp = await post(`/api/campaigns/${id}/launch/locations`, {
+      commandId: newId(),
+      location: { kind: 'planet', name: 'Mire', planetClass: 'swamp', details: {} },
+    });
+    expect(swamp.statusCode).toBe(400);
   });
 
   it('decides a truth, rolling server-side when asked (A26)', async () => {

@@ -772,7 +772,7 @@ proposal per object), D-197 (the map is hand-rolled SVG).
     the key change at acceptance does not force the second mechanism crew needed (group
     7's note). The sector name has one fixed target, `'sector'` (7.0a's shape). Do this
     first, because 8.0d–i depend on it.
-  - [ ] **8.0b The command enforces what readiness already assumes.** `saveLaunchRoute`
+  - [x] **8.0b The command enforces what readiness already assumes.** `saveLaunchRoute`
     accepts any id in `state.launch.locations`, but `validateSector` counts only settlements
     and `kind: 'other'` as endpoints. A route to a planet is accepted and then blocked as
     `route_endpoint_unknown`. D-165 settles which is right: settlement and other-location

@@ -561,6 +561,89 @@ describe.skipIf(!hasTestDatabase)('the launch aggregates', () => {
       ).rejects.toThrow(LaunchRejectedError);
     });
 
+    it('refuses a passage or a map position for a planet, which is a detail (D-165, 8.0b)', async () => {
+      const campaignId = await campaign();
+      await sector(campaignId);
+      const ember = await addLocation(campaignId, settlement('Ember Hold'));
+      const planet = await addLocation(campaignId, {
+        kind: 'planet',
+        name: 'Ember',
+        planetClass: 'furnace',
+        details: {},
+      });
+
+      await expect(
+        saveLaunchRoute(db.sql, {
+          campaignId,
+          commandId: newId<CommandId>(),
+          actor: PLAYER,
+          route: { from: ember, to: planet },
+        }),
+      ).rejects.toThrow(expect.objectContaining({ reason: 'not_a_map_node' }));
+      await expect(
+        setSectorLayout(db.sql, {
+          campaignId,
+          commandId: newId<CommandId>(),
+          actor: PLAYER,
+          coordinates: { [ember]: { x: 1, y: 1 }, [planet]: { x: 2, y: 2 } },
+        }),
+      ).rejects.toThrow(expect.objectContaining({ reason: 'not_a_map_node' }));
+
+      // Readiness counts the same endpoints, so it has nothing here to block.
+      const events = await readEvents(db.sql, campaignId);
+      expect(project(events).launch.routes).toEqual([]);
+      const problems = buildLaunchWorkspace(events).readiness.problems;
+      expect(problems.map((problem) => problem.code)).not.toContain('route_endpoint_unknown');
+    });
+
+    it('links a planet only to a planetside or orbital settlement (8.0b)', async () => {
+      const campaignId = await campaign();
+      await sector(campaignId);
+      const planet = await addLocation(campaignId, {
+        kind: 'planet',
+        name: 'Ember',
+        planetClass: 'furnace',
+        details: {},
+      });
+
+      await expect(
+        addLocation(campaignId, { ...settlement('Ember Hold'), planetId: planet }),
+      ).rejects.toThrow(expect.objectContaining({ reason: 'deep_space_planet' }));
+
+      const orbital = await addLocation(campaignId, {
+        ...settlement('Ember Hold'),
+        location: 'orbital',
+        planetId: planet,
+      });
+      const state = project(await readEvents(db.sql, campaignId));
+      expect(state.launch.locations[orbital]).toMatchObject({ planetId: planet });
+    });
+
+    it("names the sector's star only when it is an accepted star (D-195, 8.0b)", async () => {
+      const campaignId = await campaign();
+      await sector(campaignId);
+      const ember = await addLocation(campaignId, settlement('Ember Hold'));
+      const star = await addLocation(campaignId, {
+        kind: 'star',
+        name: 'Cinder',
+        details: { description: 'Smoldering red star' },
+      });
+      const configure = (starId: EntityId) =>
+        configureLaunchSector(db.sql, {
+          campaignId,
+          commandId: newId<CommandId>(),
+          actor: PLAYER,
+          sector: { name: 'Lantern Reach', region: 'expanse', starId },
+        });
+
+      await expect(configure(ember)).rejects.toThrow(
+        expect.objectContaining({ reason: 'unknown_star' }),
+      );
+      await configure(star);
+
+      expect(project(await readEvents(db.sql, campaignId)).launch.sector?.starId).toBe(star);
+    });
+
     it('selects a starting settlement, and refuses one that is not a settlement (A35)', async () => {
       const campaignId = await campaign();
       await sector(campaignId);
