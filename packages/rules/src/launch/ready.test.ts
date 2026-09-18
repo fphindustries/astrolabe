@@ -33,6 +33,7 @@ function readyInput(): LaunchReadinessInput {
   return {
     campaignName: 'Lantern Wake',
     premise: 'A crew chasing a signal out past the Drift.',
+    draftedSections: [],
     truths: allTruthsLeftOpen,
     characters: [
       {
@@ -275,6 +276,7 @@ describe('launch readiness can be satisfied', () => {
 describe('a saved draft starts a section (6.0f, D-187)', () => {
   const empty = (): LaunchReadinessInput => ({
     campaignName: '',
+    draftedSections: [],
     truths: [],
     characters: [],
   });

@@ -23,7 +23,7 @@ describe('Campaign Launch rules', () => {
   });
   it('reports missing launch facts without treating a truth omission as open', () => {
     const result = validateLaunchReadiness(
-      { campaignName: 'Test', truths: [], characters: [] },
+      { campaignName: 'Test', draftedSections: [], truths: [], characters: [] },
       STARFORGED.truths,
       STARFORGED,
     );

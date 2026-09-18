@@ -138,8 +138,13 @@ export interface LaunchReadinessInput {
    *
    * Supplied by the caller from the projected drafts, so this stays pure and
    * the client keeps no second readiness rule of its own (D-176).
+   *
+   * Required, and empty rather than absent when there are none. Optional would
+   * let a caller quietly stop carrying it, which is the failure this group has
+   * now found four times — a fact written, and read by nobody, with nothing
+   * failing to compile. Here the compiler asks.
    */
-  readonly draftedSections?: readonly LaunchSection[];
+  readonly draftedSections: readonly LaunchSection[];
 }
 export interface LaunchReadiness {
   readonly ready: boolean;
@@ -294,7 +299,7 @@ export function validateLaunchReadiness(
 }
 function sectionStarted(section: LaunchSection, input: LaunchReadinessInput): boolean {
   // D-187: saved work starts a section, whatever has been accepted in it.
-  if (input.draftedSections?.includes(section) === true) return true;
+  if (input.draftedSections.includes(section)) return true;
   return {
     foundation: input.campaignName !== '',
     truths: input.truths.length > 0,
