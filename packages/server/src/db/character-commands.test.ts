@@ -1,11 +1,21 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { STARFORGED, type AssetId, type CharacterDraft } from '@astrolabe/rules';
+import { STARFORGED, type AssetId, type CharacterDraft, type CharacterId } from '@astrolabe/rules';
 import { LOCAL_PLAYER_ID, type Actor, type CampaignId, type CommandId } from '@astrolabe/shared';
 
+import { buildLaunchWorkspace } from '../launch/workspace.js';
 import { project } from '../projection/project.js';
 
-import { CharacterRejectedError, createCharacter } from './character-commands.js';
+import {
+  CharacterRejectedError,
+  LaunchCharacterRejectedError,
+  UnknownCharacterError,
+  createCharacter,
+  removeCharacter,
+  reviseCharacter,
+  type ReviseCharacterRequest,
+} from './character-commands.js';
+import { saveSharedStarship } from './launch-commands.js';
 import { appendCommand, readEvents } from './event-store.js';
 import { createTestDatabase, hasTestDatabase, type TestDatabase } from './testing.js';
 import { uuidv7 } from './uuid.js';
@@ -271,5 +281,254 @@ describe.skipIf(!hasTestDatabase)('creating a character (task 3.5)', () => {
         }),
       ).rejects.toThrow(/cannot be chosen at creation/);
     });
+  });
+});
+
+describe.skipIf(!hasTestDatabase)('revising and removing a crew member (6.0d)', () => {
+  let db: TestDatabase;
+
+  beforeAll(async () => {
+    db = await createTestDatabase('crew_revise');
+  }, 30_000);
+
+  afterAll(async () => {
+    await db?.close();
+  });
+
+  async function newCampaign(): Promise<CampaignId> {
+    const campaignId = newId<CampaignId>();
+    await appendCommand(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      kind: 'campaign.create',
+      actor: PLAYER,
+      createCampaign: { name: 'Lantern Wake' },
+      events: [
+        {
+          type: 'campaign.created',
+          payload: {
+            name: 'Lantern Wake',
+            settings: { narrationLatitude: 'color', narrationLength: 'standard', rerollCap: 2 },
+          },
+        },
+      ],
+    });
+    return campaignId;
+  }
+
+  const LAUNCH = {
+    appearance: 'Sharp-eyed, jacket a size too big.',
+    backstory: { kind: 'written' as const, text: 'Flew charts nobody else trusted.' },
+  };
+  const VOW = { title: 'Find the lost survey', rank: 'formidable' as const };
+
+  /** A campaign with one complete launch character and its background vow. */
+  async function withCrew(): Promise<{ campaignId: CampaignId; characterId: CharacterId }> {
+    const campaignId = await newCampaign();
+    const { characterId } = await createCharacter(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      draft: draft(),
+      backgroundVow: VOW,
+      launch: LAUNCH,
+      grantCommandVehicle: false,
+    });
+    return { campaignId, characterId };
+  }
+
+  const revise = (
+    campaignId: CampaignId,
+    characterId: CharacterId,
+    overrides: Partial<ReviseCharacterRequest> = {},
+  ) =>
+    reviseCharacter(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      characterId,
+      draft: draft(),
+      backgroundVow: VOW,
+      launch: LAUNCH,
+      ...overrides,
+    });
+
+  it('supersedes the earlier version and keeps it readable', async () => {
+    const { campaignId, characterId } = await withCrew();
+    const before = project(await readEvents(db.sql, campaignId)).characters[characterId];
+
+    await revise(campaignId, characterId, {
+      launch: { ...LAUNCH, appearance: 'A quieter jacket.' },
+    });
+
+    const state = project(await readEvents(db.sql, campaignId));
+    expect(state.characters[characterId]?.appearance).toBe('A quieter jacket.');
+    // The server names what it supersedes, from its own projection.
+    const revision = (await readEvents(db.sql, campaignId)).find(
+      (event) => event.type === 'character.revised',
+    );
+    expect(revision?.type === 'character.revised' && revision.payload.supersedesEventId).toBe(
+      before?.eventId,
+    );
+    expect(state.launch.crewHistory[characterId]?.[0]?.appearance).toBe(LAUNCH.appearance);
+  });
+
+  it('carries the meters and momentum through rather than resetting them', async () => {
+    const { campaignId, characterId } = await withCrew();
+
+    await revise(campaignId, characterId, { draft: draft({ name: 'Vesna K. Kade' }) });
+
+    const character = project(await readEvents(db.sql, campaignId)).characters[characterId];
+    expect(character?.name).toBe('Vesna K. Kade');
+    expect(character?.meters.health).toMatchObject({ value: 5, min: 0, max: 5 });
+    expect(character?.momentum.value).toBe(2);
+  });
+
+  it('moves the background vow’s own track with it (D-188)', async () => {
+    const { campaignId, characterId } = await withCrew();
+    const track = project(await readEvents(db.sql, campaignId)).characters[characterId]
+      ?.vowTrackIds[0];
+    expect(track).toBeDefined();
+
+    await revise(campaignId, characterId, {
+      backgroundVow: { title: 'Find the lost survey, and who buried it', rank: 'extreme' },
+    });
+
+    const state = project(await readEvents(db.sql, campaignId));
+    expect(state.tracks[track!]?.title).toBe('Find the lost survey, and who buried it');
+    expect(state.tracks[track!]?.rank).toBe('extreme');
+    // Still one track: a rename, not a second vow.
+    expect(state.characters[characterId]?.vowTrackIds).toEqual([track]);
+  });
+
+  it('writes no track event when the vow did not change', async () => {
+    const { campaignId, characterId } = await withCrew();
+
+    await revise(campaignId, characterId, {
+      launch: { ...LAUNCH, appearance: 'Only the jacket changed.' },
+    });
+
+    const events = await readEvents(db.sql, campaignId);
+    expect(events.filter((event) => event.type === 'track.revised')).toHaveLength(0);
+  });
+
+  it('gives a character who had no vow track the one they were missing', async () => {
+    // A Milestone 1 character created without a background vow: the revision
+    // adds one, so it needs `track.created`, not `track.revised`.
+    const campaignId = await newCampaign();
+    const { characterId } = await createCharacter(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      draft: draft(),
+      grantCommandVehicle: false,
+    });
+
+    const { vowTrackId } = await revise(campaignId, characterId);
+
+    expect(vowTrackId).toBeDefined();
+    const state = project(await readEvents(db.sql, campaignId));
+    expect(state.tracks[vowTrackId!]?.title).toBe(VOW.title);
+    expect(state.characters[characterId]?.vowTrackIds).toEqual([vowTrackId]);
+  });
+
+  it('refuses a revision the launch rules reject', async () => {
+    const { campaignId, characterId } = await withCrew();
+
+    await expect(
+      revise(campaignId, characterId, { launch: { ...LAUNCH, appearance: '   ' } }),
+    ).rejects.toBeInstanceOf(LaunchCharacterRejectedError);
+  });
+
+  it('refuses a character the campaign does not have', async () => {
+    const campaignId = await newCampaign();
+
+    await expect(revise(campaignId, newId<CharacterId>())).rejects.toBeInstanceOf(
+      UnknownCharacterError,
+    );
+    await expect(
+      removeCharacter(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        characterId: newId<CharacterId>(),
+        reason: 'Never existed.',
+      }),
+    ).rejects.toBeInstanceOf(UnknownCharacterError);
+  });
+
+  it('removes a crew member and their vow track together', async () => {
+    const { campaignId, characterId } = await withCrew();
+    const track = project(await readEvents(db.sql, campaignId)).characters[characterId]
+      ?.vowTrackIds[0];
+
+    await removeCharacter(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      characterId,
+      reason: 'Replaced by a different concept.',
+    });
+
+    const state = project(await readEvents(db.sql, campaignId));
+    expect(state.characters[characterId]).toBeUndefined();
+    expect(state.tracks[track!]).toBeUndefined();
+    // A40: what was removed stays answerable.
+    expect(state.launch.crewHistory[characterId]).toHaveLength(1);
+  });
+
+  it('lets the crew reach zero, because readiness is what refuses a launch', async () => {
+    // Not a command's job to enforce a crew floor (D-176): a player who removes
+    // their only character to build a better one passes through zero.
+    const { campaignId, characterId } = await withCrew();
+
+    await removeCharacter(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      characterId,
+      reason: 'Starting over.',
+    });
+
+    const events = await readEvents(db.sql, campaignId);
+    expect(Object.keys(project(events).characters)).toEqual([]);
+    expect(
+      buildLaunchWorkspace(events).readiness.sections.crew.blockers.map((b) => b.code),
+    ).toContain('crew_count_invalid');
+  });
+
+  it('surfaces a module orphaned by a removal as a starship blocker, not silently', async () => {
+    const { campaignId, characterId } = await withCrew();
+    const moduleId = byCategory('module', 1)[0] as AssetId;
+    const starshipAsset = STARFORGED.assets.find(
+      (asset) => asset.categoryId === 'command_vehicle' && asset.name === 'Starship',
+    )!;
+    await saveSharedStarship(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      starship: {
+        starshipId: newId(),
+        name: 'Lantern Wake',
+        appearance: 'Worn hull.',
+        history: 'A salvage hauler.',
+        quirks: ['Its clocks run slightly fast.'],
+        integrity: { value: 5, min: 0, max: 5 },
+        assetId: starshipAsset.id,
+        modules: [{ assetId: moduleId, ownerCharacterId: characterId }],
+      },
+    });
+
+    await removeCharacter(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      characterId,
+      reason: 'Replaced.',
+    });
+
+    const blockers = buildLaunchWorkspace(await readEvents(db.sql, campaignId)).readiness.sections
+      .starship.blockers;
+    expect(blockers.map((blocker) => blocker.code)).toContain('module_owner_unknown');
   });
 });

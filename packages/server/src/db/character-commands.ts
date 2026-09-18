@@ -5,16 +5,26 @@ import {
   startingMeters,
   validateCharacterDraft,
   validateLaunchCharacterDraft,
+  type ChallengeRank,
   type CharacterDraft,
   type CharacterId,
   type CharacterProblem,
   type TrackId,
 } from '@astrolabe/rules';
-import type { Actor, CampaignId, CommandId, EventId, SessionId } from '@astrolabe/shared';
+import type {
+  Actor,
+  CampaignId,
+  CharacterState,
+  CommandId,
+  EventId,
+  PayloadFor,
+  SessionId,
+} from '@astrolabe/shared';
 import type { Sql } from 'postgres';
 
 import { project } from '../projection/project.js';
 
+import { requireLaunchOpen } from './launch-commands.js';
 import {
   appendCommand,
   readEvents,
@@ -247,4 +257,224 @@ export async function createCharacter(
     ...(vowTrackId !== undefined ? { vowTrackId } : {}),
     result,
   };
+}
+
+/** A command naming a crew member the campaign does not have. */
+export class UnknownCharacterError extends Error {
+  constructor() {
+    super('That character does not exist in this campaign.');
+    this.name = 'UnknownCharacterError';
+  }
+}
+
+export interface ReviseCharacterRequest {
+  readonly campaignId: CampaignId;
+  readonly commandId: CommandId;
+  readonly actor: Actor;
+  readonly characterId: CharacterId;
+  readonly draft: CharacterDraft;
+  readonly backgroundVow: { readonly title: string; readonly rank: ChallengeRank };
+  readonly launch: {
+    readonly appearance: string;
+    readonly backstory:
+      { readonly kind: 'written'; readonly text: string } | { readonly kind: 'discover_in_play' };
+    readonly signatureGear?: string;
+  };
+  readonly hooks?: readonly string[];
+  readonly pronouns?: string;
+}
+
+/**
+ * Revise an accepted crew member before launch (6.0d, D-161, D-177).
+ *
+ * A revision, not a correction: the earlier version stays in the log and in
+ * `crewHistory`, and `supersedesEventId` is read from the projected character
+ * rather than accepted from the caller — a client that could name what it
+ * supersedes could rewrite a different revision's place in the chain.
+ *
+ * **The background vow travels with it (D-188).** D-105 wrote the character
+ * and its vow track as one command because they are one decision; the same
+ * holds when the vow changes. A vow whose words moved gets a `track.revised`
+ * in this command, and a character who had no vow track gets the
+ * `track.created` they were missing — otherwise the sheet and the launch
+ * record would disagree permanently, with no way to undo the original.
+ */
+export async function reviseCharacter(
+  sql: Sql,
+  request: ReviseCharacterRequest,
+): Promise<CreatedCharacter> {
+  const state = project(await readEvents(sql, request.campaignId));
+  requireLaunchOpen(state, 'A character changes by amendment after launch.');
+  const current = state.characters[request.characterId];
+  if (current === undefined) throw new UnknownCharacterError();
+
+  const hooks = (request.hooks ?? []).map((hook) => hook.trim()).filter((hook) => hook !== '');
+  const pronouns = request.pronouns?.trim() ?? '';
+  const backgroundVow = {
+    title: request.backgroundVow.title.trim(),
+    rank: request.backgroundVow.rank,
+  };
+  const problems = validateLaunchCharacterDraft(
+    {
+      ...request.draft,
+      appearance: request.launch.appearance,
+      backstory: request.launch.backstory,
+      backgroundVow,
+      ...(request.launch.signatureGear === undefined
+        ? {}
+        : { signatureGear: request.launch.signatureGear }),
+      ...(hooks.length === 0 ? {} : { hooks }),
+      ...(pronouns === '' ? {} : { pronouns }),
+    },
+    STARFORGED,
+  );
+  if (problems.length > 0) throw new LaunchCharacterRejectedError(problems);
+
+  const events: NewEvent[] = [
+    {
+      type: 'character.revised',
+      payload: {
+        characterId: request.characterId,
+        character: {
+          characterId: request.characterId,
+          name: request.draft.name.trim(),
+          callsign: request.draft.callsign.trim(),
+          stats: request.draft.stats,
+          // Carried, not recomputed. A revision restates the launch fields; it
+          // is not a reason to reset a meter, and `startingMeters` here would
+          // be a silent reset for anything that had already moved.
+          meters: meterSnapshots(current),
+          momentum: current.momentum.value,
+          assets: request.draft.assets,
+          appearance: request.launch.appearance.trim(),
+          backstory: request.launch.backstory,
+          backgroundVow,
+          ...(request.launch.signatureGear === undefined
+            ? {}
+            : { signatureGear: request.launch.signatureGear.trim() }),
+          ...(hooks.length > 0 ? { hooks } : {}),
+          ...(pronouns !== '' ? { pronouns } : {}),
+        },
+        provenance: 'player_written',
+        groundedIn: [],
+        supersedesEventId: current.eventId,
+      },
+      sessionId: null,
+      subjectCharacterId: request.characterId,
+    },
+  ];
+
+  // D-188. The first vow track is the background vow: before launch a
+  // character has at most one, and the shared inciting vow is created at
+  // activation, after which this command is refused outright.
+  const vowTrackId = current.vowTrackIds[0];
+  let createdVowTrackId: TrackId | undefined;
+  if (vowTrackId === undefined) {
+    createdVowTrackId = uuidv7() as TrackId;
+    events.push({
+      type: 'track.created',
+      payload: {
+        kind: 'vow',
+        trackId: createdVowTrackId,
+        title: backgroundVow.title,
+        rank: backgroundVow.rank,
+        characterId: request.characterId,
+      },
+      sessionId: null,
+      subjectCharacterId: request.characterId,
+    });
+  } else if (
+    current.backgroundVow?.title !== backgroundVow.title ||
+    current.backgroundVow.rank !== backgroundVow.rank
+  ) {
+    events.push({
+      type: 'track.revised',
+      payload: { trackId: vowTrackId, title: backgroundVow.title, rank: backgroundVow.rank },
+      sessionId: null,
+      subjectCharacterId: request.characterId,
+    });
+  }
+
+  const result = await appendCommand(sql, {
+    campaignId: request.campaignId,
+    commandId: request.commandId,
+    kind: 'character.revise',
+    actor: request.actor,
+    events,
+    response: {
+      characterId: request.characterId,
+      ...(createdVowTrackId !== undefined ? { vowTrackId: createdVowTrackId } : {}),
+    },
+  });
+
+  return {
+    characterId: request.characterId,
+    ...(createdVowTrackId !== undefined ? { vowTrackId: createdVowTrackId } : {}),
+    result,
+  };
+}
+
+export interface RemoveCharacterRequest {
+  readonly campaignId: CampaignId;
+  readonly commandId: CommandId;
+  readonly actor: Actor;
+  readonly characterId: CharacterId;
+  readonly reason: string;
+}
+
+/**
+ * Remove a crew member before launch (6.0d).
+ *
+ * No crew floor is enforced here. A crew of zero is a legal thing to pass
+ * through — a player who removes their only character to build a better one
+ * does exactly that — and `validateLaunchReadiness` already refuses to launch
+ * from there with `crew_count_invalid`. Refusing the removal as well would put
+ * a readiness rule inside a command, which is what D-176 exists to prevent.
+ *
+ * What removal must not do is strand anything. The projection arm drops the
+ * character's own vow tracks, and a module still naming them as its owner
+ * surfaces as `module_owner_unknown` from the starship validator rather than
+ * silently — blocking launch until the player resolves it, which is the right
+ * place for it to surface.
+ */
+export async function removeCharacter(
+  sql: Sql,
+  request: RemoveCharacterRequest,
+): Promise<{ readonly characterId: CharacterId; readonly result: AppendResult }> {
+  const state = project(await readEvents(sql, request.campaignId));
+  requireLaunchOpen(state, 'A launched campaign keeps its crew.');
+  const current = state.characters[request.characterId];
+  if (current === undefined) throw new UnknownCharacterError();
+
+  const result = await appendCommand(sql, {
+    campaignId: request.campaignId,
+    commandId: request.commandId,
+    kind: 'character.remove',
+    actor: request.actor,
+    events: [
+      {
+        type: 'character.removed',
+        payload: {
+          characterId: request.characterId,
+          supersedesEventId: current.eventId,
+          reason: request.reason.trim(),
+        },
+        sessionId: null,
+        subjectCharacterId: request.characterId,
+      },
+    ],
+    response: { characterId: request.characterId },
+  });
+
+  return { characterId: request.characterId, result };
+}
+
+/** `CharacterState` meters carry provenance; the event payload does not. */
+function meterSnapshots(character: CharacterState): PayloadFor<'character.created'>['meters'] {
+  const of = (meter: 'health' | 'spirit' | 'supply') => ({
+    value: character.meters[meter].value,
+    min: character.meters[meter].min,
+    max: character.meters[meter].max,
+  });
+  return { health: of('health'), spirit: of('spirit'), supply: of('supply') };
 }

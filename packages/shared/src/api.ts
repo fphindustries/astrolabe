@@ -182,6 +182,47 @@ export type CreateLaunchCharacterRequestBody = z.infer<
 >;
 
 /**
+ * The body of `PUT /campaigns/:id/launch/crew/:characterId` (6.0d).
+ *
+ * The same shape acceptance takes, minus the fields the server decides for
+ * itself. `characterId` comes from the route, and `supersedesEventId` is never
+ * in the body: the server reads it from the projected character, because a
+ * client that could name what it supersedes could rewrite a different
+ * revision's place in the chain.
+ */
+export const ReviseLaunchCharacterRequestBodySchema = CreateLaunchCharacterRequestBodySchema.omit({
+  grantCommandVehicle: true,
+});
+export type ReviseLaunchCharacterRequestBody = z.infer<
+  typeof ReviseLaunchCharacterRequestBodySchema
+>;
+
+/**
+ * The body of `DELETE /campaigns/:id/launch/crew/:characterId` (6.0d).
+ *
+ * A reason is required by `character.removed`'s own schema, and this is why:
+ * removal is append-only like everything else before launch (A40), so the log
+ * has to say why a crew member is gone rather than merely that they are.
+ */
+export const RemoveLaunchCharacterRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  reason: z.string().trim().min(1),
+});
+export type RemoveLaunchCharacterRequestBody = z.infer<
+  typeof RemoveLaunchCharacterRequestBodySchema
+>;
+
+export interface ReviseCharacterResponse {
+  readonly characterId: CharacterId;
+  /** Present when the revision created the character's first background vow. */
+  readonly vowTrackId?: TrackId;
+}
+
+export interface RemoveCharacterResponse {
+  readonly characterId: CharacterId;
+}
+
+/**
  * The body of `POST /campaigns` (task 4.1). `commandId` is minted by the
  * client, same reasoning as the character-creation body. `settings` is
  * optional and partial — an omitted field falls back to

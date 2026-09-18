@@ -548,18 +548,19 @@ member in it, so every cross-cutting affordance group 5 built is blind to crew. 
 that before the editor is built.
 
 Decisions behind this group: D-184 (crew metadata on the character), D-185 (`creation.proposed`
-for crew), D-186 (a declared character recipe), D-187 (a saved draft starts a section).
+for crew), D-186 (a declared character recipe), D-187 (a saved draft starts a section), D-188
+(a revised background vow reaches its track).
 
-- [ ] 6.0 Prerequisites found while planning group 6. Each begins with its failing test
+- [ ] 6.0 Prerequisites found while planning group 6 (a–d done; e–h open). Each begins with its failing test
   (3R.1a's pattern):
-  - **6.0a Crew acceptance is readable (D-184).** `CharacterCreatedSchema` gains optional
+  - [x] **6.0a Crew acceptance is readable (D-184).** `CharacterCreatedSchema` gains optional
     `provenance` and `groundedIn`; projection carries `eventId`, `seq`, `provenance` and
     `groundedIn` onto `CharacterState`. All optional, so no upcaster is owed.
-  - **6.0b Crew chips resolve (D-184).** `launchChips` walks `state.characters` as well as
+  - [x] **6.0b Crew chips resolve (D-184).** `launchChips` walks `state.characters` as well as
     `state.launch`, and its comment stops claiming groups 6–9 need no edit there.
-  - **6.0c The crew revision chain is readable (D-184).** `LaunchState.crewHistory`, oldest
+  - [x] **6.0c The crew revision chain is readable (D-184).** `LaunchState.crewHistory`, oldest
     first, written by the `character.revised` arm — `truthHistory`'s shape and projection arm.
-  - **6.0d `reviseCharacter` and `removeCharacter` commands and routes.** Both events have
+  - [x] **6.0d `reviseCharacter` and `removeCharacter` commands and routes.** Both events have
     schemas, metadata, projection arms and sample payloads, and **no command appends either**;
     6.4 requires both. Guarded by `requireLaunchOpen` (D-178), revalidated with
     `validateLaunchCharacterDraft`, and filling `supersedesEventId` from the projected

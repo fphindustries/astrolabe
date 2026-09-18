@@ -65,7 +65,7 @@ export function launchClosedReason(state: CampaignState): LaunchClosedReason | u
  * the same function, so the client's routing decision and this refusal cannot
  * drift into disagreeing about whether a campaign is still in launch.
  */
-function requireLaunchOpen(state: CampaignState, whenActive: string): void {
+export function requireLaunchOpen(state: CampaignState, whenActive: string): void {
   const reason = launchClosedReason(state);
   if (reason === 'campaign_active') throw new LaunchRejectedError(reason, whenActive);
   if (reason === 'campaign_in_play')

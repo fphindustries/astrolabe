@@ -60,7 +60,7 @@ import { SceneStartedSchema } from './scene.js';
 import { SectorRouteAddedSchema } from './sector.js';
 import { SessionBeganSchema, SessionEndedSchema, SessionSummaryProposedSchema } from './session.js';
 import { StateChangedSchema, StateOverriddenSchema } from './state.js';
-import { TrackAdvancedSchema, TrackCreatedSchema } from './track.js';
+import { TrackAdvancedSchema, TrackCreatedSchema, TrackRevisedSchema } from './track.js';
 import { TruthSetSchema } from './truth.js';
 import { EventVoidedSchema } from './void.js';
 
@@ -107,6 +107,7 @@ export const PAYLOAD_SCHEMAS = {
   'state.overridden': StateOverriddenSchema,
   'track.created': TrackCreatedSchema,
   'track.advanced': TrackAdvancedSchema,
+  'track.revised': TrackRevisedSchema,
   'entity.established': EntityEstablishedSchema,
   'narration.written': NarrationWrittenSchema,
   'narration.correction_requested': NarrationCorrectionRequestedSchema,
@@ -239,6 +240,7 @@ export const EventSchema = z.discriminatedUnion('type', [
   eventMember('state.overridden'),
   eventMember('track.created'),
   eventMember('track.advanced'),
+  eventMember('track.revised'),
   eventMember('entity.established'),
   eventMember('narration.written'),
   eventMember('narration.correction_requested'),

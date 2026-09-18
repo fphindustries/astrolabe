@@ -254,6 +254,18 @@ export const EVENT_TYPE_META: MetaTable = {
     introduces: none,
     references: (p) => [track(p.trackId)],
   },
+  // D-188. Narrative: a vow's words changing is a fact a reader wants to see,
+  // the way `track.created` is. Voidable on the ordinary session rules — it is
+  // not a launch event, merely unreachable by void before activation, as
+  // everything pre-launch is.
+  'track.revised': {
+    narrative: true,
+    significant: true,
+    mutatesState: true,
+    voidable: true,
+    introduces: none,
+    references: (p) => [track(p.trackId)],
+  },
   'entity.established': {
     narrative: true,
     significant: true,

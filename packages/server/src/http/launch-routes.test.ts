@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 
-import { STARFORGED } from '@astrolabe/rules';
+import { STARFORGED, type CharacterId } from '@astrolabe/rules';
 import type {
   CreateCampaignResponse,
   CreateCharacterResponse,
@@ -376,5 +376,137 @@ describe.skipIf(!hasTestDatabase)('the Campaign Launch routes (3.1–3.9)', () =
     expect(state.launch.startingSettlementId).toBe(ember);
     expect(state.launch.layout[ember]).toEqual({ x: 4, y: 9 });
     expect(state.launch.routes).toHaveLength(1);
+  });
+
+  describe('revising and removing a crew member over HTTP (6.0d)', () => {
+    const CREW_BODY = {
+      draft: {
+        name: 'Vesna Kade',
+        callsign: 'Map',
+        stats: { edge: 3, heart: 2, iron: 2, shadow: 1, wits: 1 },
+        assets: paths,
+      },
+      backgroundVow: { title: 'Find the lost colony', rank: 'formidable' },
+      launch: { appearance: 'Weathered jacket', backstory: { kind: 'discover_in_play' } },
+    } as const;
+
+    const del = (url: string, body: Record<string, unknown>) =>
+      app.inject({ method: 'DELETE', url, payload: body });
+
+    async function crew(): Promise<{ id: string; characterId: CharacterId }> {
+      const id = await campaign();
+      const created = await post(`/api/campaigns/${id}/launch/crew`, {
+        commandId: newId(),
+        ...CREW_BODY,
+      });
+      return { id, characterId: (created.json() as CreateCharacterResponse).characterId };
+    }
+
+    it('revises a crew member in place', async () => {
+      const { id, characterId } = await crew();
+
+      const response = await put(`/api/campaigns/${id}/launch/crew/${characterId}`, {
+        commandId: newId(),
+        ...CREW_BODY,
+        launch: { ...CREW_BODY.launch, appearance: 'A quieter jacket' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const workspace = await app.inject({ method: 'GET', url: `/api/campaigns/${id}/launch` });
+      const state = (workspace.json() as LaunchWorkspaceResponse).state;
+      expect(state.characters[characterId]?.appearance).toBe('A quieter jacket');
+      expect(state.launch.crewHistory[characterId]).toHaveLength(1);
+    });
+
+    it('removes a crew member, and says why in the log', async () => {
+      const { id, characterId } = await crew();
+
+      const response = await del(`/api/campaigns/${id}/launch/crew/${characterId}`, {
+        commandId: newId(),
+        reason: 'Replaced by a different concept.',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const workspace = await app.inject({ method: 'GET', url: `/api/campaigns/${id}/launch` });
+      const state = (workspace.json() as LaunchWorkspaceResponse).state;
+      expect(state.characters[characterId]).toBeUndefined();
+      expect(state.launch.crewHistory[characterId]).toHaveLength(1);
+    });
+
+    it('answers 404 for a character the campaign does not have', async () => {
+      const id = await campaign();
+
+      const revised = await put(`/api/campaigns/${id}/launch/crew/${crypto.randomUUID()}`, {
+        commandId: newId(),
+        ...CREW_BODY,
+      });
+      const removed = await del(`/api/campaigns/${id}/launch/crew/${crypto.randomUUID()}`, {
+        commandId: newId(),
+        reason: 'Never existed.',
+      });
+
+      expect(revised.statusCode).toBe(404);
+      expect(removed.statusCode).toBe(404);
+    });
+
+    it('answers 400 for a malformed character id and 400 for a removal with no reason', async () => {
+      const { id, characterId } = await crew();
+
+      expect(
+        (
+          await put(`/api/campaigns/${id}/launch/crew/not-a-uuid`, {
+            commandId: newId(),
+            ...CREW_BODY,
+          })
+        ).statusCode,
+      ).toBe(400);
+      expect(
+        (await del(`/api/campaigns/${id}/launch/crew/${characterId}`, { commandId: newId() }))
+          .statusCode,
+      ).toBe(400);
+    });
+
+    it('refuses a rules-invalid revision with 422, not 500', async () => {
+      const { id, characterId } = await crew();
+
+      const response = await put(`/api/campaigns/${id}/launch/crew/${characterId}`, {
+        commandId: newId(),
+        ...CREW_BODY,
+        // Three paths and nothing else is a legal creation set; a deed is not.
+        draft: { ...CREW_BODY.draft, assets: [...paths, starshipAsset] },
+      });
+
+      expect(response.statusCode).toBe(422);
+    });
+
+    it('refuses both on a campaign already in play (D-178)', async () => {
+      const fixture = FIXTURES.get(SESSION_ONE)!;
+      await seedFixture(db.sql, SESSION_ONE);
+      const characterId = (
+        Object.keys(
+          (
+            (
+              await app.inject({
+                method: 'GET',
+                url: `/api/campaigns/${fixture.campaignId}/launch`,
+              })
+            ).json() as LaunchWorkspaceResponse
+          ).state.characters,
+        ) as CharacterId[]
+      )[0]!;
+
+      const revised = await put(`/api/campaigns/${fixture.campaignId}/launch/crew/${characterId}`, {
+        commandId: newId(),
+        ...CREW_BODY,
+      });
+      const removed = await del(`/api/campaigns/${fixture.campaignId}/launch/crew/${characterId}`, {
+        commandId: newId(),
+        reason: 'Not allowed.',
+      });
+
+      expect(revised.statusCode).toBe(422);
+      expect(revised.json()).toMatchObject({ reason: 'campaign_in_play' });
+      expect(removed.statusCode).toBe(422);
+    });
   });
 });

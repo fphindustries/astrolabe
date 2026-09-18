@@ -28,8 +28,11 @@ describe('the catalogue', () => {
     // incident.proposed (4.6, D-132), move.suggested (7.12, D-135) and
     // move.trigger_noted (7.13, D-136) one each, and complication.offered and
     // complication.set (8.7, D-143), and actions.suggested (9.3, D-148) and
-    // session.summary_proposed (9.4, D-149).
-    expect(EVENT_TYPES).toHaveLength(61);
+    // session.summary_proposed (9.4, D-149). Campaign Launch brought its own
+    // catalogue, and track.revised (6.0d, D-188) joins them: a background vow
+    // that a pre-launch revision renamed has to reach its track, and
+    // track.created cannot be undone before a session exists.
+    expect(EVENT_TYPES).toHaveLength(62);
   });
 
   it('exposes every type through isEventType, and rejects anything else', () => {

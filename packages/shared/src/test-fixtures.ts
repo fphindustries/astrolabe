@@ -265,6 +265,11 @@ export const SAMPLE_PAYLOADS: { [T in EventType]: PayloadFor<T> } = {
       reason: 'forcing the bulkhead tripped emergency load-shedding',
     },
   },
+  'track.revised': {
+    trackId: VOW_TRACK,
+    title: "Recover the flight recorder of Meridian's Hope, whatever it costs",
+    rank: 'formidable',
+  },
   'entity.established': {
     entityId: SURVIVOR,
     kind: 'npc',

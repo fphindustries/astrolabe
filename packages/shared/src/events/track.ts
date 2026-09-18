@@ -74,3 +74,22 @@ export const TrackAdvancedSchema = z.object({
   /** The verbatim rule clause, where a rule rather than AI judgement caused it. */
   clause: z.string().min(1).optional(),
 });
+
+/**
+ * A track's own words changed (D-188).
+ *
+ * Only the words. `reviseCharacter` makes a background vow editable before
+ * launch, and D-105 wrote the vow and its track as one decision — so a revised
+ * vow has to reach its track or the two disagree permanently. There is no
+ * undoing `track.created`: void is bounded to the current session (D-84) and
+ * every pre-launch event has a null session, so `planVoid` refuses.
+ *
+ * Rename, not re-swear. Progress, kind and owner are untouched, and abandoning
+ * a vow is a different act that this event does not express. `rank` is absent
+ * for a clock, which has none.
+ */
+export const TrackRevisedSchema = z.object({
+  trackId: TrackIdSchema,
+  title: z.string().min(1),
+  rank: ChallengeRankSchema.optional(),
+});

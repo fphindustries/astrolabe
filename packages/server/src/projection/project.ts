@@ -459,9 +459,51 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
       }));
     }
     case 'character.removed': {
-      const { [event.payload.characterId]: _removed, ...characters } = state.characters;
-      return { ...state, characters };
+      const removed = state.characters[event.payload.characterId];
+      if (removed === undefined) return state;
+      const { [event.payload.characterId]: _dropped, ...characters } = state.characters;
+      // The character's own vow tracks go with them (6.0d). Nothing else can
+      // drop a track — void is bounded to the current session (D-84) and every
+      // pre-launch event has none — so leaving them would strand a vow on a
+      // crew member who is not there. A shared vow cannot be caught by this:
+      // it is created at activation, after which removal is refused.
+      const tracks = Object.fromEntries(
+        Object.entries(state.tracks).filter(([id]) => !removed.vowTrackIds.includes(id as TrackId)),
+      );
+      return {
+        ...state,
+        characters,
+        tracks,
+        launch: {
+          ...state.launch,
+          // What was removed stays answerable (A40): the final version joins
+          // the history rather than being orphaned beside it.
+          crewHistory: {
+            ...state.launch.crewHistory,
+            [event.payload.characterId]: [
+              ...(state.launch.crewHistory[event.payload.characterId] ?? []),
+              supersededCharacter(removed),
+            ],
+          },
+        },
+      };
     }
+    case 'track.revised':
+      // D-188: the words, and only the words. A vow's progress, kind and owner
+      // are not what a revision changed.
+      return state.tracks[event.payload.trackId] === undefined
+        ? state
+        : {
+            ...state,
+            tracks: {
+              ...state.tracks,
+              [event.payload.trackId]: {
+                ...state.tracks[event.payload.trackId]!,
+                title: event.payload.title,
+                ...(event.payload.rank !== undefined ? { rank: event.payload.rank } : {}),
+              },
+            },
+          };
     case 'starship.established':
       return {
         ...state,

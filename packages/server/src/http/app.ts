@@ -17,6 +17,8 @@ import {
   SaveSharedStarshipRequestBodySchema,
   ConfigureLaunchSectorRequestBodySchema,
   CreateLaunchCharacterRequestBodySchema,
+  RemoveLaunchCharacterRequestBodySchema,
+  ReviseLaunchCharacterRequestBodySchema,
   EstablishLaunchConnectionRequestBodySchema,
   AcceptLaunchIncidentRequestBodySchema,
   AmendLaunchFactRequestBodySchema,
@@ -38,6 +40,8 @@ import {
   type CampaignStateResponse,
   type CreateCampaignResponse,
   type CreateCharacterResponse,
+  type RemoveCharacterResponse,
+  type ReviseCharacterResponse,
   type InvokeMoveResponse,
   type LaunchWorkspaceResponse,
   type EntityGroundingResponse,
@@ -62,7 +66,7 @@ import {
   type VoidPreviewResult,
 } from '@astrolabe/shared';
 import fastifyStatic from '@fastify/static';
-import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import type { Sql } from 'postgres';
 import * as z from 'zod';
 
@@ -73,7 +77,13 @@ import { AiStatus } from '../ai/status.js';
 import { owedPassages } from '../ai/context/index.js';
 import { buildNarrativeLog, oracleChips } from '../projection/narrative-log.js';
 import { registerAiRoutes } from './ai-routes.js';
-import { parseCampaignId, parseEntityId, parseEventId, requireCampaignExists } from './params.js';
+import {
+  parseCampaignId,
+  parseCharacterId,
+  parseEntityId,
+  parseEventId,
+  requireCampaignExists,
+} from './params.js';
 import { project } from '../projection/project.js';
 import { buildLaunchWorkspace } from '../launch/workspace.js';
 import {
@@ -86,9 +96,12 @@ import {
   burnMomentum,
   CharacterRejectedError,
   LaunchCharacterRejectedError,
+  UnknownCharacterError,
   UnknownProposalError,
   createCampaign,
   createCharacter,
+  removeCharacter,
+  reviseCharacter,
   IncitingVowRejectedError,
   invokeMove,
   latestSessionId,
@@ -175,6 +188,34 @@ export interface BuildAppOptions {
 
 interface CampaignParams {
   readonly id: string;
+}
+
+interface CrewParams extends CampaignParams {
+  readonly characterId: string;
+}
+
+/**
+ * The refusals both crew routes share (6.0d).
+ *
+ * 404 for a character the campaign does not have, so a stale link reads as
+ * "not here" rather than as a bad request; 422 for a launch that is closed
+ * (D-178) or a draft the rules reject, which is the shape every other launch
+ * route already uses.
+ */
+function crewFailure(error: unknown, reply: FastifyReply): { problem: string; reason?: string } {
+  if (error instanceof UnknownCharacterError) {
+    reply.code(404);
+    return { problem: error.message };
+  }
+  if (error instanceof LaunchRejectedError) {
+    reply.code(422);
+    return { problem: error.message, reason: error.reason };
+  }
+  if (error instanceof LaunchCharacterRejectedError) {
+    reply.code(422);
+    return { problem: error.message };
+  }
+  throw error;
 }
 
 interface EventParams {
@@ -847,6 +888,85 @@ export function buildApp({
           return { problem: error.message };
         }
         throw error;
+      }
+    },
+  );
+
+  // 6.0d: revise an accepted crew member before launch. PUT, because the
+  // revision replaces the character rather than adding to it — the same shape
+  // `PUT /launch/drafts` uses for the same reason.
+  app.put<{ Params: CrewParams }>(
+    '/api/campaigns/:id/launch/crew/:characterId',
+    async (
+      request,
+      reply,
+    ): Promise<ReviseCharacterResponse | { problem: string; reason?: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      const characterId = parseCharacterId(request.params.characterId, reply);
+      if (id === undefined || characterId === undefined) return undefined;
+      if (!(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = ReviseLaunchCharacterRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        const result = await reviseCharacter(sql, {
+          campaignId: id,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          commandId: parsed.data.commandId,
+          characterId,
+          draft: parsed.data.draft,
+          backgroundVow: parsed.data.backgroundVow,
+          launch: {
+            appearance: parsed.data.launch.appearance,
+            backstory: parsed.data.launch.backstory,
+            ...(parsed.data.launch.signatureGear === undefined
+              ? {}
+              : { signatureGear: parsed.data.launch.signatureGear }),
+          },
+          ...(parsed.data.hooks === undefined ? {} : { hooks: parsed.data.hooks }),
+          ...(parsed.data.pronouns === undefined ? {} : { pronouns: parsed.data.pronouns }),
+        });
+        return {
+          characterId: result.characterId,
+          ...(result.vowTrackId === undefined ? {} : { vowTrackId: result.vowTrackId }),
+        };
+      } catch (error: unknown) {
+        return crewFailure(error, reply);
+      }
+    },
+  );
+
+  // 6.0d: remove a crew member before launch. Append-only like everything else
+  // before activation (A40) — the reason is required, and the removal is an
+  // event rather than a deletion.
+  app.delete<{ Params: CrewParams }>(
+    '/api/campaigns/:id/launch/crew/:characterId',
+    async (
+      request,
+      reply,
+    ): Promise<RemoveCharacterResponse | { problem: string; reason?: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      const characterId = parseCharacterId(request.params.characterId, reply);
+      if (id === undefined || characterId === undefined) return undefined;
+      if (!(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = RemoveLaunchCharacterRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        const result = await removeCharacter(sql, {
+          campaignId: id,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          commandId: parsed.data.commandId,
+          characterId,
+          reason: parsed.data.reason,
+        });
+        return { characterId: result.characterId };
+      } catch (error: unknown) {
+        return crewFailure(error, reply);
       }
     },
   );

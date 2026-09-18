@@ -68,11 +68,16 @@ export {
 } from './amend-commands.js';
 export {
   createCharacter,
+  removeCharacter,
+  reviseCharacter,
   CharacterRejectedError,
   LaunchCharacterRejectedError,
+  UnknownCharacterError,
   UnknownProposalError,
   type CreateCharacterRequest,
   type CreatedCharacter,
+  type RemoveCharacterRequest,
+  type ReviseCharacterRequest,
 } from './character-commands.js';
 export { listCampaigns } from './campaign-queries.js';
 export {

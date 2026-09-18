@@ -508,3 +508,134 @@ describe('the crew revision chain is readable (6.0c, D-184)', () => {
     expect(cold.launch.crewHistory[VESNA]).toHaveLength(1);
   });
 });
+
+describe('removing a crew member leaves nothing dangling (6.0d)', () => {
+  const VOW = '77777777-7777-4777-8777-777777777777';
+
+  const crewLog = () =>
+    new LogBuilder()
+      .add('campaign.created', {
+        name: 'Lantern Wake',
+        settings: { narrationLatitude: 'color', narrationLength: 'standard', rerollCap: 2 },
+      })
+      .add('character.created', {
+        ...character(VESNA, 'Vesna Kade', 2),
+        appearance: 'Sharp-eyed.',
+        backstory: { kind: 'written' as const, text: 'Flew charts nobody trusted.' },
+        backgroundVow: { title: 'Find the lost survey', rank: 'formidable' as const },
+        provenance: 'player_written' as const,
+        groundedIn: [],
+      })
+      .add('track.created', {
+        kind: 'vow',
+        trackId: VOW as never,
+        title: 'Find the lost survey',
+        rank: 'formidable',
+        characterId: VESNA,
+      });
+
+  const removal = (builder: LogBuilder) =>
+    builder.add('character.removed', {
+      characterId: VESNA,
+      supersedesEventId: builder.at(2).id,
+      reason: 'Replaced by a different concept.',
+    });
+
+  it('takes the character’s own vow tracks with them', () => {
+    // Nothing else can drop a track: void is bounded to the current session
+    // (D-84) and every pre-launch event has none, so leaving it would strand
+    // a vow on a crew member who is not there.
+    const before = project(crewLog().build());
+    expect(before.tracks[VOW as never]).toBeDefined();
+    expect(before.characters[VESNA]?.vowTrackIds).toEqual([VOW]);
+
+    const after = project(removal(crewLog()).build());
+
+    expect(after.characters[VESNA]).toBeUndefined();
+    expect(after.tracks[VOW as never]).toBeUndefined();
+  });
+
+  it('keeps what was removed answerable (A40)', () => {
+    const state = project(removal(crewLog()).build());
+
+    const history = state.launch.crewHistory[VESNA];
+    expect(history).toHaveLength(1);
+    expect(history?.[0]?.name).toBe('Vesna Kade');
+    expect(history?.[0]?.backgroundVow?.title).toBe('Find the lost survey');
+  });
+
+  it('changes nothing when the character is not there', () => {
+    const builder = new LogBuilder()
+      .add('campaign.created', {
+        name: 'Lantern Wake',
+        settings: { narrationLatitude: 'color', narrationLength: 'standard', rerollCap: 2 },
+      })
+      .add('character.removed', {
+        characterId: VESNA,
+        supersedesEventId: testEventId(1),
+        reason: 'Never existed.',
+      });
+
+    expect(project(builder.build()).launch.crewHistory[VESNA]).toBeUndefined();
+  });
+
+  it('rebuilds cold to exactly what incremental projection produced', () => {
+    const events = removal(crewLog()).build();
+
+    const cold = project(events);
+    const incremental = events.reduce((state, event) => applyEvent(state, event), emptyState());
+
+    expect(cold).toEqual(incremental);
+  });
+});
+
+describe('a revised vow reaches its track (6.0d, D-188)', () => {
+  const VOW = '77777777-7777-4777-8777-777777777777';
+
+  const withVow = () =>
+    new LogBuilder()
+      .add('campaign.created', {
+        name: 'Lantern Wake',
+        settings: { narrationLatitude: 'color', narrationLength: 'standard', rerollCap: 2 },
+      })
+      .add('track.created', {
+        kind: 'vow',
+        trackId: VOW as never,
+        title: 'Find the lost survey',
+        rank: 'formidable',
+        characterId: VESNA,
+      });
+
+  it('replaces the words and the rank, and leaves progress alone', () => {
+    const builder = withVow().add('track.advanced', {
+      trackId: VOW as never,
+      ticks: 4,
+      cause: { kind: 'ai_judgement', reason: 'A lead panned out.' },
+    });
+    const before = project(builder.build()).tracks[VOW as never];
+    expect(before?.ticks).toBe(4);
+
+    builder.add('track.revised', {
+      trackId: VOW as never,
+      title: 'Find the lost survey, and whoever buried it',
+      rank: 'extreme',
+    });
+
+    const after = project(builder.build()).tracks[VOW as never];
+
+    expect(after?.title).toBe('Find the lost survey, and whoever buried it');
+    expect(after?.rank).toBe('extreme');
+    // Rename, not re-swear.
+    expect(after?.ticks).toBe(4);
+    expect(after?.kind).toBe('vow');
+  });
+
+  it('changes nothing when the track is not there', () => {
+    const builder = withVow().add('track.revised', {
+      trackId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc' as never,
+      title: 'A track nobody created.',
+    });
+
+    expect(project(builder.build()).tracks[VOW as never]?.title).toBe('Find the lost survey');
+  });
+});
