@@ -551,7 +551,7 @@ Decisions behind this group: D-184 (crew metadata on the character), D-185 (`cre
 for crew), D-186 (a declared character recipe), D-187 (a saved draft starts a section), D-188
 (a revised background vow reaches its track).
 
-- [ ] 6.0 Prerequisites found while planning group 6 (a–f done; g–h open). Each begins with its failing test
+- [ ] 6.0 Prerequisites found while planning group 6 (a–g done; h open). Each begins with its failing test
   (3R.1a's pattern):
   - [x] **6.0a Crew acceptance is readable (D-184).** `CharacterCreatedSchema` gains optional
     `provenance` and `groundedIn`; projection carries `eventId`, `seq`, `provenance` and
@@ -583,7 +583,7 @@ for crew), D-186 (a declared character recipe), D-187 (a saved draft starts a se
     sections. The test churn predicted here did not materialise: `draftedSections` is
     optional, so every existing caller and fixture is unaffected, and no existing test saved
     a draft and then asserted `not_started`.
-  - **6.0g Delete the `rank as never` casts.** `character-commands.ts` types
+  - [x] **6.0g Delete the `rank as never` casts.** `character-commands.ts` types
     `backgroundVow.rank` as `string` and casts twice. `/launch/crew` routes through it, so it
     is a launch command path and 3R.2b's rule applies; D-175 exists to stop this drift.
   - **6.0h Declare `CHARACTER_RECIPE` (D-186).** Five distinct slots, added to

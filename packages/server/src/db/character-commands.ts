@@ -86,7 +86,7 @@ export interface CreateCharacterRequest {
    * Optional: a character can be created without one and swear their first
    * vow in play.
    */
-  readonly backgroundVow?: { readonly title: string; readonly rank: string };
+  readonly backgroundVow?: { readonly title: string; readonly rank: ChallengeRank };
   /**
    * D-89: the starship is a default asset and occupies no slot. Set false
    * for a character the fiction says has no ship of their own — ownership
@@ -144,7 +144,7 @@ export async function createCharacter(
         backgroundVow:
           request.backgroundVow === undefined
             ? { title: '', rank: 'troublesome' }
-            : { title: request.backgroundVow.title, rank: request.backgroundVow.rank as never },
+            : { title: request.backgroundVow.title, rank: request.backgroundVow.rank },
         ...(request.launch.signatureGear === undefined
           ? {}
           : { signatureGear: request.launch.signatureGear }),
@@ -213,7 +213,7 @@ export async function createCharacter(
                   ? undefined
                   : {
                       title: request.backgroundVow.title,
-                      rank: request.backgroundVow.rank as never,
+                      rank: request.backgroundVow.rank,
                     },
               ...(request.launch.signatureGear === undefined
                 ? {}
@@ -234,7 +234,7 @@ export async function createCharacter(
         kind: 'vow',
         trackId: vowTrackId,
         title: request.backgroundVow.title,
-        rank: request.backgroundVow.rank as never,
+        rank: request.backgroundVow.rank,
         characterId,
       },
       sessionId,

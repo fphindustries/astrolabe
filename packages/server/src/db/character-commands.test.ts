@@ -1,6 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { STARFORGED, type AssetId, type CharacterDraft, type CharacterId } from '@astrolabe/rules';
+import {
+  STARFORGED,
+  type AssetId,
+  type ChallengeRank,
+  type CharacterDraft,
+  type CharacterId,
+} from '@astrolabe/rules';
 import { LOCAL_PLAYER_ID, type Actor, type CampaignId, type CommandId } from '@astrolabe/shared';
 
 import { buildLaunchWorkspace } from '../launch/workspace.js';
@@ -106,6 +112,28 @@ describe.skipIf(!hasTestDatabase)('creating a character (task 3.5)', () => {
     const character = project(await readEvents(db.sql, campaignId)).characters[characterId];
     expect(character?.name).toBe('Rook Ilari');
     expect(character?.callsign).toBe('Rook');
+  });
+
+  it('refuses a rank outside the vocabulary, now that nothing casts it away (6.0g, D-175)', async () => {
+    // The cast this replaces made `rank` a `string` all the way to the event,
+    // so the compiler had nothing to check and only the append-time schema
+    // stood between a typo and a written track. The request type is now
+    // `ChallengeRank`, which is the real fix; this asserts the second line of
+    // defence still holds for a caller that reaches the command untyped, which
+    // is what the cast made every caller look like.
+    const campaignId = await newCampaign();
+
+    await expect(
+      createCharacter(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        draft: draft(),
+        backgroundVow: { title: 'Find the ship', rank: 'legendary' as ChallengeRank },
+      }),
+    ).rejects.toThrow();
+
+    expect(Object.keys(project(await readEvents(db.sql, campaignId)).characters)).toEqual([]);
   });
 
   it('writes the background vow in the same command, owned by the character', async () => {
