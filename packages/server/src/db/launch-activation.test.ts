@@ -30,6 +30,7 @@ import {
   saveSharedStarship,
   setLaunchFoundation,
   setStartingSettlement,
+  type SaveLaunchLocationRequest,
 } from './launch-commands.js';
 import { createTestDatabase, hasTestDatabase, type TestDatabase } from './testing.js';
 import { uuidv7 } from './uuid.js';
@@ -46,6 +47,15 @@ import { uuidv7 } from './uuid.js';
 
 const PLAYER: Actor = { kind: 'player', playerId: LOCAL_PLAYER_ID };
 const newId = <T>() => uuidv7() as T;
+
+/** Add a node and return the id the server minted for it (8.0a). */
+async function addLocation(
+  sql: Parameters<typeof saveLaunchLocation>[0],
+  request: SaveLaunchLocationRequest,
+): Promise<EntityId> {
+  const result = await saveLaunchLocation(sql, request);
+  return (result.response as { locationId: EntityId }).locationId;
+}
 
 const paths = STARFORGED.assets
   .filter((asset) => asset.categoryId === 'path')
@@ -127,23 +137,15 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
       campaignId,
       commandId: newId<CommandId>(),
       actor: PLAYER,
-      sector: {
-        sectorId: newId<EntityId>(),
-        name: 'Lantern Reach',
-        region: 'expanse',
-        baseline: { settlements: 2, passages: 1 },
-      },
+      sector: { name: 'Lantern Reach', region: 'expanse' },
     });
 
-    const emberHold = newId<EntityId>();
-    const stillHarbor = newId<EntityId>();
-    await saveLaunchLocation(db.sql, {
+    const emberHold = await addLocation(db.sql, {
       campaignId,
       commandId: newId<CommandId>(),
       actor: PLAYER,
       location: {
         kind: 'settlement',
-        id: emberHold,
         name: 'Ember Hold',
         location: 'deep_space',
         population: 'Hundreds',
@@ -152,13 +154,12 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
         firstLooks: ['Cold corridors, warm voices'],
       },
     });
-    await saveLaunchLocation(db.sql, {
+    const stillHarbor = await addLocation(db.sql, {
       campaignId,
       commandId: newId<CommandId>(),
       actor: PLAYER,
       location: {
         kind: 'settlement',
-        id: stillHarbor,
         name: 'Still Harbor',
         location: 'deep_space',
         population: 'Dozens',

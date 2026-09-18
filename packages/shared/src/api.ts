@@ -22,7 +22,7 @@ import {
   IncidentAcceptedSchema,
   LaunchAmendmentSchema,
   LaunchDraftSavedSchema,
-  LaunchLocationSchema,
+  LaunchLocationDetailsSchema,
   LaunchRouteSchema,
   LaunchTroubleSchema,
   SharedStarshipSchema,
@@ -340,15 +340,22 @@ export interface SaveSharedStarshipResponse {
   readonly starshipId: EntityId;
 }
 
+/**
+ * What the player states about the sector (8.0a). Its id and baseline are the
+ * server's: one campaign has one starting sector, so the id is minted on
+ * configure and reused on revise, and the baseline is the region's rule
+ * (D-180), which a request should not be able to restate.
+ */
+export const LaunchSectorDetailsSchema = z.object({
+  name: z.string().trim().min(1),
+  region: z.enum(['terminus', 'outlands', 'expanse']),
+  starId: EntityIdSchema.optional(),
+});
+export type LaunchSectorDetails = z.infer<typeof LaunchSectorDetailsSchema>;
+
 export const ConfigureLaunchSectorRequestBodySchema = z.object({
   commandId: CommandIdSchema,
-  sector: z.object({
-    sectorId: EntityIdSchema,
-    name: z.string().trim().min(1),
-    region: z.enum(['terminus', 'outlands', 'expanse']),
-    baseline: z.object({ settlements: z.int().positive(), passages: z.int().positive() }),
-    starId: EntityIdSchema.optional(),
-  }),
+  sector: LaunchSectorDetailsSchema,
 });
 export type ConfigureLaunchSectorRequestBody = z.infer<
   typeof ConfigureLaunchSectorRequestBodySchema
@@ -398,7 +405,9 @@ export interface AmendLaunchFactResponse {
 
 export const SaveLaunchLocationRequestBodySchema = z.object({
   commandId: CommandIdSchema,
-  location: LaunchLocationSchema,
+  /** The accepted node being revised. Absent to add one; the server mints its id (8.0a). */
+  locationId: EntityIdSchema.optional(),
+  location: LaunchLocationDetailsSchema,
 });
 export type SaveLaunchLocationRequestBody = z.infer<typeof SaveLaunchLocationRequestBodySchema>;
 export interface SaveLaunchLocationResponse {

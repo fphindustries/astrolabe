@@ -259,18 +259,20 @@ describe.skipIf(!hasTestDatabase)('the Campaign Launch routes (3.1–3.9)', () =
   it('turns a refused command into 422 with its reason', async () => {
     const id = await campaign();
 
-    const response = await post(`/api/campaigns/${id}/launch/sector`, {
+    await post(`/api/campaigns/${id}/launch/sector`, {
       commandId: newId(),
-      sector: {
-        sectorId: crypto.randomUUID(),
-        name: 'Lantern Reach',
-        region: 'expanse',
-        baseline: { settlements: 4, passages: 3 },
-      },
+      sector: { name: 'Lantern Reach', region: 'expanse' },
+    });
+
+    // A revision may name only a location the server minted (8.0a).
+    const response = await post(`/api/campaigns/${id}/launch/locations`, {
+      commandId: newId(),
+      locationId: crypto.randomUUID(),
+      location: { kind: 'other', name: 'Kessel Drift', description: 'A river of ice' },
     });
 
     expect(response.statusCode).toBe(422);
-    expect(response.json()).toMatchObject({ reason: 'invalid_sector_baseline' });
+    expect(response.json()).toMatchObject({ reason: 'unknown_location' });
   });
 
   it('decides a truth, rolling server-side when asked (A26)', async () => {
@@ -388,22 +390,17 @@ describe.skipIf(!hasTestDatabase)('the Campaign Launch routes (3.1–3.9)', () =
 
   it('saves the sector graph through its own routes (A31–A35)', async () => {
     const id = await campaign();
-    await post(`/api/campaigns/${id}/launch/sector`, {
+    const configured = await post(`/api/campaigns/${id}/launch/sector`, {
       commandId: newId(),
-      sector: {
-        sectorId: crypto.randomUUID(),
-        name: 'Lantern Reach',
-        region: 'expanse',
-        baseline: { settlements: 2, passages: 1 },
-      },
+      sector: { name: 'Lantern Reach', region: 'expanse' },
     });
-    const ember = crypto.randomUUID() as EntityId;
+    // The server mints the ids and says what they are (8.0a).
+    expect(configured.json()).toEqual({ sectorId: expect.any(String) });
 
     const location = await post(`/api/campaigns/${id}/launch/locations`, {
       commandId: newId(),
       location: {
         kind: 'settlement',
-        id: ember,
         name: 'Ember Hold',
         location: 'deep_space',
         population: 'Hundreds',
@@ -411,6 +408,7 @@ describe.skipIf(!hasTestDatabase)('the Campaign Launch routes (3.1–3.9)', () =
         projects: ['Rebuilding the relay'],
       },
     });
+    const ember = (location.json() as { locationId: EntityId }).locationId;
     const route = await post(`/api/campaigns/${id}/launch/routes`, {
       commandId: newId(),
       route: { from: ember, to: { kind: 'off_map', label: 'The Drift' } },

@@ -19,7 +19,6 @@ import {
   decideTruth,
   proposeLaunchCreation,
   rollLaunchOracle,
-  type LaunchRejectedError,
   saveLaunchDraft,
   setLaunchFoundation,
 } from './launch-commands.js';
@@ -154,37 +153,17 @@ describe.skipIf(!hasTestDatabase)('Campaign Launch workspace commands (3.1–3.2
     });
   });
 
-  it('stores the selected region baseline and rejects a fabricated one', async () => {
+  it('stores the baseline the selected region states (D-180, 8.0a)', async () => {
     const campaignId = await campaign();
-    const sectorId = newId<EntityId>();
     await configureLaunchSector(db.sql, {
       campaignId,
       commandId: newId<CommandId>(),
       actor: PLAYER,
-      sector: {
-        sectorId,
-        name: 'The Quiet Reach',
-        region: 'terminus',
-        baseline: { settlements: 4, passages: 3 },
-      },
+      sector: { name: 'The Quiet Reach', region: 'terminus' },
     });
-    await expect(
-      configureLaunchSector(db.sql, {
-        campaignId,
-        commandId: newId<CommandId>(),
-        actor: PLAYER,
-        sector: {
-          sectorId,
-          name: 'The Quiet Reach',
-          region: 'terminus',
-          baseline: { settlements: 1, passages: 1 },
-        },
-      }),
-    ).rejects.toMatchObject({
-      reason: 'invalid_sector_baseline',
-    } satisfies Partial<LaunchRejectedError>);
     expect(project(await readEvents(db.sql, campaignId)).launch.sector).toMatchObject({
       name: 'The Quiet Reach',
+      baseline: { settlements: 4, passages: 3 },
     });
   });
 

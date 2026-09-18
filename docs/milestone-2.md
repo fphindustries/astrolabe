@@ -757,7 +757,7 @@ proposal per object), D-197 (the map is hand-rolled SVG).
   `creation.proposed`, the sector draft arm, the history reads in §8, the `sector.configured`
   row (server-minted id and derived baseline), and `starting_settlement.selected`'s
   supersession as written.
-  - [ ] **8.0a The server owns sector and location identity (7.0a's shape).**
+  - [x] **8.0a The server owns sector and location identity (7.0a's shape).**
     `configureLaunchSector` mints `sectorId` on configure and reuses the projected one on
     revise, so a revision cannot split the aggregate. It derives `baseline` from
     `REGION_BASELINES` instead of checking a client copy: the field records the region's

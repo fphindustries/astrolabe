@@ -145,10 +145,15 @@ export const SharedStarshipSchema = z.object({
     .optional(),
 });
 const RegionSchema = z.enum(['terminus', 'outlands', 'expanse']);
-export const LaunchLocationSchema = z.discriminatedUnion('kind', [
+/**
+ * What the player states about a sector node, one arm per kind, without its
+ * id (8.0a). The id is the server's: minted when the node is added and named
+ * by a revision, so a request cannot invent one or split a node in two. The
+ * accepted fact below is these arms with the id put back.
+ */
+const LOCATION_DETAIL_ARMS = [
   z.object({
     kind: z.literal('settlement'),
-    id: EntityIdSchema,
     name: z.string().min(1),
     location: z.enum(['planetside', 'orbital', 'deep_space']),
     population: z.string().min(1),
@@ -159,7 +164,6 @@ export const LaunchLocationSchema = z.discriminatedUnion('kind', [
   }),
   z.object({
     kind: z.literal('planet'),
-    id: EntityIdSchema,
     name: z.string().min(1),
     planetClass: z.string().min(1),
     /**
@@ -180,17 +184,24 @@ export const LaunchLocationSchema = z.discriminatedUnion('kind', [
   }),
   z.object({
     kind: z.literal('star'),
-    id: EntityIdSchema,
     name: z.string().min(1),
     /** A star's detail is a single rolled description; stars are optional (A33). */
     details: z.object({ description: z.string().min(1).optional() }),
   }),
   z.object({
     kind: z.literal('other'),
-    id: EntityIdSchema,
     name: z.string().min(1),
     description: z.string().min(1),
   }),
+] as const;
+export const LaunchLocationDetailsSchema = z.discriminatedUnion('kind', LOCATION_DETAIL_ARMS);
+export type LaunchLocationDetails = z.infer<typeof LaunchLocationDetailsSchema>;
+const withId = <T extends z.ZodRawShape>(arm: z.ZodObject<T>) => arm.extend({ id: EntityIdSchema });
+export const LaunchLocationSchema = z.discriminatedUnion('kind', [
+  withId(LOCATION_DETAIL_ARMS[0]),
+  withId(LOCATION_DETAIL_ARMS[1]),
+  withId(LOCATION_DETAIL_ARMS[2]),
+  withId(LOCATION_DETAIL_ARMS[3]),
 ]);
 export const LaunchRouteEndpointSchema = z.union([
   EntityIdSchema,

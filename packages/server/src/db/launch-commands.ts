@@ -23,9 +23,12 @@ import type {
   LaunchAmendment,
   LaunchAmendmentSubject,
   LaunchClosedReason,
+  LaunchLocationDetails,
+  LaunchSectorDetails,
   LaunchRouteEndpoint,
   CampaignSettings,
   CommandId,
+  DeepReadonly,
   EntityId,
   EventId,
   PayloadFor,
@@ -456,7 +459,8 @@ export interface ConfigureLaunchSectorRequest {
   readonly campaignId: CampaignId;
   readonly commandId: CommandId;
   readonly actor: Actor;
-  readonly sector: Omit<PayloadFor<'sector.configured'>, 'provenance' | 'groundedIn'>;
+  /** What the player states; the id and baseline are the server's (8.0a). */
+  readonly sector: DeepReadonly<LaunchSectorDetails>;
 }
 
 export interface EstablishLaunchConnectionRequest {
@@ -491,7 +495,9 @@ export interface SaveLaunchLocationRequest {
   readonly campaignId: CampaignId;
   readonly commandId: CommandId;
   readonly actor: Actor;
-  readonly location: LaunchLocationInput;
+  /** The accepted node being revised; absent to add one, whose id the server mints (8.0a). */
+  readonly locationId?: EntityId;
+  readonly location: DeepReadonly<LaunchLocationDetails>;
 }
 
 export interface SaveLaunchRouteRequest {
@@ -671,25 +677,14 @@ function routeKey(route: { readonly from: EntityId; readonly to: LaunchRouteEndp
   return [route.from, to].sort().join('|');
 }
 
-type LaunchLocationInput =
-  | Omit<
-      Extract<PayloadFor<'location.added'>, { readonly kind: 'settlement' }>,
-      'provenance' | 'groundedIn'
-    >
-  | Omit<
-      Extract<PayloadFor<'location.added'>, { readonly kind: 'planet' }>,
-      'provenance' | 'groundedIn'
-    >
-  | Omit<
-      Extract<PayloadFor<'location.added'>, { readonly kind: 'star' }>,
-      'provenance' | 'groundedIn'
-    >
-  | Omit<
-      Extract<PayloadFor<'location.added'>, { readonly kind: 'other' }>,
-      'provenance' | 'groundedIn'
-    >;
-
-/** Add or revise a canonical sector node, preserving the accepted predecessor. */
+/**
+ * Add or revise a canonical sector node, preserving the accepted predecessor.
+ *
+ * The id is the server's (8.0a). An add mints it; a revision names a node the
+ * fold already holds, so a request can neither invent an id nor split one node
+ * into two by sending a fresh one. A revision keeps the node's kind: a trouble,
+ * a route or a settlement's `planetId` may already rest on what it is.
+ */
 export async function saveLaunchLocation(
   sql: Sql,
   request: SaveLaunchLocationRequest,
@@ -701,6 +696,19 @@ export async function saveLaunchLocation(
       'sector_required',
       'Configure the sector before adding locations.',
     );
+  const previous =
+    request.locationId === undefined ? undefined : state.launch.locations[request.locationId];
+  if (request.locationId !== undefined && previous === undefined)
+    throw new LaunchRejectedError(
+      'unknown_location',
+      'Only an accepted location can be revised; add a new one without an id.',
+    );
+  if (previous !== undefined && previous.kind !== request.location.kind)
+    throw new LaunchRejectedError(
+      'location_kind_changed',
+      `That location is a ${previous.kind}; a revision cannot make it a ${request.location.kind}.`,
+    );
+  const locationId = request.locationId ?? (uuidv7() as EntityId);
   if (
     request.location.kind === 'settlement' &&
     request.location.planetId !== undefined &&
@@ -712,13 +720,12 @@ export async function saveLaunchLocation(
       'A planetside settlement must reference an accepted planet.',
     );
   }
-  const previous = state.launch.locations[request.location.id] as
-    { readonly eventId?: EventId } | undefined;
   const payload: PayloadFor<'location.added'> = {
     ...request.location,
+    id: locationId,
     provenance: 'player_written' as const,
     groundedIn: [],
-    ...(previous?.eventId === undefined ? {} : { supersedesEventId: previous.eventId }),
+    ...(previous === undefined ? {} : { supersedesEventId: previous.eventId }),
   };
   return appendCommand(sql, {
     campaignId: request.campaignId,
@@ -726,11 +733,11 @@ export async function saveLaunchLocation(
     kind: previous === undefined ? 'launch.location.add' : 'launch.location.revise',
     actor: request.actor,
     events: [
-      previous?.eventId === undefined
+      previous === undefined
         ? { type: 'location.added', payload }
         : { type: 'location.revised', payload },
     ],
-    response: { locationId: request.location.id },
+    response: { locationId },
   });
 }
 
@@ -976,24 +983,24 @@ export async function establishLaunchConnection(
   });
 }
 
-/** Establish the region and its immutable rules-derived baseline. */
+/**
+ * Establish or revise the one starting sector (8.0a).
+ *
+ * The player states its name, region and star; the server supplies the rest.
+ * The id is minted once and reused on every revision, so a revision cannot
+ * split the aggregate, and the baseline is read from the region's rule
+ * (D-180) rather than checked against a copy the request sends — the field
+ * records the rule, and only the rules can state it.
+ */
 export async function configureLaunchSector(
   sql: Sql,
   request: ConfigureLaunchSectorRequest,
 ): Promise<AppendResult> {
   const state = project(await readEvents(sql, request.campaignId));
   requireLaunchOpen(state, 'The sector changes by amendment after launch.');
-  const expected = REGION_BASELINES[request.sector.region];
-  if (
-    request.sector.baseline.settlements !== expected.settlements ||
-    request.sector.baseline.passages !== expected.passages
-  ) {
-    throw new LaunchRejectedError(
-      'invalid_sector_baseline',
-      'The sector baseline must match the selected region.',
-    );
-  }
   const previous = state.launch.sector;
+  const sectorId = previous?.sectorId ?? (uuidv7() as EntityId);
+  const { settlements, passages } = REGION_BASELINES[request.sector.region];
   return appendCommand(sql, {
     campaignId: request.campaignId,
     commandId: request.commandId,
@@ -1003,14 +1010,18 @@ export async function configureLaunchSector(
       {
         type: 'sector.configured',
         payload: {
-          ...request.sector,
+          sectorId,
+          name: request.sector.name,
+          region: request.sector.region,
+          baseline: { settlements, passages },
+          ...(request.sector.starId === undefined ? {} : { starId: request.sector.starId }),
           provenance: 'player_written',
           groundedIn: [],
-          ...(previous?.eventId === undefined ? {} : { supersedesEventId: previous.eventId }),
+          ...(previous === undefined ? {} : { supersedesEventId: previous.eventId }),
         },
       },
     ],
-    response: { sectorId: request.sector.sectorId },
+    response: { sectorId },
   });
 }
 

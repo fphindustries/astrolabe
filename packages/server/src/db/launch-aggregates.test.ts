@@ -28,6 +28,7 @@ import {
   saveLaunchLocation,
   saveLaunchRoute,
   saveSharedStarship,
+  type SaveLaunchLocationRequest,
   setSectorLayout,
   setStartingSettlement,
 } from './launch-commands.js';
@@ -95,16 +96,29 @@ describe.skipIf(!hasTestDatabase)('the launch aggregates', () => {
     ...overrides,
   });
 
-  const settlement = (id: EntityId, name: string) =>
+  const settlement = (name: string) =>
     ({
       kind: 'settlement',
-      id,
       name,
       location: 'deep_space',
       population: 'Hundreds',
       authority: 'Corporate',
       projects: ['Rebuilding the relay'],
     }) as const;
+
+  /** Add a node and return the id the server minted for it (8.0a). */
+  async function addLocation(
+    campaignId: CampaignId,
+    location: SaveLaunchLocationRequest['location'],
+  ): Promise<EntityId> {
+    const result = await saveLaunchLocation(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      location,
+    });
+    return (result.response as { locationId: EntityId }).locationId;
+  }
 
   // 3R.7c — the connection (A36, D-167)
   describe('the starting connection', () => {
@@ -408,58 +422,92 @@ describe.skipIf(!hasTestDatabase)('the launch aggregates', () => {
   // 3R.7e — the sector graph (A31–A35)
   describe('the sector graph', () => {
     async function sector(campaignId: CampaignId) {
+      const result = await configureLaunchSector(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        sector: { name: 'Lantern Reach', region: 'expanse' },
+      });
+      return (result.response as { sectorId: EntityId }).sectorId;
+    }
+
+    it('mints the sector id, derives its baseline from the region, and keeps both on revision (8.0a)', async () => {
+      const campaignId = await campaign();
+      const sectorId = await sector(campaignId);
+
       await configureLaunchSector(db.sql, {
         campaignId,
         commandId: newId<CommandId>(),
         actor: PLAYER,
-        sector: {
-          sectorId: newId<EntityId>(),
-          name: 'Lantern Reach',
-          region: 'expanse',
-          baseline: { settlements: 2, passages: 1 },
-        },
+        sector: { name: 'Lantern Reach', region: 'terminus' },
       });
-    }
 
-    it('refuses a baseline that does not match the chosen region (A31)', async () => {
+      const events = await readEvents(db.sql, campaignId);
+      const configured = events.filter((event) => event.type === 'sector.configured');
+      expect(configured.map((event) => event.payload.sectorId)).toEqual([sectorId, sectorId]);
+      // The baseline is the region's rule (D-180), written by the server.
+      expect(configured.map((event) => event.payload.baseline)).toEqual([
+        { settlements: 2, passages: 1 },
+        { settlements: 4, passages: 3 },
+      ]);
+      expect(configured[1]!.payload.supersedesEventId).toBe(configured[0]!.id);
+      expect(project(events).launch.sector?.sectorId).toBe(sectorId);
+    });
+
+    it('mints a location id, and revises only a location the fold holds (8.0a)', async () => {
       const campaignId = await campaign();
+      await sector(campaignId);
+      const ember = await addLocation(campaignId, settlement('Ember Hold'));
 
+      const revised = await saveLaunchLocation(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        locationId: ember,
+        location: settlement('Ember Hold Station'),
+      });
+      expect(revised.response).toEqual({ locationId: ember });
+      const state = project(await readEvents(db.sql, campaignId));
+      expect(Object.keys(state.launch.locations)).toEqual([ember]);
+      expect(state.launch.locations[ember]?.name).toBe('Ember Hold Station');
+
+      // An id the server never minted cannot be revised into existence.
       await expect(
-        configureLaunchSector(db.sql, {
+        saveLaunchLocation(db.sql, {
           campaignId,
           commandId: newId<CommandId>(),
           actor: PLAYER,
-          sector: {
-            sectorId: newId<EntityId>(),
-            name: 'Lantern Reach',
-            region: 'expanse',
-            // Terminus numbers under an Expanse label.
-            baseline: { settlements: 4, passages: 3 },
-          },
+          locationId: newId<EntityId>(),
+          location: settlement('Invented'),
         }),
-      ).rejects.toThrow(/baseline must match/i);
+      ).rejects.toThrow(expect.objectContaining({ reason: 'unknown_location' }));
     });
 
-    it('refuses a location before a sector exists, and a route to an unknown place', async () => {
+    it('refuses a revision that changes what kind of place a location is (8.0a)', async () => {
       const campaignId = await campaign();
-      const ember = newId<EntityId>();
+      await sector(campaignId);
+      const ember = await addLocation(campaignId, settlement('Ember Hold'));
 
       await expect(
         saveLaunchLocation(db.sql, {
           campaignId,
           commandId: newId<CommandId>(),
           actor: PLAYER,
-          location: settlement(ember, 'Ember Hold'),
+          locationId: ember,
+          location: { kind: 'other', name: 'Ember Hold', description: 'Now a ruin' },
         }),
-      ).rejects.toThrow(LaunchRejectedError);
+      ).rejects.toThrow(expect.objectContaining({ reason: 'location_kind_changed' }));
+    });
+
+    it('refuses a location before a sector exists, and a route to an unknown place', async () => {
+      const campaignId = await campaign();
+
+      await expect(addLocation(campaignId, settlement('Ember Hold'))).rejects.toThrow(
+        LaunchRejectedError,
+      );
 
       await sector(campaignId);
-      await saveLaunchLocation(db.sql, {
-        campaignId,
-        commandId: newId<CommandId>(),
-        actor: PLAYER,
-        location: settlement(ember, 'Ember Hold'),
-      });
+      const ember = await addLocation(campaignId, settlement('Ember Hold'));
 
       await expect(
         saveLaunchRoute(db.sql, {
@@ -474,13 +522,7 @@ describe.skipIf(!hasTestDatabase)('the launch aggregates', () => {
     it('accepts a passage to an off-map exit (A34)', async () => {
       const campaignId = await campaign();
       await sector(campaignId);
-      const ember = newId<EntityId>();
-      await saveLaunchLocation(db.sql, {
-        campaignId,
-        commandId: newId<CommandId>(),
-        actor: PLAYER,
-        location: settlement(ember, 'Ember Hold'),
-      });
+      const ember = await addLocation(campaignId, settlement('Ember Hold'));
 
       await saveLaunchRoute(db.sql, {
         campaignId,
@@ -495,13 +537,7 @@ describe.skipIf(!hasTestDatabase)('the launch aggregates', () => {
     it('stores map layout as presentation only, and refuses an unplaceable node (A34)', async () => {
       const campaignId = await campaign();
       await sector(campaignId);
-      const ember = newId<EntityId>();
-      await saveLaunchLocation(db.sql, {
-        campaignId,
-        commandId: newId<CommandId>(),
-        actor: PLAYER,
-        location: settlement(ember, 'Ember Hold'),
-      });
+      const ember = await addLocation(campaignId, settlement('Ember Hold'));
 
       await setSectorLayout(db.sql, {
         campaignId,
@@ -528,25 +564,12 @@ describe.skipIf(!hasTestDatabase)('the launch aggregates', () => {
     it('selects a starting settlement, and refuses one that is not a settlement (A35)', async () => {
       const campaignId = await campaign();
       await sector(campaignId);
-      const ember = newId<EntityId>();
-      const planet = newId<EntityId>();
-      await saveLaunchLocation(db.sql, {
-        campaignId,
-        commandId: newId<CommandId>(),
-        actor: PLAYER,
-        location: settlement(ember, 'Ember Hold'),
-      });
-      await saveLaunchLocation(db.sql, {
-        campaignId,
-        commandId: newId<CommandId>(),
-        actor: PLAYER,
-        location: {
-          kind: 'planet',
-          id: planet,
-          name: 'Ember',
-          planetClass: 'furnace',
-          details: {},
-        },
+      const ember = await addLocation(campaignId, settlement('Ember Hold'));
+      const planet = await addLocation(campaignId, {
+        kind: 'planet',
+        name: 'Ember',
+        planetClass: 'furnace',
+        details: {},
       });
 
       await setStartingSettlement(db.sql, {
@@ -570,32 +593,22 @@ describe.skipIf(!hasTestDatabase)('the launch aggregates', () => {
 
   // 3R.9b — passage identity (D-174)
   describe('passage identity', () => {
-    async function sectorWith(campaignId: CampaignId, ids: readonly EntityId[]) {
+    async function sectorWith(campaignId: CampaignId, count: number): Promise<EntityId[]> {
       await configureLaunchSector(db.sql, {
         campaignId,
         commandId: newId<CommandId>(),
         actor: PLAYER,
-        sector: {
-          sectorId: newId<EntityId>(),
-          name: 'Lantern Reach',
-          region: 'expanse',
-          baseline: { settlements: 2, passages: 1 },
-        },
+        sector: { name: 'Lantern Reach', region: 'expanse' },
       });
-      for (const [index, id] of ids.entries())
-        await saveLaunchLocation(db.sql, {
-          campaignId,
-          commandId: newId<CommandId>(),
-          actor: PLAYER,
-          location: settlement(id, `Settlement ${index}`),
-        });
+      const ids: EntityId[] = [];
+      for (let index = 0; index < count; index++)
+        ids.push(await addLocation(campaignId, settlement(`Settlement ${index}`)));
+      return ids;
     }
 
     it('treats a passage stated the other way round as the same passage', async () => {
       const campaignId = await campaign();
-      const a = newId<EntityId>();
-      const b = newId<EntityId>();
-      await sectorWith(campaignId, [a, b]);
+      const [a, b] = (await sectorWith(campaignId, 2)) as [EntityId, EntityId];
 
       await saveLaunchRoute(db.sql, {
         campaignId,
@@ -616,8 +629,7 @@ describe.skipIf(!hasTestDatabase)('the launch aggregates', () => {
 
     it('recognises a repeated off-map exit, which object identity never could', async () => {
       const campaignId = await campaign();
-      const a = newId<EntityId>();
-      await sectorWith(campaignId, [a]);
+      const [a] = (await sectorWith(campaignId, 1)) as [EntityId];
       const drift = { from: a, to: { kind: 'off_map', label: 'The Drift' } } as const;
 
       await saveLaunchRoute(db.sql, {
@@ -656,12 +668,7 @@ describe.skipIf(!hasTestDatabase)('the launch aggregates', () => {
           campaignId,
           commandId: newId<CommandId>(),
           actor: PLAYER,
-          sector: {
-            sectorId: newId<EntityId>(),
-            name: 'Too late',
-            region: 'expanse',
-            baseline: { settlements: 2, passages: 1 },
-          },
+          sector: { name: 'Too late', region: 'expanse' },
         }),
       ).rejects.toThrow(/already in play/i);
     });

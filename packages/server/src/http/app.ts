@@ -725,14 +725,15 @@ export function buildApp({
         return undefined;
       }
       try {
-        await saveLaunchLocation(sql, {
+        const result = await saveLaunchLocation(sql, {
           campaignId: id,
           commandId: parsed.data.commandId,
           actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          ...(parsed.data.locationId === undefined ? {} : { locationId: parsed.data.locationId }),
           location: parsed.data.location,
         });
         reply.code(201);
-        return { locationId: parsed.data.location.id };
+        return result.response as SaveLaunchLocationResponse;
       } catch (error) {
         if (error instanceof LaunchRejectedError) {
           reply.code(422);
@@ -986,14 +987,14 @@ export function buildApp({
         return undefined;
       }
       try {
-        await configureLaunchSector(sql, {
+        const result = await configureLaunchSector(sql, {
           campaignId: id,
           commandId: parsed.data.commandId,
           actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
           sector: parsed.data.sector,
         });
         reply.code(201);
-        return { sectorId: parsed.data.sector.sectorId };
+        return result.response as ConfigureLaunchSectorResponse;
       } catch (error) {
         if (error instanceof LaunchRejectedError) {
           reply.code(422);
