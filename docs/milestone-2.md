@@ -622,12 +622,110 @@ criterion A22–A44. Starship modules, connection and incident belong to groups 
 
 ### 7. Shared starship
 
-- [ ] 7.1 Add the starship step with manual, roll, field-help, and whole-ship proposal
-  paths for name, appearance, history, and one or two quirks.
-- [ ] 7.2 Show integrity 5, the shared Starship asset, installed modules, their owners, and
-  validation conflicts.
-- [ ] 7.3 Remove the per-character command-vehicle grant and add compatibility projection
-  for existing characters that carry it.
+Planning group 7 turned up the same kind of defect as groups 4–6: **the starship aggregate
+is written and projected, but everything that would let a player build it with help, or
+see where it came from, is missing below the client.** `saveSharedStarship` records
+`player_written` with no grounding for every ship. The client supplies the ship's identity
+and its integrity bounds. There is no starship proposal route. The Starship's integrity
+of 5 is a literal in the validator rather than something traced to the imported rule. 7.0
+fixes these before the editor is built.
+
+Decisions behind this group: D-190 (a module keeps its owner, the crew uses it), D-191
+(installed modules are derived from the crew), D-192 (shared abilities are shown, not
+automated), D-193 (the legacy grant is neutralized in projection).
+
+- [ ] 7.0 Prerequisites found while planning group 7. Each starts with its failing test
+  (3R.1a's pattern). **Before the first schema change lands** (7.0d, 7.0f, 7.0i), update
+  `design-event-log.md`: the `creation.proposed` starship arm, `starshipHistory` in §8, and
+  the `starship.established` and `character.removed` rows that D-191 corrects.
+  - [ ] **7.0a The server owns the ship's identity and bounds.** `SaveSharedStarshipRequest`
+    takes `starshipId`, `integrity {value,min,max}` and `assetId` from the client. Mint
+    `starshipId` on establish and reuse the projected one on revise, so a revision cannot
+    split the aggregate. Derive `assetId` and integrity from the rules. Sequence this first,
+    because 7.0c–e key off it. There is exactly one ship, and no id exists before
+    establishment, so a starship proposal's `targetId` is the fixed `'starship'` rather than
+    a client-minted id (D-185's `draftId` problem avoided rather than repeated).
+  - [ ] **7.0b Integrity is traced to the imported rule.** The adapter drops Datasworn's
+    `controls`. Import the command vehicle's `integrity` condition meter (min 0, max 5,
+    value 5) into the asset schema, regenerate the artifact, and have `validateSharedStarship`
+    read it instead of the literal `5`. Check `min`/`max` too; today a client can send
+    `max: 99`. The `battered`/`cursed` impacts are imported as data only; nothing marks them
+    in Milestone 2. The new asset field is optional and additive, so existing
+    `STARFORGED.assets` consumers (MoveComposer, AssetDrawer, crew form) are untouched.
+    Regenerate the artifact with `npm run generate --workspace @astrolabe/rules`.
+  - [ ] **7.0c Proposal-aware acceptance.** Stop hardcoding `player_written` and `groundedIn: []`.
+    Acceptance names the proposal event. The server resolves `causedBy` and decides between
+    `guide_proposal` and `guide_proposal_edited` by comparing the proposal with what was
+    accepted. Field-level rolls the player kept become `groundedIn`, validated as recorded
+    `oracle.rolled` events. Two acceptance mechanisms exist today: truths' `acceptedProposal` over
+    `state.launch.proposals`, and crew's `readEventsByCommand`. D-185 said it would
+    generalize and it did not. Generalize `acceptedProposal` over the projected proposals
+    (it is already projected for A41) and state why in the note.
+  - [ ] **7.0d A per-field starship proposal.** The `starship` arm of `creation.proposed` is
+    `SharedStarshipSchema.partial()`, so the proposal has no per-field reason or grounding. It
+    has the same shape as the character arm before 6.3. Add `StarshipProposalSchema`: name,
+    history and each quirk as `ProposedTextSchema` (value, reason, the rolls behind it), and
+    appearance as `ProposedNoteSchema`. Beat 6 has the player keep one quirk and edit the
+    appearance, and still see the original. Update sample payloads (3R.4e).
+  - [ ] **7.0e A starship proposal route.** Add a `starship_proposal` purpose, a context
+    builder in `ai/context/starship.ts` over accepted facts only (truths, crew backgrounds,
+    no drafts, D-161), a `proposeStarship` command, `POST /starship-proposals` beside
+    `/truth-proposals`, the structured arm in `create-provider.ts`, and a dev-stub answer
+    (A42's stubbed path). The client rolls `{ kind: 'starship', quirkCount }` through
+    `rollLaunchRecipe` and passes the event ids as `groundedIn` (D-186's shape). Field-level
+    help is the same command with a requested-field list (6.3's shape). The grounding check
+    refuses a proposal whose name, history or quirk cites no roll from the recipe.
+  - [ ] **7.0f The starship revision chain is readable.** Add `LaunchState.starshipHistory`,
+    oldest first, written by the `starship.revised` arm. It has the same shape as
+    `truthHistory` and `crewHistory` (A40; beat 6 tests "ship proposal and revision").
+  - [ ] **7.0g The starship draft admits incomplete work.** The draft arm is
+    `SharedStarshipSchema.partial()`, whose inner `min(1)` and quirk bounds refuse a draft
+    that has one quirk blank. Loosen it as 6.0e did for crew. D-182's precedence is
+    per section, because there is one ship.
+  - [ ] **7.0h Play context knows the ship.** `renderState` reads no `launch.starship`, so a
+    launched campaign would be narrated by a Guide that does not know the *Lantern Wake* by
+    name. This is D-183's defect again. Render name, appearance, history, quirks, integrity
+    and installed modules with their owners. Assert that each one arrives.
+  - [ ] **7.0i Installed modules are derived from the crew (D-190, D-191).** Take `modules`
+    out of the accepted payload's inputs and out of the request body. Derive the list and
+    its owners in the read layer from the crew's module-category assets. `starship.established`
+    events already written with a `modules` list stay readable, but the list is ignored.
+    `module_owner_unknown` is then unreachable by construction, and `module_invalid`'s
+    category check is true by construction. Both leave `validateSharedStarship`.
+    `module_duplicate` moves to the Crew section, reported on the later-created of two
+    characters holding the same module (D-191). Assert that revising Vesna's final asset, or
+    removing her, updates the ship with no second write.
+- [ ] 7.1 Add the Starship step with Write, Roll, field-level Guide help, and a whole-ship
+  proposal for name, appearance, history, and one or two quirks. Every transition lives in
+  `starship-form.ts`, not the `.tsx` (the lesson from groups 5 and 6). That covers the
+  quirk count, keeping or discarding a proposed field, and carrying the proposal id only
+  while the selection is still the Guide's. Field Roll uses `rollLaunchOracle` against the
+  recipe's own oracles, with chips resolved by the existing `launchChips` walk. Save and
+  continue and D-182 precedence apply. Proposal actions are disabled when there is no
+  provider, and Write/Roll remain (A42). `SECTION_ARRIVES_IN.starship` becomes null. The
+  placeholder example, and the tests that name it, move to Sector.
+- [ ] 7.2 Show integrity from the imported meter, the shared Starship asset with its
+  abilities (the first enabled by default), installed modules labelled with their owners,
+  and the server's `readiness.sections.starship.blockers` beside the fields they name.
+  Show the visible revision history from `starshipHistory`. Nothing here is a second
+  readiness algorithm (D-176). In play, the ship appears once as a crew-level panel, not
+  under each character, with its abilities as Reference (D-192). Each module is labelled
+  with its owner and usable by the crew (D-190).
+- [ ] 7.3 Remove the per-character grant in one change: `CHARACTER_CREATION.grants`,
+  `grantedAssets`, the `grantCommandVehicle` flag and its call sites, and
+  `CharacterCreationScreen`'s `GRANTED`. Update the creation prompt's "granted separately"
+  line. Apply D-193: `legacyStarshipGrant` in the `character.created` arm,
+  keyed by a `rules`-exported id constant. First, a failing test: a legacy incomplete
+  campaign whose characters carry the grant must not report `forbidden_category` or
+  `category_not_allowed` for it. Today it does, so A43's Finish campaign launch can never
+  reach `ready` for such a campaign. Then assert that the three built-in fixtures still
+  open in play and the golden session still passes. State the one expected change: in the
+  fixtures' world context, the Starship moves from each character's asset list to D-193's
+  single crew line. Assert that line, rather than claiming the context is unchanged.
+
+**Scope fences.** Starship impacts, Withstand Damage and Repair against integrity, support
+vehicles, and buying modules after launch are not in any of A22–A44. Ship details are
+proposed only from the declared starship recipe (D-164). The Guide chooses no table.
 
 ### 8. Starting sector
 
