@@ -1,13 +1,16 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type {
   CreateCharacterResponse,
+  ProposeCharacterResponse,
   RemoveCharacterResponse,
   ReviseCharacterResponse,
   RollLaunchOracleResponse,
+  RollLaunchRecipeResponse,
 } from '@astrolabe/shared';
 
 import { apiDelete, apiPost, apiPut } from './http.js';
 import { useInvalidateCampaign } from './campaigns.js';
+import { aiKeys } from './narration.js';
 
 /**
  * The Campaign Launch crew commands (6.1, 6.4).
@@ -107,5 +110,56 @@ export function useRemoveLaunchCharacter(campaignId: string) {
         { commandId: crypto.randomUUID(), reason: input.reason },
       ),
     onSuccess: invalidate,
+  });
+}
+
+/**
+ * Ask the Guide for a whole crew member (6.3, D-185, D-186).
+ *
+ * Two commands, in this order: the declared character recipe is rolled first,
+ * and its event ids ground the proposal. The rolls are the player's either
+ * way — if the provider is unavailable the dice are still on the table, which
+ * is the point of rolling them separately (A42).
+ *
+ * An outage is an answer, not a thrown error: the response comes back
+ * `ok: false` with a reason the panel shows, and every manual path stays
+ * exactly as usable as it was.
+ */
+export function useProposeCrewMember(campaignId: string) {
+  const invalidate = useInvalidateCampaign(campaignId);
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: {
+      readonly targetId: string;
+      readonly concept: string;
+      readonly fields?: readonly string[];
+    }): Promise<{
+      readonly commandId: string;
+      readonly groundedIn: readonly string[];
+      readonly response: ProposeCharacterResponse;
+    }> => {
+      const rolled = await apiPost<RollLaunchRecipeResponse>(
+        `/campaigns/${campaignId}/launch/recipe-rolls`,
+        { commandId: crypto.randomUUID(), selector: { kind: 'character' } },
+      );
+      const groundedIn = rolled.results.map((result) => result.eventId);
+      const commandId = crypto.randomUUID();
+      const response = await apiPost<ProposeCharacterResponse>(
+        `/campaigns/${campaignId}/character-proposals`,
+        {
+          commandId,
+          concept: input.concept,
+          targetId: input.targetId,
+          groundedIn,
+          ...(input.fields === undefined ? {} : { fields: input.fields }),
+        },
+      );
+      return { commandId, groundedIn, response };
+    },
+    onSettled: () => {
+      invalidate();
+      void queryClient.invalidateQueries({ queryKey: aiKeys.status });
+    },
   });
 }

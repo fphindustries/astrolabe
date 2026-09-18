@@ -6,11 +6,18 @@ import {
   type AssetId,
   type ChallengeRank,
   type CharacterId,
+  STAT_IDS,
   type CreationSlot,
   type LaunchCharacterProblem,
   type StatId,
 } from '@astrolabe/rules';
-import type { CampaignState, CharacterState, EventId, LaunchDraftFor } from '@astrolabe/shared';
+import type {
+  CampaignState,
+  CharacterState,
+  EventId,
+  LaunchDraftFor,
+  PayloadFor,
+} from '@astrolabe/shared';
 
 import { assignStat, emptyDraft } from '../characters/creation-form.js';
 
@@ -476,4 +483,212 @@ export function isDirty(
   baseline: readonly CrewMemberForm[],
 ): boolean {
   return JSON.stringify(toDraftSnapshot(crew)) !== JSON.stringify(toDraftSnapshot(baseline));
+}
+
+// ---------------------------------------------------------------------------
+// The Guide's proposal (6.3, D-185)
+// ---------------------------------------------------------------------------
+
+/** A whole proposed crew member, as the server stored it. */
+export type CrewProposal = Extract<
+  PayloadFor<'creation.proposed'>,
+  { readonly targetKind: 'character' }
+>['proposal'];
+
+/**
+ * The fields a proposal can fill, in the order the review reads them.
+ *
+ * Named separately from the form's own keys because one of them — `vow` —
+ * covers two form fields and `assets` covers three slots. What the player
+ * keeps or edits is the field, not the storage.
+ */
+export const CREW_PROPOSAL_FIELDS = [
+  'name',
+  'callsign',
+  'pronouns',
+  'appearance',
+  'backstory',
+  'stats',
+  'assets',
+  'vow',
+  'hooks',
+  'gear',
+] as const;
+export type CrewProposalField = (typeof CREW_PROPOSAL_FIELDS)[number];
+
+export const PROPOSAL_FIELD_LABELS: Readonly<Record<CrewProposalField, string>> = {
+  name: 'Name',
+  callsign: 'Callsign',
+  pronouns: 'Pronouns',
+  appearance: 'Appearance',
+  backstory: 'Backstory',
+  stats: 'Stats',
+  assets: 'Assets',
+  vow: 'Background vow',
+  hooks: 'Hooks',
+  gear: 'Signature gear',
+};
+
+/**
+ * Which fields this proposal actually fills.
+ *
+ * Pronouns and gear only when the Guide offered them: D-131 keeps pronouns the
+ * player's own words or nothing, so an absent field stays untouched and
+ * unmarked rather than being overwritten with a blank.
+ */
+export function proposedFields(proposal: CrewProposal): readonly CrewProposalField[] {
+  return CREW_PROPOSAL_FIELDS.filter(
+    (field) =>
+      (field !== 'pronouns' || proposal.pronouns !== undefined) &&
+      (field !== 'gear' || proposal.signatureGear !== undefined),
+  );
+}
+
+/** The Guide's one-line reason for a field, for the review to show beside it. */
+export function proposalReason(proposal: CrewProposal, field: CrewProposalField): string {
+  switch (field) {
+    case 'name':
+      return proposal.name.reason;
+    case 'callsign':
+      return proposal.callsign.reason;
+    case 'pronouns':
+      return proposal.pronouns?.reason ?? '';
+    case 'appearance':
+      return proposal.appearance.reason;
+    case 'backstory':
+      return proposal.backstory.reason;
+    case 'stats':
+      return proposal.stats.reason;
+    case 'assets':
+      return proposal.assets.map((asset) => asset.reason).join(' ');
+    case 'vow':
+      return proposal.backgroundVow.reason;
+    case 'hooks':
+      return proposal.hooks.map((hook) => hook.reason).join(' ');
+    case 'gear':
+      return proposal.signatureGear?.reason ?? '';
+  }
+}
+
+/** The rolls a proposed field cites, for its chips (A41). */
+export function proposalGrounding(
+  proposal: CrewProposal,
+  field: CrewProposalField,
+): readonly EventId[] {
+  switch (field) {
+    case 'name':
+      return proposal.name.groundedIn;
+    case 'callsign':
+      return proposal.callsign.groundedIn;
+    case 'backstory':
+      return proposal.backstory.groundedIn;
+    case 'hooks':
+      return proposal.hooks.flatMap((hook) => hook.groundedIn);
+    default:
+      return [];
+  }
+}
+
+/**
+ * Apply the named fields of a proposal to a crew member.
+ *
+ * A subset, always: beat 5 asks the Guide for help with hooks and a vow and
+ * keeps everything else as written. Passing every proposed field is beat 3's
+ * whole-object acceptance — the same function, not a second path (D-166).
+ *
+ * The rolls behind the proposal are recorded whichever fields are taken, so
+ * the accepted character cites what it was built on even when the player kept
+ * only one of the Guide's answers.
+ */
+export function applyProposal(
+  member: CrewMemberForm,
+  proposal: CrewProposal,
+  fields: readonly CrewProposalField[],
+  prompts: readonly { readonly eventId: EventId; readonly text: string }[] = [],
+): CrewMemberForm {
+  const take = new Set(fields);
+  let next: CrewMemberForm = { ...member };
+  if (take.has('name')) next = { ...next, name: proposal.name.value };
+  if (take.has('callsign')) next = { ...next, callsign: proposal.callsign.value };
+  if (take.has('pronouns') && proposal.pronouns !== undefined)
+    next = { ...next, pronouns: proposal.pronouns.value };
+  if (take.has('appearance')) next = { ...next, appearance: proposal.appearance.value };
+  if (take.has('backstory'))
+    next = {
+      ...next,
+      backstoryMode: proposal.backstory.value.kind,
+      // The player's own words survive a proposal that discovers in play, the
+      // same way they survive the radio button (`setBackstoryMode`).
+      backstoryText:
+        proposal.backstory.value.kind === 'written'
+          ? proposal.backstory.value.text
+          : next.backstoryText,
+    };
+  if (take.has('stats')) next = { ...next, stats: proposal.stats.value };
+  if (take.has('assets'))
+    next = {
+      ...next,
+      slotSelections: slotSelectionsOf(proposal.assets.map((asset) => asset.assetId)),
+    };
+  if (take.has('vow'))
+    next = {
+      ...next,
+      vowTitle: proposal.backgroundVow.title,
+      vowRank: proposal.backgroundVow.rank,
+    };
+  if (take.has('hooks')) next = { ...next, hooks: proposal.hooks.map((hook) => hook.text) };
+  if (take.has('gear') && proposal.signatureGear !== undefined)
+    next = { ...next, signatureGear: proposal.signatureGear.value };
+  const known = new Set(next.prompts.map((prompt) => prompt.eventId));
+  return {
+    ...next,
+    prompts: [...next.prompts, ...prompts.filter((prompt) => !known.has(prompt.eventId))],
+  };
+}
+
+/**
+ * Which applied fields the player has since changed (A41, beat 3).
+ *
+ * "He changes the final asset to Sensor Array. The UI marks that field as
+ * player-edited and preserves the proposal's original choice and reason." So
+ * this compares what is in the form against what was proposed rather than
+ * tracking edits as they happen — a field edited back to the Guide's value is
+ * the Guide's value again, and saying otherwise would be a claim about the
+ * player's history rather than about the character.
+ */
+export function editedFields(
+  member: CrewMemberForm,
+  proposal: CrewProposal,
+  applied: readonly CrewProposalField[],
+): readonly CrewProposalField[] {
+  const asProposed = applyProposal(member, proposal, applied);
+  return applied.filter((field) => !sameField(member, asProposed, field));
+}
+
+function sameField(a: CrewMemberForm, b: CrewMemberForm, field: CrewProposalField): boolean {
+  switch (field) {
+    case 'name':
+      return a.name === b.name;
+    case 'callsign':
+      return a.callsign === b.callsign;
+    case 'pronouns':
+      return a.pronouns === b.pronouns;
+    case 'appearance':
+      return a.appearance === b.appearance;
+    case 'backstory':
+      return (
+        a.backstoryMode === b.backstoryMode &&
+        (a.backstoryMode === 'discover_in_play' || a.backstoryText === b.backstoryText)
+      );
+    case 'stats':
+      return STAT_IDS.every((statId) => a.stats[statId] === b.stats[statId]);
+    case 'assets':
+      return JSON.stringify(chosenAssets(a)) === JSON.stringify(chosenAssets(b));
+    case 'vow':
+      return a.vowTitle === b.vowTitle && a.vowRank === b.vowRank;
+    case 'hooks':
+      return JSON.stringify(a.hooks) === JSON.stringify(b.hooks);
+    case 'gear':
+      return a.signatureGear === b.signatureGear;
+  }
 }

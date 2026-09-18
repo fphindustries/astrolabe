@@ -5,14 +5,17 @@ import type { LaunchWorkspaceResponse } from '@astrolabe/shared';
 
 import {
   useCreateLaunchCharacter,
+  useProposeCrewMember,
   useReviseLaunchCharacter,
   useRollLaunchOracle,
 } from '../api/crew.js';
+import { useAiStatus } from '../api/narration.js';
 import { useSaveLaunchDraft } from '../api/launch.js';
 import { AssetPicker } from '../characters/AssetPicker.js';
 import { ErrorSummary } from '../ui/ErrorSummary.js';
 import { fieldAnchorId } from '../ui/error-summary.js';
 
+import { CrewProposalPanel, proposalFailureText } from './CrewProposalPanel.js';
 import { launchErrorSummary } from './errors.js';
 import {
   BACKSTORY_PROMPT_ORACLE,
@@ -22,6 +25,8 @@ import {
   STEP_LABELS,
   addHook,
   addPrompt,
+  applyProposal,
+  editedFields,
   emptyCrewMember,
   initialCrewForm,
   isCrewMemberComplete,
@@ -40,6 +45,8 @@ import {
   toAcceptRequest,
   toDraftSnapshot,
   type CrewMemberForm,
+  type CrewProposal,
+  type CrewProposalField,
   type CrewStep,
 } from './crew-form.js';
 import styles from './CrewSection.module.css';
@@ -75,10 +82,24 @@ export function CrewSection({
   const [step, setStep] = useState<CrewStep>('identity');
   const [saved, setSaved] = useState<string | undefined>(undefined);
 
+  const [concept, setConcept] = useState('');
+  const [held, setHeld] = useState<
+    | {
+        readonly draftId: string;
+        readonly proposal: CrewProposal;
+        readonly applied: readonly CrewProposalField[];
+        readonly prompts: readonly { readonly eventId: string; readonly text: string }[];
+      }
+    | undefined
+  >(undefined);
+  const [askFailure, setAskFailure] = useState<string | undefined>(undefined);
+
   const saveDraft = useSaveLaunchDraft<'crew'>(campaignId);
   const create = useCreateLaunchCharacter(campaignId);
   const revise = useReviseLaunchCharacter(campaignId);
   const rollPrompt = useRollLaunchOracle(campaignId);
+  const propose = useProposeCrewMember(campaignId);
+  const guide = useAiStatus();
   const failure = create.error ?? revise.error ?? saveDraft.error ?? rollPrompt.error;
 
   const open = crew.find((member) => member.draftId === openId);
@@ -146,6 +167,66 @@ export function CrewSection({
         }}
         onAdd={addMember}
       />
+
+      {open !== undefined && (
+        <CrewProposalPanel
+          concept={concept}
+          onConcept={setConcept}
+          proposal={held?.draftId === open.draftId ? held.proposal : undefined}
+          chips={workspace.chips}
+          applied={held?.draftId === open.draftId ? held.applied : []}
+          edited={
+            held?.draftId === open.draftId ? editedFields(open, held.proposal, held.applied) : []
+          }
+          failure={askFailure}
+          pending={propose.isPending}
+          aiAvailable={guide.data?.available === true}
+          aiReason={
+            guide.data?.lastFailure === undefined
+              ? undefined
+              : proposalFailureText(guide.data.lastFailure)
+          }
+          onAsk={(fields) => {
+            const member = open;
+            setAskFailure(undefined);
+            propose.mutate(
+              {
+                targetId: member.characterId ?? member.draftId,
+                concept,
+                ...(fields === undefined ? {} : { fields: [...fields] }),
+              },
+              {
+                onSuccess: (result) => {
+                  if (!result.response.ok) {
+                    setAskFailure(proposalFailureText(result.response));
+                    setHeld(undefined);
+                    return;
+                  }
+                  setHeld({
+                    draftId: member.draftId,
+                    proposal: result.response.proposal,
+                    applied: [],
+                    prompts: result.response.rolls.map((roll) => ({
+                      eventId: roll.eventId,
+                      text: roll.rowText,
+                    })),
+                  });
+                },
+              },
+            );
+          }}
+          onApply={(fields) => {
+            if (held === undefined) return;
+            edit(applyProposal(open, held.proposal, fields, held.prompts as never));
+            setHeld({ ...held, applied: fields });
+          }}
+          onRestore={(field) => {
+            if (held === undefined) return;
+            edit(applyProposal(open, held.proposal, [field]));
+          }}
+          onDismiss={() => setHeld(undefined)}
+        />
+      )}
 
       {open === undefined ? (
         <p className={styles.empty}>

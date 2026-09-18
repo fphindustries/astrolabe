@@ -7,7 +7,12 @@ import {
   CREW_SLOTS,
   addHook,
   addPrompt,
+  applyProposal,
   chosenAssets,
+  editedFields,
+  proposalGrounding,
+  proposalReason,
+  proposedFields,
   emptyCrewMember,
   initialCrewForm,
   isCrewMemberComplete,
@@ -26,7 +31,22 @@ import {
   toAcceptRequest,
   toDraftSnapshot,
   type CrewMemberForm,
+  type CrewProposal,
 } from './crew-form.js';
+
+/** The launch-field half of a complete member, for reuse in the proposal tests. */
+function completeFields() {
+  const member = complete();
+  return {
+    name: member.name,
+    callsign: member.callsign,
+    appearance: member.appearance,
+    backstoryText: member.backstoryText,
+    vowTitle: member.vowTitle,
+    vowRank: member.vowRank,
+    slotSelections: member.slotSelections,
+  };
+}
 
 /**
  * The Crew form's transitions (6.1).
@@ -319,5 +339,145 @@ describe('what the form sends', () => {
 
     expect(isDirty(crew, crew)).toBe(false);
     expect(isDirty([setVow(complete(), { title: 'Something else' })], crew)).toBe(true);
+  });
+});
+
+describe('the Guide’s proposal (6.3, D-185)', () => {
+  const proposal = (overrides: Record<string, unknown> = {}) =>
+    ({
+      concept: 'A pilot who trusts charts more than institutions.',
+      name: { value: 'Vesna Kade', reason: 'Both name rolls.', groundedIn: ['evt-given'] },
+      callsign: { value: 'Map', reason: 'Her crew shortened it.', groundedIn: ['evt-callsign'] },
+      appearance: { value: 'Weathered flight jacket.', reason: 'A working pilot.' },
+      backstory: {
+        value: { kind: 'written', text: 'Flew charts nobody else trusted.' },
+        reason: 'From both prompts.',
+        groundedIn: ['evt-backstory-1', 'evt-backstory-2'],
+      },
+      stats: {
+        value: { edge: 3, heart: 2, iron: 2, shadow: 1, wits: 1 },
+        reason: 'A pilot lives on edge.',
+      },
+      assets: [
+        { assetId: paths[0], reason: 'She flies.' },
+        { assetId: paths[1], reason: 'She navigates.' },
+        { assetId: companion, reason: 'Someone rides along.' },
+      ],
+      backgroundVow: {
+        title: 'Find the lost survey',
+        rank: 'formidable',
+        reason: 'The heart of the concept.',
+      },
+      hooks: [
+        {
+          text: 'She still hears the channel.',
+          reason: 'The first prompt.',
+          groundedIn: ['evt-backstory-1'],
+        },
+      ],
+      ...overrides,
+    }) as never as CrewProposal;
+
+  it('offers pronouns and gear only when the Guide gave them', () => {
+    // D-131: an absent field stays the player's, untouched and unmarked,
+    // rather than being overwritten with a blank.
+    expect(proposedFields(proposal())).not.toContain('pronouns');
+    expect(proposedFields(proposal())).not.toContain('gear');
+    expect(
+      proposedFields(proposal({ pronouns: { value: 'she/her', reason: 'The concept says so.' } })),
+    ).toContain('pronouns');
+  });
+
+  it('applies the whole proposal, which is beat 3', () => {
+    const member = applyProposal(emptyCrewMember('d'), proposal(), proposedFields(proposal()));
+
+    expect(member.name).toBe('Vesna Kade');
+    expect(member.appearance).toBe('Weathered flight jacket.');
+    expect(member.backstoryText).toBe('Flew charts nobody else trusted.');
+    expect(chosenAssets(member)).toEqual([paths[0], paths[1], companion]);
+    expect(isCrewMemberComplete(member)).toBe(true);
+  });
+
+  it('applies only the fields asked for, which is beat 5', () => {
+    // "Juno starts manually, and asks the Guide for help only with hooks and a
+    // background vow." Everything the player wrote stays theirs.
+    const written = {
+      ...emptyCrewMember('d'),
+      name: 'Juno Marr',
+      appearance: 'Grease to the elbow.',
+    };
+
+    const member = applyProposal(written, proposal(), ['hooks', 'vow']);
+
+    expect(member.name).toBe('Juno Marr');
+    expect(member.appearance).toBe('Grease to the elbow.');
+    expect(member.vowTitle).toBe('Find the lost survey');
+    expect(member.hooks).toEqual(['She still hears the channel.']);
+  });
+
+  it('keeps the player’s written backstory when the Guide discovers it in play', () => {
+    const written = { ...emptyCrewMember('d'), backstoryText: 'Words the player typed.' };
+
+    const member = applyProposal(
+      written,
+      proposal({
+        backstory: {
+          value: { kind: 'discover_in_play' },
+          reason: 'The concept says so.',
+          groundedIn: [],
+        },
+      }),
+      ['backstory'],
+    );
+
+    expect(member.backstoryMode).toBe('discover_in_play');
+    expect(member.backstoryText).toBe('Words the player typed.');
+  });
+
+  it('records the rolls behind the proposal, whichever fields were taken', () => {
+    const member = applyProposal(
+      emptyCrewMember('d'),
+      proposal(),
+      ['hooks'],
+      [{ eventId: 'evt-backstory-1' as never, text: 'A debt unpaid.' }],
+    );
+
+    expect(toAcceptRequest({ ...member, ...completeFields() })?.groundedIn).toEqual([
+      'evt-backstory-1',
+    ]);
+  });
+
+  it('marks the fields the player changed, and keeps the rest the Guide’s (beat 3, A41)', () => {
+    const applied = proposedFields(proposal());
+    const kept = applyProposal(emptyCrewMember('d'), proposal(), applied);
+
+    expect(editedFields(kept, proposal(), applied)).toEqual([]);
+
+    // Beat 3 exactly: he changes the final asset and keeps everything else.
+    const edited = selectSlot(kept, CREW_SLOTS[2]!.id, paths[2] as AssetId);
+
+    expect(editedFields(edited, proposal(), applied)).toEqual(['assets']);
+  });
+
+  it('stops calling a field edited once it is put back', () => {
+    // The mark is about the character, not about the player's history: a field
+    // edited back to the Guide's value is the Guide's value again.
+    const applied = proposedFields(proposal());
+    const kept = applyProposal(emptyCrewMember('d'), proposal(), applied);
+    const away = { ...kept, name: 'Someone else' };
+
+    expect(editedFields(away, proposal(), applied)).toEqual(['name']);
+    expect(editedFields({ ...away, name: 'Vesna Kade' }, proposal(), applied)).toEqual([]);
+  });
+
+  it('carries each field’s own reason and grounding for the review to show', () => {
+    expect(proposalReason(proposal(), 'vow')).toBe('The heart of the concept.');
+    expect(proposalGrounding(proposal(), 'backstory')).toEqual([
+      'evt-backstory-1',
+      'evt-backstory-2',
+    ]);
+    // Appearance is read off the concept, so it cites nothing rather than
+    // citing an empty roll.
+    expect(proposalGrounding(proposal(), 'appearance')).toEqual([]);
   });
 });

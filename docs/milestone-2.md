@@ -604,7 +604,7 @@ for crew), D-186 (a declared character recipe), D-187 (a saved draft starts a se
   in words that an omitted pronoun is not guessed (D-131) and that discover-in-play is an
   explicit state, not a missing required field. Field-level **Roll** for backstory prompts
   through the existing single-oracle endpoint (3R.5c), its chip resolved by 6.0b.
-- [ ] 6.3 Update concept-first proposals and field-level help to fill the same draft.
+- [x] 6.3 Update concept-first proposals and field-level help to fill the same draft.
   `characterProposalSchema`, `CREATION_RULES` and `checkCharacterProposal` gain `appearance`,
   `backstory` and optional `signatureGear` — beat 3 keeps the *proposed* appearance and
   backstory, and today the schema has neither. The command writes `creation.proposed`
