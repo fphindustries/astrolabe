@@ -106,6 +106,12 @@ export function buildCharacterProposalRequest(
     context.length > 0 ? `<campaign>\n${context}\n</campaign>` : '',
     `<oracle_rolls>\n${rolls.map((r) => `- ${r.key} (${r.label}): ${r.rowText}`).join('\n')}\n</oracle_rolls>`,
     `<concept>\n${concept}\n</concept>`,
+    // Beat 5: the player wanted help with two fields, not the whole sheet. The
+    // answer stays complete, so the review screen can show it beside what they
+    // already have; this only says where to put the thought.
+    fields !== undefined && fields.length > 0
+      ? `<wants_help_with>\n${fields.join(', ')}\n</wants_help_with>`
+      : '',
     'Propose the build.',
   ]
     .filter((part) => part.length > 0)
