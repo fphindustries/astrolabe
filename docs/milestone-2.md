@@ -942,14 +942,142 @@ every roll it cites comes from a declared recipe.
 
 ### 9. Connection, incident, and launch
 
+Planning group 9 found the same shape of gap as groups 4–8, spread across three objects.
+**The connection** is established by its own command but cannot be revised, although its
+refusal message says to revise it. It records no grounding, and its proposal arm is
+`ConnectionSchema.partial()`, the shape the starship arm had before 7.0d.
+**The incident** can be proposed and can be accepted, but nothing connects the two:
+`incident.proposed` is not projected, so a proposal is lost on reload and its chips never
+reach the workspace. A chosen option names what it draws on by entity and truth id, while
+acceptance wants the event ids of accepted facts, and acceptance always records
+`player_written`. **Swearing the vow** has no path at all. Activation records a
+`pendingVow`, but no command turns it into the real `Swear an Iron Vow` move with a shared
+track. The play screen's scene header also resolves a location only against entities, so
+Session 1 would open at an unnamed place: 8.0j's defect, on the client. 9.0 fixes these
+before the screens are built.
+
+Decisions behind this group: D-199 (the connection's track stays a vow), D-200 (the vow
+choices are made on the review page), D-201 (one move command swears the pending vow),
+D-202 (`track.revised` carries participants).
+
+- [ ] 9.0 Prerequisites found while planning group 9. Each starts with its failing test
+  (3R.1a's pattern). **Before the first schema change lands** (9.0b, 9.0e, 9.0g, 9.0h),
+  update `design-event-log.md`: the connection and incident arms of `creation.proposed`,
+  `incident.proposed`'s projection, the incident's optional vow choices, `track.revised`'s
+  participants, the vow track's `incidentId`, and `launch.activation.vowTrackId` in §8.
+  - [ ] **9.0a The connection can be revised (D-202).** Add `reviseLaunchConnection` and
+    its route, guarded by `requireLaunchOpen`, filling `supersedesEventId` from the
+    projected connection rather than trusting the client. A changed name or rank changes
+    the track's title and rank, and a changed sharing crew changes its participants. Both
+    go through `track.revised` in the same command, as D-188 does for a background vow.
+    `establishLaunchConnection`'s refusal then points at a command that exists.
+  - [ ] **9.0b A per-field connection proposal (7.0d's shape).** `ConnectionProposalSchema`
+    has the NPC's name, role, goal, first look and disposition, each as
+    `ProposedTextSchema` with its reason and rolls. The rank and the sharing crew are the
+    player's (beat 10), so the Guide proposes neither. The target is the fixed
+    `'connection'`, because there is one starting connection. Update the sample payloads
+    (3R.4e).
+  - [ ] **9.0c A connection proposal route (8.0e's shape).** Add a `connection_proposal`
+    purpose, a context builder over accepted facts only (truths, crew, the starting
+    settlement and its trouble; no drafts, D-161), `proposeConnection`,
+    `POST /connection-proposals`, the structured arm in `create-provider.ts`, and a dev-stub
+    answer. The client rolls `STARTING_CONNECTION_RECIPE` through `rollLaunchRecipe`, and
+    the rolls are matched by recorded slot (8.5). The grounding check refuses a field that
+    cites no roll.
+  - [ ] **9.0d Proposal-aware connection acceptance (7.0c again).** Establishing or
+    revising names the proposal event, and `heldProposal` resolves it. The server decides
+    `guide_proposal` or `guide_proposal_edited` field by field and grounds the connection in
+    the rolls behind the kept fields. The NPC's `entity.established` carries the same
+    grounding, with its goal, first look and disposition as fields. D-167 holds: nothing
+    rolls or fabricates a result for the automatic strong hit.
+  - [ ] **9.0e Incident proposals are readable and launch-scoped.** Project the latest
+    `incident.proposed` into the launch fold, so a proposal survives a reload and its rolls
+    resolve as chips (A41). `proposeIncidents` refuses a campaign whose launch is closed
+    (D-178). It rolls the declared `INCITING_INCIDENT_RECIPE` once per option through the
+    recipe path, so each roll records its slot (8.5).
+  - [ ] **9.0f Accepting an incident names its option.** `acceptLaunchIncident` takes the
+    proposal event and the chosen option's index. The server resolves what the option draws
+    on (truth, location, character and launch-fact ids) to the **event ids** of those
+    accepted facts for `citedFactEventIds`. It decides `guide_proposal` or
+    `guide_proposal_edited` by comparing the accepted words and rank with the option's, and
+    grounds the incident in the option's rolls. A written incident still works without a
+    proposal. The server mints the `incidentId` and reuses it on revision (8.0a's lesson).
+    `citedFactEventIds` must name accepted launch facts, from the same set activation cites
+    (3R.9f), not merely non-draft events: today an `oracle.rolled` would pass.
+  - [ ] **9.0g The vow choices are optional until the review (D-200).** On the incident,
+    `rollerId`, `participants` and `openingScene` become optional. Beat 11 accepts the words,
+    the citations and the option's proposed rank, and beat 12 picks the rest. **Rank stays
+    required** because it sizes the vow track. The review page confirms it or changes it,
+    through the same revision. Readiness gains an
+    `incident_vow_choices_missing` blocker, so launch waits for them. A revision command
+    sets them, with the roller and participants checked as crew. The opening scene's
+    location is stamped by the server as the starting settlement (D-168: "at the starting
+    settlement"), never taken from the client, and activation writes the scene there. The
+    fields become optional, which is additive, so no upcaster is owed.
+  - [ ] **9.0h One move command swears the pending vow (D-201).** `invokeMove` gains a
+    pending-vow mode for `Swear an Iron Vow`. It is refused unless the campaign is active
+    with an unsworn `pendingVow`, the actor is its roller, and the roll is +heart. In one
+    command it writes the vow's `track.created`: kind vow, the incident's words and rank,
+    the roller as `characterId`, the participants, and a new optional `incidentId`. The
+    move's own events follow. Effects apply to the roller alone through the existing
+    `target: 'actor'` spec (A39). The `track.created` arm sets a new
+    `launch.activation.vowTrackId` when its `incidentId` matches the pending vow. That is the
+    field the guard reads, as 8.0h's `startingSettlementEventId` is, and a second swear is
+    refused. The ordinary checked narration path narrates the result.
+  - [ ] **9.0i Play knows where Session 1 opens (8.0j's defect, client side).** `play/scene.ts`
+    and `SceneHeader` resolve a scene's location against the launch locations as well as
+    entities. Assert that the opening scene shows its settlement by name.
+  - [ ] **9.0j Milestone 1's inciting-vow command cannot write a launched campaign's vow.**
+    `swearIncitingVow` and `POST /inciting-vow` still create a vow track from an incident
+    with no roll. The session-one fixture uses them, so they stay until 10.1 rebuilds the
+    fixtures. But on a campaign with a launch they would be a second path to the fact D-201
+    owns. They refuse any campaign whose launch is open or activated, and keep serving a
+    Milestone 1 campaign in play. 10.1 removes them with the fixtures.
+  - [ ] **9.0k Play context knows the incident (D-183, a fourth time).** `renderState` reads
+    no `launch.incident`. Until the vow is sworn, the Guide in play would not know why the
+    campaign has begun. Render the accepted incident, and the pending vow with its roller and
+    sharing crew, while it is unsworn. Assert that each arrives.
 - [ ] 9.1 Establish the local NPC connection, role, rank, track, and sharing crew through
-  the automatic strong-hit launch command.
+  the automatic strong-hit launch command. This is the connection half of Connection and
+  Troubles, beside group 8's troubles. Offer Write, a field Roll from the declared NPC
+  recipe, and Ask the Guide, reviewed field by field (beat 10). The screen says plainly
+  that the automatic strong hit is the rules' outcome and that no die is rolled (D-167).
+  Show the sharing crew as checkboxes, and the progress track with its participants.
+  Transitions live in `connection-form.ts`, not the `.tsx`. The section stops being half
+  built: `SECTION_ARRIVES_IN.connection_troubles` becomes null, and the `part` placeholder
+  goes.
 - [ ] 9.2 Extend incident proposals to cite complete accepted launch facts and oracle
-  grounding; retain choose/edit/write/ask-again behavior.
-- [ ] 9.3 Build the launch review and activation flow.
+  grounding; retain choose/edit/write/ask-again behavior. This is the Incident half of
+  Incident and Launch. Ask the Guide for three incidents. Each shows its rolls as chips and
+  names what it draws on (A37). The player chooses one, edits its words, asks again, or
+  writes their own, and accepts. Accepting records the words, rank and citations only
+  (D-200). Assert that the incident context carries the connection's NPC details and the
+  starting settlement's first looks, which it gained after 3R.6.
+- [ ] 9.3 Build the launch review and activation flow. The review page picks the
+  swearing character, the sharing crew, the rank and the opening scene's title (beat 12,
+  D-200), and saves them as an incident revision. The starting settlement is shown as
+  where the scene opens. Blockers stay the server's (D-176). Launch is enabled only when
+  readiness is ready, and the one-way confirmation is group 4's.
+  `SECTION_ARRIVES_IN.incident_launch` becomes null; no section is a placeholder any more,
+  so the catalogue test asserts zero pending. `review.ts`'s comment about the pickers
+  belonging elsewhere is corrected.
 - [ ] 9.4 Run the real `Swear an Iron Vow` move as Session 1's first beat, including actor,
-  sharing crew, loaded dice in tests, result, effects, and checked narration.
-- [ ] 9.5 Transition into the existing play screen without a reload-only state gap.
+  sharing crew, loaded dice in tests, result, effects, and checked narration. The play
+  screen offers **Swear the inciting vow** while the pending vow is unsworn, opening the
+  move composer on `Swear an Iron Vow` for the roller at +heart, with the vow's words,
+  rank and sharing crew shown and the player's adds available. A server test with loaded
+  dice asserts one formidable track shared by the three crew members, momentum changed on
+  the roller only, and the checked narration committing.
+- [ ] 9.5 Transition into the existing play screen without a reload-only state gap. After
+  activation, play opens on the new scene, named at its settlement (9.0i), with the vow
+  offered (9.4), from the same invalidated reads, with no reload. Assert in the browser.
+  The launch workspace URL then says launch is closed, as 4.4 decided.
+
+**Scope fences.** The Connection move family beyond the automatic strong hit stays
+Reference (D-167). There is no amendment screen: the post-launch amendment commands exist
+(3.9, 8.0k), and a screen for them is in no group 9 task. The recap and a scene-frame
+narration for Session 1's opening scene are not beat 13's. The first narrated beat is the
+vow's result. Rebuilding the fixtures on the launch belongs to 10.1.
 
 ### 10. Compatibility, acceptance, and packaging
 
