@@ -78,10 +78,12 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
   });
 
   /** Every fact a launch needs, each through its own command. */
-  async function readyCampaign(): Promise<{
+  async function readyCampaign(options: { readonly secondCrew?: boolean } = {}): Promise<{
     campaignId: CampaignId;
     characterId: CharacterId;
     startingSettlementId: EntityId;
+    /** A crew member who is not the vow's roller, when asked for. */
+    otherCharacterId?: CharacterId;
   }> {
     const { campaignId } = await createCampaign(db.sql, {
       campaignId: newId<CampaignId>(),
@@ -124,6 +126,28 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
         backstory: { kind: 'discover_in_play' },
       },
     });
+
+    const otherCharacterId =
+      options.secondCrew === true
+        ? (
+            await createCharacter(db.sql, {
+              campaignId,
+              commandId: newId<CommandId>(),
+              actor: PLAYER,
+              draft: {
+                name: 'Rook Ilari',
+                callsign: 'Rook',
+                stats: { edge: 2, heart: 1, iron: 3, shadow: 2, wits: 1 },
+                assets: paths,
+              },
+              backgroundVow: { title: 'Pay back the Syndicate', rank: 'dangerous' },
+              launch: {
+                appearance: 'Scarred knuckles',
+                backstory: { kind: 'discover_in_play' },
+              },
+            })
+          ).characterId
+        : undefined;
 
     await saveSharedStarship(db.sql, {
       campaignId,
@@ -228,7 +252,12 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
       },
     });
 
-    return { campaignId, characterId, startingSettlementId: emberHold };
+    return {
+      campaignId,
+      characterId,
+      startingSettlementId: emberHold,
+      ...(otherCharacterId === undefined ? {} : { otherCharacterId }),
+    };
   }
 
   it('reaches ready once every launch fact is accepted through its command', async () => {
@@ -539,8 +568,8 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
   // 9.0h (D-201): the pending vow is sworn by one real Swear an Iron Vow,
   // which writes the vow's track from the incident in the same command.
   describe('swearing the pending vow (9.0h, D-201)', () => {
-    async function launched() {
-      const ready = await readyCampaign();
+    async function launched(options: { readonly secondCrew?: boolean } = {}) {
+      const ready = await readyCampaign(options);
       await activateLaunch(db.sql, {
         campaignId: ready.campaignId,
         commandId: newId<CommandId>(),
@@ -635,6 +664,15 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
       await expect(m1()).rejects.toThrow(IncitingVowRejectedError);
       await activateLaunch(db.sql, { campaignId, commandId: newId<CommandId>(), actor: PLAYER });
       await expect(m1()).rejects.toThrow(IncitingVowRejectedError);
+    });
+
+    it('refuses a crew member who is not the roller, and an aided swear', async () => {
+      const { campaignId, characterId, otherCharacterId } = await launched({ secondCrew: true });
+
+      await expect(swear(campaignId, otherCharacterId!)).rejects.toThrow(/chosen to swear it/);
+      await expect(
+        swear(campaignId, characterId, { aidingAllyId: otherCharacterId! }),
+      ).rejects.toThrow(/roller alone/);
     });
 
     it('refuses before launch', async () => {

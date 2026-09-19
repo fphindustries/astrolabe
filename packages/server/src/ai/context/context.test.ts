@@ -813,8 +813,31 @@ describe('renderState (task 7.4)', () => {
       );
       expect(text).toContain(
         'The inciting vow (formidable) is not yet sworn: Vesna Kade is to swear it with ' +
-          'Swear an Iron Vow, shared with Vesna Kade, Rook Ilari.',
+          'Swear an Iron Vow, shared with Rook Ilari.',
       );
+    });
+
+    it('shares a vow with no one when its roller swears it alone', () => {
+      const text = renderState(
+        project(
+          goldenSessionPrelude()
+            .add('campaign.activated', {
+              launchFactEventIds: [],
+              sessionId: 'bbbb2222-bbbb-4bbb-8bbb-bbbbbbbbbbbb' as never,
+              sceneId: 'bbbb3333-bbbb-4bbb-8bbb-bbbbbbbbbbbb' as never,
+              pendingVow: {
+                incidentId: INCIDENT,
+                rank: 'dangerous',
+                rollerId: VESNA,
+                participants: [VESNA],
+              },
+              readinessVersion: 1,
+            })
+            .build(),
+        ),
+      );
+
+      expect(text).toContain('Vesna Kade is to swear it with Swear an Iron Vow.');
     });
 
     it('stops calling the vow pending once it is sworn (D-201)', () => {

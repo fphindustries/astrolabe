@@ -162,11 +162,14 @@ export function renderState(state: CampaignState): string {
     const nameOf = (id: string) =>
       Object.values(state.characters).find((c) => c.id === id)?.name ?? 'an unknown crew member';
     const vow = activation.pendingVow;
+    // The participants include the roller; the vow is shared with the others.
+    const sharing = vow.participants.filter((id) => id !== vow.rollerId).map(nameOf);
     // D-168: the vow is pending until the player swears it with the real
     // move, so the Guide is told it is not sworn yet rather than left to say so.
     sections.push(
       `The inciting vow (${vow.rank}) is not yet sworn: ${nameOf(vow.rollerId)} is to swear it ` +
-        `with Swear an Iron Vow, shared with ${vow.participants.map(nameOf).join(', ')}.`,
+        `with Swear an Iron Vow` +
+        (sharing.length > 0 ? `, shared with ${sharing.join(', ')}.` : '.'),
     );
   }
 

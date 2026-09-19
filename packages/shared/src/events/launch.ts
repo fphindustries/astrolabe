@@ -280,6 +280,13 @@ const IncidentSchema = z.object({
  * are optional; accepting a Guide option adds the facts it drew on.
  */
 export const LaunchIncidentDetailsSchema = IncidentSchema.omit({ incidentId: true }).extend({
+  /**
+   * Required on the first acceptance, carried forward on a revision that
+   * leaves them out: the review page sets the vow's choices without resending
+   * the incident's words, so a stale copy cannot rewrite them (9.0g).
+   */
+  text: z.string().min(1).optional(),
+  rank: ChallengeRankSchema.optional(),
   citedFactEventIds: z.array(EventIdSchema).optional(),
   /** Only the title: where the scene opens is the server's to say (D-168, 9.0g). */
   openingScene: z.object({ title: z.string().min(1) }).optional(),
@@ -721,7 +728,16 @@ export const LaunchAmendmentSchema = z.discriminatedUnion('subject', [
   z.object({ subject: z.literal('route'), replacement: LaunchRouteSchema }),
   z.object({ subject: z.literal('trouble'), replacement: LaunchTroubleSchema }),
   z.object({ subject: z.literal('connection'), replacement: ConnectionSchema }),
-  z.object({ subject: z.literal('incident'), replacement: IncidentSchema }),
+  // After launch the vow's choices are frozen in the activation, so an
+  // amended incident still states them all (D-200 loosened only the draft).
+  z.object({
+    subject: z.literal('incident'),
+    replacement: IncidentSchema.required({
+      rollerId: true,
+      participants: true,
+      openingScene: true,
+    }),
+  }),
 ]);
 
 export type LaunchAmendment = z.infer<typeof LaunchAmendmentSchema>;

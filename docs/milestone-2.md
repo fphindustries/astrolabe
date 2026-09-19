@@ -1037,7 +1037,10 @@ D-202 (`track.revised` carries participants).
     The request's opening scene is a title alone. Activation opens the scene at the starting
     settlement as it is at launch, since the settlement can change after the choices are
     saved. No readiness-version bump: an incident without these fields could not exist
-    before, so no campaign is admitted or refused differently.
+    before, so no campaign is admitted or refused differently. The words and rank carry forward
+    too: the review page sends the choices alone, so a stale copy of the incident cannot
+    rewrite it. A first acceptance still needs both. An amendment after launch still states
+    a whole incident, choices included, because they are frozen in the activation.
   - [x] **9.0h One move command swears the pending vow (D-201).** `invokeMove` gains a
     pending-vow mode for `Swear an Iron Vow`. It is refused unless the campaign is active
     with an unsworn `pendingVow`, the actor is its roller, and the roll is +heart. In one
@@ -1069,7 +1072,7 @@ D-202 (`track.revised` carries participants).
     *As built:* the fence is narrower than "launch open". The session-one fixture decides
     its truths through `decideTruth` and swears before its first session, so by
     `launchClosedReason` it is a campaign whose launch is open. The command refuses what
-    D-201 owns: a campaign that has accepted a launch incident, or has activated.
+    D-201 owns: a campaign that has accepted a launch incident, or has activated (D-204).
   - [x] **9.0k Play context knows the incident (D-183, a fourth time).** `renderState` reads
     no `launch.incident`. Until the vow is sworn, the Guide in play would not know why the
     campaign has begun. Render the accepted incident, and the pending vow with its roller and

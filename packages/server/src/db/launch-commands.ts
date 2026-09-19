@@ -1451,9 +1451,12 @@ export async function acceptLaunchIncident(
   ) {
     throw new LaunchRejectedError('invalid_incident_crew', 'The incident must name launch crew.');
   }
-  const text = incident.text.trim();
+  const text = incident.text?.trim() ?? previous?.text ?? '';
   if (text === '')
     throw new LaunchRejectedError('incident_text_required', 'The incident needs its own words.');
+  const rank = incident.rank ?? previous?.rank;
+  if (rank === undefined)
+    throw new LaunchRejectedError('incident_rank_required', 'The incident needs a rank.');
 
   // No proposal event when a revision carries the acceptance forward.
   let accepted: (Omit<Acceptance, 'eventId'> & { readonly eventId?: EventId }) | undefined;
@@ -1469,7 +1472,7 @@ export async function acceptLaunchIncident(
         'unknown_proposal',
         'That incident option is not among the Guide’s proposals.',
       );
-    const unchanged = sameWords(option.title, text) && option.rank === incident.rank;
+    const unchanged = sameWords(option.title, text) && option.rank === rank;
     accepted = {
       eventId: request.proposal.eventId,
       provenance: unchanged ? 'guide_proposal' : 'guide_proposal_edited',
@@ -1481,7 +1484,7 @@ export async function acceptLaunchIncident(
     previous?.provenance === 'guide_proposal_edited'
   ) {
     // Carried forward: the Guide's words stay the Guide's, edited if changed.
-    const unchanged = sameWords(previous.text, text) && previous.rank === incident.rank;
+    const unchanged = sameWords(previous.text, text) && previous.rank === rank;
     accepted = {
       provenance: unchanged ? previous.provenance : 'guide_proposal_edited',
       groundedIn: previous.groundedIn,
@@ -1514,7 +1517,7 @@ export async function acceptLaunchIncident(
     incidentId,
     text,
     citedFactEventIds: cited,
-    rank: incident.rank,
+    rank,
     ...(rollerId === undefined ? {} : { rollerId }),
     ...(participants === undefined ? {} : { participants: [...participants] }),
     ...(sceneTitle === undefined

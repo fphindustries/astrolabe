@@ -191,6 +191,15 @@ describe.skipIf(!hasTestDatabase)('accepting the inciting incident (9.0f)', () =
 
   it('accepts a written incident as the player’s own', async () => {
     const { campaignId, characterId } = await campaign();
+    // A first acceptance has nothing to carry forward, so it states a rank.
+    await expect(
+      acceptLaunchIncident(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        incident: { text: 'A written incident.' },
+      }),
+    ).rejects.toMatchObject({ reason: 'incident_rank_required' });
 
     await acceptLaunchIncident(db.sql, {
       campaignId,
@@ -281,8 +290,10 @@ describe.skipIf(!hasTestDatabase)('accepting the inciting incident (9.0f)', () =
       campaignId,
       commandId: newId<CommandId>(),
       actor: PLAYER,
+      // The review page sends the choices alone; the words and rank carry forward.
       incident: {
-        ...details(characterId, 'Answer incident 1'),
+        rollerId: characterId,
+        participants: [characterId],
         // The client cannot place the scene; the server does (D-168).
         openingScene: { title: 'The relay', locationId: newId<EntityId>() } as { title: string },
       },
@@ -290,6 +301,7 @@ describe.skipIf(!hasTestDatabase)('accepting the inciting incident (9.0f)', () =
 
     const revised = project(await readEvents(db.sql, campaignId)).launch.incident!;
     expect(revised.incidentId).toBe(accepted.incidentId);
+    expect([revised.text, revised.rank]).toEqual(['Answer incident 1', 'dangerous']);
     expect(revised.provenance).toBe('guide_proposal');
     expect(revised.groundedIn).toEqual(accepted.groundedIn);
     expect(revised.citedFactEventIds).toEqual(accepted.citedFactEventIds);
