@@ -22,6 +22,7 @@ import { useSaveLaunchDraft } from '../api/launch.js';
 import { AssetPicker } from '../characters/AssetPicker.js';
 import { ErrorSummary } from '../ui/ErrorSummary.js';
 import { fieldAnchorId } from '../ui/error-summary.js';
+import { guarded } from '../ui/guarded.js';
 
 import { CrewProposalPanel, proposalFailureText } from './CrewProposalPanel.js';
 import { launchErrorSummary } from './errors.js';
@@ -320,8 +321,7 @@ export function CrewSection({
         <button
           type="button"
           className={styles.secondary}
-          disabled={saveDraft.isPending}
-          onClick={handleSaveDraft}
+          {...guarded({ busy: saveDraft.isPending, onClick: handleSaveDraft })}
         >
           Save and continue
         </button>
@@ -381,7 +381,7 @@ function CrewRoster({
                 {row.characterId === undefined ? ' · not accepted' : ''}
               </span>
             </button>
-            <RemoveCrewMember row={row} disabled={removing} onRemove={onRemove} />
+            <RemoveCrewMember row={row} busy={removing} onRemove={onRemove} />
             {row.history.length > 0 && (
               <details className={styles.history}>
                 <summary className={styles.historySummary}>
@@ -402,7 +402,11 @@ function CrewRoster({
           </li>
         ))}
       </ul>
-      <button type="button" className={styles.add} disabled={!canAddCrew(rows)} onClick={onAdd}>
+      <button
+        type="button"
+        className={styles.add}
+        {...guarded({ blocked: !canAddCrew(rows), onClick: onAdd })}
+      >
         Add a character
       </button>
       <p className={styles.rosterNote}>{crewSummary(rows)}</p>
@@ -436,11 +440,11 @@ function CrewRoster({
  */
 function RemoveCrewMember({
   row,
-  disabled,
+  busy,
   onRemove,
 }: {
   readonly row: CrewOverviewRow;
-  readonly disabled: boolean;
+  readonly busy: boolean;
   readonly onRemove: (row: CrewOverviewRow, reason: string) => void;
 }) {
   const [asking, setAsking] = useState(false);
@@ -452,8 +456,7 @@ function RemoveCrewMember({
       <button
         type="button"
         className={styles.secondary}
-        disabled={disabled}
-        onClick={() => setAsking(true)}
+        {...guarded({ busy, onClick: () => setAsking(true) })}
       >
         Remove<span className={styles.visuallyHidden}> {row.name}</span>
       </button>
@@ -475,8 +478,11 @@ function RemoveCrewMember({
         <button
           type="button"
           className={styles.primary}
-          disabled={disabled || (row.characterId !== undefined && reason.trim() === '')}
-          onClick={() => onRemove(row, reason.trim())}
+          {...guarded({
+            busy,
+            blocked: row.characterId !== undefined && reason.trim() === '',
+            onClick: () => onRemove(row, reason.trim()),
+          })}
         >
           Remove {row.name}
         </button>
@@ -588,8 +594,7 @@ function MemberEditor({
         <button
           type="button"
           className={styles.secondary}
-          disabled={step === CREW_STEPS[0]}
-          onClick={() => onStep(stepAt(step, -1))}
+          {...guarded({ blocked: step === CREW_STEPS[0], onClick: () => onStep(stepAt(step, -1)) })}
         >
           Back
         </button>
@@ -597,8 +602,7 @@ function MemberEditor({
           <button
             type="button"
             className={styles.primary}
-            disabled={!complete || accepting}
-            onClick={onAccept}
+            {...guarded({ busy: accepting, blocked: !complete, onClick: onAccept })}
           >
             {member.characterId === undefined ? 'Accept this character' : 'Save changes'}
           </button>
@@ -763,8 +767,7 @@ function BackgroundStep({
         <button
           type="button"
           className={styles.secondary}
-          disabled={rolling}
-          onClick={onRollPrompt}
+          {...guarded({ busy: rolling, onClick: onRollPrompt })}
         >
           Roll a backstory prompt
         </button>
@@ -838,8 +841,10 @@ function BackgroundStep({
         <button
           type="button"
           className={styles.secondary}
-          disabled={member.hooks.length >= MAX_HOOKS}
-          onClick={() => onChange(addHook(member))}
+          {...guarded({
+            blocked: member.hooks.length >= MAX_HOOKS,
+            onClick: () => onChange(addHook(member)),
+          })}
         >
           Add a hook
         </button>

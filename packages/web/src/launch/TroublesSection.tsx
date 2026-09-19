@@ -6,6 +6,7 @@ import { useSaveLaunchDraft } from '../api/launch.js';
 import { useAiStatus } from '../api/narration.js';
 import { useProposeTrouble, useRollLaunchRecipe, useSaveTrouble } from '../api/sector.js';
 import { fieldAnchorId } from '../ui/error-summary.js';
+import { guarded } from '../ui/guarded.js';
 
 import { proposalFailureText } from './CrewProposalPanel.js';
 import { heldTroubleProposal } from './sector-form.js';
@@ -86,23 +87,24 @@ export function TroublesSection({
           <button
             type="button"
             className={styles.secondary}
-            disabled={roll.isPending}
             aria-label="Roll the sector trouble"
-            onClick={() =>
-              roll.mutate(
-                { kind: 'sector_trouble' },
-                {
-                  onSuccess: (response) => {
-                    setRolled(
-                      response.results
-                        .map((result) => `${result.roll}: ${result.text}`)
-                        .join(' · '),
-                    );
-                    edit(applySectorTroubleRoll(response.results));
+            {...guarded({
+              busy: roll.isPending,
+              onClick: () =>
+                roll.mutate(
+                  { kind: 'sector_trouble' },
+                  {
+                    onSuccess: (response) => {
+                      setRolled(
+                        response.results
+                          .map((result) => `${result.roll}: ${result.text}`)
+                          .join(' · '),
+                      );
+                      edit(applySectorTroubleRoll(response.results));
+                    },
                   },
-                },
-              )
-            }
+                ),
+            })}
           >
             Roll
           </button>
@@ -116,7 +118,7 @@ export function TroublesSection({
           left open. You keep, edit or replace its words.
         </p>
         {guide.data?.available !== true && (
-          <p className={styles.unavailable} role="status">
+          <p className={styles.unavailable} role="status" id="trouble-guide-unavailable">
             No Guide is available. Write the trouble, or keep the rolled words.
           </p>
         )}
@@ -129,25 +131,29 @@ export function TroublesSection({
           <button
             type="button"
             className={styles.primary}
-            disabled={
-              guide.data?.available !== true || propose.isPending || form.rolls.length === 0
-            }
-            onClick={() => {
-              setAskFailure(undefined);
-              propose.mutate(
-                { kind: 'sector', groundedIn: [...form.rolls] },
-                {
-                  onSuccess: (response) => {
-                    if (!response.ok) setAskFailure(proposalFailureText(response));
+            {...guarded({
+              busy: propose.isPending,
+              blocked: guide.data?.available !== true || form.rolls.length === 0,
+              reasonId: 'trouble-guide-unavailable trouble-roll-first',
+              onClick: () => {
+                setAskFailure(undefined);
+                propose.mutate(
+                  { kind: 'sector', groundedIn: [...form.rolls] },
+                  {
+                    onSuccess: (response) => {
+                      if (!response.ok) setAskFailure(proposalFailureText(response));
+                    },
                   },
-                },
-              );
-            }}
+                );
+              },
+            })}
           >
             {propose.isPending ? 'Asking…' : 'Ask the Guide to read it'}
           </button>
           {form.rolls.length === 0 && (
-            <span className={styles.note}>Roll the trouble first; the Guide reads a roll.</span>
+            <span className={styles.note} id="trouble-roll-first">
+              Roll the trouble first; the Guide reads a roll.
+            </span>
           )}
         </div>
         {held !== null && (
@@ -191,32 +197,36 @@ export function TroublesSection({
         <button
           type="button"
           className={styles.secondary}
-          disabled={saveDraft.isPending}
-          onClick={() =>
-            saveDraft.mutate(
-              { section: 'connection_troubles', snapshot: toTroublesDraft(state, form) },
-              { onSuccess: () => setSaved('Saved as setup. This is not campaign canon yet.') },
-            )
-          }
+          {...guarded({
+            busy: saveDraft.isPending,
+            onClick: () =>
+              saveDraft.mutate(
+                { section: 'connection_troubles', snapshot: toTroublesDraft(state, form) },
+                { onSuccess: () => setSaved('Saved as setup. This is not campaign canon yet.') },
+              ),
+          })}
         >
           Save and continue
         </button>
         <button
           type="button"
           className={styles.primary}
-          disabled={save.isPending || toSectorTroubleRequest(form) === null}
-          onClick={() => {
-            const request = toSectorTroubleRequest(form);
-            if (request === null) return;
-            save.mutate(request, {
-              onSuccess: () =>
-                setSaved(
-                  trouble === undefined
-                    ? 'Accepted. This is what troubles the sector.'
-                    : 'Saved. The earlier version stays in the trouble’s history.',
-                ),
-            });
-          }}
+          {...guarded({
+            busy: save.isPending,
+            blocked: toSectorTroubleRequest(form) === null,
+            onClick: () => {
+              const request = toSectorTroubleRequest(form);
+              if (request === null) return;
+              save.mutate(request, {
+                onSuccess: () =>
+                  setSaved(
+                    trouble === undefined
+                      ? 'Accepted. This is what troubles the sector.'
+                      : 'Saved. The earlier version stays in the trouble’s history.',
+                  ),
+              });
+            },
+          })}
         >
           {trouble === undefined ? 'Accept the sector trouble' : 'Save this revision'}
         </button>

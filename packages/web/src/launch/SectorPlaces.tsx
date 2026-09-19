@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 
 import { planetClassFromRow } from '@astrolabe/rules';
 import type { LaunchWorkspaceResponse, OracleChip } from '@astrolabe/shared';
@@ -14,6 +14,7 @@ import {
 } from '../api/sector.js';
 import { ErrorSummary } from '../ui/ErrorSummary.js';
 import { fieldAnchorId } from '../ui/error-summary.js';
+import { guarded } from '../ui/guarded.js';
 
 import { proposalFailureText } from './CrewProposalPanel.js';
 import { PlanetFields } from './SectorDetails.js';
@@ -148,7 +149,7 @@ export function SectorPlaces({
             time below, and draw the passages yourself.
           </p>
           {guide.data?.available !== true && (
-            <p className={styles.unavailable} role="status">
+            <p className={styles.unavailable} role="status" id="sector-guide-unavailable">
               No Guide is available. Every settlement can still be written or rolled.
             </p>
           )}
@@ -161,8 +162,12 @@ export function SectorPlaces({
             <button
               type="button"
               className={styles.primary}
-              disabled={!configured || guide.data?.available !== true || whole.isPending}
-              onClick={askForWholeSector}
+              {...guarded({
+                busy: whole.isPending,
+                blocked: !configured || guide.data?.available !== true,
+                reasonId: 'sector-guide-unavailable',
+                onClick: askForWholeSector,
+              })}
             >
               {whole.isPending ? 'Asking…' : 'Ask the Guide for the whole sector'}
             </button>
@@ -211,8 +216,7 @@ export function SectorPlaces({
           <button
             type="button"
             className={styles.secondary}
-            disabled={!configured}
-            onClick={addNew}
+            {...guarded({ blocked: !configured, onClick: addNew })}
           >
             Add a settlement
           </button>
@@ -442,8 +446,7 @@ function SettlementEditor({
         <button
           type="button"
           className={styles.secondary}
-          disabled={rollWhole.isPending || region === ''}
-          onClick={onRollWhole}
+          {...guarded({ busy: rollWhole.isPending, blocked: region === '', onClick: onRollWhole })}
         >
           Roll the whole settlement
         </button>
@@ -456,7 +459,8 @@ function SettlementEditor({
         invalid={submitted && settlement.name.trim() === ''}
         onChange={(text) => edit((current) => setSettlementText(current, draftId, 'name', text))}
         onRoll={() => onRollField('name')}
-        rollDisabled={rollField.isPending || region === ''}
+        rollBusy={rollField.isPending}
+        rollBlocked={region === ''}
         rolled={rolled.name}
       />
 
@@ -480,7 +484,8 @@ function SettlementEditor({
           </div>
           <RollButton
             label="Roll the location"
-            disabled={rollField.isPending || region === ''}
+            busy={rollField.isPending}
+            blocked={region === ''}
             onRoll={() => onRollField('location')}
           />
         </div>
@@ -503,7 +508,8 @@ function SettlementEditor({
           edit((current) => setSettlementText(current, draftId, 'population', text))
         }
         onRoll={() => onRollField('population')}
-        rollDisabled={rollField.isPending || region === ''}
+        rollBusy={rollField.isPending}
+        rollBlocked={region === ''}
         rolled={rolled.population}
       />
       <TextField
@@ -515,7 +521,8 @@ function SettlementEditor({
           edit((current) => setSettlementText(current, draftId, 'authority', text))
         }
         onRoll={() => onRollField('authority')}
-        rollDisabled={rollField.isPending || region === ''}
+        rollBusy={rollField.isPending}
+        rollBlocked={region === ''}
         rolled={rolled.authority}
       />
 
@@ -546,7 +553,8 @@ function SettlementEditor({
               invalid={submitted && project.trim() === ''}
               onChange={(text) => edit((current) => setProject(current, draftId, index, text))}
               onRoll={() => onRollField(field)}
-              rollDisabled={rollField.isPending || region === ''}
+              rollBusy={rollField.isPending}
+              rollBlocked={region === ''}
               rolled={rolled[field]}
             />
           );
@@ -571,8 +579,7 @@ function SettlementEditor({
         <button
           type="button"
           className={styles.primary}
-          disabled={save.isPending}
-          onClick={onAccept}
+          {...guarded({ busy: save.isPending, onClick: onAccept })}
         >
           {settlement.locationId === undefined ? 'Accept this settlement' : 'Save this revision'}
         </button>
@@ -598,8 +605,11 @@ function SettlementEditor({
             <button
               type="button"
               className={styles.secondary}
-              disabled={reason.trim() === '' || remove.isPending}
-              onClick={onRemove}
+              {...guarded({
+                busy: remove.isPending,
+                blocked: reason.trim() === '',
+                onClick: onRemove,
+              })}
             >
               Remove
             </button>
@@ -617,7 +627,8 @@ function TextField({
   invalid,
   onChange,
   onRoll,
-  rollDisabled,
+  rollBusy,
+  rollBlocked,
   rolled,
 }: {
   readonly id: string;
@@ -626,7 +637,8 @@ function TextField({
   readonly invalid: boolean;
   readonly onChange: (text: string) => void;
   readonly onRoll: () => void;
-  readonly rollDisabled: boolean;
+  readonly rollBusy: boolean;
+  readonly rollBlocked: boolean;
   readonly rolled: string | undefined;
 }) {
   return (
@@ -644,7 +656,8 @@ function TextField({
         />
         <RollButton
           label={`Roll the ${label.toLowerCase()}`}
-          disabled={rollDisabled}
+          busy={rollBusy}
+          blocked={rollBlocked}
           onRoll={onRoll}
         />
       </div>
@@ -655,20 +668,21 @@ function TextField({
 
 function RollButton({
   label,
-  disabled,
+  busy,
+  blocked,
   onRoll,
 }: {
   readonly label: string;
-  readonly disabled: boolean;
+  readonly busy: boolean;
+  readonly blocked: boolean;
   readonly onRoll: () => void;
 }) {
   return (
     <button
       type="button"
       className={styles.secondary}
-      disabled={disabled}
+      {...guarded({ busy, blocked, onClick: onRoll })}
       aria-label={label}
-      onClick={onRoll}
     >
       Roll
     </button>
@@ -701,6 +715,7 @@ function SettlementGuide({
   readonly onTake: (fields?: readonly ProposedSettlementField[]) => void;
   readonly onDismiss: () => void;
 }) {
+  const unavailableId = useId();
   return (
     <section className={styles.panel} aria-label="Ask the Guide for this settlement">
       <p className={styles.help}>
@@ -708,7 +723,7 @@ function SettlementGuide({
         a proposal. Nothing is written until you accept the settlement.
       </p>
       {!aiAvailable && (
-        <p className={styles.unavailable} role="status">
+        <p className={styles.unavailable} role="status" id={unavailableId}>
           {aiReason ?? 'No Guide is configured.'} Every other way still works: write the fields, or
           roll them.
         </p>
@@ -722,8 +737,12 @@ function SettlementGuide({
         <button
           type="button"
           className={styles.primary}
-          disabled={!aiAvailable || pending}
-          onClick={onAsk}
+          {...guarded({
+            busy: pending,
+            blocked: !aiAvailable,
+            reasonId: unavailableId,
+            onClick: onAsk,
+          })}
         >
           {pending ? 'Asking…' : 'Ask the Guide'}
         </button>
@@ -876,8 +895,11 @@ function OtherLocations({
               <button
                 type="button"
                 className={styles.primary}
-                disabled={save.isPending || toOtherRequest(other) === null}
-                onClick={() => accept(other.draftId)}
+                {...guarded({
+                  busy: save.isPending,
+                  blocked: toOtherRequest(other) === null,
+                  onClick: () => accept(other.draftId),
+                })}
               >
                 {other.locationId === undefined ? 'Accept this location' : 'Save this revision'}
               </button>
@@ -899,10 +921,11 @@ function OtherLocations({
               <button
                 type="button"
                 className={styles.secondary}
-                disabled={
-                  other.locationId !== undefined && (reasons[other.draftId] ?? '').trim() === ''
-                }
-                onClick={() => drop(other.draftId, other.locationId)}
+                {...guarded({
+                  blocked:
+                    other.locationId !== undefined && (reasons[other.draftId] ?? '').trim() === '',
+                  onClick: () => drop(other.draftId, other.locationId),
+                })}
               >
                 {other.locationId === undefined ? 'Discard' : 'Remove'}
               </button>
@@ -914,8 +937,10 @@ function OtherLocations({
         <button
           type="button"
           className={styles.secondary}
-          disabled={!configured}
-          onClick={() => update((current) => addOther(current, crypto.randomUUID()))}
+          {...guarded({
+            blocked: !configured,
+            onClick: () => update((current) => addOther(current, crypto.randomUUID())),
+          })}
         >
           Add a location
         </button>

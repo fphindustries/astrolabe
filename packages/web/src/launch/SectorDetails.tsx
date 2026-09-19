@@ -5,6 +5,7 @@ import { PLANET_CLASSES, withoutLinks, type PlanetClass } from '@astrolabe/rules
 import { useRollLaunchOracle } from '../api/crew.js';
 import { useConfigureSector, useRollLaunchRecipe, useSaveLocation } from '../api/sector.js';
 import { fieldAnchorId } from '../ui/error-summary.js';
+import { guarded } from '../ui/guarded.js';
 
 import {
   PLANET_FIELD_LABELS,
@@ -129,9 +130,8 @@ export function PlanetFields({
         <button
           type="button"
           className={styles.secondary}
-          disabled={rollRecipe.isPending}
+          {...guarded({ busy: rollRecipe.isPending, onClick: rollClass })}
           aria-label="Roll the planet’s class"
-          onClick={rollClass}
         >
           Roll
         </button>
@@ -155,9 +155,12 @@ export function PlanetFields({
             <button
               type="button"
               className={styles.secondary}
-              disabled={rollField.isPending || planetClass === undefined}
+              {...guarded({
+                busy: rollField.isPending,
+                blocked: planetClass === undefined,
+                onClick: () => rollOne(field),
+              })}
               aria-label={`Roll the planet’s ${PLANET_FIELD_LABELS[field].toLowerCase()}`}
-              onClick={() => rollOne(field)}
             >
               Roll
             </button>
@@ -175,8 +178,11 @@ export function PlanetFields({
           <button
             type="button"
             className={styles.secondary}
-            disabled={rollRecipe.isPending || planetClass === undefined}
-            onClick={rollDetail}
+            {...guarded({
+              busy: rollRecipe.isPending,
+              blocked: planetClass === undefined,
+              onClick: rollDetail,
+            })}
           >
             Roll the starting detail
           </button>
@@ -262,21 +268,22 @@ export function StarFields({
           <button
             type="button"
             className={styles.secondary}
-            disabled={roll.isPending}
-            aria-label="Roll the star"
-            onClick={() =>
-              roll.mutate(
-                { kind: 'star' },
-                {
-                  onSuccess: (response) => {
-                    const result = response.results[0];
-                    if (result === undefined) return;
-                    setRolled(`${result.roll}: ${result.text}`);
-                    update((current) => applyStarRoll(current, result));
+            {...guarded({
+              busy: roll.isPending,
+              onClick: () =>
+                roll.mutate(
+                  { kind: 'star' },
+                  {
+                    onSuccess: (response) => {
+                      const result = response.results[0];
+                      if (result === undefined) return;
+                      setRolled(`${result.roll}: ${result.text}`);
+                      update((current) => applyStarRoll(current, result));
+                    },
                   },
-                },
-              )
-            }
+                ),
+            })}
+            aria-label="Roll the star"
           >
             Roll
           </button>
@@ -292,8 +299,11 @@ export function StarFields({
         <button
           type="button"
           className={styles.secondary}
-          disabled={!configured || save.isPending || toStarRequest(form.star) === null}
-          onClick={accept}
+          {...guarded({
+            busy: save.isPending,
+            blocked: !configured || toStarRequest(form.star) === null,
+            onClick: accept,
+          })}
         >
           {form.star.locationId === undefined ? 'Accept the star' : 'Save the star'}
         </button>

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { guarded } from '../ui/guarded.js';
+
 import styles from './LaunchConfirmDialog.module.css';
 
 /**
@@ -62,8 +64,7 @@ export function LaunchConfirmDialog({
         <button
           type="button"
           className={styles.primary}
-          disabled={pending}
-          onClick={() => onConfirm(commandId)}
+          {...guarded({ busy: pending, onClick: () => onConfirm(commandId) })}
         >
           {pending ? 'Launching…' : 'Launch campaign'}
         </button>

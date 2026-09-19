@@ -5,6 +5,7 @@ import type { LaunchWorkspaceResponse } from '@astrolabe/shared';
 
 import { useAcceptIncident } from '../api/incident.js';
 import { fieldAnchorId } from '../ui/error-summary.js';
+import { guarded } from '../ui/guarded.js';
 
 import {
   initialVowChoices,
@@ -137,11 +138,14 @@ export function VowChoicesPanel({
         <button
           type="button"
           className={styles.primary}
-          disabled={accept.isPending || request === null || !changed}
-          onClick={() => {
-            if (request === null) return;
-            accept.mutate(request, { onSuccess: () => setSaved('Saved with the incident.') });
-          }}
+          {...guarded({
+            busy: accept.isPending,
+            blocked: request === null || !changed,
+            onClick: () => {
+              if (request === null) return;
+              accept.mutate(request, { onSuccess: () => setSaved('Saved with the incident.') });
+            },
+          })}
         >
           Save the vow’s choices
         </button>

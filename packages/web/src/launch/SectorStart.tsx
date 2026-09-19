@@ -11,6 +11,7 @@ import {
   useSetStartingSettlement,
 } from '../api/sector.js';
 import { fieldAnchorId } from '../ui/error-summary.js';
+import { guarded } from '../ui/guarded.js';
 
 import { proposalFailureText } from './CrewProposalPanel.js';
 import {
@@ -99,8 +100,10 @@ export function SectorStart({
                 type="radio"
                 name="starting-settlement"
                 checked={settlement.locationId === startId}
-                disabled={select.isPending}
-                onChange={() => settlement.locationId && select.mutate(settlement.locationId)}
+                aria-disabled={select.isPending ? true : undefined}
+                onChange={() =>
+                  !select.isPending && settlement.locationId && select.mutate(settlement.locationId)
+                }
               />
               <span>{settlement.name}</span>
             </label>
@@ -114,28 +117,29 @@ export function SectorStart({
             <button
               type="button"
               className={styles.secondary}
-              disabled={roll.isPending}
-              onClick={() =>
-                roll.mutate(
-                  {
-                    kind: 'starting_settlement',
-                    firstLookCount: start.firstLooks.length >= 2 ? 2 : 1,
-                  },
-                  {
-                    onSuccess: (response) => {
-                      setSaved(undefined);
-                      setRolled(
-                        response.results
-                          .map((result) => `${result.roll}: ${result.text}`)
-                          .join(' · '),
-                      );
-                      update((current) =>
-                        applyStartingRecipe(current, start.draftId, response.results),
-                      );
+              {...guarded({
+                busy: roll.isPending,
+                onClick: () =>
+                  roll.mutate(
+                    {
+                      kind: 'starting_settlement',
+                      firstLookCount: start.firstLooks.length >= 2 ? 2 : 1,
                     },
-                  },
-                )
-              }
+                    {
+                      onSuccess: (response) => {
+                        setSaved(undefined);
+                        setRolled(
+                          response.results
+                            .map((result) => `${result.roll}: ${result.text}`)
+                            .join(' · '),
+                        );
+                        update((current) =>
+                          applyStartingRecipe(current, start.draftId, response.results),
+                        );
+                      },
+                    },
+                  ),
+              })}
             >
               Roll first looks and trouble
             </button>
@@ -188,26 +192,29 @@ export function SectorStart({
               <button
                 type="button"
                 className={styles.secondary}
-                disabled={saveLocation.isPending || toSettlementRequest(start) === null}
-                onClick={() => {
-                  const request = toSettlementRequest(start);
-                  if (request === null) return;
-                  saveLocation.mutate(request, {
-                    onSuccess: (response) => {
-                      persist(
-                        update((current) =>
-                          markSettlementAccepted(
-                            current,
-                            start.draftId,
-                            response.locationId,
-                            response.planetId,
+                {...guarded({
+                  busy: saveLocation.isPending,
+                  blocked: toSettlementRequest(start) === null,
+                  onClick: () => {
+                    const request = toSettlementRequest(start);
+                    if (request === null) return;
+                    saveLocation.mutate(request, {
+                      onSuccess: (response) => {
+                        persist(
+                          update((current) =>
+                            markSettlementAccepted(
+                              current,
+                              start.draftId,
+                              response.locationId,
+                              response.planetId,
+                            ),
                           ),
-                        ),
-                      );
-                      setSaved('The first looks are part of the settlement now.');
-                    },
-                  });
-                }}
+                        );
+                        setSaved('The first looks are part of the settlement now.');
+                      },
+                    });
+                  },
+                })}
               >
                 Save the first looks
               </button>
@@ -237,7 +244,7 @@ export function SectorStart({
               replace its words; the roll stays what it was built on.
             </p>
             {guide.data?.available !== true && (
-              <p className={styles.unavailable} role="status">
+              <p className={styles.unavailable} role="status" id="start-trouble-guide-unavailable">
                 No Guide is available. Write the trouble, or keep the rolled words.
               </p>
             )}
@@ -250,28 +257,30 @@ export function SectorStart({
               <button
                 type="button"
                 className={styles.primary}
-                disabled={
-                  guide.data?.available !== true ||
-                  propose.isPending ||
-                  troubleRolls.length === 0 ||
-                  start.locationId === undefined
-                }
-                onClick={() => {
-                  if (troubleRolls.length === 0 || start.locationId === undefined) return;
-                  setAskFailure(undefined);
-                  propose.mutate(
-                    {
-                      kind: 'settlement',
-                      ownerId: start.locationId,
-                      groundedIn: [...troubleRolls],
-                    },
-                    {
-                      onSuccess: (response) => {
-                        if (!response.ok) setAskFailure(proposalFailureText(response));
+                {...guarded({
+                  busy: propose.isPending,
+                  blocked:
+                    guide.data?.available !== true ||
+                    troubleRolls.length === 0 ||
+                    start.locationId === undefined,
+                  reasonId: 'start-trouble-guide-unavailable',
+                  onClick: () => {
+                    if (troubleRolls.length === 0 || start.locationId === undefined) return;
+                    setAskFailure(undefined);
+                    propose.mutate(
+                      {
+                        kind: 'settlement',
+                        ownerId: start.locationId,
+                        groundedIn: [...troubleRolls],
                       },
-                    },
-                  );
-                }}
+                      {
+                        onSuccess: (response) => {
+                          if (!response.ok) setAskFailure(proposalFailureText(response));
+                        },
+                      },
+                    );
+                  },
+                })}
               >
                 {propose.isPending ? 'Asking…' : 'Ask the Guide to read the trouble'}
               </button>
@@ -310,14 +319,17 @@ export function SectorStart({
             <button
               type="button"
               className={styles.primary}
-              disabled={saveTrouble.isPending || toSettlementTroubleRequest(start) === null}
-              onClick={() => {
-                const request = toSettlementTroubleRequest(start);
-                if (request === null) return;
-                saveTrouble.mutate(request, {
-                  onSuccess: () => setSaved('The settlement’s trouble is accepted.'),
-                });
-              }}
+              {...guarded({
+                busy: saveTrouble.isPending,
+                blocked: toSettlementTroubleRequest(start) === null,
+                onClick: () => {
+                  const request = toSettlementTroubleRequest(start);
+                  if (request === null) return;
+                  saveTrouble.mutate(request, {
+                    onSuccess: () => setSaved('The settlement’s trouble is accepted.'),
+                  });
+                },
+              })}
             >
               Accept the trouble
             </button>

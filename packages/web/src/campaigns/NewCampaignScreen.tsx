@@ -6,6 +6,7 @@ import type { CampaignSettings } from '@astrolabe/shared';
 import { useCreateCampaign } from '../api/campaigns.js';
 import { navigate } from '../app/location.js';
 import { launchOverviewPath } from '../launch/sections.js';
+import { guarded } from '../ui/guarded.js';
 
 import styles from './NewCampaignScreen.module.css';
 
@@ -28,7 +29,8 @@ export function NewCampaignScreen() {
   const [settings, setSettings] = useState<CampaignSettings>(DEFAULT_CAMPAIGN_SETTINGS);
 
   const createCampaign = useCreateCampaign();
-  const canSubmit = name.trim().length > 0 && !createCampaign.isPending;
+  const named = name.trim().length > 0;
+  const canSubmit = named && !createCampaign.isPending;
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -128,7 +130,20 @@ export function NewCampaignScreen() {
           </p>
         )}
 
-        <button type="submit" className={styles.submit} disabled={!canSubmit}>
+        {!named && (
+          <p className={styles.hint} id="name-required">
+            Give the campaign a name to create it.
+          </p>
+        )}
+        <button
+          type="submit"
+          className={styles.submit}
+          {...guarded({
+            busy: createCampaign.isPending,
+            blocked: !named,
+            reasonId: 'name-required',
+          })}
+        >
           Create campaign
         </button>
       </form>

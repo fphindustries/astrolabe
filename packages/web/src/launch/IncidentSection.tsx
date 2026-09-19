@@ -7,6 +7,7 @@ import { useAcceptIncident, useProposeIncidents } from '../api/incident.js';
 import { useSaveLaunchDraft } from '../api/launch.js';
 import { useAiStatus } from '../api/narration.js';
 import { fieldAnchorId } from '../ui/error-summary.js';
+import { guarded } from '../ui/guarded.js';
 
 import { proposalFailureText } from './CrewProposalPanel.js';
 import {
@@ -84,7 +85,7 @@ export function IncidentSection({
           campaign has accepted. Choose one and edit it, ask again, or write your own.
         </p>
         {guide.data?.available !== true && (
-          <p className={styles.unavailable} role="status">
+          <p className={styles.unavailable} role="status" id="incident-guide-unavailable">
             No Guide is available. Write the incident yourself.
           </p>
         )}
@@ -97,15 +98,19 @@ export function IncidentSection({
           <button
             type="button"
             className={styles.primary}
-            disabled={guide.data?.available !== true || propose.isPending}
-            onClick={() => {
-              setAskFailure(undefined);
-              propose.mutate(undefined, {
-                onSuccess: (response) => {
-                  if (!response.ok) setAskFailure(proposalFailureText(response));
-                },
-              });
-            }}
+            {...guarded({
+              busy: propose.isPending,
+              blocked: guide.data?.available !== true,
+              reasonId: 'incident-guide-unavailable',
+              onClick: () => {
+                setAskFailure(undefined);
+                propose.mutate(undefined, {
+                  onSuccess: (response) => {
+                    if (!response.ok) setAskFailure(proposalFailureText(response));
+                  },
+                });
+              },
+            })}
           >
             {propose.isPending ? 'Asking…' : held === undefined ? 'Ask the Guide' : 'Ask again'}
           </button>
@@ -214,31 +219,35 @@ export function IncidentSection({
         <button
           type="button"
           className={styles.secondary}
-          disabled={saveDraft.isPending}
-          onClick={() =>
-            saveDraft.mutate(
-              { section: 'incident_launch', snapshot: toIncidentDraft(form) },
-              { onSuccess: () => setSaved('Saved as setup. This is not campaign canon yet.') },
-            )
-          }
+          {...guarded({
+            busy: saveDraft.isPending,
+            onClick: () =>
+              saveDraft.mutate(
+                { section: 'incident_launch', snapshot: toIncidentDraft(form) },
+                { onSuccess: () => setSaved('Saved as setup. This is not campaign canon yet.') },
+              ),
+          })}
         >
           Save and continue
         </button>
         <button
           type="button"
           className={styles.primary}
-          disabled={accept.isPending || request === null}
-          onClick={() => {
-            if (request === null) return;
-            accept.mutate(request, {
-              onSuccess: () =>
-                setSaved(
-                  accepted
-                    ? 'Saved. The earlier version stays in the incident’s history.'
-                    : 'Accepted. Choose who swears it on the review page.',
-                ),
-            });
-          }}
+          {...guarded({
+            busy: accept.isPending,
+            blocked: request === null,
+            onClick: () => {
+              if (request === null) return;
+              accept.mutate(request, {
+                onSuccess: () =>
+                  setSaved(
+                    accepted
+                      ? 'Saved. The earlier version stays in the incident’s history.'
+                      : 'Accepted. Choose who swears it on the review page.',
+                  ),
+              });
+            },
+          })}
         >
           {accepted ? 'Save this revision' : 'Accept the incident'}
         </button>

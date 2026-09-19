@@ -10,6 +10,7 @@ import { ErrorSummary } from '../ui/ErrorSummary.js';
 import { fieldAnchorId } from '../ui/error-summary.js';
 import { ShipPanel } from '../ship/ShipPanel.js';
 import { blockersByField, shipHistory, shipView } from '../ship/ship-view.js';
+import { guarded } from '../ui/guarded.js';
 
 import { proposalFailureText } from './CrewProposalPanel.js';
 import { launchErrorSummary } from './errors.js';
@@ -309,16 +310,14 @@ export function StarshipSection({
         <button
           type="button"
           className={styles.secondary}
-          disabled={saveDraft.isPending}
-          onClick={handleSaveDraft}
+          {...guarded({ busy: saveDraft.isPending, onClick: handleSaveDraft })}
         >
           Save and continue
         </button>
         <button
           type="button"
           className={styles.primary}
-          disabled={save.isPending}
-          onClick={handleAccept}
+          {...guarded({ busy: save.isPending, onClick: handleAccept })}
         >
           {accepted ? 'Save this revision' : 'Accept the ship'}
         </button>
@@ -357,9 +356,8 @@ function RollButton({
     <button
       type="button"
       className={styles.secondary}
-      disabled={pending}
       aria-label={`Roll the ${FIELD_LABELS[field].toLowerCase()}`}
-      onClick={() => onRoll(field)}
+      {...guarded({ busy: pending, onClick: () => onRoll(field) })}
     >
       Roll
     </button>
@@ -438,7 +436,7 @@ function GuidePanel({
       </fieldset>
 
       {!aiAvailable && (
-        <p className={styles.unavailable} role="status">
+        <p className={styles.unavailable} role="status" id="starship-guide-unavailable">
           {aiReason ?? 'No Guide is configured.'} Every other way of building the ship still works:
           write the fields, or roll them.
         </p>
@@ -453,8 +451,12 @@ function GuidePanel({
         <button
           type="button"
           className={styles.primary}
-          disabled={!aiAvailable || pending}
-          onClick={() => onAsk(quirkCountOf(form), [...wanted])}
+          {...guarded({
+            busy: pending,
+            blocked: !aiAvailable,
+            reasonId: 'starship-guide-unavailable',
+            onClick: () => onAsk(quirkCountOf(form), [...wanted]),
+          })}
         >
           {pending ? 'Asking…' : 'Ask the Guide'}
         </button>

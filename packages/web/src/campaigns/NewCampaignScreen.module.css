@@ -80,8 +80,14 @@
   cursor: pointer;
 }
 
-.submit:disabled {
+.submit[aria-disabled='true'] {
   background: var(--surface-2);
   color: var(--text-muted);
   cursor: not-allowed;
+}
+
+.hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
 }

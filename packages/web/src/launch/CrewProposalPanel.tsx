@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { OracleChip } from '@astrolabe/shared';
 
 import { describeFailure } from '../play/narration/frames.js';
+import { guarded } from '../ui/guarded.js';
 
 import {
   CREW_PROPOSAL_FIELDS,
@@ -108,7 +109,7 @@ export function CrewProposalPanel({
       </fieldset>
 
       {!aiAvailable && (
-        <p className={styles.unavailable} role="status">
+        <p className={styles.unavailable} role="status" id="crew-guide-unavailable">
           {aiReason ?? 'No Guide is configured.'} Every other way of building this character still
           works — write the fields, or roll for a backstory prompt.
         </p>
@@ -123,8 +124,12 @@ export function CrewProposalPanel({
         <button
           type="button"
           className={styles.primary}
-          disabled={!aiAvailable || pending || concept.trim() === ''}
-          onClick={() => onAsk(wanted.size === 0 ? undefined : [...wanted])}
+          {...guarded({
+            busy: pending,
+            blocked: !aiAvailable || concept.trim() === '',
+            reasonId: 'crew-guide-unavailable',
+            onClick: () => onAsk(wanted.size === 0 ? undefined : [...wanted]),
+          })}
         >
           {pending ? 'Asking…' : 'Ask the Guide'}
         </button>

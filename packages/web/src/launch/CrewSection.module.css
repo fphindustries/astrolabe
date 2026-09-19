@@ -218,13 +218,6 @@
   color: inherit;
 }
 
-.primary:disabled,
-.secondary:disabled,
-.add:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
 .saved {
   color: var(--text-muted);
   font-size: var(--text-sm);

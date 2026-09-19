@@ -12,6 +12,7 @@ import { useRollLaunchOracle } from '../api/crew.js';
 import { useSaveLaunchDraft } from '../api/launch.js';
 import { useAiStatus } from '../api/narration.js';
 import { fieldAnchorId } from '../ui/error-summary.js';
+import { guarded } from '../ui/guarded.js';
 
 import { proposalFailureText } from './CrewProposalPanel.js';
 import {
@@ -164,9 +165,8 @@ export function ConnectionSection({
             <button
               type="button"
               className={styles.secondary}
-              disabled={rolling !== undefined}
               aria-label={`Roll the connection’s ${CONNECTION_FIELD_LABELS[field].toLowerCase()}`}
-              onClick={() => void rollField(field)}
+              {...guarded({ busy: rolling !== undefined, onClick: () => void rollField(field) })}
             >
               {rolling === field ? 'Rolling…' : 'Roll'}
             </button>
@@ -240,40 +240,45 @@ export function ConnectionSection({
         <button
           type="button"
           className={styles.secondary}
-          disabled={saveDraft.isPending}
-          onClick={() =>
-            saveDraft.mutate(
-              { section: 'connection_troubles', snapshot: toConnectionDraft(state, form) },
-              { onSuccess: () => setSaved('Saved as setup. This is not campaign canon yet.') },
-            )
-          }
+          {...guarded({
+            busy: saveDraft.isPending,
+            onClick: () =>
+              saveDraft.mutate(
+                { section: 'connection_troubles', snapshot: toConnectionDraft(state, form) },
+                { onSuccess: () => setSaved('Saved as setup. This is not campaign canon yet.') },
+              ),
+          })}
         >
           Save and continue
         </button>
         <button
           type="button"
           className={styles.primary}
-          disabled={save.isPending || request === null}
-          onClick={() => {
-            if (request === null) return;
-            save.mutate(
-              { body: request, revise: accepted },
-              {
-                onSuccess: () =>
-                  setSaved(
-                    accepted
-                      ? 'Saved. The earlier version stays in the connection’s history.'
-                      : 'Accepted. The crew has a connection here.',
-                  ),
-              },
-            );
-          }}
+          {...guarded({
+            busy: save.isPending,
+            blocked: request === null,
+            reasonId: 'connection-blocked',
+            onClick: () => {
+              if (request === null) return;
+              save.mutate(
+                { body: request, revise: accepted },
+                {
+                  onSuccess: () =>
+                    setSaved(
+                      accepted
+                        ? 'Saved. The earlier version stays in the connection’s history.'
+                        : 'Accepted. The crew has a connection here.',
+                    ),
+                },
+              );
+            },
+          })}
         >
           {accepted ? 'Save this revision' : 'Accept the connection'}
         </button>
       </div>
       {request === null && (
-        <p className={styles.note}>
+        <p className={styles.note} id="connection-blocked">
           A connection needs a name, a role, and at least one crew member to share it.
         </p>
       )}
@@ -320,7 +325,7 @@ function GuidePanel({
         rank and no sharing crew: those are yours.
       </p>
       {!aiAvailable && (
-        <p className={styles.unavailable} role="status">
+        <p className={styles.unavailable} role="status" id="connection-guide-unavailable">
           No Guide is available. Write the fields, or roll them.
         </p>
       )}
@@ -333,8 +338,12 @@ function GuidePanel({
         <button
           type="button"
           className={styles.primary}
-          disabled={!aiAvailable || pending}
-          onClick={onAsk}
+          {...guarded({
+            busy: pending,
+            blocked: !aiAvailable,
+            reasonId: 'connection-guide-unavailable',
+            onClick: onAsk,
+          })}
         >
           {pending ? 'Asking…' : 'Ask the Guide'}
         </button>

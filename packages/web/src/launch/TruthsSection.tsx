@@ -4,6 +4,7 @@ import type { LaunchWorkspaceResponse } from '@astrolabe/shared';
 
 import { useDecideTruth, useSaveLaunchDraft } from '../api/launch.js';
 import { ErrorSummary } from '../ui/ErrorSummary.js';
+import { guarded } from '../ui/guarded.js';
 
 import { launchErrorSummary } from './errors.js';
 import {
@@ -109,13 +110,14 @@ export function TruthsSection({
         <button
           type="button"
           className={styles.secondary}
-          disabled={saveDraft.isPending}
-          onClick={() =>
-            saveDraft.mutate(
-              { section: 'truths', snapshot: toDraftSnapshot(form) },
-              { onSuccess: () => setSaved('Saved as setup. This is not campaign canon yet.') },
-            )
-          }
+          {...guarded({
+            busy: saveDraft.isPending,
+            onClick: () =>
+              saveDraft.mutate(
+                { section: 'truths', snapshot: toDraftSnapshot(form) },
+                { onSuccess: () => setSaved('Saved as setup. This is not campaign canon yet.') },
+              ),
+          })}
         >
           Save and continue
         </button>

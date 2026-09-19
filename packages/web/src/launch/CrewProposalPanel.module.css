@@ -77,11 +77,6 @@
   composes: secondary from '../ui/controls.module.css';
 }
 
-.primary[aria-disabled='true'],
-.secondary[aria-disabled='true'] {
-  opacity: 0.5;
-}
-
 .fields,
 .review,
 .proposed {

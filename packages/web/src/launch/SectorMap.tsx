@@ -3,6 +3,7 @@ import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import type { LaunchWorkspaceResponse } from '@astrolabe/shared';
 
 import { useRemoveRoute, useSaveRoute, useSetLayout, type RouteEndpoint } from '../api/sector.js';
+import { guarded } from '../ui/guarded.js';
 
 import {
   MAP_HEIGHT,
@@ -166,8 +167,11 @@ export function SectorMap({
         <button
           type="button"
           className={styles.secondary}
-          disabled={!dirty || setLayout.isPending || nodes.length === 0}
-          onClick={saveLayout}
+          {...guarded({
+            busy: setLayout.isPending,
+            blocked: !dirty || nodes.length === 0,
+            onClick: saveLayout,
+          })}
         >
           Save the layout
         </button>
@@ -244,14 +248,16 @@ function PassageList({
                 <button
                   type="button"
                   className={styles.secondary}
-                  disabled={(reasons[passage.key] ?? '').trim() === '' || remove.isPending}
+                  {...guarded({
+                    busy: remove.isPending,
+                    blocked: (reasons[passage.key] ?? '').trim() === '',
+                    onClick: () =>
+                      remove.mutate({
+                        route: { from: passage.from, to: passage.to },
+                        reason: reasons[passage.key] ?? '',
+                      }),
+                  })}
                   aria-label={`Remove the passage ${passage.text}`}
-                  onClick={() =>
-                    remove.mutate({
-                      route: { from: passage.from, to: passage.to },
-                      reason: reasons[passage.key] ?? '',
-                    })
-                  }
                 >
                   Remove
                 </button>
@@ -317,19 +323,22 @@ function PassageList({
           <button
             type="button"
             className={styles.secondary}
-            disabled={!canAdd || add.isPending}
-            onClick={() => {
-              if (target === undefined) return;
-              add.mutate(
-                { from, to: target },
-                {
-                  onSuccess: () => {
-                    setTo('');
-                    setLabel('');
+            {...guarded({
+              busy: add.isPending,
+              blocked: !canAdd,
+              onClick: () => {
+                if (target === undefined) return;
+                add.mutate(
+                  { from, to: target },
+                  {
+                    onSuccess: () => {
+                      setTo('');
+                      setLabel('');
+                    },
                   },
-                },
-              );
-            }}
+                );
+              },
+            })}
           >
             Add the passage
           </button>

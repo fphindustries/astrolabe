@@ -6,6 +6,7 @@ import { useSaveLaunchDraft } from '../api/launch.js';
 import { useConfigureSector, useRollLaunchRecipe } from '../api/sector.js';
 import { ErrorSummary } from '../ui/ErrorSummary.js';
 import { fieldAnchorId } from '../ui/error-summary.js';
+import { guarded } from '../ui/guarded.js';
 
 import { launchErrorSummary } from './errors.js';
 import { StarFields } from './SectorDetails.js';
@@ -178,8 +179,7 @@ export function SectorSection({
         <button
           type="button"
           className={styles.secondary}
-          disabled={saveDraft.isPending}
-          onClick={handleSaveDraft}
+          {...guarded({ busy: saveDraft.isPending, onClick: handleSaveDraft })}
         >
           Save and continue
         </button>
@@ -290,9 +290,8 @@ function SectorHeader({
           <button
             type="button"
             className={styles.secondary}
-            disabled={roll.isPending}
+            {...guarded({ busy: roll.isPending, onClick: rollName })}
             aria-label="Roll the sector name"
-            onClick={rollName}
           >
             Roll
           </button>
@@ -318,7 +317,11 @@ function SectorHeader({
       <StarFields campaignId={campaignId} form={form} update={update} configured={configured} />
 
       <div className={styles.actions}>
-        <button type="button" className={styles.primary} disabled={pending} onClick={onConfigure}>
+        <button
+          type="button"
+          className={styles.primary}
+          {...guarded({ busy: pending, onClick: onConfigure })}
+        >
           {configured ? 'Save the region and name' : 'Accept the region and name'}
         </button>
       </div>
