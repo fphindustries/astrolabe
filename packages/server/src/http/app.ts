@@ -1,12 +1,9 @@
 import {
-  AddSectorLocationRequestBodySchema,
-  AddSectorRouteRequestBodySchema,
   BeginSessionRequestBodySchema,
   EndSessionRequestBodySchema,
   ApplyMoveChoiceRequestBodySchema,
   BurnMomentumRequestBodySchema,
   CreateCampaignRequestBodySchema,
-  CreateCharacterRequestBodySchema,
   InvokeMoveRequestBodySchema,
   LOCAL_PLAYER_ID,
   ResolvePayThePriceRequestBodySchema,
@@ -33,9 +30,7 @@ import {
   RollLaunchOracleRequestBodySchema,
   RollLaunchRecipeRequestBodySchema,
   ProposeLaunchCreationRequestBodySchema,
-  SwearIncitingVowRequestBodySchema,
   VoidEventRequestBodySchema,
-  type AddSectorLocationResponse,
   type BeginSessionResponse,
   type EndSessionResponse,
   type BurnMomentumResponse,
@@ -64,7 +59,6 @@ import {
   type SaveLaunchTroubleResponse,
   type RollLaunchOracleResponse,
   type RollLaunchRecipeResponse,
-  type SwearIncitingVowResponse,
   type VoidEventResponse,
   type VoidPreviewResult,
 } from '@astrolabe/shared';
@@ -73,7 +67,7 @@ import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import type { Sql } from 'postgres';
 import * as z from 'zod';
 
-import type { CharacterProblem, RandomSource } from '@astrolabe/rules';
+import type { RandomSource } from '@astrolabe/rules';
 
 import type { AiProvider } from '../ai/provider.js';
 import { AiStatus } from '../ai/status.js';
@@ -90,14 +84,11 @@ import {
 import { project } from '../projection/project.js';
 import { buildLaunchWorkspace } from '../launch/workspace.js';
 import {
-  addSectorLocation,
-  addSectorRoute,
   applyMoveChoice,
   beginSession,
   endSession,
   SessionRejectedError,
   burnMomentum,
-  CharacterRejectedError,
   LaunchCharacterRejectedError,
   UnknownCharacterError,
   UnknownProposalError,
@@ -105,7 +96,6 @@ import {
   createCharacter,
   removeCharacter,
   reviseCharacter,
-  IncitingVowRejectedError,
   invokeMove,
   latestSessionId,
   listCampaigns,
@@ -114,7 +104,6 @@ import {
   readEvents,
   readNarrativeEvents,
   resolvePayThePriceMethod,
-  SectorRouteRejectedError,
   saveLaunchDraft,
   setLaunchFoundation,
   decideTruth,
@@ -136,7 +125,6 @@ import {
   rollLaunchRecipe,
   proposeLaunchCreation,
   LaunchRejectedError,
-  swearIncitingVow,
   voidEvent,
   VoidRefusedError,
 } from '../db/index.js';
@@ -1022,7 +1010,12 @@ export function buildApp({
           ...(result.vowTrackId === undefined ? {} : { vowTrackId: result.vowTrackId }),
         };
       } catch (error) {
-        if (error instanceof LaunchCharacterRejectedError) {
+        // An unknown proposal is the client's error, not the server's (10.1e:
+        // only the retired Milestone 1 route mapped it).
+        if (
+          error instanceof LaunchCharacterRejectedError ||
+          error instanceof UnknownProposalError
+        ) {
           reply.code(422);
           return { problem: error.message };
         }
@@ -1291,160 +1284,6 @@ export function buildApp({
         if (error instanceof LaunchRejectedError) {
           reply.code(422);
           return { problem: error.message, reason: error.reason };
-        }
-        throw error;
-      }
-    },
-  );
-
-  app.post<{ Params: CampaignParams }>(
-    '/api/campaigns/:id/characters',
-    async (
-      request,
-      reply,
-    ): Promise<
-      | CreateCharacterResponse
-      | { problems: readonly CharacterProblem[]; problem?: string }
-      | undefined
-    > => {
-      const id = parseCampaignId(request.params.id, reply);
-      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
-        return undefined;
-      }
-
-      const parsedBody = CreateCharacterRequestBodySchema.safeParse(request.body);
-      if (!parsedBody.success) {
-        reply.code(400);
-        return undefined;
-      }
-      const { commandId, draft, backgroundVow, hooks, pronouns, proposalCommandId } =
-        parsedBody.data;
-
-      try {
-        const created = await createCharacter(sql, {
-          campaignId: id,
-          commandId,
-          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
-          draft,
-          ...(backgroundVow !== undefined ? { backgroundVow } : {}),
-          ...(hooks !== undefined ? { hooks } : {}),
-          ...(pronouns !== undefined ? { pronouns } : {}),
-          ...(proposalCommandId !== undefined ? { proposalCommandId } : {}),
-        });
-        reply.code(201);
-        return {
-          characterId: created.characterId,
-          ...(created.vowTrackId !== undefined ? { vowTrackId: created.vowTrackId } : {}),
-        };
-      } catch (error) {
-        if (error instanceof CharacterRejectedError) {
-          reply.code(422);
-          return { problems: error.problems };
-        }
-        if (error instanceof UnknownProposalError) {
-          reply.code(422);
-          return { problems: [], problem: error.message };
-        }
-        throw error;
-      }
-    },
-  );
-
-  app.post<{ Params: CampaignParams }>(
-    '/api/campaigns/:id/sector/locations',
-    async (
-      request,
-      reply,
-    ): Promise<AddSectorLocationResponse | { problem: string } | undefined> => {
-      const id = parseCampaignId(request.params.id, reply);
-      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
-        return undefined;
-      }
-
-      const parsedBody = AddSectorLocationRequestBodySchema.safeParse(request.body);
-      if (!parsedBody.success) {
-        reply.code(400);
-        return undefined;
-      }
-      const { commandId, name, description } = parsedBody.data;
-
-      const added = await addSectorLocation(sql, {
-        campaignId: id,
-        commandId,
-        actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
-        name,
-        description,
-      });
-      reply.code(201);
-      return { locationId: added.locationId };
-    },
-  );
-
-  app.post<{ Params: CampaignParams }>(
-    '/api/campaigns/:id/sector/routes',
-    async (request, reply): Promise<Record<string, never> | { problem: string } | undefined> => {
-      const id = parseCampaignId(request.params.id, reply);
-      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
-        return undefined;
-      }
-
-      const parsedBody = AddSectorRouteRequestBodySchema.safeParse(request.body);
-      if (!parsedBody.success) {
-        reply.code(400);
-        return undefined;
-      }
-      const { commandId, fromLocationId, toLocationId } = parsedBody.data;
-
-      try {
-        await addSectorRoute(sql, {
-          campaignId: id,
-          commandId,
-          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
-          fromLocationId,
-          toLocationId,
-        });
-        reply.code(201);
-        return {};
-      } catch (error) {
-        if (error instanceof SectorRouteRejectedError) {
-          reply.code(422);
-          return { problem: error.message };
-        }
-        throw error;
-      }
-    },
-  );
-
-  app.post<{ Params: CampaignParams }>(
-    '/api/campaigns/:id/inciting-vow',
-    async (request, reply): Promise<SwearIncitingVowResponse | { problem: string } | undefined> => {
-      const id = parseCampaignId(request.params.id, reply);
-      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
-        return undefined;
-      }
-
-      const parsedBody = SwearIncitingVowRequestBodySchema.safeParse(request.body);
-      if (!parsedBody.success) {
-        reply.code(400);
-        return undefined;
-      }
-      const { commandId, title, rank, proposalCommandId } = parsedBody.data;
-
-      try {
-        const sworn = await swearIncitingVow(sql, {
-          campaignId: id,
-          commandId,
-          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
-          title,
-          rank,
-          ...(proposalCommandId !== undefined ? { proposalCommandId } : {}),
-        });
-        reply.code(201);
-        return { vowTrackId: sworn.vowTrackId };
-      } catch (error) {
-        if (error instanceof IncitingVowRejectedError || error instanceof UnknownProposalError) {
-          reply.code(422);
-          return { problem: error.message };
         }
         throw error;
       }

@@ -1187,7 +1187,7 @@ of them stays). D-170 retires the production seed, and was approved with the mil
     `toIncidentRequest` does. The sections pass the proposal the fold holds, not the one the
     panel shows: discarding hides a proposal without un-holding it, and a hidden proposal is
     still a valid acceptance target.
-- [ ] 10.1 Extract a reusable Lantern Wake campaign-launch fixture and rebuild the three
+- [x] 10.1 Extract a reusable Lantern Wake campaign-launch fixture and rebuild the three
   existing fixtures on top of it as active campaigns.
   - [x] **10.1a One HTTP fixture harness.** Move what `golden-session.ts` builds for itself
     into `fixtures/http-script.ts`: typed route calls that fail on a non-2xx with the beat
@@ -1280,10 +1280,21 @@ of them stays). D-170 retires the production seed, and was approved with the mil
     Starship grant, three location entities, two routes and the vow, and its blockers are
     reported rather than thrown. With a session it is closed as `campaign_in_play`, though
     its phase still says `draft`.
-  - [ ] **10.1e Retire Milestone 1's write paths (D-206).** Only then remove the commands,
+  - [x] **10.1e Retire Milestone 1's write paths (D-206).** Only then remove the commands,
     routes, helper and screen D-206 names, with the diff test, and rewrite or delete the
     tests that drove them. The projection keeps folding the legacy events, and A43 stays on
     the frozen log.
+    *As built:* removed `swearIncitingVow`, `addSectorLocation` and `addSectorRoute` with
+    their errors, the four routes, their shared schemas, `createLegacyCharacter`, and the
+    web's Milestone 1 character screen, its proposal module, its API hooks and its route.
+    `createCharacter` stays, because the launch crew route uses it. Removing the old
+    `POST /characters` exposed a gap: an unknown `proposalCommandId` on the **launch** crew
+    route was a 500, because only the retired route mapped `UnknownProposalError`. It is
+    now a 422, with a test that fails without the fix. The tests that drove the retired
+    paths were deleted, including 9.0j's fence and the legacy log's diff, or moved onto
+    launch commands: a launch settlement, and crew accepted through `/launch/crew`. The move
+    tests' characters come from the command. D-206 records that it amends D-189: no path
+    remains to add a character to a campaign in play.
 - [ ] 10.2 Implement `golden-launch.test.ts` through HTTP routes with loaded dice and
   scripted providers, covering A22–A44. It asserts on 10.1b's run, beat by beat, and names
   the criterion each block covers, with a table from A22–A44 to their tests so none is

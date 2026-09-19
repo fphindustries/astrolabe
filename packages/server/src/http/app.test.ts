@@ -1,25 +1,25 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 
-import { STARFORGED, type AssetId } from '@astrolabe/rules';
-import type {
-  AddSectorLocationResponse,
-  CampaignListResponse,
-  CampaignStateResponse,
-  CreateCampaignResponse,
-  CreateCharacterResponse,
-  InvokeMoveResponse,
-  NarrativeLogResponse,
-  ResolvePayThePriceResponse,
-  SwearIncitingVowResponse,
-  VoidPreviewResult,
-  CommandId,
-  EntityId,
-  EventId,
+import { STARFORGED } from '@astrolabe/rules';
+import {
+  LOCAL_PLAYER_ID,
+  type CampaignId,
+  type CampaignListResponse,
+  type CampaignStateResponse,
+  type CreateCampaignResponse,
+  type InvokeMoveResponse,
+  type NarrativeLogResponse,
+  type ResolvePayThePriceResponse,
+  type VoidPreviewResult,
+  type CommandId,
+  type EntityId,
+  type EventId,
 } from '@astrolabe/shared';
 
 import { playSessionTwoOpen, type SessionTwoOpenRun } from '../fixtures/index.js';
 import { StubProvider } from '../ai/stub.js';
+import { createCharacter } from '../db/character-commands.js';
 import { appendCommand } from '../db/event-store.js';
 import { createTestDatabase, hasTestDatabase, type TestDatabase } from '../db/testing.js';
 import { uuidv7 } from '../db/uuid.js';
@@ -286,75 +286,6 @@ describe.skipIf(!hasTestDatabase)('the HTTP read API', () => {
     });
   });
 
-  describe('creating a character (task 3.2)', () => {
-    it('writes a character and returns it', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: `/api/campaigns/${run.campaignId}/characters`,
-        payload: validDraftBody(),
-      });
-      expect(response.statusCode).toBe(201);
-      const body = response.json<CreateCharacterResponse>();
-      expect(body.characterId).toBeTruthy();
-
-      const state = await app.inject({
-        method: 'GET',
-        url: `/api/campaigns/${run.campaignId}/state`,
-      });
-      const stateBody = state.json<CampaignStateResponse>();
-      expect(stateBody.state.characters[body.characterId]?.callsign).toBe('Nyx');
-    });
-
-    it('writes the background vow in the same command', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: `/api/campaigns/${run.campaignId}/characters`,
-        payload: validDraftBody({
-          backgroundVow: { title: 'Recover what was lost', rank: 'dangerous' },
-        }),
-      });
-      expect(response.statusCode).toBe(201);
-      const body = response.json<CreateCharacterResponse>();
-      expect(body.vowTrackId).toBeTruthy();
-    });
-
-    it('422s a draft the rules reject, with the problems attached', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: `/api/campaigns/${run.campaignId}/characters`,
-        payload: validDraftBody({
-          draft: {
-            name: '',
-            callsign: 'Nyx',
-            stats: { edge: 5, heart: 5, iron: 5, shadow: 5, wits: 5 },
-            assets: [] as AssetId[],
-          },
-        }),
-      });
-      expect(response.statusCode).toBe(422);
-      const body = response.json<{ problems: readonly { code: string }[] }>();
-      expect(body.problems.map((p) => p.code)).toContain('name_required');
-    });
-
-    it('400s a malformed body', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: `/api/campaigns/${run.campaignId}/characters`,
-        payload: { commandId: 'not-a-uuid' },
-      });
-      expect(response.statusCode).toBe(400);
-    });
-
-    it('404s an unknown campaign', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/api/campaigns/00000000-0000-0000-0000-000000000000/characters',
-        payload: validDraftBody(),
-      });
-      expect(response.statusCode).toBe(404);
-    });
-  });
-
   async function freshCampaignId(): Promise<string> {
     const response = await app.inject({
       method: 'POST',
@@ -376,114 +307,18 @@ describe.skipIf(!hasTestDatabase)('the HTTP read API', () => {
     return campaignId;
   }
 
+  /** Setup, not the subject: the character command (D-206 retired its Milestone 1 route). */
   async function freshCharacterId(campaignId: string): Promise<string> {
-    const response = await app.inject({
-      method: 'POST',
-      url: `/api/campaigns/${campaignId}/characters`,
-      payload: validDraftBody(),
+    const body = validDraftBody();
+    const created = await createCharacter(db.sql, {
+      campaignId: campaignId as CampaignId,
+      commandId: body.commandId as CommandId,
+      actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+      draft: body.draft,
     });
-    return response.json<CreateCharacterResponse>().characterId;
+    return created.characterId;
   }
 
-  describe('the sector: locations and routes (task 4.3)', () => {
-    it('adds a location and a route between two locations', async () => {
-      const campaignId = await freshCampaignId();
-      const a = await app.inject({
-        method: 'POST',
-        url: `/api/campaigns/${campaignId}/sector/locations`,
-        payload: {
-          commandId: crypto.randomUUID(),
-          name: 'The derelict relay station',
-          description: 'At the edge of the sector.',
-        },
-      });
-      expect(a.statusCode).toBe(201);
-      const { locationId: locationA } = a.json<AddSectorLocationResponse>();
-
-      const b = await app.inject({
-        method: 'POST',
-        url: `/api/campaigns/${campaignId}/sector/locations`,
-        payload: { commandId: crypto.randomUUID(), name: 'Outpost', description: '' },
-      });
-      const { locationId: locationB } = b.json<AddSectorLocationResponse>();
-
-      const route = await app.inject({
-        method: 'POST',
-        url: `/api/campaigns/${campaignId}/sector/routes`,
-        payload: {
-          commandId: crypto.randomUUID(),
-          fromLocationId: locationA,
-          toLocationId: locationB,
-        },
-      });
-      expect(route.statusCode).toBe(201);
-
-      const state = await app.inject({ method: 'GET', url: `/api/campaigns/${campaignId}/state` });
-      expect(state.json<CampaignStateResponse>().state.sector.routes).toEqual([
-        { from: locationA, to: locationB },
-      ]);
-    });
-
-    it('422s a route to a location that was never established', async () => {
-      const campaignId = await freshCampaignId();
-      const a = await app.inject({
-        method: 'POST',
-        url: `/api/campaigns/${campaignId}/sector/locations`,
-        payload: { commandId: crypto.randomUUID(), name: 'Station', description: '' },
-      });
-      const { locationId } = a.json<AddSectorLocationResponse>();
-
-      const response = await app.inject({
-        method: 'POST',
-        url: `/api/campaigns/${campaignId}/sector/routes`,
-        payload: {
-          commandId: crypto.randomUUID(),
-          fromLocationId: locationId,
-          toLocationId: '00000000-0000-0000-0000-000000000000',
-        },
-      });
-      expect(response.statusCode).toBe(422);
-    });
-  });
-
-  describe('the inciting incident becomes the first vow (task 4.4)', () => {
-    it('writes the vow and it shows up on the play screen’s state', async () => {
-      const campaignId = await freshCampaignId();
-      const response = await app.inject({
-        method: 'POST',
-        url: `/api/campaigns/${campaignId}/inciting-vow`,
-        payload: {
-          commandId: crypto.randomUUID(),
-          title: "Recover the flight recorder of Meridian's Hope",
-          rank: 'formidable',
-        },
-      });
-      expect(response.statusCode).toBe(201);
-      const { vowTrackId } = response.json<SwearIncitingVowResponse>();
-
-      const state = await app.inject({ method: 'GET', url: `/api/campaigns/${campaignId}/state` });
-      const track = state.json<CampaignStateResponse>().state.tracks[vowTrackId];
-      expect(track?.title).toBe("Recover the flight recorder of Meridian's Hope");
-      expect(track?.kind).toBe('vow');
-    });
-
-    it('400s a missing title', async () => {
-      const campaignId = await freshCampaignId();
-      const response = await app.inject({
-        method: 'POST',
-        url: `/api/campaigns/${campaignId}/inciting-vow`,
-        payload: { commandId: crypto.randomUUID(), rank: 'formidable' },
-      });
-      expect(response.statusCode).toBe(400);
-    });
-  });
-
-  /**
-   * The move flow (task 6.x). Real HTTP requests roll on `cryptoRandomSource`
-   * (never seedable over the wire, by design), so these check routing,
-   * validation and error mapping — exact mechanics (which tier, which
-   * effects) are `move-commands.test.ts`'s job, against a seeded RNG.
-   */
   describe('resolving a move (task 6.x)', () => {
     it('invokes a rolled move and returns a result with a real tier', async () => {
       const campaignId = await freshSessionCampaignId();

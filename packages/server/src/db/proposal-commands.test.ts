@@ -16,9 +16,14 @@ import { StubProvider } from '../ai/stub.js';
 import { loadedDice } from '../fixtures/loaded-dice.js';
 import { project } from '../projection/project.js';
 
-import { addSectorLocation, createCampaign, swearIncitingVow } from './campaign-commands.js';
+import { createCampaign } from './campaign-commands.js';
 import { createCharacter, UnknownProposalError } from './character-commands.js';
-import { decideTruth, rollLaunchRecipe } from './launch-commands.js';
+import {
+  configureLaunchSector,
+  decideTruth,
+  rollLaunchRecipe,
+  saveLaunchLocation,
+} from './launch-commands.js';
 import { readEvents } from './event-store.js';
 import { AiRequestRefusedError } from './narration-commands.js';
 import { proposeCharacter, proposeIncidents } from './proposal-commands.js';
@@ -642,12 +647,25 @@ describe.skipIf(!hasTestDatabase)('inciting incident proposals (task 4.6, D-132â
       resolution: 'custom',
       text: 'The sun plague burned the old worlds.',
     });
-    await addSectorLocation(db.sql, {
+    // A launch settlement: the Milestone 1 location command is retired (D-206).
+    await configureLaunchSector(db.sql, {
       campaignId,
       commandId: newId(),
       actor: PLAYER,
-      name: 'Varga Relay',
-      description: 'A relay station at the sector edge.',
+      sector: { name: 'Lantern Reach', region: 'expanse' },
+    });
+    await saveLaunchLocation(db.sql, {
+      campaignId,
+      commandId: newId(),
+      actor: PLAYER,
+      location: {
+        kind: 'settlement',
+        name: 'Varga Relay',
+        location: 'deep_space',
+        population: 'Few',
+        authority: 'None',
+        projects: ['Keeping the relay dark'],
+      },
     });
     await createCharacter(db.sql, {
       campaignId,
@@ -694,7 +712,7 @@ describe.skipIf(!hasTestDatabase)('inciting incident proposals (task 4.6, D-132â
     const events = await readEvents(db.sql, campaignId);
     const state = project(events);
     const [vesna] = Object.values(state.characters);
-    const relay = Object.values(state.entities).find((e) => e.name === 'Varga Relay');
+    const relay = Object.values(state.launch.locations).find((l) => l.name === 'Varga Relay');
     expect(result.proposal.options).toHaveLength(3);
     result.proposal.options.forEach((option, i) => {
       expect(option.groundedIn).toEqual([result.rolls[i]?.eventId]);
@@ -712,7 +730,7 @@ describe.skipIf(!hasTestDatabase)('inciting incident proposals (task 4.6, D-132â
       '- oracle:cataclysm (Cataclysm): The sun plague burned the old worlds.',
     );
     expect(asked?.user).toContain(
-      '- Varga Relay (description: A relay station at the sector edge.)',
+      '- Varga Relay (deep_space; population: Few; authority: None; projects: Keeping the relay dark)',
     );
     expect(asked?.user).toContain(
       '- Vesna: Vesna Kade (she/her); background vow: "Find the pilots I left behind" (extreme); backstory: She flew the last evacuation out of a burning colony.',
@@ -794,65 +812,5 @@ describe.skipIf(!hasTestDatabase)('inciting incident proposals (task 4.6, D-132â
 
     expect(again).toEqual(first);
     expect(ai.requests).toHaveLength(1);
-  });
-
-  it('swears the vow the player edited, naming the proposal as its cause (D-132)', async () => {
-    const campaignId = await campaign();
-    const ai = new StubProvider({ responses: [{ kind: 'structured', value: goodIncidents() }] });
-    const proposalCommandId = newId<CommandId>();
-    const proposed = await proposeIncidents(db.sql, ai, {
-      campaignId,
-      commandId: proposalCommandId,
-      actor: PLAYER,
-      rng: incidentRolls(),
-    });
-    if (!proposed.ok) throw new Error('expected a proposal');
-
-    const sworn = await swearIncitingVow(db.sql, {
-      campaignId,
-      commandId: newId(),
-      actor: PLAYER,
-      title: 'Recover the flight recorder of the Meridian',
-      rank: 'formidable',
-      proposalCommandId,
-    });
-
-    const vow = sworn.result.events.find((e) => e.type === 'track.created');
-    expect(vow?.causedBy).toBe(proposed.proposalEventId);
-    const state = project(await readEvents(db.sql, campaignId));
-    expect(state.tracks[sworn.vowTrackId]).toMatchObject({
-      title: 'Recover the flight recorder of the Meridian',
-      rank: 'formidable',
-    });
-  });
-
-  it('refuses a vow naming a command that holds no incident proposal', async () => {
-    const campaignId = await campaign();
-    const characterProposal = newId<CommandId>();
-    await proposeCharacter(
-      db.sql,
-      new StubProvider({ responses: [{ kind: 'structured', value: goodProposal() }] }),
-      {
-        campaignId,
-        commandId: characterProposal,
-        actor: PLAYER,
-        concept: CONCEPT,
-        targetId: 'draft-vesna',
-        groundedIn: await rollCharacterRecipe(db.sql, campaignId),
-      },
-    );
-
-    for (const proposalCommandId of [newId<CommandId>(), characterProposal]) {
-      await expect(
-        swearIncitingVow(db.sql, {
-          campaignId,
-          commandId: newId(),
-          actor: PLAYER,
-          title: 'Anything',
-          rank: 'dangerous',
-          proposalCommandId,
-        }),
-      ).rejects.toBeInstanceOf(UnknownProposalError);
-    }
   });
 });

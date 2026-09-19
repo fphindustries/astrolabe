@@ -1,24 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { STARFORGED } from '@astrolabe/rules';
-import {
-  LOCAL_PLAYER_ID,
-  type Actor,
-  type CampaignId,
-  type CommandId,
-  type EntityId,
-} from '@astrolabe/shared';
+import { LOCAL_PLAYER_ID, type Actor, type CampaignId, type CommandId } from '@astrolabe/shared';
 
 import { project } from '../projection/project.js';
 
-import {
-  addSectorLocation,
-  addSectorRoute,
-  createCampaign,
-  IncitingVowRejectedError,
-  SectorRouteRejectedError,
-  swearIncitingVow,
-} from './campaign-commands.js';
+import { createCampaign } from './campaign-commands.js';
 import { readEvents } from './event-store.js';
 import { createTestDatabase, hasTestDatabase, type TestDatabase } from './testing.js';
 import { uuidv7 } from './uuid.js';
@@ -103,118 +90,5 @@ describe.skipIf(!hasTestDatabase)('creating a campaign (task 4.1, task 4.5)', ()
 
     const rows = await db.sql`select id from campaigns where name = 'Retried Signal'`;
     expect(rows).toHaveLength(1);
-  });
-
-  async function newCampaign(): Promise<CampaignId> {
-    const { campaignId } = await createCampaign(db.sql, {
-      campaignId: newId<CampaignId>(),
-      commandId: newId<CommandId>(),
-      actor: PLAYER,
-      name: 'A fresh campaign',
-    });
-    return campaignId;
-  }
-
-  describe('the sector: locations and routes (task 4.3)', () => {
-    it('establishes a player-written location', async () => {
-      const campaignId = await newCampaign();
-      const { locationId } = await addSectorLocation(db.sql, {
-        campaignId,
-        commandId: newId<CommandId>(),
-        actor: PLAYER,
-        name: 'The derelict relay station',
-        description: 'At the edge of the sector.',
-      });
-
-      const state = project(await readEvents(db.sql, campaignId));
-      const location = state.entities[locationId];
-      expect(location?.kind).toBe('location');
-      expect(location?.name).toBe('The derelict relay station');
-      expect(location?.provenance.establishedBy).toBe('player');
-    });
-
-    it('adds a route between two established locations', async () => {
-      const campaignId = await newCampaign();
-      const a = await addSectorLocation(db.sql, {
-        campaignId,
-        commandId: newId<CommandId>(),
-        actor: PLAYER,
-        name: 'Station',
-        description: '',
-      });
-      const b = await addSectorLocation(db.sql, {
-        campaignId,
-        commandId: newId<CommandId>(),
-        actor: PLAYER,
-        name: 'Outpost',
-        description: '',
-      });
-
-      await addSectorRoute(db.sql, {
-        campaignId,
-        commandId: newId<CommandId>(),
-        actor: PLAYER,
-        fromLocationId: a.locationId,
-        toLocationId: b.locationId,
-      });
-
-      const state = project(await readEvents(db.sql, campaignId));
-      expect(state.sector.routes).toEqual([{ from: a.locationId, to: b.locationId }]);
-    });
-
-    it('rejects a route to something that is not an established location', async () => {
-      const campaignId = await newCampaign();
-      const a = await addSectorLocation(db.sql, {
-        campaignId,
-        commandId: newId<CommandId>(),
-        actor: PLAYER,
-        name: 'Station',
-        description: '',
-      });
-
-      await expect(
-        addSectorRoute(db.sql, {
-          campaignId,
-          commandId: newId<CommandId>(),
-          actor: PLAYER,
-          fromLocationId: a.locationId,
-          toLocationId: newId<EntityId>(),
-        }),
-      ).rejects.toThrow(SectorRouteRejectedError);
-    });
-  });
-
-  describe('the inciting incident becomes the first vow (task 4.4)', () => {
-    it('writes a crew-level vow with the player-written incident', async () => {
-      const campaignId = await newCampaign();
-      const { vowTrackId } = await swearIncitingVow(db.sql, {
-        campaignId,
-        commandId: newId<CommandId>(),
-        actor: PLAYER,
-        title: "Recover the flight recorder of Meridian's Hope",
-        rank: 'formidable',
-      });
-
-      const state = project(await readEvents(db.sql, campaignId));
-      const vow = state.tracks[vowTrackId];
-      expect(vow?.title).toBe("Recover the flight recorder of Meridian's Hope");
-      expect(vow?.rank).toBe('formidable');
-      expect(vow?.maxTicks).toBe(40);
-      // No character owns it — it's the crew's vow.
-      expect(Object.values(state.characters)).toHaveLength(0);
-    });
-
-    it('rejects an empty incident', async () => {
-      const campaignId = await newCampaign();
-      await expect(
-        swearIncitingVow(db.sql, {
-          campaignId,
-          commandId: newId<CommandId>(),
-          actor: PLAYER,
-          title: '   ',
-          rank: 'formidable',
-        }),
-      ).rejects.toThrow(IncitingVowRejectedError);
-    });
   });
 });

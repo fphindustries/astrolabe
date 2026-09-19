@@ -88,7 +88,7 @@ export async function appendMilestoneOneLog(
     ]);
   }
 
-  // `createLegacyCharacter`'s events: the chosen assets and the granted Starship.
+  // Milestone 1's character events: the chosen assets and the granted Starship.
   const crew = [
     [
       'vesna',

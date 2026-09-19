@@ -52,10 +52,10 @@ describe('matchRoute', () => {
       expect(matchRoute(pathname)).toEqual({ name: 'not-found', pathname });
   });
 
-  it('matches character creation with its campaign id', () => {
+  it('no longer routes Milestone 1 character creation (D-206)', () => {
     expect(matchRoute('/campaigns/abc-123/characters/new')).toEqual({
-      name: 'character-new',
-      campaignId: 'abc-123',
+      name: 'not-found',
+      pathname: '/campaigns/abc-123/characters/new',
     });
   });
 

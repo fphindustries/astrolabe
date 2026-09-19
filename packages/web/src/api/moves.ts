@@ -21,8 +21,8 @@ import { apiGet, apiPost } from './http.js';
 import { aiKeys } from './narration.js';
 
 /**
- * The move flow (task 6.x). Every mutation follows `useCreateCharacter`'s
- * shape exactly: a client-minted `commandId` per call (the idempotency key
+ * The move flow (task 6.x). Every mutation has the same shape: a
+ * client-minted `commandId` per call (the idempotency key
  * section 2's store expects), and invalidate campaign state + log on
  * success so the crew rail, pressure rail and narrative log pick up
  * whatever the command just wrote.

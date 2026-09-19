@@ -129,18 +129,8 @@ export {
 } from './proposal-commands.js';
 export {
   createCampaign,
-  addSectorLocation,
-  addSectorRoute,
-  swearIncitingVow,
-  SectorRouteRejectedError,
-  IncitingVowRejectedError,
   type CreateCampaignRequest,
   type CreatedCampaign,
-  type AddSectorLocationRequest,
-  type AddedSectorLocation,
-  type AddSectorRouteRequest,
-  type SwearIncitingVowRequest,
-  type SwornIncitingVow,
 } from './campaign-commands.js';
 export {
   applyMoveChoice,

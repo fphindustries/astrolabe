@@ -519,6 +519,19 @@ describe.skipIf(!hasTestDatabase)('the Campaign Launch routes (3.1–3.9)', () =
       return { id, characterId: (created.json() as CreateCharacterResponse).characterId };
     }
 
+    // 10.1e: only the retired Milestone 1 route mapped this; it was a 500 here.
+    it('refuses an unknown proposal as the client’s error, not the server’s', async () => {
+      const id = await campaign();
+
+      const response = await post(`/api/campaigns/${id}/launch/crew`, {
+        commandId: newId(),
+        ...CREW_BODY,
+        proposalCommandId: newId(),
+      });
+
+      expect(response.statusCode).toBe(422);
+    });
+
     it('revises a crew member in place', async () => {
       const { id, characterId } = await crew();
 

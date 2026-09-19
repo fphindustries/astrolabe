@@ -32,7 +32,6 @@ export type Route =
       readonly campaignId: string;
       readonly section: LaunchSection;
     }
-  | { readonly name: 'character-new'; readonly campaignId: string }
   | { readonly name: 'not-found'; readonly pathname: string };
 
 /** Pure: pathname in, route out. */
@@ -58,9 +57,6 @@ export function matchRoute(pathname: string): Route {
   }
   if (segments[2] === 'play' && segments.length === 3) {
     return { name: 'play', campaignId };
-  }
-  if (segments[2] === 'characters' && segments[3] === 'new' && segments.length === 4) {
-    return { name: 'character-new', campaignId };
   }
   if (segments[2] === 'launch') {
     if (segments.length === 3) {

@@ -3,7 +3,6 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { CampaignHomeScreen } from '../campaigns/CampaignHomeScreen.js';
 import { CampaignListScreen } from '../campaigns/CampaignListScreen.js';
 import { NewCampaignScreen } from '../campaigns/NewCampaignScreen.js';
-import { CharacterCreationScreen } from '../characters/CharacterCreationScreen.js';
 import { NotFoundScreen } from '../play/NotFoundScreen.js';
 import { PlayScreen } from '../play/PlayScreen.js';
 import { ErrorBoundary } from '../ui/ErrorBoundary.js';
@@ -53,8 +52,6 @@ function Routed() {
       );
     case 'play':
       return <PlayScreen campaignId={route.campaignId} />;
-    case 'character-new':
-      return <CharacterCreationScreen campaignId={route.campaignId} />;
     case 'not-found':
       return <NotFoundScreen message={`No route matches ${route.pathname}.`} />;
   }

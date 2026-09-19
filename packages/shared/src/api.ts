@@ -595,49 +595,6 @@ export type ProposeLaunchCreationRequestBody = z.infer<
   typeof ProposeLaunchCreationRequestBodySchema
 >;
 
-/** The body of `POST /campaigns/:id/sector/locations` (task 4.3). */
-export const AddSectorLocationRequestBodySchema = z.object({
-  commandId: CommandIdSchema,
-  name: z.string().min(1),
-  description: z.string(),
-});
-
-export type AddSectorLocationRequestBody = z.infer<typeof AddSectorLocationRequestBodySchema>;
-
-export interface AddSectorLocationResponse {
-  readonly locationId: EntityId;
-}
-
-/** The body of `POST /campaigns/:id/sector/routes` (task 4.3, D-103). */
-export const AddSectorRouteRequestBodySchema = z.object({
-  commandId: CommandIdSchema,
-  fromLocationId: EntityIdSchema,
-  toLocationId: EntityIdSchema,
-});
-
-export type AddSectorRouteRequestBody = z.infer<typeof AddSectorRouteRequestBodySchema>;
-
-/**
- * The body of `POST /campaigns/:id/inciting-vow` (task 4.4, D-34, D-101).
- * No `characterId` field yet: the player-written path this task builds
- * always swears a crew-level vow, matching the golden session's own
- * inciting vow. A per-character option waits for whatever UI decision
- * accompanies the AI-proposal path this defers.
- */
-export const SwearIncitingVowRequestBodySchema = z.object({
-  commandId: CommandIdSchema,
-  title: z.string().min(1),
-  rank: ChallengeRankSchema,
-  /** D-132: the incident proposal the player started from, edited or not. */
-  proposalCommandId: CommandIdSchema.optional(),
-});
-
-export type SwearIncitingVowRequestBody = z.infer<typeof SwearIncitingVowRequestBodySchema>;
-
-export interface SwearIncitingVowResponse {
-  readonly vowTrackId: TrackId;
-}
-
 /**
  * The move flow (task 6.x). The write API D-94 left for later: it did not
  * get its own task number in the list, and lands with 6.2, the first UI

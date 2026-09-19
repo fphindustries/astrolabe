@@ -356,9 +356,10 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
     const log = await app.inject({ method: 'GET', url: `/api/campaigns/${campaignId}/log` });
     expect(log.body).not.toContain(body.rolls[0].eventId);
 
+    // Accepted where crew is built: the launch route (D-206 retired the other).
     const created = await app.inject({
       method: 'POST',
-      url: `/api/campaigns/${campaignId}/characters`,
+      url: `/api/campaigns/${campaignId}/launch/crew`,
       payload: {
         commandId: newId(),
         draft: {
@@ -367,8 +368,10 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
           stats: body.proposal.stats.value,
           assets: ['asset:path/ace', 'asset:path/navigator', 'asset:module/sensor-array'],
         },
+        backgroundVow: { title: 'Find the lost settlement', rank: 'dangerous' },
         hooks: ['A lost settlement still broadcasts.'],
         proposalCommandId,
+        launch: { appearance: 'A lantern on a chain', backstory: { kind: 'discover_in_play' } },
       },
     });
     expect(created.statusCode).toBe(201);
@@ -386,8 +389,8 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
 
   // D-132's incident proposal, launch-scoped since 9.0e (D-178): proposed
   // while launch is open, refused once a campaign is in play. Swearing the
-  // chosen incident is activation's and the vow move's now (D-201), so the
-  // Milestone 1 inciting-vow route is tested on its own, in app.test.ts.
+  // chosen incident is activation's and the vow move's now (D-201); the
+  // Milestone 1 inciting-vow route is retired (D-206).
   it('proposes inciting incidents during launch, and refuses them in play (4.6, D-132, 9.0e)', async () => {
     const campaignId = newId<CampaignId>();
     await appendCommand(db.sql, {
