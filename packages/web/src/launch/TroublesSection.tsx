@@ -18,6 +18,7 @@ import {
   toTroublesDraft,
   type SectorTroubleForm,
 } from './troubles-form.js';
+import { rollChipText } from './roll-chip.js';
 import styles from './SectorSection.module.css';
 
 /**
@@ -158,7 +159,7 @@ export function TroublesSection({
                 const chip = workspace.chips[eventId];
                 return chip === undefined ? null : (
                   <li key={eventId} className={styles.chip}>
-                    {chip.oracleId.split('/').at(-1)} {chip.roll}: {chip.rowText}
+                    {rollChipText(chip)}
                   </li>
                 );
               })}

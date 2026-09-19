@@ -21,6 +21,7 @@ import {
   writeOwn,
   type IncidentForm,
 } from './incident-form.js';
+import { rollChipText } from './roll-chip.js';
 import styles from './SectorSection.module.css';
 
 /**
@@ -131,7 +132,7 @@ export function IncidentSection({
                       const chip = workspace.chips[eventId];
                       return chip === undefined ? null : (
                         <li key={eventId} className={styles.chip}>
-                          {chip.oracleId.split('/').at(-1)} {chip.roll}: {chip.rowText}
+                          {rollChipText(chip)}
                         </li>
                       );
                     })}

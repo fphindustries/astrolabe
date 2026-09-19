@@ -208,6 +208,28 @@ export function toDecideRequest(
 }
 
 /**
+ * Why `toDecideRequest` has nothing to send yet, in the words a button that
+ * does nothing should say (10.4). `null` when the selection is a decision.
+ *
+ * Found in the browser pass: the Guide can propose an option with a nested
+ * choice and leave the nested choice to the player, and both accept buttons
+ * then sat disabled without a word about what was missing.
+ */
+export function decideGap(truthId: OracleId, selection: TruthSelection): string | null {
+  if (toDecideRequest(truthId, selection) !== null) return null;
+  const truth = STARFORGED.truths.find((candidate) => candidate.id === truthId);
+  const option =
+    selection.resolution === 'selected' && selection.optionIndex !== undefined
+      ? truth?.rows[selection.optionIndex]
+      : undefined;
+  if (option?.subchoice !== undefined) {
+    return `Choose one ${option.subchoice.name.toLowerCase()} first.`;
+  }
+  if (selection.resolution === 'custom') return 'Write your answer first.';
+  return 'Choose an answer or write your own first.';
+}
+
+/**
  * The truths whose selection on screen says something the server does not
  * hold yet.
  *

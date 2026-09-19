@@ -582,6 +582,12 @@ describe('the crew overview (6.4, A27)', () => {
     expect(crewSummary(three)).toContain('room for 3 more');
   });
 
+  it('does not call an empty crew a choice (10.4)', () => {
+    expect(crewSummary([])).toBe(
+      'One complete character is the launch minimum; none is complete yet. There is room for 6 more.',
+    );
+  });
+
   it('stops offering another at six, and says so rather than going quiet', () => {
     const full = crewOverview(
       Array.from({ length: 6 }, () => acceptedMember),

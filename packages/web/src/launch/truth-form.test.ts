@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { emptyCampaignState } from './state-fixture.js';
 import {
+  decideGap,
   initialTruthsForm,
   selectOption,
   selectSubchoice,
@@ -216,6 +217,22 @@ describe('what the truths form sends', () => {
       subchoiceId: subchoice.id,
       subchoiceOptionIndex: 2,
     });
+  });
+
+  it('says what is missing whenever it would send nothing (10.4)', () => {
+    const nested = CATACLYSM.rows[0]!.subchoice!.name.toLowerCase();
+
+    expect(decideGap(CATACLYSM.id, { resolution: 'selected', optionIndex: 0 })).toBe(
+      `Choose one ${nested} first.`,
+    );
+    expect(decideGap(EXODUS.id, { resolution: 'custom', text: '  ' })).toBe(
+      'Write your answer first.',
+    );
+    expect(decideGap(EXODUS.id, {})).toBe('Choose an answer or write your own first.');
+    expect(
+      decideGap(CATACLYSM.id, { resolution: 'selected', optionIndex: 0, subchoiceOptionIndex: 2 }),
+    ).toBeNull();
+    expect(decideGap(EXODUS.id, { resolution: 'leave_open' })).toBeNull();
   });
 
   it('sends nothing for a truth the player has not touched', () => {

@@ -5,6 +5,7 @@ import type { EntityId, EventId } from '@astrolabe/shared';
 import { emptyCampaignState } from './state-fixture.js';
 import {
   EMPTY_SECTOR_FORM,
+  rolledLocationHasPlanet,
   addProposedSettlements,
   addSettlement,
   heldSectorNameProposal,
@@ -425,7 +426,7 @@ describe('a settlement proposal (8.2, D-196)', () => {
   it('shows each proposed field with the rolls it cites (A41)', () => {
     expect(proposedSettlementFields(held.proposal)).toContain('planet');
     expect(proposedSettlementGrounding(held.proposal, 'planet')).toEqual([id(6), id(7)]);
-    expect(proposedSettlementValue(held.proposal, 'planet')).toEqual(['Hollow, a ice world']);
+    expect(proposedSettlementValue(held.proposal, 'planet')).toEqual(['Hollow, an ice world']);
   });
 });
 
@@ -624,5 +625,19 @@ describe('the whole sector (8.6, D-196)', () => {
       sector: { name: 'Ashen Anvil', region: 'outlands' },
       proposalEventId: id(9),
     });
+  });
+});
+
+describe('rolling a whole settlement by hand (10.4)', () => {
+  it('rolls its planet too wherever it has one', () => {
+    const at = (text: string) => [
+      { slot: 'name', text: 'Spire' },
+      { slot: 'location', text },
+    ];
+
+    expect(rolledLocationHasPlanet(at('Planetside'))).toBe(true);
+    expect(rolledLocationHasPlanet(at('Orbital'))).toBe(true);
+    expect(rolledLocationHasPlanet(at('Deep space'))).toBe(false);
+    expect(rolledLocationHasPlanet([{ slot: 'name', text: 'Spire' }])).toBe(false);
   });
 });

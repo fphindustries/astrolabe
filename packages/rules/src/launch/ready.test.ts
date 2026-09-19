@@ -138,6 +138,14 @@ describe('launch readiness can be satisfied', () => {
       expect(codes).toContain('settlements_insufficient');
       expect(codes).toContain('passages_insufficient');
     }
+    // 10.4: named as the rulebook names it, and counted in English.
+    const outlands = check({ ...ready, sector: { ...ready.sector!, region: 'outlands' } });
+    expect(outlands.problems.map((problem) => problem.message)).toEqual(
+      expect.arrayContaining([
+        'The Outlands needs at least 3 settlements.',
+        'The Outlands needs at least 2 passages.',
+      ]),
+    );
   });
 
   it('permits content beyond the baseline (A31)', () => {

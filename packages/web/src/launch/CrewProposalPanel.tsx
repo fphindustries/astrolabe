@@ -13,6 +13,7 @@ import {
   type CrewProposal,
   type CrewProposalField,
 } from './crew-form.js';
+import { rollChipText } from './roll-chip.js';
 import styles from './CrewProposalPanel.module.css';
 
 /**
@@ -151,7 +152,7 @@ export function CrewProposalPanel({
                           const chip = chips[eventId];
                           return chip === undefined ? null : (
                             <li key={eventId} className={styles.chip}>
-                              {chip.oracleId.split('/').at(-1)} {chip.roll}: {chip.rowText}
+                              {rollChipText(chip)}
                             </li>
                           );
                         })}

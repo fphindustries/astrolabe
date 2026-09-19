@@ -32,11 +32,17 @@ export function LaunchConfirmDialog({
   const [commandId] = useState(() => crypto.randomUUID());
 
   useEffect(() => {
+    // The dialog unmounts rather than closes, so the platform's own return of
+    // focus never runs: put it back on whatever opened the dialog (10.4).
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const dialog = ref.current;
     if (dialog !== null && !dialog.open) {
       dialog.showModal();
       cancelRef.current?.focus();
     }
+    return () => {
+      if (opener?.isConnected === true) opener.focus();
+    };
   }, []);
 
   return (

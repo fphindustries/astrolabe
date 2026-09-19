@@ -333,6 +333,11 @@ function sectionStarted(section: LaunchSection, input: LaunchReadinessInput): bo
     incident_launch: input.incident !== undefined,
   }[section];
 }
+/** A message names the region as the rulebook does, not by its id (10.4). */
+const regionName = (region: LaunchRegion) =>
+  `The ${region.charAt(0).toUpperCase()}${region.slice(1)}`;
+const count = (n: number, noun: string) => `${String(n)} ${noun}${n === 1 ? '' : 's'}`;
+
 function validateSector(
   sector: LaunchSector | undefined,
   add: (s: LaunchSection, c: string, p: string, m: string) => void,
@@ -347,14 +352,14 @@ function validateSector(
       'sector',
       'settlements_insufficient',
       'sector.settlements',
-      `${sector.region} needs ${baseline.settlements} settlements.`,
+      `${regionName(sector.region)} needs at least ${count(baseline.settlements, 'settlement')}.`,
     );
   if (sector.routes.length < baseline.passages)
     add(
       'sector',
       'passages_insufficient',
       'sector.routes',
-      `${sector.region} needs ${baseline.passages} passages.`,
+      `${regionName(sector.region)} needs at least ${count(baseline.passages, 'passage')}.`,
     );
   const ids = new Set(sector.settlements.map((settlement) => settlement.id));
   const endpoints = new Set([...ids, ...sector.locations]);

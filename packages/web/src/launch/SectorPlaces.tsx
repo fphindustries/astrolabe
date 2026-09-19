@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { planetClassFromRow } from '@astrolabe/rules';
 import type { LaunchWorkspaceResponse, OracleChip } from '@astrolabe/shared';
 
 import { useRollLaunchOracle } from '../api/crew.js';
@@ -24,6 +25,8 @@ import {
   addProposedSettlements,
   addSettlement,
   applySettlementFieldRoll,
+  applyPlanetClassRoll,
+  applyPlanetRecipe,
   applySettlementRecipe,
   discardSettlement,
   dropSettlementProposal,
@@ -38,6 +41,7 @@ import {
   proposedSettlementGrounding,
   proposedSettlementReasons,
   proposedSettlementValue,
+  rolledLocationHasPlanet,
   setOther,
   setProject,
   setProjectCount,
@@ -55,6 +59,7 @@ import {
   type SettlementForm,
   type SettlementRollField,
 } from './sector-form.js';
+import { rollChipText } from './roll-chip.js';
 import styles from './SectorSection.module.css';
 
 /**
@@ -294,25 +299,34 @@ function SettlementEditor({
     });
   };
 
-  const onRollWhole = () => {
+  const onRollWhole = async () => {
     if (region === '') return;
-    rollWhole.mutate(
-      {
+    try {
+      const response = await rollWhole.mutateAsync({
         kind: 'settlement',
         region,
         projectCount: settlement.projects.length >= 2 ? 2 : 1,
-      },
-      {
-        onSuccess: (response) => {
-          setRolled(
-            Object.fromEntries(
-              response.results.map((result) => [result.slot, `${result.roll}: ${result.text}`]),
-            ),
-          );
-          edit((current) => applySettlementRecipe(current, draftId, response.results));
-        },
-      },
-    );
+      });
+      setRolled(
+        Object.fromEntries(
+          response.results.map((result) => [result.slot, `${result.roll}: ${result.text}`]),
+        ),
+      );
+      edit((current) => applySettlementRecipe(current, draftId, response.results));
+      // 10.4: the whole settlement includes its planet where it has one, as
+      // the copy above says; without this a hand-rolled one was left short.
+      if (!rolledLocationHasPlanet(response.results)) return;
+      const classRolled = await rollWhole.mutateAsync({ kind: 'planet_class' });
+      const classRow = classRolled.results[0];
+      if (classRow === undefined) return;
+      edit((current) => applyPlanetClassRoll(current, draftId, classRow));
+      const planetClass = planetClassFromRow(classRow.text);
+      if (planetClass === undefined) return;
+      const planet = await rollWhole.mutateAsync({ kind: 'planet', planetClass, depth: 'shallow' });
+      edit((current) => applyPlanetRecipe(current, draftId, planet.results));
+    } catch {
+      // Shown through `rollWhole.error`, with every roll that did land kept.
+    }
   };
 
   const onAccept = () => {
@@ -730,7 +744,7 @@ function SettlementGuide({
                       const chip = chips[eventId];
                       return chip === undefined ? null : (
                         <li key={eventId} className={styles.chip}>
-                          {chip.oracleId.split('/').at(-1)} {chip.roll}: {chip.rowText}
+                          {rollChipText(chip)}
                         </li>
                       );
                     })}

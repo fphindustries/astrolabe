@@ -33,7 +33,13 @@ export function initialSectorTrouble(state: CampaignState): SectorTroubleForm {
     saved !== undefined &&
     (accepted === undefined || saved.seq > accepted.seq)
   )
-    return { text: drafted.text ?? '', rolls: [] };
+    return {
+      text: drafted.text ?? '',
+      rolls: [...(drafted.groundedIn ?? [])],
+      ...(drafted.proposalEventId === undefined
+        ? {}
+        : { proposalEventId: drafted.proposalEventId }),
+    };
   if (accepted === undefined) return EMPTY_SECTOR_TROUBLE;
   return { text: accepted.text, rolls: [...accepted.groundedIn] };
 }
@@ -86,7 +92,12 @@ export function toTroublesDraft(
     ...(saved?.connection === undefined ? {} : { connection: saved.connection }),
     troubles: [
       ...(saved?.troubles ?? []).filter((trouble) => trouble.kind !== 'sector'),
-      { kind: 'sector', text: form.text },
+      {
+        kind: 'sector',
+        text: form.text,
+        ...(form.rolls.length > 0 ? { groundedIn: [...form.rolls] } : {}),
+        ...(form.proposalEventId === undefined ? {} : { proposalEventId: form.proposalEventId }),
+      },
     ],
   };
 }

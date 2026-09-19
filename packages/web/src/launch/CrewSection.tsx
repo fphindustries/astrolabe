@@ -1,6 +1,13 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-import { CHALLENGE_RANKS, STARFORGED, STAT_IDS, type AssetId, type StatId } from '@astrolabe/rules';
+import {
+  CHALLENGE_RANKS,
+  STARFORGED,
+  STAT_IDS,
+  type AssetId,
+  type LaunchCharacterProblem,
+  type StatId,
+} from '@astrolabe/rules';
 import type { LaunchWorkspaceResponse } from '@astrolabe/shared';
 
 import {
@@ -47,6 +54,7 @@ import {
   setVow,
   stepAt,
   stepBadgeLabel,
+  stepOfField,
   toAcceptRequest,
   toDraftSnapshot,
   type CrewMemberForm,
@@ -502,6 +510,19 @@ function MemberEditor({
   const byStep = problemsByStep(member);
   const complete = isCrewMemberComplete(member);
   const panelId = `crew-step-${member.draftId}`;
+  const panelRef = useRef<HTMLDivElement>(null);
+  // 10.4: a Review summary link names a field on another step. Focus moves
+  // once that step has rendered, not before, or it lands on nothing.
+  const pendingFocus = useRef<string | null>(null);
+  useEffect(() => {
+    const id = pendingFocus.current;
+    if (id === null) return;
+    pendingFocus.current = null;
+    const target =
+      document.getElementById(id) ??
+      panelRef.current?.querySelector<HTMLElement>('input, select, textarea, button');
+    target?.focus();
+  }, [step]);
 
   return (
     <section
@@ -536,7 +557,7 @@ function MemberEditor({
       {/* A named region with a visible heading, so which step you are on is
           not carried by the tab's colour alone, and so a reader who moves into
           the panel is told where they landed rather than inferring it. */}
-      <div className={styles.panel} role="group" aria-labelledby={panelId}>
+      <div className={styles.panel} role="group" aria-labelledby={panelId} ref={panelRef}>
         <h4 className={styles.panelHeading} id={panelId}>
           {STEP_LABELS[step]}
         </h4>
@@ -551,7 +572,16 @@ function MemberEditor({
             onRollPrompt={onRollPrompt}
           />
         )}
-        {step === 'review' && <ReviewStep member={member} problems={byStep} />}
+        {step === 'review' && (
+          <ReviewStep
+            member={member}
+            problems={byStep}
+            onFollow={(field) => {
+              pendingFocus.current = fieldAnchorId(`${member.draftId}-${field}`);
+              onStep(stepOfField(field));
+            }}
+          />
+        )}
       </div>
 
       <div className={styles.stepActions}>
@@ -721,6 +751,7 @@ function BackgroundStep({
         </label>
         {written && (
           <textarea
+            id={fieldAnchorId(`${member.draftId}-backstory`)}
             className={styles.textarea}
             rows={3}
             aria-label="Backstory"
@@ -763,6 +794,7 @@ function BackgroundStep({
           What this character has already sworn. It becomes their own vow track.
         </p>
         <input
+          id={fieldAnchorId(`${member.draftId}-backgroundVow`)}
           className={styles.input}
           aria-label="Background vow"
           value={member.vowTitle}
@@ -832,11 +864,16 @@ function BackgroundStep({
 function ReviewStep({
   member,
   problems,
+  onFollow,
 }: {
   readonly member: CrewMemberForm;
   readonly problems: ReturnType<typeof problemsByStep>;
+  readonly onFollow: (field: LaunchCharacterProblem['field']) => void;
 }) {
   const outstanding = CREW_STEPS.flatMap((step) => problems[step]);
+  const fieldOf = new Map(
+    outstanding.map((problem) => [`${member.draftId}-${problem.field}`, problem.field]),
+  );
   return (
     <div className={styles.fields}>
       {outstanding.length > 0 ? (
@@ -846,6 +883,10 @@ function ReviewStep({
             path: `${member.draftId}-${problem.field}`,
             message: problem.message,
           }))}
+          onFollow={(path) => {
+            const field = fieldOf.get(path);
+            if (field !== undefined) onFollow(field);
+          }}
         />
       ) : (
         <p className={styles.help}>

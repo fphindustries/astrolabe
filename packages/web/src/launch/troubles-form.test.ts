@@ -72,6 +72,19 @@ describe('the sector trouble (8.5)', () => {
     expect(rolled).toEqual({ text: 'Deliver + Discovery', rolls: [id(1), id(2)] });
   });
 
+  it('resumes a saved trouble with its roll and the Guide’s reading (10.4)', () => {
+    const taken = takeSectorTroubleProposal(
+      applySectorTroubleRoll([{ slot: 'trouble', eventId: id(1), text: 'A blockade' }]),
+      { eventId: id(9), text: 'The Kronos blockade tightens.' },
+    );
+    const draft = toTroublesDraft(emptyCampaignState(), taken);
+    const resumed = initialSectorTrouble(
+      emptyCampaignState({ drafts: { connection_troubles: { seq: 4, snapshot: draft } } }),
+    );
+
+    expect(resumed).toEqual(taken);
+  });
+
   it('saves the troubles without erasing a connection drafted on the other half', () => {
     const connection = {
       npcName: 'Juno Marr',

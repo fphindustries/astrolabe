@@ -572,6 +572,10 @@ const DraftSnapshotSchema = z.discriminatedUnion('section', [
           troubleId: EntityIdSchema.optional(),
           ownerId: EntityIdSchema.optional(),
           text: z.string().optional(),
+          // 10.4: the roll it was built on and the Guide's reading of it, so a
+          // resumed draft still grounds and credits what it accepts (A41).
+          groundedIn: z.array(EventIdSchema).optional(),
+          proposalEventId: EventIdSchema.optional(),
         }),
       ),
     }),

@@ -256,7 +256,8 @@ function SectorHeader({
               <span>
                 <strong>{REGION_LABELS[region]}</strong> — {REGION_DESCRIPTIONS[region]}{' '}
                 <span className={styles.help}>
-                  ({counts.settlements} settlements, {counts.passages} passages)
+                  ({counts.settlements} settlements, {counts.passages}{' '}
+                  {counts.passages === 1 ? 'passage' : 'passages'})
                 </span>
               </span>
             </label>
@@ -267,8 +268,8 @@ function SectorHeader({
       {baseline !== undefined && (
         <p className={styles.help} role="note">
           This region asks for at least {baseline.settlements} settlements and {baseline.passages}{' '}
-          passages before launch. That is a floor, not a quota: add as many more as you like. (
-          {baseline.citation}.)
+          {baseline.passages === 1 ? 'passage' : 'passages'} before launch. That is a floor, not a
+          quota: add as many more as you like. ({baseline.citation}.)
           {configured &&
             ' Changing the region changes what it asks for; settlements you have already accepted keep their populations.'}
         </p>

@@ -705,6 +705,20 @@ export function applySettlementRecipe(
   });
 }
 
+/**
+ * Whether a whole-settlement roll put the settlement where it has a planet,
+ * so the planet's class and name are rolled with it (10.4), as the Guide's
+ * whole-sector roll does on the server.
+ */
+export function rolledLocationHasPlanet(
+  results: readonly { readonly slot: string; readonly text: string }[],
+): boolean {
+  const row = results.find((result) => result.slot === 'location');
+  const location =
+    row === undefined ? undefined : settlementLocationFromRow(withoutLinks(row.text).trim());
+  return location === 'planetside' || location === 'orbital';
+}
+
 /** Cite every roll a slot yielded, not only the first (8.5). */
 function withRolls(form: SectorForm, draftId: string, eventIds: readonly EventId[]): SectorForm {
   return replaceSettlement(form, draftId, (settlement) => ({
@@ -782,6 +796,9 @@ export function proposedSettlementFields(
 }
 
 /** A proposed field as words, one line per value. */
+/** "an ocean world", "a rocky world" (10.4). */
+const article = (word: string) => `${/^[aeiou]/i.test(word) ? 'an' : 'a'} ${word}`;
+
 export function proposedSettlementValue(
   proposal: SettlementProposal,
   field: ProposedSettlementField,
@@ -794,7 +811,7 @@ export function proposedSettlementValue(
     case 'planet':
       return proposal.planet === undefined
         ? []
-        : [`${proposal.planet.name.value}, a ${proposal.planet.planetClass.value} world`];
+        : [`${proposal.planet.name.value}, ${article(proposal.planet.planetClass.value)} world`];
     case 'firstLooks':
       return (proposal.firstLooks ?? []).map((look) => look.value);
     default:

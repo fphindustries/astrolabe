@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 
 import type { TruthSelection } from './truth-form.js';
 import {
+  decideGap,
   selectOption,
   selectSubchoice,
   toDecideRequest,
@@ -47,6 +48,8 @@ export function TruthCard({
   const chosen =
     selection.optionIndex === undefined ? undefined : view.options[selection.optionIndex];
   const ready = toDecideRequest(view.truthId, selection);
+  const gap = decideGap(view.truthId, selection);
+  const gapId = useId();
 
   const decide = (body: DecideTruthBody | null) => {
     if (body !== null) onDecide(body);
@@ -173,6 +176,7 @@ export function TruthCard({
             // Kept focusable rather than `disabled`, so a keyboard user can
             // reach it and hear why it does nothing yet.
             aria-disabled={ready === null || pending}
+            aria-describedby={gap === null ? undefined : gapId}
             onClick={() => decide(ready)}
           >
             Use this answer
@@ -194,6 +198,11 @@ export function TruthCard({
             Leave it open
           </button>
         </div>
+        {gap !== null && (
+          <p className={styles.gap} id={gapId}>
+            {gap}
+          </p>
+        )}
         <p className={styles.note}>
           Leaving a truth open is an answer: this campaign says nothing about it, and the Guide will
           not settle it later.

@@ -145,6 +145,12 @@
   opacity: 0.5;
 }
 
+.gap {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
 .note {
   margin: 0;
   color: var(--text-muted);

@@ -350,6 +350,11 @@ export function stepAt(step: CrewStep, offset: number): CrewStep {
   return CREW_STEPS[Math.min(Math.max(index, 0), CREW_STEPS.length - 1)] ?? step;
 }
 
+/** The step whose fields fix a problem, for a summary link to go to (10.4). */
+export function stepOfField(field: LaunchCharacterProblem['field']): CrewStep {
+  return STEP_OF_FIELD[field];
+}
+
 /** The rules' own problems, grouped by the step that can fix them. */
 export function problemsByStep(
   member: CrewMemberForm,
@@ -794,7 +799,11 @@ export const MAX_CREW = 6;
 export function crewSummary(rows: readonly CrewOverviewRow[]): string {
   const complete = rows.filter((row) => row.complete).length;
   const room = MAX_CREW - rows.length;
-  const minimum = `One complete character is the launch minimum; ${complete} is this campaign's choice, not a requirement.`;
+  // 10.4: "0 is this campaign's choice" read as a choice nobody made.
+  const minimum =
+    complete === 0
+      ? 'One complete character is the launch minimum; none is complete yet.'
+      : `One complete character is the launch minimum; ${complete} is this campaign's choice, not a requirement.`;
   return room > 0
     ? `${minimum} There is room for ${room} more.`
     : `${minimum} This campaign is full at ${MAX_CREW}.`;

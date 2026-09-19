@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 
 import type { LaunchWorkspaceResponse } from '@astrolabe/shared';
 
@@ -8,7 +8,7 @@ import { useAiStatus } from '../api/narration.js';
 import { proposalFailureText } from './CrewProposalPanel.js';
 
 import type { DecideTruthBody, TruthSelection } from './truth-form.js';
-import { toDecideRequest } from './truth-form.js';
+import { decideGap, toDecideRequest } from './truth-form.js';
 import { heldProposal, isEditedProposal, proposalSelection } from './truth-proposal.js';
 import type { TruthView } from './truths.js';
 import styles from './TruthProposalPanel.module.css';
@@ -50,6 +50,8 @@ export function TruthProposalPanel({
   const held = heldProposal(workspace.state, view.truthId);
   const option = held?.optionIndex === undefined ? undefined : view.options[held.optionIndex];
   const edited = held !== null && isEditedProposal(held, selection);
+  const gap = decideGap(view.truthId, selection);
+  const gapId = useId();
 
   const ask = () => {
     if (unavailable || propose.isPending) return;
@@ -125,11 +127,17 @@ export function TruthProposalPanel({
               type="button"
               className={styles.primary}
               aria-disabled={toDecideRequest(view.truthId, selection) === null}
+              aria-describedby={gap === null ? undefined : gapId}
               onClick={accept}
             >
               {edited ? 'Accept your edit of it' : 'Accept the Guide’s answer'}
             </button>
           </div>
+          {gap !== null && (
+            <p className={styles.rationale} id={gapId}>
+              {gap}
+            </p>
+          )}
         </div>
       )}
     </section>

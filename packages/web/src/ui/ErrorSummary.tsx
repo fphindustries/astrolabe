@@ -21,12 +21,18 @@ export function ErrorSummary({
   problems = [],
   details = [],
   takeFocus = false,
+  onFollow,
 }: {
   readonly title: string;
   readonly problems?: readonly { readonly path: string; readonly message: string }[];
   readonly details?: readonly string[];
   /** Set after a failed submit; not on a summary that was simply on the page. */
   readonly takeFocus?: boolean;
+  /**
+   * Follow a link in place of the fragment, for a form whose field is not on
+   * the page yet — a step not showing (10.4). It is handed the problem's path.
+   */
+  readonly onFollow?: (path: string) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const entries = summaryEntries(problems);
@@ -47,9 +53,18 @@ export function ErrorSummary({
       )}
       {entries.length > 0 && (
         <ul className={styles.list}>
-          {entries.map((entry) => (
+          {entries.map((entry, index) => (
             <li key={entry.id}>
-              <a className={styles.link} href={entry.href}>
+              <a
+                className={styles.link}
+                href={entry.href}
+                onClick={(event) => {
+                  const path = problems[index]?.path;
+                  if (onFollow === undefined || path === undefined) return;
+                  event.preventDefault();
+                  onFollow(path);
+                }}
+              >
                 {entry.message}
               </a>
             </li>
