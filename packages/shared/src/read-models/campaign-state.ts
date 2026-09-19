@@ -426,6 +426,12 @@ export interface LaunchState {
     readonly sessionId: SessionId;
     readonly sceneId: SceneId;
     readonly pendingVow: PayloadFor<'campaign.activated'>['pendingVow'];
+    /**
+     * D-201: the vow track the pending vow's swear created. Set once, by the
+     * `track.created` that names the pending incident; a second swear is
+     * refused on it.
+     */
+    readonly vowTrackId?: TrackId;
   };
 }
 

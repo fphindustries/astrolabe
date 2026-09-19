@@ -244,7 +244,13 @@ export const EVENT_TYPE_META: MetaTable = {
     voidable: true,
     introduces: (p) => [track(p.trackId)],
     references: (p) =>
-      p.kind === 'vow' && p.characterId !== undefined ? [character(p.characterId)] : [],
+      p.kind === 'vow'
+        ? [
+            ...(p.characterId === undefined ? [] : [character(p.characterId)]),
+            ...(p.participantCharacterIds ?? []).map(character),
+            ...(p.incidentId === undefined ? [] : [entity(p.incidentId)]),
+          ]
+        : [],
   },
   'track.advanced': {
     narrative: true,

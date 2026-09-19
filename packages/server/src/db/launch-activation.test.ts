@@ -12,6 +12,7 @@ import {
   type EventId,
 } from '@astrolabe/shared';
 
+import { actionRoll } from '../fixtures/loaded-dice.js';
 import { buildLaunchWorkspace } from '../launch/workspace.js';
 
 import { createCampaign } from './campaign-commands.js';
@@ -34,6 +35,7 @@ import {
   setStartingSettlement,
   type SaveLaunchLocationRequest,
 } from './launch-commands.js';
+import { invokeMove, MoveRejectedError, type InvokeMoveRequest } from './move-commands.js';
 import { createTestDatabase, hasTestDatabase, type TestDatabase } from './testing.js';
 import { uuidv7 } from './uuid.js';
 
@@ -532,5 +534,96 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
         },
       }),
     ).rejects.toThrow(/amendment after launch/);
+  });
+
+  // 9.0h (D-201): the pending vow is sworn by one real Swear an Iron Vow,
+  // which writes the vow's track from the incident in the same command.
+  describe('swearing the pending vow (9.0h, D-201)', () => {
+    async function launched() {
+      const ready = await readyCampaign();
+      await activateLaunch(db.sql, {
+        campaignId: ready.campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+      });
+      return ready;
+    }
+
+    const swear = (
+      campaignId: CampaignId,
+      characterId: CharacterId,
+      overrides: Partial<InvokeMoveRequest> = {},
+    ) =>
+      invokeMove(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        moveId: 'move:quest/swear-an-iron-vow' as InvokeMoveRequest['moveId'],
+        actorCharacterId: characterId,
+        using: { using: 'stat', stat: 'heart' },
+        adds: [],
+        actionText: 'Juno swears to find the source of the beacon.',
+        swearsPendingVow: true,
+        rng: actionRoll(6, [2, 3]),
+        ...overrides,
+      });
+
+    it('writes the vow from the incident, then the move, in one command', async () => {
+      const { campaignId, characterId } = await launched();
+      const before = project(await readEvents(db.sql, campaignId));
+
+      const sworn = await swear(campaignId, characterId);
+
+      expect(sworn.roll.tier).toBe('strong_hit');
+      const written = sworn.result.events.map((event) => event.type);
+      expect(written.slice(0, 3)).toEqual(['track.created', 'move.invoked', 'dice.rolled']);
+      const events = await readEvents(db.sql, campaignId);
+      const created = events.find(
+        (event) =>
+          event.type === 'track.created' &&
+          (event.payload as { incidentId?: string }).incidentId !== undefined,
+      );
+      expect(created?.payload).toMatchObject({
+        kind: 'vow',
+        title: 'A distress beacon carries the lost colony’s call sign.',
+        rank: 'formidable',
+        characterId,
+        participantCharacterIds: [characterId],
+        incidentId: before.launch.incident!.incidentId,
+      });
+      expect(created?.causedBy).toBe(before.launch.activation!.eventId);
+      const state = project(events);
+      expect(state.launch.activation?.vowTrackId).toBe(
+        (created?.payload as { trackId: string }).trackId,
+      );
+      // A39: the move's own effect lands on the roller, through the ordinary spec.
+      expect(state.characters[characterId]!.momentum.value).toBe(
+        before.characters[characterId]!.momentum.value + 2,
+      );
+    });
+
+    it('refuses a second swear, a stranger, and a roll that is not +heart', async () => {
+      const { campaignId, characterId } = await launched();
+
+      await expect(
+        swear(campaignId, characterId, { using: { using: 'stat', stat: 'iron' } }),
+      ).rejects.toThrow(/\+heart/);
+      await expect(swear(campaignId, newId<CharacterId>())).rejects.toThrow(MoveRejectedError);
+
+      await swear(campaignId, characterId);
+      await expect(swear(campaignId, characterId)).rejects.toThrow(/already been sworn/);
+      const vows = (await readEvents(db.sql, campaignId)).filter(
+        (event) =>
+          event.type === 'track.created' &&
+          (event.payload as { incidentId?: string }).incidentId !== undefined,
+      );
+      expect(vows).toHaveLength(1);
+    });
+
+    it('refuses before launch', async () => {
+      const { campaignId, characterId } = await readyCampaign();
+
+      await expect(swear(campaignId, characterId)).rejects.toThrow(MoveRejectedError);
+    });
   });
 });

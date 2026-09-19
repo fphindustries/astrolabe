@@ -303,9 +303,15 @@ setup revision.
 
 `campaign.activated` is non-voidable and references every canonical launch fact it
 freezes. It is appended atomically with the existing `session.began` and `scene.started`
-events. Those events are caused by activation. The pending vow is not a track yet: the
-existing move event sequence creates `track.created` and `vow.sworn` only when the
-player actually invokes `Swear an Iron Vow`.
+events. Those events are caused by activation. The pending vow is not a track yet. It
+becomes one only when the player actually invokes `Swear an Iron Vow` in its pending-vow
+mode (D-201, 9.0h). That single `move.invoke` command writes the vow's `track.created`
+first: kind vow, the incident's words and rank, the roller as `characterId`, the sharing
+crew as `participantCharacterIds`, and the incident's `incidentId`, caused by the
+activation. Then come the move's own `move.invoked`, `dice.rolled` and outcome events.
+(D-93 dropped `vow.sworn`: `track.created` says it.) The fold sets
+`launch.activation.vowTrackId` from the `track.created` whose `incidentId` names the
+pending vow, and a second swear is refused on it, re-checked under the campaign lock.
 
 Metadata rules for the new catalogue:
 
@@ -541,7 +547,7 @@ interface LaunchState {
   troubles: TroubleState[];
   troubleHistory: Record<EntityId, TroubleState[]>;    // superseded versions (8.0h)
   incident?: IncidentState;
-  activation?: { eventId; sessionId; sceneId; pendingVow: PendingVow };
+  activation?: { eventId; sessionId; sceneId; pendingVow: PendingVow; vowTrackId? };
 }
 ```
 

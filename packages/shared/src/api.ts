@@ -690,6 +690,12 @@ export const InvokeMoveRequestBodySchema = z.object({
    * `MoveChainedSchema` has the full reasoning).
    */
   chainedFromCommandId: CommandIdSchema.optional(),
+  /**
+   * D-201: this `Swear an Iron Vow` swears the campaign's pending vow, the
+   * inciting incident's. The server writes the vow's track from the incident
+   * in the same command; the client names neither.
+   */
+  swearsPendingVow: z.literal(true).optional(),
 });
 
 export type InvokeMoveRequestBody = z.infer<typeof InvokeMoveRequestBodySchema>;

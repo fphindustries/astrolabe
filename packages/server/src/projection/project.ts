@@ -244,7 +244,21 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
           ...(reason?.kind === 'ai_judgement' ? { reason: reason.reason } : {}),
         },
       };
-      const withTrack = { ...state, tracks: { ...state.tracks, [track.id]: track } };
+      const activation = state.launch.activation;
+      const swornPending =
+        payload.kind === 'vow' &&
+        payload.incidentId !== undefined &&
+        activation !== undefined &&
+        activation.vowTrackId === undefined &&
+        activation.pendingVow.incidentId === payload.incidentId;
+      const withTrack = {
+        ...state,
+        tracks: { ...state.tracks, [track.id]: track },
+        // D-201: the pending vow is sworn once its track exists.
+        ...(swornPending
+          ? { launch: { ...state.launch, activation: { ...activation, vowTrackId: track.id } } }
+          : {}),
+      };
       // A vow belongs to the character who swore it, so the sheet can list
       // it without scanning every track in the campaign.
       if (payload.kind !== 'vow' || payload.characterId === undefined) {

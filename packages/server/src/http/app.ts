@@ -1476,6 +1476,7 @@ export function buildApp({
         proposalEventId,
         suggestionEventId,
         chainedFromCommandId,
+        swearsPendingVow,
       } = parsedBody.data;
 
       try {
@@ -1494,6 +1495,7 @@ export function buildApp({
           ...(proposalEventId !== undefined ? { proposalEventId } : {}),
           ...(suggestionEventId !== undefined ? { suggestionEventId } : {}),
           ...(chainedFromCommandId !== undefined ? { chainedFromCommandId } : {}),
+          ...(swearsPendingVow === true ? { swearsPendingVow } : {}),
         });
         reply.code(201);
         return {

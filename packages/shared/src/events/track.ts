@@ -2,7 +2,7 @@ import * as z from 'zod';
 import { CHALLENGE_RANKS } from '@astrolabe/rules';
 
 import { ChangeCauseSchema } from '../cause.js';
-import { CharacterIdSchema, TrackIdSchema } from '../ids.js';
+import { CharacterIdSchema, EntityIdSchema, TrackIdSchema } from '../ids.js';
 
 /**
  * Starforged's five challenge ranks. A game constant rather than imported
@@ -41,6 +41,12 @@ export const TrackCreatedSchema = z.discriminatedUnion('kind', [
     characterId: CharacterIdSchema.optional(),
     /** D-168: one vow can be shared while retaining one swearing character. */
     participantCharacterIds: z.array(CharacterIdSchema).min(1).optional(),
+    /**
+     * D-201: the inciting incident this vow was sworn for, set only when the
+     * pending vow's `Swear an Iron Vow` writes it. The fold reads it to mark
+     * the pending vow sworn.
+     */
+    incidentId: EntityIdSchema.optional(),
   }),
   z.object({
     kind: z.literal('expedition'),

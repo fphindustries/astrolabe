@@ -1038,7 +1038,7 @@ D-202 (`track.revised` carries participants).
     settlement as it is at launch, since the settlement can change after the choices are
     saved. No readiness-version bump: an incident without these fields could not exist
     before, so no campaign is admitted or refused differently.
-  - [ ] **9.0h One move command swears the pending vow (D-201).** `invokeMove` gains a
+  - [x] **9.0h One move command swears the pending vow (D-201).** `invokeMove` gains a
     pending-vow mode for `Swear an Iron Vow`. It is refused unless the campaign is active
     with an unsworn `pendingVow`, the actor is its roller, and the roll is +heart. In one
     command it writes the vow's `track.created`: kind vow, the incident's words and rank,
@@ -1048,6 +1048,13 @@ D-202 (`track.revised` carries participants).
     `launch.activation.vowTrackId` when its `incidentId` matches the pending vow. That is the
     field the guard reads, as 8.0h's `startingSettlementEventId` is, and a second swear is
     refused. The ordinary checked narration path narrates the result.
+    *As built:* the request flag is `swearsPendingVow: true`, and the server names the
+    vow's words and track itself. The check runs again as the append's precondition,
+    under the campaign lock, so two swears racing cannot both write the vow. The track id
+    derives from the command id, so a replay writes the same track. An aided swear is
+    refused, because the pending vow is its roller's. `track.created` now references
+    the vow's participants and incident, so neither can be voided out from under it
+    (D-83).
   - [ ] **9.0i Play knows where Session 1 opens (8.0j's defect, client side).** `play/scene.ts`
     and `SceneHeader` resolve a scene's location against the launch locations as well as
     entities. Assert that the opening scene shows its settlement by name.
