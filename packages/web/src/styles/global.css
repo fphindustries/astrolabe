@@ -70,13 +70,20 @@ select {
     color 120ms ease;
 }
 
-:where(button:hover:not(:disabled)) {
+:where(button:hover:not(:disabled, [aria-disabled='true'])) {
   border-color: var(--surface-border-strong);
 }
 
 :where(button:disabled) {
   opacity: 0.55;
   cursor: default;
+}
+
+/* A focusable button that is busy or blocked (D-208): `:disabled` never matches it, so it has to
+   look unavailable on its own. */
+:where(button[aria-disabled='true']) {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 :where(input:not([type='checkbox'], [type='radio'], [type='range']), textarea, select) {
