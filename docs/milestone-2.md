@@ -1060,12 +1060,16 @@ D-202 (`track.revised` carries participants).
     entities. Assert that the opening scene shows its settlement by name.
     *As built:* the Begin Session view (`session/session.ts`) resolved the carried-forward
     scene's location the same entity-only way, so it reads the launch locations too.
-  - [ ] **9.0j Milestone 1's inciting-vow command cannot write a launched campaign's vow.**
+  - [x] **9.0j Milestone 1's inciting-vow command cannot write a launched campaign's vow.**
     `swearIncitingVow` and `POST /inciting-vow` still create a vow track from an incident
     with no roll. The session-one fixture uses them, so they stay until 10.1 rebuilds the
     fixtures. But on a campaign with a launch they would be a second path to the fact D-201
     owns. They refuse any campaign whose launch is open or activated, and keep serving a
     Milestone 1 campaign in play. 10.1 removes them with the fixtures.
+    *As built:* the fence is narrower than "launch open". The session-one fixture decides
+    its truths through  and swears before its first session, so by
+     it is a campaign whose launch is open. The command refuses what
+    D-201 owns: a campaign that has accepted a launch incident, or has activated.
   - [ ] **9.0k Play context knows the incident (D-183, a fourth time).** `renderState` reads
     no `launch.incident`. Until the vow is sworn, the Guide in play would not know why the
     campaign has begun. Render the accepted incident, and the pending vow with its roller and

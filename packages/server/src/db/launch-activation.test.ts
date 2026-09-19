@@ -15,7 +15,7 @@ import {
 import { actionRoll } from '../fixtures/loaded-dice.js';
 import { buildLaunchWorkspace } from '../launch/workspace.js';
 
-import { createCampaign } from './campaign-commands.js';
+import { createCampaign, IncitingVowRejectedError, swearIncitingVow } from './campaign-commands.js';
 import { createCharacter } from './character-commands.js';
 import { readEvents } from './event-store.js';
 import { project } from '../projection/project.js';
@@ -618,6 +618,23 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
           (event.payload as { incidentId?: string }).incidentId !== undefined,
       );
       expect(vows).toHaveLength(1);
+    });
+
+    // 9.0j: Milestone 1's no-roll inciting vow is not a second path to it.
+    it('fences off the Milestone 1 inciting-vow command, before and after launch', async () => {
+      const { campaignId } = await readyCampaign();
+      const m1 = () =>
+        swearIncitingVow(db.sql, {
+          campaignId,
+          commandId: newId<CommandId>(),
+          actor: PLAYER,
+          title: 'A vow with no roll',
+          rank: 'dangerous',
+        });
+
+      await expect(m1()).rejects.toThrow(IncitingVowRejectedError);
+      await activateLaunch(db.sql, { campaignId, commandId: newId<CommandId>(), actor: PLAYER });
+      await expect(m1()).rejects.toThrow(IncitingVowRejectedError);
     });
 
     it('refuses before launch', async () => {

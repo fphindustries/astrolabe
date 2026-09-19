@@ -232,6 +232,11 @@ export class IncitingVowRejectedError extends Error {
  * names that proposal: the server resolves it and records it as the vow's
  * cause, never taking causality from the client (D-124). Edited or not, the
  * words sworn are the ones sent.
+ *
+ * Milestone 1's path, kept for the session-one fixture until 10.1 rebuilds
+ * it (9.0j). A campaign whose launch has accepted an incident, or has
+ * activated, owns its inciting vow through the pending-vow swear (D-201), so
+ * this command, which writes a vow with no roll, refuses it.
  */
 export interface SwearIncitingVowRequest {
   readonly campaignId: CampaignId;
@@ -255,6 +260,12 @@ export async function swearIncitingVow(
   const title = request.title.trim();
   if (title.length === 0) {
     throw new IncitingVowRejectedError('An inciting incident needs its own words.');
+  }
+  const { launch } = project(await readEvents(sql, request.campaignId));
+  if (launch.phase === 'active' || launch.incident !== undefined) {
+    throw new IncitingVowRejectedError(
+      'This campaign’s inciting vow is sworn with Swear an Iron Vow once it launches.',
+    );
   }
 
   let causedBy: EventId | undefined;
