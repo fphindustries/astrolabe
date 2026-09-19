@@ -75,13 +75,15 @@ export function resolveBeatScope(
       (e) => e.commandId === rootCommandId && e.causedBy !== null,
     )?.causedBy;
     const parent = parentId === null || parentId === undefined ? undefined : byId.get(parentId);
-    // A chain is moves caused by moves. A move caused by something else, as
-    // the pending vow's swear is by the activation (D-201), starts its own.
-    if (
-      parent === undefined ||
-      seen.has(parent.commandId) ||
-      !events.some((e) => e.commandId === parent.commandId && e.type === 'move.invoked')
-    ) {
+    if (parent === undefined || seen.has(parent.commandId)) {
+      break;
+    }
+    // A chain is moves caused by moves. Once the walk stands on a move, a
+    // cause that is not one (the activation, for the pending vow's swear,
+    // D-201) is not part of the chain, and the move starts its own.
+    const isMove = (id: CommandId) =>
+      events.some((e) => e.commandId === id && e.type === 'move.invoked');
+    if (isMove(rootCommandId) && !isMove(parent.commandId)) {
       break;
     }
     rootCommandId = parent.commandId;

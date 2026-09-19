@@ -1132,11 +1132,12 @@ D-202 (`track.revised` carries participants).
   rank and sharing crew shown and the player's adds available. A server test with loaded
   dice asserts one formidable track shared by the three crew members, momentum changed on
   the roller only, and the checked narration committing.
-  *As built:* the server test drives narration through  and
-  . It found a 9.0h defect. The swear is  the activation,
-  and the beat scope walked every  link up to the chain's root, so it reached the
-  activation command, found no move there, and refused to narrate. A chain is now moves
-  caused by moves. A move caused by anything else starts its own chain. In the composer the
+  *As built:* the server test drives narration through `prepareBeatNarration` and
+  `runBeatNarration`. It found a 9.0h defect. The swear is `causedBy` the activation,
+  and the beat scope walked every `causedBy` link up to the chain's root, so it reached the
+  activation command, found no move there, and refused to narrate. Once the walk stands on
+  a move, it now stops at a cause that is not a move. The walk from a narration or a
+  complication up to its move is unchanged, which the golden session confirms. In the composer the
   vow is shown, the roll is +heart only, no ally can aid it, and an add row is always offered
   for the adds the player is due. Walked in the browser: offered, sworn, the vow's track
   created, the result card, and a narrated passage. The offer is gone once the vow exists.
