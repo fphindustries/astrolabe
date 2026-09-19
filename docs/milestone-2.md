@@ -751,7 +751,7 @@ Decisions behind this group: D-194 (sector trouble is edited in Connection and T
 D-195 (the optional star belongs to the sector), D-196 (a whole-sector proposal is one
 proposal per object), D-197 (the map is hand-rolled SVG).
 
-- [ ] 8.0 Prerequisites found while planning group 8. Each starts with its failing test
+- [x] 8.0 Prerequisites found while planning group 8. Each starts with its failing test
   (3R.1a's pattern). **Before the first schema change lands** (8.0b, 8.0d, 8.0h, 8.0i),
   update `design-event-log.md`: the settlement, trouble and sector arms of
   `creation.proposed`, the sector draft arm, the history reads in §8, the `sector.configured`
@@ -960,7 +960,7 @@ Decisions behind this group: D-199 (the connection's track stays a vow), D-200 (
 choices are made on the review page), D-201 (one move command swears the pending vow),
 D-202 (`track.revised` carries participants).
 
-- [ ] 9.0 Prerequisites found while planning group 9. Each starts with its failing test
+- [x] 9.0 Prerequisites found while planning group 9. Each starts with its failing test
   (3R.1a's pattern). **Before the first schema change lands** (9.0b, 9.0e, 9.0g, 9.0h),
   update `design-event-log.md`: the connection and incident arms of `creation.proposed`,
   `incident.proposed`'s projection, the incident's optional vow choices, `track.revised`'s
@@ -1332,7 +1332,7 @@ of them stays). D-170 retires the production seed, and was approved with the mil
   the narration stream ends `failed` rather than committed (D-116). No proposal is held
   anywhere. The second test fails one starship proposal as `unavailable`: its rolls stay
   recorded, nothing is proposed, and a Foundation acceptance straight after succeeds.
-- [ ] 10.4 Exercise the full flow in the browser at 1280×720, including save/resume,
+- [x] 10.4 Exercise the full flow in the browser at 1280×720, including save/resume,
   keyboard focus, map alternatives, launch, and entry into play. A fresh campaign on the
   production build, on the dev stub, through every section. That includes save, a server
   restart and resume in each; every section by keyboard alone, with focus visible and the
@@ -1340,7 +1340,7 @@ of them stays). D-170 retires the production seed, and was approved with the mil
   play and the vow. Then the no-provider pass (A42), which groups 8 and 9 left open: the
   server without a provider, proposal actions disabled with their reason, and the launch
   completed by hand. Defects found are fixed here and listed.
-- [ ] 10.5 Run one live-provider launch pass for proposal validity, authority, provenance,
+- [x] 10.5 Run one live-provider launch pass for proposal validity, authority, provenance,
   latency, and token accounting; AI quality remains an eval/live sign-off, not a unit
   assertion. A script drives 10.1b's launch against the configured Claude provider in a
   throwaway schema, and records for every Guide call whether it passed schema and check
@@ -1348,6 +1348,12 @@ of them stays). D-170 retires the production seed, and was approved with the mil
   fact's grounding resolves to its rolls, the latency, and the tokens against what
   `ai.completed` recorded. **Run only with the user's approval of the cost**, never in CI.
   The results and any prompt defect go in the as-built note.
+  *As built:* `npm run eval:launch` (`ai/eval/launch-eval.ts`, beside `eval:authority`, not
+  a test file) plays `playLanternWakeLaunch` in a throwaway schema with the live Guide,
+  checker and planner behind a recording wrapper. `openScript` gained a `live` option: past
+  the fixture's loaded faces the dice roll for real, leftovers are not a failure, and the
+  script's answers are not asserted spent. The record is `ai/eval/live-launch-10.5.json`.
+  See the group 10 note for the results.
 - [x] 10.6 Remove automatic production fixture seeding and update install documentation so
   a fresh deployment opens the complete new-campaign path (D-170). The startup seed leaves
   `serve.ts`; `db:seed` and `db:reset` stay for development, refused in production as now. A
@@ -1746,3 +1752,72 @@ implementation note.
     no-provider path (A42) in the browser, as in group 8. 10.3 and 10.4 own it.
   Verified with Postgres: 133 files, 1591 tests, zero skipped files. typecheck, lint,
   format:check and the web build clean.
+
+- **Group 10 complete.** 10.0–10.3 and 10.6 are recorded under their tasks. 10.4 and 10.5
+  closed the group.
+  - **10.5, the live pass (2026-09-19).** Guide `claude-opus-5`, checker and planner
+    `claude-sonnet-5`. The golden launch finished: 15 calls, 134 events, 187 s wall time.
+    Every call passed its schema first time; no `ai.failed` was written. One character
+    proposal was asked twice. Both answers parsed, so the first failed the server's own
+    check, and **the reason is not recorded anywhere**. `ai.completed` has no field for it
+    and the retry leaves no event. The authority checker judged the swear passage once and
+    found no violation. All 159 citations in the log resolve to `oracle.rolled` events.
+    The tokens the provider reported equal what `ai.completed` recorded exactly:
+    55,298 in, 10,555 out, 20,108 cache read, 14,819 cache write. Latency by purpose,
+    median: character 19.8 s (max 26.4), incident 24.9 s, starship 15.5 s, connection
+    11.9 s, settlement 10.0 s, trouble 7.1 s, sector name 6.0 s, the swear passage 7.6 s,
+    its check 8.6 s, the world plan 4.1 s. `world_plan` runs on the narrator's model; only
+    the scene frame's plan uses the planner (D-141). No prompt defect was found.
+  - **10.4, the browser pass.** Production build, 1280x720 checked by rendering every launch
+    view and play in a 1280x720 frame, since the browser window could not be resized; no
+    view scrolls sideways. One fresh campaign went through every section on the dev stub and
+    launched into play without a reload. Session 1 opened at its settlement, the vow was
+    sworn with a real roll and the stub's passage committed. A second went through with no
+    provider (A42): every Guide action was disabled with its reason before any click, and
+    every section completed by hand and by rolls. Save, a server restart and resume passed
+    in all seven sections. The map moved by arrow keys with a visible focus ring, and the
+    passage was added from the list. The launch dialog opened on Cancel and closed on Escape.
+    The Vite first-paint freeze (group 7) was not re-examined; only the production build was
+    used, and it never froze.
+  - **Defects found and fixed.** (1) Focus fell to the page top on every launch view change;
+    it now moves to the new view's heading. (2) The truth panel said the Guide was unavailable
+    only after a click. (3) The dev stub's character was called "Stub", the first word of
+    its own narration, so D-127 withdrew every passage. (4) A Guide truth proposal that
+    leaves a nested choice open disabled both accept buttons silently. They now say what is
+    missing. (5) An empty crew read "0 is this campaign's choice". (6) A resumed sector
+    trouble lost its roll and the Guide's reading, so the Guide refused it and acceptance
+    would have recorded it as the player's, ungrounded. The draft's trouble now keeps
+    `groundedIn` and `proposalEventId`, an additive change to the draft arm, recorded in
+    `design-event-log.md`. (7) Roll chips showed Datasworn's link markdown,
+    `[Ocean World](id:…)`. The seven copies of the chip now share `rollChipText`. (8) "1
+    passages", "expanse needs 2 settlements" and "a ocean world". (9) Escape on the launch
+    dialog dropped focus to the page. It returns to Launch campaign. (10) Every link in the
+    crew Review step's error summary pointed at a field on a step not showing, and the
+    background vow and backstory had no anchor. A link now opens the step and focuses the
+    field. (11) "Roll the whole settlement" left a planetside or orbital settlement without
+    the planet its copy promised. It now rolls the class and a shallow planet, as the
+    Guide's whole sector does on the server.
+  - **Not fixed, for a decision.** With no provider, play opens paused (D-116) and hides the
+    composer, so the pending vow cannot be sworn in the browser. The HTTP path can (10.3).
+    Whether the swear should stay reachable while narration is paused is D-116's call, and
+    the non-negotiable that dice never wait on the AI bears on it.
+  - **Not fixed, noted.** After Create campaign and after activation, focus starts at the
+    top of the new page, not on its heading. Within the launch workspace it is handled
+    (fix 1).
+  - **Not walked.** Every section by keyboard alone. Foundation, the error summaries of
+    Foundation, Starship and the crew Review, the map, the vow choices and the launch
+    dialog were done by keyboard. The other sections were driven by pointer and script.
+  Verified with Postgres: 137 files, 1608 tests, zero skipped files. typecheck, lint,
+  format:check and the web build clean.
+
+---
+
+## Milestone 2 complete
+
+Groups 1 to 10 are done. The golden launch runs from a blank campaign to a sworn first vow
+through the HTTP routes with loaded dice and stubbed providers (10.2). It is the foundation
+the Session 1 and golden-session fixtures now stand on (10.1). It completes with no provider
+(10.3), and a fresh install opens it (10.6). It was walked in the browser on the dev stub
+and with no provider (10.4), and run once against the live Guide (10.5). One question is
+left for the design record: whether the inciting vow can be sworn while play is paused
+without a Guide (D-116).
