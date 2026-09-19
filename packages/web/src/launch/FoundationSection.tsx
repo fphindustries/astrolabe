@@ -7,6 +7,7 @@ import { useSaveLaunchDraft, useSetFoundation } from '../api/launch.js';
 import { navigate } from '../app/location.js';
 import { ErrorSummary } from '../ui/ErrorSummary.js';
 import { fieldAnchorId } from '../ui/error-summary.js';
+import { guarded } from '../ui/guarded.js';
 
 import { launchErrorSummary } from './errors.js';
 import { initialFoundationForm, toDraftSnapshot, toFoundationRequest } from './foundation-form.js';
@@ -163,12 +164,15 @@ export function FoundationSection({
         <button
           type="button"
           className={styles.secondary}
-          disabled={saveDraft.isPending}
-          onClick={handleSaveDraft}
+          {...guarded({ busy: saveDraft.isPending, onClick: handleSaveDraft })}
         >
           Save and continue
         </button>
-        <button type="submit" className={styles.primary} disabled={setFoundation.isPending}>
+        <button
+          type="submit"
+          className={styles.primary}
+          {...guarded({ busy: setFoundation.isPending })}
+        >
           Set as campaign foundation
         </button>
       </div>
