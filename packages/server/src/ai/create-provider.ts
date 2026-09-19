@@ -344,12 +344,14 @@ function stubTroubleProposal(user: string) {
 /** A build that passes the creation rules and cites every roll D-123 makes (3.3). */
 const STUB_CHARACTER_PROPOSAL = {
   name: {
-    value: 'Stub Given Stub Family',
+    // Not "Stub": the stub's narration opens with that word, and a passage
+    // naming a player character in a world segment is withdrawn (D-127, 10.4).
+    value: 'Sam Placeholder',
     reason: 'Stub proposal: the two name rolls, together.',
     groundedIn: ['given-name', 'family-name'],
   },
   callsign: {
-    value: 'Stub',
+    value: 'Placeholder',
     reason: 'Stub proposal: the callsign roll.',
     groundedIn: ['callsign'],
   },

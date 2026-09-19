@@ -3,6 +3,9 @@ import { useState } from 'react';
 import type { LaunchWorkspaceResponse } from '@astrolabe/shared';
 
 import { useProposeTruth } from '../api/launch.js';
+import { useAiStatus } from '../api/narration.js';
+
+import { proposalFailureText } from './CrewProposalPanel.js';
 
 import type { DecideTruthBody, TruthSelection } from './truth-form.js';
 import { toDecideRequest } from './truth-form.js';
@@ -40,12 +43,16 @@ export function TruthProposalPanel({
 }) {
   const propose = useProposeTruth(campaignId);
   const [refusal, setRefusal] = useState<string | undefined>(undefined);
+  // 10.4: said before the click, as every later section says it, not only after.
+  const guide = useAiStatus();
+  const unavailable = guide.data !== undefined && !guide.data.available;
 
   const held = heldProposal(workspace.state, view.truthId);
   const option = held?.optionIndex === undefined ? undefined : view.options[held.optionIndex];
   const edited = held !== null && isEditedProposal(held, selection);
 
   const ask = () => {
+    if (unavailable || propose.isPending) return;
     setRefusal(undefined);
     propose.mutate(view.truthId, {
       onSuccess: (result) => {
@@ -73,13 +80,21 @@ export function TruthProposalPanel({
         <button
           type="button"
           className={styles.secondary}
-          aria-disabled={propose.isPending}
+          aria-disabled={propose.isPending || unavailable}
           onClick={ask}
         >
           {held === null ? 'Ask the Guide' : 'Ask again'}
         </button>
       </div>
 
+      {unavailable && refusal === undefined && (
+        <p className={styles.refusal} role="status">
+          {guide.data?.lastFailure === undefined
+            ? 'No Guide is available.'
+            : proposalFailureText(guide.data.lastFailure)}{' '}
+          Choosing, rolling, writing and leaving this truth open all still work.
+        </p>
+      )}
       {refusal !== undefined && (
         <p className={styles.refusal} role="status">
           {refusal} Choosing, rolling, writing and leaving this truth open all still work.

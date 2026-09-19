@@ -60,7 +60,11 @@ export function CampaignHomeScreen({
   }
 
   return (
-    <LaunchWorkspaceScreen campaignId={campaignId} workspace={workspace.data}>
+    <LaunchWorkspaceScreen
+      campaignId={campaignId}
+      workspace={workspace.data}
+      viewKey={view.kind === 'section' ? `section:${view.section}` : view.kind}
+    >
       {(view.kind === 'home' || view.kind === 'overview') && (
         <LaunchDashboard campaignId={campaignId} workspace={workspace.data} />
       )}

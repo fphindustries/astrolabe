@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
 
 /**
  * Keyboard play (task 10.3, §10: keyboard navigable).
@@ -55,4 +55,24 @@ export function useFocusHandoff(ref: RefObject<HTMLElement | null>): void {
       root.removeEventListener('focusin', onFocusIn);
     };
   }, [ref]);
+}
+
+/**
+ * Moving between the views of one screen replaces the page under the
+ * keyboard, and focus would fall to the top of the document (10.4, found in
+ * the browser pass). When `viewKey` changes, focus moves to the new view's
+ * heading inside `ref`: its first `h2`, else its first `h1`. Not on the first
+ * render, where the browser's own starting point is right.
+ */
+export function useFocusOnViewChange(ref: RefObject<HTMLElement | null>, viewKey: string): void {
+  const previous = useRef(viewKey);
+  useEffect(() => {
+    if (previous.current === viewKey) return;
+    previous.current = viewKey;
+    const heading =
+      ref.current?.querySelector<HTMLElement>('h2') ?? ref.current?.querySelector('h1');
+    if (heading === null || heading === undefined) return;
+    if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1');
+    heading.focus();
+  }, [ref, viewKey]);
 }

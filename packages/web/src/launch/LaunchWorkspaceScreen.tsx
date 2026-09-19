@@ -1,8 +1,9 @@
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 
 import type { LaunchWorkspaceResponse } from '@astrolabe/shared';
 
 import { Link } from '../app/routes.js';
+import { useFocusOnViewChange } from '../ui/focus.js';
 
 import { launchOverviewPath, launchReviewPath } from './sections.js';
 import styles from './LaunchWorkspaceScreen.module.css';
@@ -17,16 +18,21 @@ import styles from './LaunchWorkspaceScreen.module.css';
 export function LaunchWorkspaceScreen({
   campaignId,
   workspace,
+  viewKey,
   children,
 }: {
   readonly campaignId: string;
   readonly workspace: LaunchWorkspaceResponse;
+  /** Which view is showing; a change moves focus to its heading (10.4). */
+  readonly viewKey: string;
   readonly children: ReactNode;
 }) {
   const name = workspace.state.campaign?.name ?? 'This campaign';
+  const pageRef = useRef<HTMLDivElement>(null);
+  useFocusOnViewChange(pageRef, viewKey);
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} ref={pageRef}>
       <header className={styles.header}>
         <p className={styles.eyebrow}>Campaign Launch</p>
         <h1 className={styles.title}>{name}</h1>
