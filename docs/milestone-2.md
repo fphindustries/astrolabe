@@ -1160,19 +1160,118 @@ vow's result. Rebuilding the fixtures on the launch belongs to 10.1.
 
 ### 10. Compatibility, acceptance, and packaging
 
+Group 10 turns groups 1–9 into Milestone 2's proof. Planning found four things the task list
+does not say. **The foundation is Milestone 1's.** `session-1` builds the crew with
+`createLegacyCharacter`, the sector with `addSectorLocation`, and the vow with
+`swearIncitingVow`, then begins Session 1 by hand. No fixture has a launch, so nothing
+proves that a launched campaign plays the golden session. **The golden session leans on
+that foundation.** Its test finds the relay among `entities`, finds "the" NPC by kind, and
+relies on momentum totals (Vesna +7, a burn offer of 9) that the swear's own momentum would
+now shift. Session 1 has no burn or reset, so the swear's momentum would reach the golden
+session. A launch also brings an NPC of its own, the connection, and four more vow tracks:
+three background vows and the connection's. **A43 is tested only
+through the fixtures.** Once they launch, nothing would exercise a Milestone 1 campaign, and
+D-206 removes the commands that could build one. **Two of the stale proposal ids 9.2 fixed
+remain**, in the connection and starship forms, where 10.4's pass would meet them.
+
+Decisions behind this group: D-205 (the golden launch is one HTTP script, and it is the
+fixture foundation), D-206 (Milestone 1's creation write paths are retired, and every read
+of them stays). D-170 retires the production seed, and was approved with the milestone.
+
+- [ ] 10.0 Prerequisite found while planning.
+  - [ ] **10.0a Asking again stops naming the old proposal, for the connection and the
+    starship.** 9.2's fix, applied to the other two forms that keep a proposal id: a
+    request names a proposal only while it is the one held, and otherwise sends the
+    player's words as their own. Starts with a failing form test for each.
 - [ ] 10.1 Extract a reusable Lantern Wake campaign-launch fixture and rebuild the three
   existing fixtures on top of it as active campaigns.
+  - [ ] **10.1a One HTTP fixture harness.** Move what `golden-session.ts` builds for itself
+    into `fixtures/http-script.ts`: typed route calls that fail on a non-2xx with the beat
+    named, NDJSON streams read to `committed`, loaded dice per step that fail on a die left
+    over, a Guide scripted per purpose that names an unscripted call, and command ids derived
+    from the fixture's name. The golden session moves onto it unchanged, and its test still
+    passes before anything else changes.
+  - [ ] **10.1b The Lantern Wake launch (D-205).** `playLanternWakeLaunch` plays
+    golden-launch beats 1–13 through the harness, exactly as the narrative gives them, with
+    every route the screens use. That covers the premise and settings, all fourteen truths
+    (picked, rolled, custom, one with a subchoice, one revised, Horrors left open), Vesna
+    from an edited Guide proposal, Rook by hand, Juno with mixed help, the ship from a
+    proposal with Vesna's Sensor Array installed, and the Outlands with three settlements
+    (one manual, one rolled, one proposed), Kessel Drift, passages, an off-map exit and a
+    saved layout. Then Deepwater Anchorage as the start with its first looks and trouble, the
+    sector trouble, a connection shared by all three, three incidents with one chosen and
+    edited to *Recover the flight recorder of Meridian's Hope*, the review's choices (Vesna
+    swears, Rook and Juno share, formidable, *A beacon at Deepwater Anchorage*), activation,
+    and the swear, narrated. It returns every beat's response and the Guide's requests for
+    the test. **The crew's stats are pinned to session 1's arrays**: Rook's by the
+    narrative, Vesna's by the scripted proposal she keeps, and Juno's by hand. Every later
+    outcome rests on them. Registered as its own fixture, `lantern-wake-launch`: a campaign
+    just launched, Session 1 open, the vow sworn. **Measure** `db:seed` and the
+    DB-backed suite's wall time before and after, because the launch now replays under
+    every fixture. Record both in the as-built note.
+  - [ ] **10.1c Rebuild the three fixtures on it.** `session-1` continues from the launch:
+    Session 1 is the activation's, and the swear is its first beat. The existing moves,
+    passages, relay scene and ending follow. **Session 1 absorbs the swear's momentum.**
+    Momentum adds to no action roll, so its dice and tiers stay as they are. Its momentum
+    choices change so that it still ends at Vesna +7, Rook +2 and Juno +3, and each changed
+    choice or passage is listed. **The golden session is then unchanged**: its dice,
+    outcomes, momentum and burn offer are all as today. Its test changes only where the
+    foundation did: the relay is a launch location, NPCs are found by name, the inciting vow
+    is found as the vow sworn for the incident (there are five vows now), and the context
+    carries a launched ship rather than D-193's legacy line. Each moved assertion is listed.
+  - [ ] **10.1d Freeze a Milestone 1 log before its commands go (D-206).** While the
+    Milestone 1 commands still exist, run them once and dump the events they write into
+    `fixtures/legacy-log.ts`, a test helper that appends that log directly. It covers truths,
+    characters carrying the Starship grant, location entities and routes, and a sworn vow.
+    Prove A43 against it: without a session, the campaign opens Finish campaign launch with
+    all of it intact; with one, it opens play. A test diffs the frozen log against the
+    commands' output while both exist.
+  - [ ] **10.1e Retire Milestone 1's write paths (D-206).** Only then remove the commands,
+    routes, helper and screen D-206 names, with the diff test, and rewrite or delete the
+    tests that drove them. The projection keeps folding the legacy events, and A43 stays on
+    the frozen log.
 - [ ] 10.2 Implement `golden-launch.test.ts` through HTTP routes with loaded dice and
-  scripted providers, covering A22–A44.
+  scripted providers, covering A22–A44. It asserts on 10.1b's run, beat by beat, and names
+  the criterion each block covers, with a table from A22–A44 to their tests so none is
+  claimed without one. It adds the final sign-off's server checks: **resume**, where every
+  section's draft is saved and read back through a fresh `buildApp` over the same database
+  (the process restart); **cold projection**, where the complete log projects from nothing
+  to the state the routes served; and **replay**, where re-sending a launch command's id
+  returns its first answer and writes nothing.
 - [ ] 10.3 Test manual/oracle completion with an unconfigured provider and proposal failure
-  without blocking unrelated setup.
+  without blocking unrelated setup. The same launch, through the harness, with an
+  unconfigured Claude provider (the shipped default without a key): every section is
+  completed by hand and by server rolls, and every proposal route answers that no Guide is
+  configured, writing no fact. Activation and the swear's roll go through, and narration
+  then pauses (D-116), which is play's contract, not launch's. Then a provider that fails
+  once: one proposal fails, its rolls stay the player's, and the next manual command in
+  another section succeeds.
 - [ ] 10.4 Exercise the full flow in the browser at 1280×720, including save/resume,
-  keyboard focus, map alternatives, launch, and entry into play.
+  keyboard focus, map alternatives, launch, and entry into play. A fresh campaign on the
+  production build, on the dev stub, through every section. That includes save, a server
+  restart and resume in each; every section by keyboard alone, with focus visible and the
+  error summaries reachable; and the map's list view in place of dragging. Then launch,
+  play and the vow. Then the no-provider pass (A42), which groups 8 and 9 left open: the
+  server without a provider, proposal actions disabled with their reason, and the launch
+  completed by hand. Defects found are fixed here and listed.
 - [ ] 10.5 Run one live-provider launch pass for proposal validity, authority, provenance,
   latency, and token accounting; AI quality remains an eval/live sign-off, not a unit
-  assertion.
+  assertion. A script drives 10.1b's launch against the configured Claude provider in a
+  throwaway schema, and records for every Guide call whether it passed schema and check
+  (and after how many retries), what the authority checker said, whether every accepted
+  fact's grounding resolves to its rolls, the latency, and the tokens against what
+  `ai.completed` recorded. **Run only with the user's approval of the cost**, never in CI.
+  The results and any prompt defect go in the as-built note.
 - [ ] 10.6 Remove automatic production fixture seeding and update install documentation so
-  a fresh deployment opens the complete new-campaign path.
+  a fresh deployment opens the complete new-campaign path (D-170). The startup seed leaves
+  `serve.ts`; `db:seed` and `db:reset` stay for development, refused in production as now. A
+  test asserts that production startup inserts nothing. The README's install section
+  describes a first run that opens the new-campaign path, and says an existing database
+  keeps its campaigns, seeded ones included. D-158 is marked superseded by D-170.
+
+**Scope fences.** No new launch capability: group 10 proves, fixes and removes. Amendment
+screens, the Connection move family and combat stay where groups 9 and 3 left them. The
+live pass measures the Guide; it does not tune prompts beyond fixing a defect it finds.
 
 ---
 
