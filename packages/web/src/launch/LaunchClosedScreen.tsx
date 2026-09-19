@@ -1,4 +1,7 @@
+import { useRef } from 'react';
+
 import { Link } from '../app/routes.js';
+import { useFocusOnArrival } from '../ui/focus.js';
 
 import { playPath } from './sections.js';
 import styles from './LaunchWorkspaceScreen.module.css';
@@ -17,8 +20,11 @@ export function LaunchClosedScreen({
   readonly campaignId: string;
   readonly message: string;
 }) {
+  const pageRef = useRef<HTMLDivElement>(null);
+  useFocusOnArrival(pageRef);
+
   return (
-    <div className={styles.page}>
+    <div className={styles.page} ref={pageRef}>
       <h1 className={styles.title}>Campaign Launch is closed</h1>
       <p className={styles.closed}>{message}</p>
       <Link className={styles.back} href={playPath(campaignId)}>

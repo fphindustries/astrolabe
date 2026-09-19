@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 
 import { CampaignSettingsSchema, DEFAULT_CAMPAIGN_SETTINGS } from '@astrolabe/shared';
 import type { CampaignSettings } from '@astrolabe/shared';
@@ -6,6 +6,7 @@ import type { CampaignSettings } from '@astrolabe/shared';
 import { useCreateCampaign } from '../api/campaigns.js';
 import { navigate } from '../app/location.js';
 import { launchOverviewPath } from '../launch/sections.js';
+import { useFocusOnArrival } from '../ui/focus.js';
 import { guarded } from '../ui/guarded.js';
 
 import styles from './NewCampaignScreen.module.css';
@@ -29,6 +30,8 @@ export function NewCampaignScreen() {
   const [settings, setSettings] = useState<CampaignSettings>(DEFAULT_CAMPAIGN_SETTINGS);
 
   const createCampaign = useCreateCampaign();
+  const pageRef = useRef<HTMLDivElement>(null);
+  useFocusOnArrival(pageRef);
   const named = name.trim().length > 0;
   const canSubmit = named && !createCampaign.isPending;
 
@@ -44,7 +47,7 @@ export function NewCampaignScreen() {
   };
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} ref={pageRef}>
       <h1 className={styles.title}>New campaign</h1>
       <p className={styles.lede}>
         Naming it opens Campaign Launch, where the crew, the sector and the first vow are settled
