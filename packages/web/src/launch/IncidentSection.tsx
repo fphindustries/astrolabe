@@ -119,7 +119,7 @@ export function IncidentSection({
               const drawsOn = drawsOnNames(state, option);
               return (
                 <li key={`${held.eventId}-${index}`} className={styles.review}>
-                  <p className={styles.value}>
+                  <p className={styles.value} id={`incident-option-${held.eventId}-${index}`}>
                     {option.title} <span className={styles.note}>({option.rank})</span>
                   </p>
                   <p className={styles.help}>{option.situation}</p>
@@ -141,6 +141,8 @@ export function IncidentSection({
                     type="button"
                     className={chosen ? styles.primary : styles.secondary}
                     aria-pressed={chosen}
+                    // 10.4: three buttons read alike; each names its own option.
+                    aria-describedby={`incident-option-${held.eventId}-${index}`}
                     onClick={() => edit(chooseOption(held.eventId, index, option))}
                   >
                     {chosen ? 'Chosen' : 'Choose this'}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { planetClassFromRow } from '@astrolabe/rules';
 import type { LaunchWorkspaceResponse, OracleChip } from '@astrolabe/shared';
@@ -257,6 +257,10 @@ function SettlementEditor({
   const [dismissed, setDismissed] = useState<string | undefined>(undefined);
   const [removing, setRemoving] = useState(false);
   const [reason, setReason] = useState('');
+  // 10.4: the editor opens above the Add button that opened it, so focus
+  // moves to it rather than staying fourteen stops below.
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => headingRef.current?.focus(), []);
 
   const rollField = useRollLaunchOracle(campaignId);
   const rollWhole = useRollLaunchRecipe(campaignId);
@@ -372,7 +376,12 @@ function SettlementEditor({
 
   return (
     <section className={styles.editor} aria-labelledby={`settlement-${draftId}-heading`}>
-      <h4 className={styles.panelHeading} id={`settlement-${draftId}-heading`}>
+      <h4
+        className={styles.panelHeading}
+        id={`settlement-${draftId}-heading`}
+        ref={headingRef}
+        tabIndex={-1}
+      >
         {settlement.name.trim() === '' ? 'New settlement' : settlement.name}
       </h4>
       {submitted && problems.length > 0 && (
