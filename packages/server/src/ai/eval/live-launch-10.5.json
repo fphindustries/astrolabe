@@ -1,0 +1,476 @@
+{
+  "ranAt": "2026-09-19T15:37:46.612Z",
+  "models": {
+    "guide": "claude-opus-5",
+    "checker": "claude-sonnet-5",
+    "planner": "claude-sonnet-5"
+  },
+  "finished": true,
+  "wallMs": 187264,
+  "events": 134,
+  "calls": [
+    {
+      "role": "guide",
+      "purpose": "character_proposal",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 1364,
+        "outputTokens": 1541,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 10054
+      },
+      "latencyMs": 26385
+    },
+    {
+      "role": "guide",
+      "purpose": "character_proposal",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 1635,
+        "outputTokens": 1464,
+        "cacheReadTokens": 10054,
+        "cacheWriteTokens": 0
+      },
+      "latencyMs": 19761
+    },
+    {
+      "role": "guide",
+      "purpose": "character_proposal",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 1689,
+        "outputTokens": 1253,
+        "cacheReadTokens": 10054,
+        "cacheWriteTokens": 0
+      },
+      "latencyMs": 17999
+    },
+    {
+      "role": "guide",
+      "purpose": "starship_proposal",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 4279,
+        "outputTokens": 789,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      },
+      "latencyMs": 15496
+    },
+    {
+      "role": "guide",
+      "purpose": "sector_name_proposal",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 3827,
+        "outputTokens": 214,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      },
+      "latencyMs": 6049
+    },
+    {
+      "role": "guide",
+      "purpose": "settlement_proposal",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 4985,
+        "outputTokens": 501,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      },
+      "latencyMs": 10914
+    },
+    {
+      "role": "guide",
+      "purpose": "settlement_proposal",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 4990,
+        "outputTokens": 533,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      },
+      "latencyMs": 8872
+    },
+    {
+      "role": "guide",
+      "purpose": "settlement_proposal",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 4984,
+        "outputTokens": 550,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      },
+      "latencyMs": 10008
+    },
+    {
+      "role": "guide",
+      "purpose": "trouble_proposal",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 4314,
+        "outputTokens": 282,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      },
+      "latencyMs": 7064
+    },
+    {
+      "role": "guide",
+      "purpose": "trouble_proposal",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 4342,
+        "outputTokens": 271,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      },
+      "latencyMs": 6694
+    },
+    {
+      "role": "guide",
+      "purpose": "connection_proposal",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 5320,
+        "outputTokens": 577,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      },
+      "latencyMs": 11870
+    },
+    {
+      "role": "guide",
+      "purpose": "incident_proposal",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 6262,
+        "outputTokens": 1594,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      },
+      "latencyMs": 24854
+    },
+    {
+      "role": "guide",
+      "purpose": "beat",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 3388,
+        "outputTokens": 343,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 1607
+      },
+      "latencyMs": 7560
+    },
+    {
+      "role": "checker",
+      "purpose": "narration_check",
+      "model": "claude-sonnet-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 574,
+        "outputTokens": 559,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 1555
+      },
+      "latencyMs": 8584,
+      "verdict": {
+        "review": "The passage stays tightly within the declared action (laying hand on receiver, swearing to find the recorder) and the resulting mechanical effect (momentum). No spoken lines or outward expressions appear that would trigger the voice restriction; the vow itself is the declared action, not additional color speech. The closing sensory detail ('bright certain line') is a bodily sensation following directly from the resolved vow, not a claim about disposition or history, so it falls within allowed sensation. No undeclared actions, no interior overreach, no injury issues.",
+        "violations": []
+      }
+    },
+    {
+      "role": "guide",
+      "purpose": "world_plan",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 3345,
+        "outputTokens": 84,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 1603
+      },
+      "latencyMs": 4106
+    }
+  ],
+  "byPurpose": {
+    "guide:character_proposal": {
+      "calls": 3,
+      "ok": 3,
+      "medianMs": 19761,
+      "maxMs": 26385,
+      "usage": {
+        "inputTokens": 4688,
+        "outputTokens": 4258,
+        "cacheReadTokens": 20108,
+        "cacheWriteTokens": 10054
+      }
+    },
+    "guide:starship_proposal": {
+      "calls": 1,
+      "ok": 1,
+      "medianMs": 15496,
+      "maxMs": 15496,
+      "usage": {
+        "inputTokens": 4279,
+        "outputTokens": 789,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      }
+    },
+    "guide:sector_name_proposal": {
+      "calls": 1,
+      "ok": 1,
+      "medianMs": 6049,
+      "maxMs": 6049,
+      "usage": {
+        "inputTokens": 3827,
+        "outputTokens": 214,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      }
+    },
+    "guide:settlement_proposal": {
+      "calls": 3,
+      "ok": 3,
+      "medianMs": 10008,
+      "maxMs": 10914,
+      "usage": {
+        "inputTokens": 14959,
+        "outputTokens": 1584,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      }
+    },
+    "guide:trouble_proposal": {
+      "calls": 2,
+      "ok": 2,
+      "medianMs": 7064,
+      "maxMs": 7064,
+      "usage": {
+        "inputTokens": 8656,
+        "outputTokens": 553,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      }
+    },
+    "guide:connection_proposal": {
+      "calls": 1,
+      "ok": 1,
+      "medianMs": 11870,
+      "maxMs": 11870,
+      "usage": {
+        "inputTokens": 5320,
+        "outputTokens": 577,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      }
+    },
+    "guide:incident_proposal": {
+      "calls": 1,
+      "ok": 1,
+      "medianMs": 24854,
+      "maxMs": 24854,
+      "usage": {
+        "inputTokens": 6262,
+        "outputTokens": 1594,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      }
+    },
+    "guide:beat": {
+      "calls": 1,
+      "ok": 1,
+      "medianMs": 7560,
+      "maxMs": 7560,
+      "usage": {
+        "inputTokens": 3388,
+        "outputTokens": 343,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 1607
+      }
+    },
+    "checker:narration_check": {
+      "calls": 1,
+      "ok": 1,
+      "medianMs": 8584,
+      "maxMs": 8584,
+      "usage": {
+        "inputTokens": 574,
+        "outputTokens": 559,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 1555
+      }
+    },
+    "guide:world_plan": {
+      "calls": 1,
+      "ok": 1,
+      "medianMs": 4106,
+      "maxMs": 4106,
+      "usage": {
+        "inputTokens": 3345,
+        "outputTokens": 84,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 1603
+      }
+    }
+  },
+  "commands": [
+    {
+      "commandId": "3b71b9b2-6456-8bf3-adc9-1185b9b3bea0",
+      "purposes": ["character_proposal"],
+      "completed": 1,
+      "failed": 0
+    },
+    {
+      "commandId": "b4026a82-cc97-81a0-b206-bd1c9f3a560b",
+      "purposes": ["character_proposal"],
+      "completed": 2,
+      "failed": 0
+    },
+    {
+      "commandId": "fb9c9e73-4be1-83b1-a3c9-3b7b7c1eac71",
+      "purposes": ["starship_proposal"],
+      "completed": 1,
+      "failed": 0
+    },
+    {
+      "commandId": "37b36e7b-cbce-8632-b29f-23898d223090",
+      "purposes": ["sector_name_proposal"],
+      "completed": 1,
+      "failed": 0
+    },
+    {
+      "commandId": "7070d9e2-6227-808f-bcd6-dc069b90c33f",
+      "purposes": ["settlement_proposal"],
+      "completed": 1,
+      "failed": 0
+    },
+    {
+      "commandId": "493d595a-0baf-819f-9926-c1fb77b5fa8e",
+      "purposes": ["settlement_proposal"],
+      "completed": 1,
+      "failed": 0
+    },
+    {
+      "commandId": "5365f3d5-110e-8d45-b443-be0b1eff450a",
+      "purposes": ["settlement_proposal"],
+      "completed": 1,
+      "failed": 0
+    },
+    {
+      "commandId": "7dbaa73d-cc47-8313-9f7a-daccf0a62f67",
+      "purposes": ["trouble_proposal"],
+      "completed": 1,
+      "failed": 0
+    },
+    {
+      "commandId": "aae3d204-16d0-86af-ad90-4dcbcd9571b1",
+      "purposes": ["trouble_proposal"],
+      "completed": 1,
+      "failed": 0
+    },
+    {
+      "commandId": "68a5709b-d897-87c8-a311-22dd1d2aaaff",
+      "purposes": ["connection_proposal"],
+      "completed": 1,
+      "failed": 0
+    },
+    {
+      "commandId": "83643f51-1f98-8c59-8d52-b5e3eba4de29",
+      "purposes": ["incident_proposal"],
+      "completed": 1,
+      "failed": 0
+    },
+    {
+      "commandId": "83441f32-78bb-876a-9248-a4733af74ad5",
+      "purposes": ["beat", "narration_check"],
+      "completed": 2,
+      "failed": 0
+    },
+    {
+      "commandId": "1ba0dfcf-91a4-88df-a34c-9411a36e9e97",
+      "purposes": ["world_plan"],
+      "completed": 1,
+      "failed": 0
+    }
+  ],
+  "checker": [
+    {
+      "purpose": "narration_check",
+      "ok": true,
+      "verdict": {
+        "review": "The passage stays tightly within the declared action (laying hand on receiver, swearing to find the recorder) and the resulting mechanical effect (momentum). No spoken lines or outward expressions appear that would trigger the voice restriction; the vow itself is the declared action, not additional color speech. The closing sensory detail ('bright certain line') is a bodily sensation following directly from the resolved vow, not a claim about disposition or history, so it falls within allowed sensation. No undeclared actions, no interior overreach, no injury issues.",
+        "violations": []
+      }
+    }
+  ],
+  "grounding": {
+    "cited": 159,
+    "unresolved": []
+  },
+  "tokens": {
+    "spent": {
+      "inputTokens": 55298,
+      "outputTokens": 10555,
+      "cacheReadTokens": 20108,
+      "cacheWriteTokens": 14819
+    },
+    "recordedCompleted": {
+      "inputTokens": 55298,
+      "outputTokens": 10555,
+      "cacheReadTokens": 20108,
+      "cacheWriteTokens": 14819
+    },
+    "recordedFailed": {
+      "inputTokens": 0,
+      "outputTokens": 0
+    }
+  }
+}

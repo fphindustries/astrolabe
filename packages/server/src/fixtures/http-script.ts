@@ -12,6 +12,7 @@ import type { Sql } from 'postgres';
 import type { AiProvider, AiRequest } from '../ai/provider.js';
 import { StubProvider, type StubResponse } from '../ai/stub.js';
 import { buildApp } from '../http/app.js';
+import { cryptoRandomSource } from '../random-source.js';
 
 import { fixtureUuid } from './ids.js';
 import { loadedDice, type Face, type LoadedDice } from './loaded-dice.js';
@@ -65,6 +66,16 @@ export interface ScriptOptions {
    * is. The checker and planner follow it.
    */
   readonly provider?: AiProvider;
+  /**
+   * A live Guide, checker and planner (10.5's pass). A live answer can ask
+   * for rolls no script foresaw, so past the loaded faces the dice roll for
+   * real, and faces left over are not a failure.
+   */
+  readonly live?: {
+    readonly ai: AiProvider;
+    readonly checker: AiProvider;
+    readonly planner: AiProvider;
+  };
 }
 
 export interface Answer {
@@ -98,15 +109,19 @@ export function openScript(sql: Sql, options: ScriptOptions) {
   // Passes every check: scripted passages are written to pass D-127–D-130.
   const checker = new StubProvider();
 
+  const live = options.live;
+  const real = cryptoRandomSource();
   let dice: LoadedDice = loadedDice([]);
-  const rng: RandomSource = { next: () => dice.next() };
+  const rng: RandomSource = {
+    next: () => (live !== undefined && dice.remaining === 0 ? real.next() : dice.next()),
+  };
 
   const provider = options.provider;
   const app = buildApp({
     sql,
-    ai: provider ?? guide,
-    checker: provider ?? checker,
-    planner: provider ?? guide,
+    ai: live?.ai ?? provider ?? guide,
+    checker: live?.checker ?? provider ?? checker,
+    planner: live?.planner ?? provider ?? guide,
     rng,
   });
   const http = routes(app, campaignId, where);
@@ -117,7 +132,7 @@ export function openScript(sql: Sql, options: ScriptOptions) {
     dice = loadedDice(faces);
     try {
       const result = await work();
-      if (dice.remaining !== 0) {
+      if (dice.remaining !== 0 && live === undefined) {
         throw new Error(`${where()}: ${dice.remaining} die/dice left over.`);
       }
       return result;
@@ -182,6 +197,7 @@ export function openScript(sql: Sql, options: ScriptOptions) {
     },
     /** Every scripted answer was asked for. */
     assertSpent() {
+      if (live !== undefined) return; // A live Guide answers instead of the script.
       for (const [purpose, left] of scripts) {
         if (left.length > 0) {
           throw new Error(

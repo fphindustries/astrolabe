@@ -28,7 +28,8 @@
     "db:seed": "npm run seed --workspace @astrolabe/server --",
     "db:reset": "npm run reset --workspace @astrolabe/server --",
     "harness": "npm run harness --workspace @astrolabe/server",
-    "eval:authority": "npm run eval:authority --workspace @astrolabe/server --"
+    "eval:authority": "npm run eval:authority --workspace @astrolabe/server --",
+    "eval:launch": "npm run eval:launch --workspace @astrolabe/server --"
   },
   "devDependencies": {
     "@eslint/js": "^9.37.0",

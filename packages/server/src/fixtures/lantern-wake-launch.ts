@@ -33,6 +33,7 @@ import {
   openScript,
   segments,
   type FixtureScript,
+  type ScriptOptions,
 } from './http-script.js';
 import type { Face } from './loaded-dice.js';
 
@@ -63,6 +64,8 @@ export interface LaunchOptions {
   readonly fixture: string;
   readonly campaignId: CampaignId;
   readonly campaignName: string;
+  /** Play against a live Guide instead of the script (10.5). */
+  readonly live?: ScriptOptions['live'];
 }
 
 export interface LaunchRun {
@@ -126,7 +129,11 @@ const cite = (value: string, reason: string, groundedIn: readonly string[]) => (
 });
 
 export async function playLanternWakeLaunch(sql: Sql, options: LaunchOptions): Promise<LaunchRun> {
-  const script = openScript(sql, { fixture: options.fixture, campaignId: options.campaignId });
+  const script = openScript(sql, {
+    fixture: options.fixture,
+    campaignId: options.campaignId,
+    ...(options.live !== undefined ? { live: options.live } : {}),
+  });
   try {
     return await play(script, options);
   } finally {
