@@ -988,7 +988,7 @@ D-202 (`track.revised` carries participants).
     answer. The client rolls `STARTING_CONNECTION_RECIPE` through `rollLaunchRecipe`, and
     the rolls are matched by recorded slot (8.5). The grounding check refuses a field that
     cites no roll.
-  - [ ] **9.0d Proposal-aware connection acceptance (7.0c again).** Establishing or
+  - [x] **9.0d Proposal-aware connection acceptance (7.0c again).** Establishing or
     revising names the proposal event, and `heldProposal` resolves it. The server decides
     `guide_proposal` or `guide_proposal_edited` field by field and grounds the connection in
     the rolls behind the kept fields. The NPC's `entity.established` carries the same

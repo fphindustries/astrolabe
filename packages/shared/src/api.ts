@@ -385,6 +385,15 @@ export const EstablishLaunchConnectionRequestBodySchema = z.object({
   role: z.string().trim().min(1),
   rank: ChallengeRankSchema,
   participants: z.array(CharacterIdSchema).min(1),
+  /** The NPC's goal, first look and disposition (9.0d), kept as the NPC's fields. */
+  details: z
+    .object({
+      goal: z.string().trim().min(1).optional(),
+      firstLook: z.string().trim().min(1).optional(),
+      disposition: z.string().trim().min(1).optional(),
+    })
+    .optional(),
+  ...AcceptanceRequestFields,
 });
 export type EstablishLaunchConnectionRequestBody = z.infer<
   typeof EstablishLaunchConnectionRequestBodySchema

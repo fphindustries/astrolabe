@@ -923,6 +923,11 @@ export function buildApp({
           role: parsed.data.role,
           rank: parsed.data.rank,
           participants: parsed.data.participants,
+          ...(parsed.data.details === undefined ? {} : { details: parsed.data.details }),
+          ...(parsed.data.proposalEventId === undefined
+            ? {}
+            : { proposalEventId: parsed.data.proposalEventId }),
+          ...(parsed.data.groundedIn === undefined ? {} : { groundedIn: parsed.data.groundedIn }),
         });
         reply.code(201);
         return result.response as EstablishLaunchConnectionResponse;
@@ -961,6 +966,11 @@ export function buildApp({
           role: parsed.data.role,
           rank: parsed.data.rank,
           participants: parsed.data.participants,
+          ...(parsed.data.details === undefined ? {} : { details: parsed.data.details }),
+          ...(parsed.data.proposalEventId === undefined
+            ? {}
+            : { proposalEventId: parsed.data.proposalEventId }),
+          ...(parsed.data.groundedIn === undefined ? {} : { groundedIn: parsed.data.groundedIn }),
         });
         reply.code(201);
         return result.response as EstablishLaunchConnectionResponse;

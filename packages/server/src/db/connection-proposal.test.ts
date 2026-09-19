@@ -17,7 +17,13 @@ import { project } from '../projection/project.js';
 
 import { createCampaign } from './campaign-commands.js';
 import { readEvents } from './event-store.js';
-import { decideTruth, rollLaunchRecipe, saveLaunchDraft } from './launch-commands.js';
+import {
+  decideTruth,
+  establishLaunchConnection,
+  rollLaunchRecipe,
+  saveLaunchDraft,
+} from './launch-commands.js';
+import { createCharacter } from './character-commands.js';
 import { AiRequestRefusedError } from './narration-commands.js';
 import { proposeConnection } from './proposal-commands.js';
 import { beginSession } from './session-commands.js';
@@ -166,6 +172,100 @@ describe.skipIf(!hasTestDatabase)('proposing the local connection (9.0c)', () =>
     const user = ai.requests[0]?.user ?? '';
     expect(user).toContain('ACCEPTED-TRUTH-MARKER');
     expect(user).not.toContain('DRAFT-ONLY-MARKER');
+  });
+
+  // 9.0d — accepting names the proposal, and the server decides whether it was edited.
+  async function crew(campaignId: CampaignId) {
+    const paths = STARFORGED.assets
+      .filter((asset) => asset.categoryId === 'path')
+      .slice(0, 3)
+      .map((asset) => asset.id);
+    const { characterId } = await createCharacter(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      draft: {
+        name: 'Vesna Kade',
+        callsign: 'Map',
+        stats: { edge: 3, heart: 2, iron: 2, shadow: 1, wits: 1 },
+        assets: paths,
+      },
+      backgroundVow: { title: 'Find the lost colony', rank: 'formidable' },
+      launch: { appearance: 'Weathered jacket', backstory: { kind: 'discover_in_play' } },
+    });
+    return characterId;
+  }
+
+  async function proposed(campaignId: CampaignId) {
+    const result = await proposeConnection(db.sql, devStub(), {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      groundedIn: await roll(campaignId),
+    });
+    if (!result.ok) throw new Error('expected a proposal');
+    return result;
+  }
+
+  it('accepts the proposed person as the Guide’s, with every roll, and a rank of the player’s', async () => {
+    const campaignId = await campaign();
+    const vesna = await crew(campaignId);
+    const { proposal, proposalEventId } = await proposed(campaignId);
+
+    const established = await establishLaunchConnection(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      npcName: proposal.npcName.value,
+      role: proposal.role.value,
+      rank: 'dangerous',
+      participants: [vesna],
+      details: {
+        goal: proposal.goal.value,
+        firstLook: proposal.firstLook.value,
+        disposition: proposal.disposition.value,
+      },
+      proposalEventId,
+    });
+
+    expect(established.events.every((event) => event.causedBy === proposalEventId)).toBe(true);
+    const state = project(await readEvents(db.sql, campaignId));
+    expect(state.launch.connection).toMatchObject({
+      provenance: 'guide_proposal',
+      rank: 'dangerous',
+    });
+    expect(state.launch.connection?.groundedIn.length).toBeGreaterThanOrEqual(6);
+    expect(state.entities[state.launch.connection!.npcId]).toMatchObject({
+      fields: { role: proposal.role.value, goal: proposal.goal.value },
+      provenance: { establishedBy: 'ai' },
+    });
+  });
+
+  it('records an edited field as edited, and drops the roll behind it', async () => {
+    const campaignId = await campaign();
+    const vesna = await crew(campaignId);
+    const { proposal, proposalEventId } = await proposed(campaignId);
+
+    await establishLaunchConnection(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      npcName: proposal.npcName.value,
+      role: 'Harbourmaster',
+      rank: 'dangerous',
+      participants: [vesna],
+      details: {
+        goal: proposal.goal.value,
+        firstLook: proposal.firstLook.value,
+        disposition: proposal.disposition.value,
+      },
+      proposalEventId,
+    });
+
+    const state = project(await readEvents(db.sql, campaignId));
+    expect(state.launch.connection?.provenance).toBe('guide_proposal_edited');
+    expect(state.launch.connection?.groundedIn).not.toContain(proposal.role.groundedIn[0]);
+    expect(state.entities[state.launch.connection!.npcId]?.provenance.establishedBy).toBe('player');
   });
 
   it('is refused for a campaign already in play (D-178)', async () => {

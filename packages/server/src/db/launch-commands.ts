@@ -516,6 +516,63 @@ export interface EstablishLaunchConnectionRequest {
   readonly role: string;
   readonly rank: PayloadFor<'connection.established'>['rank'];
   readonly participants: readonly CharacterId[];
+  /** The NPC's goal, first look and disposition, kept as the NPC's fields (9.0d). */
+  readonly details?: {
+    readonly goal?: string | undefined;
+    readonly firstLook?: string | undefined;
+    readonly disposition?: string | undefined;
+  };
+  /** The connection proposal being accepted, if any; resolved against the fold (9.0d). */
+  readonly proposalEventId?: EventId;
+  /** Field rolls the player kept (A41). Each must be a recorded oracle roll. */
+  readonly groundedIn?: readonly EventId[];
+}
+
+/** The NPC's fields as an entity keeps them: the role, and the details given. */
+function npcFields(
+  role: string,
+  details: EstablishLaunchConnectionRequest['details'],
+): Record<string, string> {
+  const fields: Record<string, string> = { role };
+  for (const key of ['goal', 'firstLook', 'disposition'] as const) {
+    const value = details?.[key]?.trim();
+    if (value) fields[key] = value;
+  }
+  return fields;
+}
+
+/**
+ * What accepting a connection proposal records (9.0d; 7.0c's shape). Field by
+ * field: the grounding is the rolls behind each field the player kept, and any
+ * field changed makes the acceptance `guide_proposal_edited`. The rank and
+ * the sharing crew were never proposed, so they cannot make it edited.
+ */
+function acceptedConnectionProposal(
+  state: CampaignState,
+  proposalEventId: EventId,
+  npcName: string,
+  fields: Readonly<Record<string, string>>,
+): Acceptance {
+  const { proposal } = heldProposal(
+    state,
+    CONNECTION_PROPOSAL_TARGET,
+    'connection',
+    proposalEventId,
+    'That connection proposal does not exist for this campaign.',
+  );
+  const pairs = [
+    [proposal.npcName, npcName],
+    [proposal.role, fields['role'] ?? ''],
+    [proposal.goal, fields['goal'] ?? ''],
+    [proposal.firstLook, fields['firstLook'] ?? ''],
+    [proposal.disposition, fields['disposition'] ?? ''],
+  ] as const;
+  const kept = pairs.filter(([proposed, accepted]) => sameWords(proposed.value, accepted));
+  return {
+    eventId: proposalEventId,
+    provenance: kept.length === pairs.length ? 'guide_proposal' : 'guide_proposal_edited',
+    groundedIn: kept.flatMap(([proposed]) => proposed.groundedIn),
+  };
 }
 
 export interface AcceptLaunchIncidentRequest {
@@ -1414,7 +1471,8 @@ export async function establishLaunchConnection(
   sql: Sql,
   request: EstablishLaunchConnectionRequest,
 ): Promise<AppendResult> {
-  const state = project(await readEvents(sql, request.campaignId));
+  const events = await readEvents(sql, request.campaignId);
+  const state = project(events);
   requireLaunchOpen(state, 'The connection changes by amendment after launch.');
   if (state.launch.connection !== undefined)
     throw new LaunchRejectedError(
@@ -1440,11 +1498,19 @@ export async function establishLaunchConnection(
   const connectionId = uuidv7() as EntityId;
   const npcId = uuidv7() as EntityId;
   const trackId = uuidv7() as TrackId;
+  const fields = npcFields(role, request.details);
+  const kept = recordedRolls(events, request.groundedIn, 'A connection');
+  const accepted =
+    request.proposalEventId === undefined
+      ? undefined
+      : acceptedConnectionProposal(state, request.proposalEventId, npcName, fields);
+  const groundedIn = [...new Set([...(accepted?.groundedIn ?? []), ...kept])];
   return appendCommand(sql, {
     campaignId: request.campaignId,
     commandId: request.commandId,
     kind: 'launch.connection.establish',
     actor: request.actor,
+    ...(accepted === undefined ? {} : { causedBy: accepted.eventId }),
     events: [
       {
         type: 'entity.established',
@@ -1452,8 +1518,12 @@ export async function establishLaunchConnection(
           entityId: npcId,
           kind: 'npc',
           name: npcName,
-          fields: { role },
-          provenance: { establishedBy: 'player', groundedIn: [] },
+          fields,
+          // A10's badge: the Guide's person, taken whole, reads as the Guide's.
+          provenance: {
+            establishedBy: accepted?.provenance === 'guide_proposal' ? 'ai' : 'player',
+            groundedIn,
+          },
         },
       },
       {
@@ -1477,8 +1547,8 @@ export async function establishLaunchConnection(
           trackId,
           participants: request.participants,
           automaticStrongHit: true,
-          provenance: 'player_written',
-          groundedIn: [],
+          provenance: accepted?.provenance ?? 'player_written',
+          groundedIn,
         },
       },
     ],
@@ -1502,7 +1572,8 @@ export async function reviseLaunchConnection(
   sql: Sql,
   request: EstablishLaunchConnectionRequest,
 ): Promise<AppendResult> {
-  const state = project(await readEvents(sql, request.campaignId));
+  const events = await readEvents(sql, request.campaignId);
+  const state = project(events);
   requireLaunchOpen(state, 'The connection changes by amendment after launch.');
   const current = state.launch.connection;
   if (current === undefined)
@@ -1526,7 +1597,21 @@ export async function reviseLaunchConnection(
       'The connection needs an NPC name and role.',
     );
   const npc = state.entities[current.npcId];
-  const npcChanged = npc === undefined || npc.name !== npcName || npc.fields['role'] !== role;
+  const fields = npcFields(role, request.details);
+  const kept = recordedRolls(events, request.groundedIn, 'A connection');
+  const accepted =
+    request.proposalEventId === undefined
+      ? undefined
+      : acceptedConnectionProposal(state, request.proposalEventId, npcName, fields);
+  const groundedIn = [...new Set([...(accepted?.groundedIn ?? []), ...kept])];
+  const sameFields = (a: Readonly<Record<string, string>>, b: Readonly<Record<string, string>>) =>
+    Object.keys(a).length === Object.keys(b).length &&
+    Object.entries(a).every(([key, value]) => b[key] === value);
+  const npcChanged =
+    npc === undefined ||
+    npc.name !== npcName ||
+    !sameFields(npc.fields, fields) ||
+    accepted !== undefined;
   const sameCrew =
     current.participants.length === request.participants.length &&
     current.participants.every((id) => request.participants.includes(id));
@@ -1536,6 +1621,7 @@ export async function reviseLaunchConnection(
     commandId: request.commandId,
     kind: 'launch.connection.revise',
     actor: request.actor,
+    ...(accepted === undefined ? {} : { causedBy: accepted.eventId }),
     events: [
       ...(npcChanged
         ? [
@@ -1545,10 +1631,13 @@ export async function reviseLaunchConnection(
                 entityId: current.npcId,
                 kind: 'npc' as const,
                 name: npcName,
-                fields: { ...(npc?.fields ?? {}), role },
+                fields,
                 provenance: {
-                  establishedBy: npc?.provenance.establishedBy ?? ('player' as const),
-                  groundedIn: [...(npc?.provenance.groundedIn ?? [])],
+                  establishedBy:
+                    accepted?.provenance === 'guide_proposal'
+                      ? ('ai' as const)
+                      : ('player' as const),
+                  groundedIn,
                 },
               },
             },
@@ -1578,8 +1667,8 @@ export async function reviseLaunchConnection(
           trackId: current.trackId,
           participants: [...request.participants],
           automaticStrongHit: true,
-          provenance: 'player_written',
-          groundedIn: [],
+          provenance: accepted?.provenance ?? 'player_written',
+          groundedIn,
           supersedesEventId: current.eventId,
         },
       },
