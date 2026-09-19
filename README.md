@@ -58,14 +58,29 @@ npm run dev --workspace @astrolabe/web      # :5173
 
 ### First install
 
-Clone the repo (or just copy `docker-compose.yml` — it's the only file the container needs):
+Running the container needs only two files, `docker-compose.yml` and `.env.example`, so there's no need to clone the repository. Make a folder for them and download both from `main`.
 
-```bash
-git clone https://github.com/fphindustries/astrolabe.git
-cd astrolabe
+PowerShell (Windows):
+
+```powershell
+mkdir astrolabe; cd astrolabe
+$raw = "https://raw.githubusercontent.com/fphindustries/astrolabe/main"
+Invoke-WebRequest "$raw/docker-compose.yml" -OutFile docker-compose.yml
+Invoke-WebRequest "$raw/.env.example" -OutFile .env.example
 ```
 
-Create a `.env` file next to `docker-compose.yml` — a plain text file, the same on both OSes:
+Bash (Linux, macOS, Git Bash):
+
+```bash
+mkdir astrolabe && cd astrolabe
+raw=https://raw.githubusercontent.com/fphindustries/astrolabe/main
+curl -fsSLO "$raw/docker-compose.yml"
+curl -fsSLO "$raw/.env.example"
+```
+
+(Prefer to have the whole repository? `git clone https://github.com/fphindustries/astrolabe.git` and work from the `astrolabe` folder instead.)
+
+Copy `.env.example` to `.env` next to `docker-compose.yml` (`Copy-Item .env.example .env` in PowerShell, `cp .env.example .env` in bash), then edit `.env` in any text editor. The template's development lines (`DATABASE_URL`, `PORT`) are ignored in Docker, so the settings that matter are:
 
 ```bash
 ANTHROPIC_API_KEY=sk-ant-...
@@ -74,13 +89,7 @@ POSTGRES_PASSWORD=choose-a-password   # read once, when the database volume is c
 # ASTROLABE_CLAUDE_MODEL=, ASTROLABE_PLAN_MODEL=, ASTROLABE_CHECK_MODEL=   # optional overrides
 ```
 
-The repo is private, so the image is too: pulling it needs a login once, with a GitHub personal access token that has `read:packages`:
-
-```bash
-docker login ghcr.io -u <your-github-username>
-```
-
-Then, from the folder holding `docker-compose.yml` (Windows: PowerShell; Linux: any shell):
+The image is public, so pulling it needs no login. Then, from the folder holding `docker-compose.yml` (Windows: PowerShell; Linux: any shell):
 
 ```bash
 docker compose pull
