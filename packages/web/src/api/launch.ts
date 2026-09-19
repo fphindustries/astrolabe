@@ -14,7 +14,7 @@ import type {
 import type { OracleId } from '@astrolabe/rules';
 
 import { apiGet, apiPost, apiPut } from './http.js';
-import { campaignKeys, useInvalidateCampaign } from './campaigns.js';
+import { campaignKeys, useInvalidateCampaign, useInvalidateCampaignSettled } from './campaigns.js';
 
 /**
  * The Campaign Launch workspace and its commands (group 4).
@@ -75,7 +75,8 @@ export function useSetFoundation(campaignId: string) {
  * a second press of Launch is the same command rather than a second one.
  */
 export function useActivateLaunch(campaignId: string) {
-  const invalidate = useInvalidateCampaign(campaignId);
+  // Settled, not fire-and-forget: the caller navigates to the campaign next (D-209).
+  const invalidate = useInvalidateCampaignSettled(campaignId);
 
   return useMutation({
     mutationFn: (commandId: string) =>

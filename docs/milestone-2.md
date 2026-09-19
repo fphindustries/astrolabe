@@ -1816,7 +1816,8 @@ implementation note.
     screen reader loses its place. The fix is `aria-disabled` with a guarded handler, as
     `TruthCard` already does, across groups 4–9: a refactor of its own. (b) After Create
     campaign and after activation, focus starts at the top of the new page, not on its
-    heading. Within the launch workspace it is handled (fix 1). (c) Once, a tab stopped
+    heading. Within the launch workspace it is handled (fix 1). **(a) and (b) are fixed
+    in `milestone-2-followup.md` (D-208, D-209).** (c) Once, a tab stopped
     responding for about 45 s on leaving a test page, and a fresh tab loaded the same URL
     at once. Later a tab stalled for about 30 s after Roll, then showed the committed roll.
     Both were on the production build, and both recovered by themselves. That fits group

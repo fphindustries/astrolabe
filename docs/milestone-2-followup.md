@@ -8,8 +8,7 @@ is an investigation and is not scoped here.
 
 This is not Milestone 3, and it pulls nothing in from it. It changes no rules, events,
 routes or projections, so `design-event-log.md` is untouched and the golden launch and golden
-session must pass unchanged. Decision IDs below are **proposed**: the open questions
-are answered, but D-208 and D-209 enter `design-record.md` only once their wording is approved.
+session must pass unchanged. D-208 and D-209 are approved and in `design-record.md` (round 39).
 
 ## What is wrong
 
@@ -86,12 +85,11 @@ landmark a screen-reader user lacks today.
 - **The tab stall.** Separate investigation.
 - **Announcing busy state** through a live region. `aria-busy` is enough here.
 
-## Decisions to approve
+## Decisions
 
-| ID | Proposed decision |
-|---|---|
-| D-208 | **Launch controls that are unavailable stay focusable.** A button that is busy or gated uses `aria-disabled` with a guarded click, never native `disabled`, so a keyboard or screen-reader user keeps their place and can reach the reason. Extends the pattern `TruthCard` and `LaunchReviewScreen` already use. **Enforced by lint**: `no-restricted-syntax` forbids `disabled` on `<button>` in `packages/web/src/launch`. Leaving 1b's gated buttons native was considered: it fixes only the focus loss, and leaves the ~34 controls a keyboard user still can't find. |
-| D-209 | **A screen reached by in-app navigation takes focus on its heading.** The first heading a top-level screen renders after `navigate()` receives focus. Full page loads and back/forward are unchanged. Amends 10.4's fix 1, which covered views within the launch workspace only. |
+D-208 and D-209 are in `design-record.md` (round 39). D-208 covers `campaigns/` as well as
+`launch/`, because the New campaign submit is the first button a new player meets. D-209
+gained one sentence after the browser pass found the activation hazard (below).
 
 ## Open questions
 
@@ -102,46 +100,85 @@ Both were asked and answered.
    activation the one screen that focuses a control, and fixtures with no pending vow would
    need a fallback.
 2. **Is 1b in scope?** Yes. The gated buttons are converted in the same pass, so D-208's lint
-   rule can cover all of `launch/`.
+   rule covers all of `launch/`.
 
 ## Tasks
 
-Each task leaves the build working and the tests passing.
+- [x] **F1** `ui/guarded.ts` and its test, and the shared `aria-disabled` style in
+  `styles/global.css`, with the hover rules in `ui/controls.module.css` excluding it.
+  *As built:* the helper is `guarded({ busy, blocked, reasonId, onClick })`, spread onto the
+  button, not the `guarded(unavailable, handler)` sketched above. It returns `aria-disabled`,
+  `aria-busy`, `aria-describedby` (only while blocked) and a click that calls
+  `preventDefault` when unavailable, so a blocked submit button cannot submit its form,
+  including through Enter in a field. The shared style is one zero-specificity rule for every
+  `button[aria-disabled='true']`, not a class each module composes.
+- [x] **F2** `FoundationSection`, checked in the browser: Save and continue kept focus.
+- [x] **F3** Every other launch button. One codemod-driven commit rather than one per section
+  (a script split each `disabled` expression into its pending terms, `busy`, and the rest,
+  `blocked`, and I reviewed the diff). Where the section already showed why, the button is
+  described by it: the Guide-unavailable notes in Crew, Starship, Sector (whole sector and
+  each settlement), Starting settlement trouble, Connection, Troubles and Incident; the
+  "needs a name, a role…" note on the connection; the "Roll the trouble first" note. The
+  now-dead `:disabled` and opacity-only rules are gone from four modules. The pending
+  starting-settlement radio also uses `aria-disabled`, since it had the same focus loss.
+- [x] **F4** New campaign's submit, with a new one-line hint as its description
+  ("Give the campaign a name to create it."), the one place this follow-up adds copy.
+- [x] **F5** The lint rule (`eslint.config.js`), proved on a probe file.
+- [x] **F6** `ui/arrival.ts`, `navigate()` noting the path, `popstate` clearing it,
+  `useFocusOnArrival`, and `useFocusOnViewChange` taking the arrival on its first render.
+  The note is keyed to a path so a screen that mounts after a heading-less loading line still
+  gets it.
+- [x] **F7** The play screen's campaign name is an `h1` (`TopBar`), and the campaign list,
+  New campaign and Launch-closed screens use `useFocusOnArrival`.
+- [x] **F8** Browser pass, below.
 
-- [ ] **F1** `ui/guarded.ts` and its unit test. Shared `aria-disabled` styling in
-  `ui/controls.module.css`. No call sites yet.
-- [ ] **F2** Convert one section end to end as the pattern's proof (`FoundationSection`, one
-  busy button and the submit). Check it in the browser before the rest.
-- [ ] **F3** Convert the remaining launch sections, one commit per section file group
-  (Truths, Crew, Starship, Sector, Connection/Troubles/Incident, Review/Vow/Confirm). Delete
-  each module's now-dead `:disabled` rule.
-- [ ] **F4** `NewCampaignScreen`'s submit. It is native `disabled` on an empty name, which
-  is a gated case. Add its reason as `aria-describedby`, since it is the first thing a new
-  player meets.
-- [ ] **F5** The lint rule, added last so it lands green.
-- [ ] **F6** `navigate()` flag, `useFocusOnArrival`, and the `useFocusOnViewChange` change (2a).
-- [ ] **F7** `PlayScreen` heading (2b), then wire activation.
-- [ ] **F8** Browser and keyboard pass at 1280×720, recorded in this file.
+## What the browser pass found
 
-## Tests
+Dev server, Chrome, no provider.
 
-`packages/web` has no DOM test tooling (no jsdom or Testing Library). Its tests are pure
-functions. This follow-up does not add any:
+- **Activation dropped focus a second time.** With the first F7 build, Launch campaign
+  focused an `h1` and then lost it. `useActivateLaunch` invalidated the campaign in the
+  background and `navigate()` ran at once, so the dispatcher at `/campaigns/:id` read the
+  *stale* launch query, rendered the launch workspace for a moment, and that mount took the
+  arrival. Play then replaced it. Fixed by `useInvalidateCampaignSettled`: activation's
+  `onSuccess` waits for the state, log and launch refetch before it navigates. Re-run: focus
+  moves to the play screen's `h1` and stays there. Before D-209 the same stale read flashed
+  the workspace for a frame with no focus at stake.
+- **Vite served a stale module.** After the codemod, the dev server served
+  `TruthsSection` with the call to `guarded` and without its import (it had transformed the
+  file between my edit and my import fix and missed the second change). The whole launch
+  workspace fell to the error boundary until the dev server was restarted. The source and
+  `tsc` were right throughout. Noted here because it looks like a regression and isn't.
+- **Checked and working.** Full load of the list: focus on the document, as it should be.
+  List → New campaign: focus on its `h1`. Create campaign: focus on the workspace heading.
+  Each of the eight launch views reached by navigation: no native `disabled` button on any,
+  no runtime error, focus on the view's heading, and the gated buttons `aria-disabled` and
+  reachable (with a description where one exists). New campaign's submit with an empty name:
+  focusable, `aria-disabled`, described by the hint, and a click does nothing. Foundation's
+  Save and continue: focus stayed on it after the save.
 
-- `guarded()` and the arrival flag are pure and get unit tests, including the guard blocking a
-  click while unavailable and the flag surviving a heading-less render.
-- The lint rule is the regression net for D-208 across all of `launch/`.
-- Focus itself is checked in the browser (F8), as 10.4 checked it. Adding jsdom and
-  `@testing-library/react` would test it in CI, but it is a new dependency and a new test
-  style for two hooks. Propose it separately if a second focus regression appears.
+## Not done, and why
 
-Full verification is the Milestone 2 bar: `npm test` with `DATABASE_URL` set and zero skipped
-files, typecheck, lint, `format:check`, and the web build.
+- **No full keyboard walk of every section.** 10.4 completed each by keyboard. This pass
+  spot-checked the pattern (Foundation's busy button, New campaign's gated one, the
+  activation path) and scanned every view's DOM. It did not re-press each of the ~58 buttons.
+  The lint rule guarantees none is native `disabled`, and `guarded` is unit-tested, but a
+  full second keyboard walk would be the honest sign-off, and it has not been done.
+- **Gated buttons with no description.** Where a section says nothing about why a button is
+  blocked, it is announced as unavailable and no more: Accept the star, Add a settlement, Add
+  a location, Save the layout, Add the passage, Accept the sector trouble, Accept the
+  incident, the Crew review step's Accept, and the vow-choices Accept. Writing that copy is a
+  separate, small pass.
+- **`VowChoicesPanel`'s radio** for the character already chosen to roll is still natively
+  `disabled`. It is a permanently unavailable option, not a pressed control losing focus, and
+  D-208 is about buttons.
+- **`NotFoundScreen`** has no heading (a `<p>`), so it takes no focus on arrival.
+- **`play/`** is untouched: about 35 native `disabled` sites, as scoped out.
+- **The tab stall** remains unexplained.
 
-## Done when
+## Verification
 
-- No native `disabled` on a `<button>` in `packages/web/src/launch` (lint-enforced).
-- Every section, and the review and confirm dialog, completes by keyboard with focus never
-  leaving the control just pressed, and every gated button reachable by Tab.
-- After Create campaign and after activation, focus is on the new screen's heading.
-- The golden launch and golden session pass unchanged.
+`npm test` with `DATABASE_URL` set: 139 files, 1620 tests, one skipped test and no skipped
+files. typecheck, lint and format:check clean. The golden launch and the golden session pass
+unchanged. New tests: `ui/guarded.test.ts` (6) and `ui/arrival.test.ts` (6). `packages/web`
+still has no DOM test tooling, so focus itself was checked in the browser, as before.

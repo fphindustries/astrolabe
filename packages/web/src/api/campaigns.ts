@@ -90,11 +90,26 @@ export function useOwedPassages(campaignId: string) {
  * both: the facts in `state`, and the readiness derived from them.
  */
 export function useInvalidateCampaign(campaignId: string) {
-  const queryClient = useQueryClient();
+  const settled = useInvalidateCampaignSettled(campaignId);
   return () => {
-    void queryClient.invalidateQueries({ queryKey: campaignKeys.state(campaignId) });
-    void queryClient.invalidateQueries({ queryKey: campaignKeys.log(campaignId) });
-    void queryClient.invalidateQueries({ queryKey: campaignKeys.launch(campaignId) });
+    void settled();
+  };
+}
+
+/**
+ * The same invalidation, resolving once what it refetches has landed. Activation
+ * waits on it: the dispatcher at `/campaigns/:id` reads the launch query, and
+ * navigating on stale data would show the launch workspace for a moment, take
+ * focus (D-209), and drop it again when play replaced it.
+ */
+export function useInvalidateCampaignSettled(campaignId: string) {
+  const queryClient = useQueryClient();
+  return async (): Promise<void> => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: campaignKeys.state(campaignId) }),
+      queryClient.invalidateQueries({ queryKey: campaignKeys.log(campaignId) }),
+      queryClient.invalidateQueries({ queryKey: campaignKeys.launch(campaignId) }),
+    ]);
   };
 }
 
