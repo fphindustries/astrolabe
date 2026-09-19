@@ -1264,13 +1264,22 @@ of them stays). D-170 retires the production seed, and was approved with the mil
     went from 7.8 s to 15.0 s. The two fixture test files went from 3.4 s to 8.6 s, since the
     launch now replays under each fixture. The launch-routes fixture test now takes a
     60-second timeout.
-  - [ ] **10.1d Freeze a Milestone 1 log before its commands go (D-206).** While the
+  - [x] **10.1d Freeze a Milestone 1 log before its commands go (D-206).** While the
     Milestone 1 commands still exist, run them once and dump the events they write into
     `fixtures/legacy-log.ts`, a test helper that appends that log directly. It covers truths,
     characters carrying the Starship grant, location entities and routes, and a sworn vow.
     Prove A43 against it: without a session, the campaign opens Finish campaign launch with
     all of it intact; with one, it opens play. A test diffs the frozen log against the
     commands' output while both exist.
+    *As built:* `appendMilestoneOneLog` appends each retiring command's events with ids
+    derived from the campaign. It uses `createCampaign` and `beginSession`, which stay. The
+    diff compares the two logs with every id replaced by the order it first appeared, and it
+    matches. The frozen log alone has `truth.set`, which has had no command since D-183. The
+    A43 tests read the workspace over HTTP. Without a session it is open (the client sends
+    it to Finish campaign launch), with its three truths folded, the crew carrying the
+    Starship grant, three location entities, two routes and the vow, and its blockers are
+    reported rather than thrown. With a session it is closed as `campaign_in_play`, though
+    its phase still says `draft`.
   - [ ] **10.1e Retire Milestone 1's write paths (D-206).** Only then remove the commands,
     routes, helper and screen D-206 names, with the diff test, and rewrite or delete the
     tests that drove them. The projection keeps folding the legacy events, and A43 stays on
