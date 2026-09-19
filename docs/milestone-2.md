@@ -1348,12 +1348,17 @@ of them stays). D-170 retires the production seed, and was approved with the mil
   fact's grounding resolves to its rolls, the latency, and the tokens against what
   `ai.completed` recorded. **Run only with the user's approval of the cost**, never in CI.
   The results and any prompt defect go in the as-built note.
-- [ ] 10.6 Remove automatic production fixture seeding and update install documentation so
+- [x] 10.6 Remove automatic production fixture seeding and update install documentation so
   a fresh deployment opens the complete new-campaign path (D-170). The startup seed leaves
   `serve.ts`; `db:seed` and `db:reset` stay for development, refused in production as now. A
   test asserts that production startup inserts nothing. The README's install section
   describes a first run that opens the new-campaign path, and says an existing database
   keeps its campaigns, seeded ones included. D-158 is marked superseded by D-170.
+  *As built:* `serve.ts` now calls `prepareDatabase` (`http/startup.ts`), which migrates and
+  nothing else. `startup.test.ts` runs it twice under `NODE_ENV=production` on an empty
+  schema and finds no campaign and no event. The README's install section describes the
+  empty first run, the launch with or without a key, and what an existing database keeps.
+  `seedAllFixtures` stays for `db:seed`, and the `lantern-wake-launch` fixture joins it.
 
 **Scope fences.** No new launch capability: group 10 proves, fixes and removes. Amendment
 screens, the Connection move family and combat stay where groups 9 and 3 left them. The

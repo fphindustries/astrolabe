@@ -6,12 +6,10 @@ import {
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import type { Sql } from 'postgres';
-
-import { createDb, databaseUrlFromEnv, migrate } from '../db/index.js';
-import { seedAllFixtures } from '../fixtures/index.js';
+import { createDb, databaseUrlFromEnv } from '../db/index.js';
 
 import { buildApp } from './app.js';
+import { prepareDatabase } from './startup.js';
 
 /**
  * The server entry point (task 5.0). `npm run dev --workspace @astrolabe/server`
@@ -22,8 +20,7 @@ import { buildApp } from './app.js';
  */
 async function main(): Promise<void> {
   const sql = createDb(databaseUrlFromEnv());
-  await migrate(sql);
-  await seedIfProduction(sql);
+  await prepareDatabase(sql);
 
   const ai = createProviderFromEnv();
   const checker = createCheckerFromEnv();
@@ -47,26 +44,6 @@ async function main(): Promise<void> {
   console.log(
     webRoot !== undefined ? `Web client: ${webRoot}` : 'Web client: not served (use Vite)',
   );
-}
-
-/**
- * D-158, amending D-154: until campaign and character creation are further
- * along, a fresh production install seeds the same example campaigns
- * `db:seed` would, so it isn't just an empty list. `db:seed` and `db:reset`
- * themselves still refuse outright under `NODE_ENV=production` (`fixtures/cli.ts`)
- * — this is a separate, idempotent path that only ever adds a fixture
- * that isn't already there, never drops or replays over real play.
- */
-async function seedIfProduction(sql: Sql): Promise<void> {
-  if (process.env['NODE_ENV'] !== 'production') {
-    return;
-  }
-  const results = await seedAllFixtures(sql);
-  for (const { name, description, outcome } of results) {
-    if (outcome === 'seeded') {
-      console.log(`Seeded ${name}: ${description}`);
-    }
-  }
 }
 
 /**

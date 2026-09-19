@@ -38,7 +38,7 @@ To run the app, copy `.env.example` to `.env` and fill in `ANTHROPIC_API_KEY`. T
 
 ```bash
 npm run db:up
-npm run db:seed                             # fixture campaigns (D-122): "session 1" to play Beat 1 on, "golden session" to read the finished session
+npm run db:seed                             # fixture campaigns (D-122, D-205): the golden launch just launched, "session 1" to play Beat 1 on, "golden session" to read the finished session
 npm run dev --workspace @astrolabe/server   # :3000
 npm run dev --workspace @astrolabe/web      # :5173
 ```
@@ -87,7 +87,7 @@ docker compose pull
 docker compose up -d
 ```
 
-This pulls the published image, starts Postgres, migrates, and serves the app at `http://localhost:3000` (or `http://<host>:3000` from another machine on a Linux server; change the port with `ASTROLABE_PORT`). **A fresh database seeds itself on first start** (D-158) with the same example campaigns local development uses — "Lantern Wake" (ready for Begin Session), "Lantern Wake (session 2 open)", and "Lantern Wake (golden session)" (played through to the end) — so there's something to open right away. This is a stopgap for as long as campaign and character creation are still catching up; it runs once and does nothing on later restarts. The manual `db:seed` and `db:reset` commands remain refused under `NODE_ENV=production`, unchanged — that's a different, destructive command, not the automatic seed. Postgres is published on `127.0.0.1` only. There is no authentication in Milestone 1, so keep the app on a trusted network. Campaign data lives in the `astrolabe-pgdata` volume; back it up with `docker compose exec db pg_dump -U astrolabe astrolabe`.
+This pulls the published image, starts Postgres, migrates, and serves the app at `http://localhost:3000` (or `http://<host>:3000` from another machine on a Linux server; change the port with `ASTROLABE_PORT`). **A fresh database starts empty** (D-170): the first thing you see is the campaign list, and **New campaign** opens Campaign Launch, which walks you from a blank campaign through truths, crew, ship, sector, connection and inciting incident to Session 1 and its first vow. It works with or without an Anthropic API key: without one, every Guide proposal says it is unavailable and every manual and oracle path still completes the launch. An existing database keeps every campaign it already has, including the example campaigns earlier versions seeded on first start (D-158, now retired). The `db:seed` and `db:reset` commands are for development and refuse under `NODE_ENV=production`. Postgres is published on `127.0.0.1` only. There is no authentication in Milestone 1, so keep the app on a trusted network. Campaign data lives in the `astrolabe-pgdata` volume; back it up with `docker compose exec db pg_dump -U astrolabe astrolabe`.
 
 ### Updating
 
