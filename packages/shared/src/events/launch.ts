@@ -265,6 +265,16 @@ const IncidentSchema = z.object({
   openingScene: z.object({ title: z.string().min(1), locationId: EntityIdSchema.optional() }),
 });
 
+/**
+ * What the player states about the incident, without its id (9.0f): the id is
+ * the server's, minted once and reused on revision. Citations the player adds
+ * are optional; accepting a Guide option adds the facts it drew on.
+ */
+export const LaunchIncidentDetailsSchema = IncidentSchema.omit({ incidentId: true }).extend({
+  citedFactEventIds: z.array(EventIdSchema).optional(),
+});
+export type LaunchIncidentDetails = z.infer<typeof LaunchIncidentDetailsSchema>;
+
 const TruthProposalSchema = z.object({
   truthId: OracleIdSchema.optional(),
   /**

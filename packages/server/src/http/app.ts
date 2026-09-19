@@ -881,14 +881,15 @@ export function buildApp({
         return undefined;
       }
       try {
-        await acceptLaunchIncident(sql, {
+        const result = await acceptLaunchIncident(sql, {
           campaignId: id,
           commandId: parsed.data.commandId,
           actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
           incident: parsed.data.incident,
+          ...(parsed.data.proposal === undefined ? {} : { proposal: parsed.data.proposal }),
         });
         reply.code(201);
-        return { incidentId: parsed.data.incident.incidentId };
+        return result.response as AcceptLaunchIncidentResponse;
       } catch (error) {
         if (error instanceof LaunchRejectedError) {
           reply.code(422);

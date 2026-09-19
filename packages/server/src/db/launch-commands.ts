@@ -24,6 +24,7 @@ import type {
   LaunchAmendment,
   LaunchAmendmentSubject,
   LaunchClosedReason,
+  LaunchIncidentDetails,
   LaunchLocationDetails,
   LaunchPlanetDetails,
   LaunchTroubleDetails,
@@ -579,7 +580,10 @@ export interface AcceptLaunchIncidentRequest {
   readonly campaignId: CampaignId;
   readonly commandId: CommandId;
   readonly actor: Actor;
-  readonly incident: Omit<PayloadFor<'incident.accepted'>, 'provenance' | 'groundedIn'>;
+  /** What the player accepts; the id is the server's (9.0f). */
+  readonly incident: DeepReadonly<LaunchIncidentDetails>;
+  /** The Guide's option being accepted, if any: the held proposal and which option (9.0f). */
+  readonly proposal?: { readonly eventId: EventId; readonly optionIndex: number };
 }
 
 export interface AmendLaunchFactRequest {
@@ -1405,7 +1409,22 @@ const AMENDABLE_SUBJECTS: Partial<Record<EventType, LaunchAmendmentSubject>> = {
   'incident.revised': 'incident',
 };
 
-/** Accept or revise the incident only after checking the cited accepted facts. */
+/**
+ * Accept or revise the inciting incident (9.0f, A37, D-168).
+ *
+ * The incident's id is the server's, minted once and reused on revision
+ * (8.0a's lesson). Accepting one of the Guide's options names the held
+ * proposal and the option. The server then resolves what that option draws
+ * on (truths, locations, crew and launch facts, all named by their own ids)
+ * to the **event ids** of those accepted facts, so the incident cites facts
+ * the log can show. It decides `guide_proposal` or `guide_proposal_edited` by
+ * comparing the accepted words and rank with the option's, and grounds the
+ * incident in the option's rolls. A written incident needs no proposal.
+ *
+ * Every citation, the option's or the player's own, must be an accepted launch
+ * fact, the set activation cites (3R.9f). A non-draft event is not enough:
+ * an `oracle.rolled` is a roll, not a fact the incident draws on.
+ */
 export async function acceptLaunchIncident(
   sql: Sql,
   request: AcceptLaunchIncidentRequest,
@@ -1414,56 +1433,109 @@ export async function acceptLaunchIncident(
   const state = project(events);
   requireLaunchOpen(state, 'The incident changes by amendment after launch.');
   const crew = state.characters;
+  const incident = request.incident;
   if (
-    crew[request.incident.rollerId] === undefined ||
-    request.incident.participants.length === 0 ||
-    request.incident.participants.some((id) => crew[id] === undefined)
+    crew[incident.rollerId] === undefined ||
+    incident.participants.length === 0 ||
+    incident.participants.some((id) => crew[id] === undefined)
   ) {
     throw new LaunchRejectedError('invalid_incident_crew', 'The incident must name launch crew.');
   }
-  const acceptedIds = new Set(
-    events
-      .filter(
-        (event) =>
-          event.type !== 'launch.draft_saved' &&
-          event.type !== 'creation.proposed' &&
-          event.type !== 'incident.proposed',
-      )
-      .map((event) => event.id),
+  const text = incident.text.trim();
+  if (text === '')
+    throw new LaunchRejectedError('incident_text_required', 'The incident needs its own words.');
+
+  let accepted: Acceptance | undefined;
+  let drawnOn: readonly EventId[] = [];
+  if (request.proposal !== undefined) {
+    const held = state.launch.incidentProposal;
+    const option =
+      held?.eventId === request.proposal.eventId
+        ? held.options[request.proposal.optionIndex]
+        : undefined;
+    if (option === undefined)
+      throw new LaunchRejectedError(
+        'unknown_proposal',
+        'That incident option is not among the Guide’s proposals.',
+      );
+    const unchanged = sameWords(option.title, text) && option.rank === incident.rank;
+    accepted = {
+      eventId: request.proposal.eventId,
+      provenance: unchanged ? 'guide_proposal' : 'guide_proposal_edited',
+      groundedIn: option.groundedIn,
+    };
+    drawnOn = drawnOnFacts(state, option.drawsOn);
+  }
+
+  const facts = new Set(
+    events.filter((event) => ACCEPTED_LAUNCH_FACTS.has(event.type)).map((event) => event.id),
   );
-  if (request.incident.citedFactEventIds.some((id) => !acceptedIds.has(id))) {
+  // What the option drew on is the server's own lookup; a fact it names that
+  // is not an accepted launch fact (a Milestone 1 `truth.set`, say) is simply
+  // not cited. What the player adds must be one, or it is refused.
+  const extra = incident.citedFactEventIds ?? [];
+  const cited = [...new Set([...drawnOn.filter((id) => facts.has(id)), ...extra])];
+  if (extra.some((id) => !facts.has(id))) {
     throw new LaunchRejectedError(
       'invalid_incident_citation',
       'Incident citations must be accepted launch facts.',
     );
   }
+
   const previous = state.launch.incident;
+  const incidentId = previous?.incidentId ?? (uuidv7() as EntityId);
+  const payload = {
+    incidentId,
+    text,
+    citedFactEventIds: cited,
+    rank: incident.rank,
+    rollerId: incident.rollerId,
+    participants: [...incident.participants],
+    openingScene: incident.openingScene,
+    provenance: accepted?.provenance ?? ('player_written' as const),
+    groundedIn: [...(accepted?.groundedIn ?? [])],
+  };
   return appendCommand(sql, {
     campaignId: request.campaignId,
     commandId: request.commandId,
     kind: previous === undefined ? 'launch.incident.accept' : 'launch.incident.revise',
     actor: request.actor,
-    events:
-      previous?.eventId === undefined
-        ? [
-            {
-              type: 'incident.accepted',
-              payload: { ...request.incident, provenance: 'player_written', groundedIn: [] },
-            },
-          ]
-        : [
-            {
-              type: 'incident.revised',
-              payload: {
-                ...request.incident,
-                provenance: 'player_written',
-                groundedIn: [],
-                supersedesEventId: previous.eventId,
-              },
-            },
-          ],
-    response: { incidentId: request.incident.incidentId },
+    ...(accepted === undefined ? {} : { causedBy: accepted.eventId }),
+    events: [
+      previous === undefined
+        ? { type: 'incident.accepted', payload }
+        : {
+            type: 'incident.revised',
+            payload: { ...payload, supersedesEventId: previous.eventId },
+          },
+    ],
+    response: { incidentId },
   });
+}
+
+/**
+ * The accepted facts an incident option draws on, as their events (9.0f).
+ * Each id resolves to the event that currently states that fact; one the fold
+ * no longer holds, a removed location say, is dropped rather than cited.
+ */
+function drawnOnFacts(
+  state: CampaignState,
+  drawsOn: PayloadFor<'incident.proposed'>['options'][number]['drawsOn'],
+): readonly EventId[] {
+  const launch = state.launch;
+  const launchFact = (id: EntityId): EventId | undefined => {
+    const trouble = Object.values(launch.troubles).find((candidate) => candidate.troubleId === id);
+    if (trouble !== undefined) return trouble.eventId;
+    if (launch.connection?.connectionId === id) return launch.connection.eventId;
+    if (launch.starship?.starshipId === id) return launch.starship.eventId;
+    return undefined;
+  };
+  return [
+    ...drawsOn.truths.map((id) => launch.truthDecisions[id]?.eventId),
+    ...drawsOn.locations.map((id) => launch.locations[id]?.eventId),
+    ...drawsOn.characters.map((id) => state.characters[id]?.eventId),
+    ...(drawsOn.launchFacts ?? []).map(launchFact),
+  ].filter((id): id is EventId => id !== undefined);
 }
 
 /** The one launch connection is an automatic strong hit, never a fabricated roll. */

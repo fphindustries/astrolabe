@@ -1004,7 +1004,7 @@ D-202 (`track.revised` carries participants).
     would give all three rolls one slot name, which the slot matcher would read as one
     field. The Milestone 1 route test that proposed incidents in play is now a refusal test
     (D-178).
-  - [ ] **9.0f Accepting an incident names its option.** `acceptLaunchIncident` takes the
+  - [x] **9.0f Accepting an incident names its option.** `acceptLaunchIncident` takes the
     proposal event and the chosen option's index. The server resolves what the option draws
     on (truth, location, character and launch-fact ids) to the **event ids** of those
     accepted facts for `citedFactEventIds`. It decides `guide_proposal` or
@@ -1013,6 +1013,12 @@ D-202 (`track.revised` carries participants).
     proposal. The server mints the `incidentId` and reuses it on revision (8.0a's lesson).
     `citedFactEventIds` must name accepted launch facts, from the same set activation cites
     (3R.9f), not merely non-draft events: today an `oracle.rolled` would pass.
+    *As built:* the request carries the incident without its id, and `proposal: { eventId,
+    optionIndex }` names the held `launch.incidentProposal`; any other proposal or index is
+    `unknown_proposal`. A drawn-on fact that is not an accepted launch fact (a Milestone 1
+    `truth.set`, say) is left out of the citations rather than refused. A citation the
+    player adds must be one, or it is `invalid_incident_citation`. The accepted event is
+    `causedBy` the proposal.
   - [ ] **9.0g The vow choices are optional until the review (D-200).** On the incident,
     `rollerId`, `participants` and `openingScene` become optional. Beat 11 accepts the words,
     the citations and the option's proposed rank, and beat 12 picks the rest. **Rank stays

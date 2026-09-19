@@ -217,7 +217,6 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
       commandId: newId<CommandId>(),
       actor: PLAYER,
       incident: {
-        incidentId: newId<EntityId>(),
         text: 'A distress beacon carries the lost colony’s call sign.',
         citedFactEventIds: [],
         rank: 'formidable',

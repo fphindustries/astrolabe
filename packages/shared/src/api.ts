@@ -19,7 +19,7 @@ import { RollAdjustmentSchema, RollUsingSchema } from './events/move.js';
 import { ChallengeRankSchema } from './events/track.js';
 import {
   CreationProposalSchema,
-  IncidentAcceptedSchema,
+  LaunchIncidentDetailsSchema,
   LaunchAmendmentSchema,
   LaunchDraftSavedSchema,
   LaunchLocationDetailsSchema,
@@ -406,7 +406,9 @@ export interface EstablishLaunchConnectionResponse {
 
 export const AcceptLaunchIncidentRequestBodySchema = z.object({
   commandId: CommandIdSchema,
-  incident: IncidentAcceptedSchema.omit({ provenance: true, groundedIn: true }),
+  incident: LaunchIncidentDetailsSchema,
+  /** The Guide's option being accepted: the held proposal and which option (9.0f). */
+  proposal: z.object({ eventId: EventIdSchema, optionIndex: z.int().nonnegative() }).optional(),
 });
 export type AcceptLaunchIncidentRequestBody = z.infer<typeof AcceptLaunchIncidentRequestBodySchema>;
 export interface AcceptLaunchIncidentResponse {
