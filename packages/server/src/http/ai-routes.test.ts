@@ -384,10 +384,39 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
     expect(empty.statusCode).toBe(400);
   });
 
-  it('proposes inciting incidents, and swearing one names the proposal as its cause (4.6, D-132)', async () => {
-    const { campaignId } = await moveMade();
-    const state = project(await readEvents(db.sql, campaignId));
-    const [rook] = Object.values(state.characters);
+  // D-132's incident proposal, launch-scoped since 9.0e (D-178): proposed
+  // while launch is open, refused once a campaign is in play. Swearing the
+  // chosen incident is activation's and the vow move's now (D-201), so the
+  // Milestone 1 inciting-vow route is tested on its own, in app.test.ts.
+  it('proposes inciting incidents during launch, and refuses them in play (4.6, D-132, 9.0e)', async () => {
+    const campaignId = newId<CampaignId>();
+    await appendCommand(db.sql, {
+      campaignId,
+      commandId: newId(),
+      kind: 'campaign.create',
+      actor: PLAYER,
+      createCampaign: { name: 'Lantern Wake' },
+      events: [
+        {
+          type: 'campaign.created',
+          payload: {
+            name: 'Lantern Wake',
+            settings: { narrationLatitude: 'color', narrationLength: 'standard', rerollCap: 2 },
+          },
+        },
+      ],
+    });
+    const { characterId } = await createCharacter(db.sql, {
+      campaignId,
+      commandId: newId(),
+      actor: PLAYER,
+      draft: {
+        name: 'Juno Marr',
+        callsign: 'Juno',
+        stats: { edge: 1, heart: 2, iron: 1, shadow: 2, wits: 3 },
+        assets: [],
+      },
+    });
     ai.enqueue({
       kind: 'structured',
       value: {
@@ -397,16 +426,15 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
           situation: `Incident ${n} has reached the relay.`,
           reason: `Roll ${n}.`,
           groundedIn: [`incident-${n}`],
-          drawsOn: { crew: [rook?.callsign] },
+          drawsOn: { crew: ['Juno'] },
         })),
       },
     });
-    const proposalCommandId = newId<CommandId>();
 
     const proposed = await app.inject({
       method: 'POST',
       url: `/api/campaigns/${campaignId}/incident-proposals`,
-      payload: { commandId: proposalCommandId },
+      payload: { commandId: newId() },
     });
     expect(proposed.statusCode).toBe(201);
     const body = proposed.json();
@@ -415,33 +443,28 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
     expect(body.proposal.options[0].drawsOn).toEqual({
       truths: [],
       locations: [],
-      characters: [rook?.id],
+      characters: [characterId],
     });
-    const log = await app.inject({ method: 'GET', url: `/api/campaigns/${campaignId}/log` });
-    expect(log.body).not.toContain(body.rolls[0].eventId);
-
-    const sworn = await app.inject({
-      method: 'POST',
-      url: `/api/campaigns/${campaignId}/inciting-vow`,
-      payload: {
-        commandId: newId(),
-        title: 'Answer incident 2, at the relay',
-        rank: 'formidable',
-        proposalCommandId,
-      },
+    // Held for review, so a reload keeps it (9.0e).
+    expect(project(await readEvents(db.sql, campaignId)).launch.incidentProposal).toMatchObject({
+      eventId: body.proposalEventId,
     });
-    expect(sworn.statusCode).toBe(201);
-    const vow = (await readEvents(db.sql, campaignId)).find(
-      (e) => e.type === 'track.created' && e.payload.title === 'Answer incident 2, at the relay',
+    // And its rolls resolve as chips in the workspace (A41).
+    const workspace = await app.inject({
+      method: 'GET',
+      url: `/api/campaigns/${campaignId}/launch`,
+    });
+    expect(Object.keys(workspace.json().chips)).toEqual(
+      expect.arrayContaining(body.rolls.map((roll: { eventId: string }) => roll.eventId)),
     );
-    expect(vow?.causedBy).toBe(body.proposalEventId);
 
-    const unknown = await app.inject({
+    const { campaignId: inPlay } = await moveMade();
+    const refused = await app.inject({
       method: 'POST',
-      url: `/api/campaigns/${campaignId}/inciting-vow`,
-      payload: { commandId: newId(), title: 'x', rank: 'dangerous', proposalCommandId: newId() },
+      url: `/api/campaigns/${inPlay}/incident-proposals`,
+      payload: { commandId: newId() },
     });
-    expect(unknown.statusCode).toBe(422);
+    expect(refused.statusCode).toBe(422);
 
     const malformed = await app.inject({
       method: 'POST',

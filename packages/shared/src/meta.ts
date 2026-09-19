@@ -353,13 +353,14 @@ export const EVENT_TYPE_META: MetaTable = {
     references: (p) => [entity(p.fromLocationId), entity(p.toLocationId)],
   },
   'incident.proposed': {
-    // D-132: a suggestion, like `character.proposed`. It changes nothing
-    // until a vow names it as its cause, and it belongs to no beat. What it
-    // draws on is not a reference: a suggestion nobody took must never
-    // block voiding the location or character it mentioned (D-83).
+    // D-132: a suggestion, like `character.proposed`, and not canon until the
+    // player accepts an option. It belongs to no beat. What it draws on is not
+    // a reference: a suggestion nobody took must never block voiding the
+    // location or character it mentioned (D-83). It is held in the launch
+    // fold for review (9.0e), which is the only state it changes.
     narrative: false,
     significant: false,
-    mutatesState: false,
+    mutatesState: true,
     voidable: true,
     introduces: none,
     references: none,

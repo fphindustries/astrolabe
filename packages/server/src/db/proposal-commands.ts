@@ -254,7 +254,7 @@ async function runProposal<T, E extends EventType>(
   const rollEvents: NewEvent<'oracle.rolled'>[] = (spec.provided ? [] : rolled).map((r) => ({
     id: r.eventId,
     type: 'oracle.rolled',
-    payload: { oracleId: r.oracleId, roll: r.roll, rowText: r.rowText },
+    payload: { oracleId: r.oracleId, roll: r.roll, rowText: r.rowText, slot: r.slot ?? r.key },
     actor: { kind: 'system' },
     sessionId: envelope.sessionId,
     sceneId: envelope.sceneId,
@@ -517,6 +517,10 @@ export async function proposeIncidents(
   request: ProposalRequest,
   status?: AiStatus,
 ): Promise<ProposeIncidentsResponse> {
+  // D-178: an incident is proposed during launch, and never for a campaign in play.
+  const closed = launchClosedReason(project(await readEvents(sql, request.campaignId)));
+  if (closed !== undefined)
+    throw new AiRequestRefusedError(closed, 'Campaign Launch is closed for this campaign.');
   const keys = INCIDENT_PROPOSAL_ROLLS.map((roll) => roll.key);
 
   const outcome = await runProposal<IncidentProposalOutput, 'incident.proposed'>(

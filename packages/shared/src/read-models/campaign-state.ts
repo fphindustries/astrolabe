@@ -411,6 +411,15 @@ export interface LaunchState {
     Record<string, PayloadFor<'creation.proposed'> & { readonly eventId: EventId }>
   >;
   readonly connection?: Accepted<'connection.established'>;
+  /**
+   * The Guide's latest inciting-incident options (9.0e), held so a proposal
+   * survives a reload and its rolls resolve as chips (A41). Not canon
+   * (D-161): nothing is an incident until the player accepts one.
+   */
+  readonly incidentProposal?: PayloadFor<'incident.proposed'> & {
+    readonly eventId: EventId;
+    readonly seq: number;
+  };
   readonly incident?: Accepted<'incident.accepted'>;
   readonly activation?: {
     readonly eventId: EventId;

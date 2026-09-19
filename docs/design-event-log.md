@@ -537,6 +537,7 @@ interface LaunchState {
   locationHistory: Record<EntityId, LocationState[]>;  // and a removed location's final one (8.0h)
   startingSettlementEventId?: EventId;      // what the next selection supersedes (8.0h)
   connection?: ConnectionState;
+  incidentProposal?: IncidentProposed & { eventId; seq };  // the latest options, not canon (9.0e)
   troubles: TroubleState[];
   troubleHistory: Record<EntityId, TroubleState[]>;    // superseded versions (8.0h)
   incident?: IncidentState;

@@ -193,7 +193,6 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
     case 'move.chained':
     case 'oracle.rolled':
     case 'character.proposed':
-    case 'incident.proposed':
     case 'move.suggested':
     case 'actions.suggested':
     case 'session.summary_proposed':
@@ -678,6 +677,15 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
         },
       };
     }
+    case 'incident.proposed':
+      // 9.0e: the latest options, held for review; a newer ask replaces them.
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          incidentProposal: { ...event.payload, eventId: event.id, seq: event.seq },
+        },
+      };
     case 'connection.established':
     case 'connection.revised':
       return {

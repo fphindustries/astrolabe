@@ -994,11 +994,16 @@ D-202 (`track.revised` carries participants).
     the rolls behind the kept fields. The NPC's `entity.established` carries the same
     grounding, with its goal, first look and disposition as fields. D-167 holds: nothing
     rolls or fabricates a result for the automatic strong hit.
-  - [ ] **9.0e Incident proposals are readable and launch-scoped.** Project the latest
+  - [x] **9.0e Incident proposals are readable and launch-scoped.** Project the latest
     `incident.proposed` into the launch fold, so a proposal survives a reload and its rolls
     resolve as chips (A41). `proposeIncidents` refuses a campaign whose launch is closed
     (D-178). It rolls the declared `INCITING_INCIDENT_RECIPE` once per option through the
     recipe path, so each roll records its slot (8.5).
+    *As built:* the proposal still rolls the incident table itself, once per option, and each
+    roll now records the option key it grounds as its slot. Rolling through the recipe path
+    would give all three rolls one slot name, which the slot matcher would read as one
+    field. The Milestone 1 route test that proposed incidents in play is now a refusal test
+    (D-178).
   - [ ] **9.0f Accepting an incident names its option.** `acceptLaunchIncident` takes the
     proposal event and the chosen option's index. The server resolves what the option draws
     on (truth, location, character and launch-fact ids) to the **event ids** of those
