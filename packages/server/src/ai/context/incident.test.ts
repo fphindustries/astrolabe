@@ -207,7 +207,22 @@ describe('the incident proposal answer (4.6, D-132)', () => {
 
 describe('the dev stub (ASTROLABE_AI_PROVIDER=stub)', () => {
   it('answers an incident proposal that passes the schema and the check, with or without a crew', async () => {
-    for (const state of [EMPTY, withSetup()]) {
+    // 9.2: a launch fact makes `launchFacts` a required part of the answer.
+    const withConnection = {
+      ...withSetup(),
+      launch: {
+        ...withSetup().launch,
+        connection: {
+          connectionId: 'conn-1',
+          npcId: 'npc-1',
+          npcName: 'Esme Varga',
+          role: 'Dockmaster',
+          rank: 'dangerous',
+          participants: [],
+        } as never,
+      },
+    };
+    for (const state of [EMPTY, withSetup(), withConnection]) {
       const context = incidentContext(state);
       const result = await createProviderFromEnv({
         ASTROLABE_AI_PROVIDER: 'stub',

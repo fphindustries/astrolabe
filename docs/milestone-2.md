@@ -1094,13 +1094,21 @@ D-202 (`track.revised` carries participants).
   revise it in place (9.0a). Walked in the browser: a Guide proposal with chips, the whole
   proposal taken, one crew member unticked, a formidable rank, and acceptance recorded as
   `guide_proposal` with its rolls. Then a revision adding the second crew member to the track.
-- [ ] 9.2 Extend incident proposals to cite complete accepted launch facts and oracle
+- [x] 9.2 Extend incident proposals to cite complete accepted launch facts and oracle
   grounding; retain choose/edit/write/ask-again behavior. This is the Incident half of
   Incident and Launch. Ask the Guide for three incidents. Each shows its rolls as chips and
   names what it draws on (A37). The player chooses one, edits its words, asks again, or
   writes their own, and accepts. Accepting records the words, rank and citations only
   (D-200). Assert that the incident context carries the connection's NPC details and the
   starting settlement's first looks, which it gained after 3R.6.
+  *As built:* the settlement's first looks were already in the context. The connection's
+  person was not, so its goal, first look and disposition now follow its line. The dev stub's
+  incident answer left out `launchFacts`, which the schema requires once any launch fact
+  exists, so a campaign with a connection could get no stub incidents. It now sends
+  `launchFacts`, and the stub test covers a campaign with a connection. Walked in the
+  browser: three options with roll chips and what each draws on, the second chosen and
+  edited, then accepted as `guide_proposal_edited` with its citation and grounding. The
+  vow's choices were left to the review page.
 - [ ] 9.3 Build the launch review and activation flow. The review page picks the
   swearing character, the sharing crew, the rank and the opening scene's title (beat 12,
   D-200), and saves them as an incident revision. The starting settlement is shown as

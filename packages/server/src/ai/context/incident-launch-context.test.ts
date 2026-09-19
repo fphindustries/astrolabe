@@ -128,6 +128,18 @@ function launched() {
         text: 'The dock crews have not been paid.',
         ...acceptance,
       })
+      .add('entity.established', {
+        entityId: NPC as never,
+        kind: 'npc',
+        name: 'Juno Marr',
+        fields: {
+          role: 'Dockmaster',
+          goal: 'Keep the docks open',
+          firstLook: 'Oil-stained gloves',
+          disposition: 'Wary',
+        },
+        provenance: { establishedBy: 'player', groundedIn: [] },
+      })
       .add('connection.established', {
         connectionId: CONNECTION as never,
         npcId: NPC as never,
@@ -186,6 +198,13 @@ describe('incident context carries the complete accepted launch facts (D-168)', 
   it('carries the local connection and who shares it', () => {
     expect(setup).toContain('The local connection: Juno Marr, Dockmaster (dangerous)');
     expect(setup).toContain('shared with Map');
+  });
+
+  // 9.2: what the NPC recipe gave the person, which the context gained after 3R.6.
+  it('carries the connection’s person: goal, first look and disposition', () => {
+    expect(setup).toContain(
+      'goal: Keep the docks open; first look: Oil-stained gloves; disposition: Wary',
+    );
   });
 
   it('never carries an unaccepted draft (D-161)', () => {

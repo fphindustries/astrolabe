@@ -414,6 +414,8 @@ function stubIncidentProposal(user: string) {
         truths: truth !== undefined ? [truth] : [],
         locations: [],
         crew: crew !== undefined ? [crew] : [],
+        // Required once the campaign has a starship, trouble or connection (9.2).
+        launchFacts: [],
       },
     })),
   };

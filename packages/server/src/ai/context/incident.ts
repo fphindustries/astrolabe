@@ -257,12 +257,23 @@ export function renderSetup(state: CampaignState): string {
   );
 
   const connection = state.launch.connection;
+  // 9.2: the person the NPC recipe gave, kept as the NPC's fields (9.0d).
+  const npc = connection === undefined ? undefined : state.entities[connection.npcId]?.fields;
+  const person = (
+    [
+      ['goal', npc?.['goal']],
+      ['first look', npc?.['firstLook']],
+      ['disposition', npc?.['disposition']],
+    ] as const
+  )
+    .filter(([, value]) => value !== undefined)
+    .map(([label, value]) => `${label}: ${value}`);
   sections.push(
     connection === undefined
       ? 'The local connection: not established yet.'
       : `The local connection: ${connection.npcName}, ${connection.role} (${connection.rank}), shared with ${connection.participants
           .map((characterId) => state.characters[characterId]?.callsign ?? characterId)
-          .join(', ')}`,
+          .join(', ')}` + (person.length > 0 ? `; ${person.join('; ')}` : ''),
   );
 
   return sections.join('\n\n');

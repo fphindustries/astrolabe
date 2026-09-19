@@ -12,6 +12,7 @@ import { SectorSection } from './SectorSection.js';
 import { StarshipSection } from './StarshipSection.js';
 import { TroublesSection } from './TroublesSection.js';
 import { ConnectionSection } from './ConnectionSection.js';
+import { IncidentSection } from './IncidentSection.js';
 import { TruthsSection } from './TruthsSection.js';
 import { launchOverviewPath } from './sections.js';
 import styles from './LaunchSectionScreen.module.css';
@@ -64,6 +65,8 @@ export function LaunchSectionScreen({
           <ConnectionSection campaignId={campaignId} workspace={workspace} />
           <TroublesSection campaignId={campaignId} workspace={workspace} />
         </>
+      ) : section === 'incident_launch' ? (
+        <IncidentSection campaignId={campaignId} workspace={workspace} />
       ) : (
         <SectionPlaceholder card={card} />
       )}
