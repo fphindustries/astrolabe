@@ -55,6 +55,8 @@ interface Call {
   readonly latencyMs: number;
   /** The checker's structured answer, which is its verdict. */
   readonly verdict?: unknown;
+  /** What the Guide wrote: its text, or its parsed structured answer. */
+  readonly output?: unknown;
 }
 
 const calls: Call[] = [];
@@ -79,6 +81,7 @@ function recording(role: Call['role'], inner: AiProvider): AiProvider {
         usage: result.usage,
         latencyMs: result.latencyMs,
         ...(role === 'checker' && result.ok ? { verdict: result.value } : {}),
+        ...(role === 'guide' && result.ok ? { output: result.value } : {}),
       });
       return result;
     } catch (error) {
@@ -111,6 +114,7 @@ function recording(role: Call['role'], inner: AiProvider): AiProvider {
           stopReason: result.stopReason,
           usage: result.usage,
           latencyMs: result.latencyMs,
+          ...(role === 'guide' ? { output: result.text } : {}),
         });
         return result;
       } catch (error) {

@@ -95,7 +95,7 @@ describe('ClaudeProvider (task 7.2)', () => {
     });
     expect(result.firstTokenMs).toBeGreaterThan(0);
     expect(params[0]).toMatchObject({
-      model: 'claude-opus-5',
+      model: 'claude-sonnet-5',
       system: [
         { type: 'text', text: 'stable rules', cache_control: { type: 'ephemeral' } },
         { type: 'text', text: 'campaign' },
@@ -234,11 +234,11 @@ describe('createProviderFromEnv (D-119)', () => {
     expect(createProviderFromEnv({ ASTROLABE_AI_PROVIDER: 'stub' }).name).toBe('stub');
   });
 
-  it('defaults to Claude Opus 5, unconfigured without a credential', () => {
+  it('defaults to Claude Sonnet 5, unconfigured without a credential', () => {
     const provider = createProviderFromEnv({});
     expect(provider).toMatchObject({
       name: 'anthropic',
-      model: 'claude-opus-5',
+      model: 'claude-sonnet-5',
       configured: false,
     });
   });
