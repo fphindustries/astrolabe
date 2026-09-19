@@ -776,6 +776,69 @@ describe('renderState (task 7.4)', () => {
     });
   });
 
+  // 9.0k: the same defect as D-183, 7.0h and 8.0j, for the incident and its vow.
+  describe('the incident and its pending vow in play narration (9.0k)', () => {
+    const INCIDENT = 'bbbb1111-bbbb-4bbb-8bbb-bbbbbbbbbbbb' as never;
+    const launched = () =>
+      goldenSessionPrelude()
+        .add('incident.accepted', {
+          incidentId: INCIDENT,
+          text: 'A distress beacon carries the lost colony’s call sign.',
+          citedFactEventIds: [],
+          rank: 'formidable',
+          rollerId: VESNA,
+          participants: [VESNA, ROOK],
+          openingScene: { title: 'The dock' },
+          provenance: 'player_written',
+          groundedIn: [],
+        })
+        .add('campaign.activated', {
+          launchFactEventIds: [],
+          sessionId: 'bbbb2222-bbbb-4bbb-8bbb-bbbbbbbbbbbb' as never,
+          sceneId: 'bbbb3333-bbbb-4bbb-8bbb-bbbbbbbbbbbb' as never,
+          pendingVow: {
+            incidentId: INCIDENT,
+            rank: 'formidable',
+            rollerId: VESNA,
+            participants: [VESNA, ROOK],
+          },
+          readinessVersion: 1,
+        });
+
+    it('names the incident, and the unsworn vow with its roller and sharing crew', () => {
+      const text = renderState(project(launched().build()));
+
+      expect(text).toContain(
+        'The inciting incident: A distress beacon carries the lost colony’s call sign.',
+      );
+      expect(text).toContain(
+        'The inciting vow (formidable) is not yet sworn: Vesna Kade is to swear it with ' +
+          'Swear an Iron Vow, shared with Vesna Kade, Rook Ilari.',
+      );
+    });
+
+    it('stops calling the vow pending once it is sworn (D-201)', () => {
+      const text = renderState(
+        project(
+          launched()
+            .add('track.created', {
+              kind: 'vow',
+              trackId: 'bbbb4444-bbbb-4bbb-8bbb-bbbbbbbbbbbb' as never,
+              title: 'A distress beacon carries the lost colony’s call sign.',
+              rank: 'formidable',
+              characterId: VESNA,
+              participantCharacterIds: [VESNA, ROOK],
+              incidentId: INCIDENT,
+            })
+            .build(),
+        ),
+      );
+
+      expect(text).not.toContain('not yet sworn');
+      expect(text).toContain('The inciting incident:');
+    });
+  });
+
   it('says nothing about a ship a campaign never established', () => {
     expect(renderState(project(goldenSessionPrelude().build()))).not.toContain('starship');
   });

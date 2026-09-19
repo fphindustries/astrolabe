@@ -150,6 +150,26 @@ export function renderState(state: CampaignState): string {
     sections.push(`Troubles:\n${troubles.join('\n')}`);
   }
 
+  // 9.0k: D-183's defect a fourth time, for the incident. Play context read
+  // no `launch.incident`, so until the vow was sworn the Guide in play did not
+  // know why the campaign had begun.
+  const incident = state.launch.incident;
+  if (incident !== undefined) {
+    sections.push(`The inciting incident: ${incident.text}`);
+  }
+  const activation = state.launch.activation;
+  if (activation !== undefined && activation.vowTrackId === undefined) {
+    const nameOf = (id: string) =>
+      Object.values(state.characters).find((c) => c.id === id)?.name ?? 'an unknown crew member';
+    const vow = activation.pendingVow;
+    // D-168: the vow is pending until the player swears it with the real
+    // move, so the Guide is told it is not sworn yet rather than left to say so.
+    sections.push(
+      `The inciting vow (${vow.rank}) is not yet sworn: ${nameOf(vow.rollerId)} is to swear it ` +
+        `with Swear an Iron Vow, shared with ${vow.participants.map(nameOf).join(', ')}.`,
+    );
+  }
+
   const crew = Object.values(state.characters).map((c) => {
     const meters = `health ${c.meters.health.value}, spirit ${c.meters.spirit.value}, supply ${c.meters.supply.value}`;
     const impacts = Object.keys(c.impacts).map(

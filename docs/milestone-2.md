@@ -1067,10 +1067,10 @@ D-202 (`track.revised` carries participants).
     owns. They refuse any campaign whose launch is open or activated, and keep serving a
     Milestone 1 campaign in play. 10.1 removes them with the fixtures.
     *As built:* the fence is narrower than "launch open". The session-one fixture decides
-    its truths through  and swears before its first session, so by
-     it is a campaign whose launch is open. The command refuses what
+    its truths through `decideTruth` and swears before its first session, so by
+    `launchClosedReason` it is a campaign whose launch is open. The command refuses what
     D-201 owns: a campaign that has accepted a launch incident, or has activated.
-  - [ ] **9.0k Play context knows the incident (D-183, a fourth time).** `renderState` reads
+  - [x] **9.0k Play context knows the incident (D-183, a fourth time).** `renderState` reads
     no `launch.incident`. Until the vow is sworn, the Guide in play would not know why the
     campaign has begun. Render the accepted incident, and the pending vow with its roller and
     sharing crew, while it is unsworn. Assert that each arrives.
