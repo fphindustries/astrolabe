@@ -191,4 +191,18 @@ export default tseslint.config(
     plugins: { 'react-hooks': reactHooks },
     rules: reactHooks.configs['recommended-latest'].rules,
   },
+  {
+    // A busy or blocked launch button stays focusable (D-208): use guarded() from ui/guarded.ts.
+    files: ['packages/web/src/launch/**/*.tsx', 'packages/web/src/campaigns/**/*.tsx'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "JSXOpeningElement[name.name='button'] > JSXAttribute[name.name='disabled']",
+          message:
+            'A native disabled button leaves the tab order and drops focus (D-208). Use guarded() from ui/guarded.ts.',
+        },
+      ],
+    },
+  },
 );
