@@ -1125,13 +1125,21 @@ D-202 (`track.revised` carries participants).
   its editor. Walked in the browser: the roller, sharing crew and scene title were chosen,
   the incident's blocker cleared, the scene was stamped at the starting settlement, and
   provenance was kept.
-- [ ] 9.4 Run the real `Swear an Iron Vow` move as Session 1's first beat, including actor,
+- [x] 9.4 Run the real `Swear an Iron Vow` move as Session 1's first beat, including actor,
   sharing crew, loaded dice in tests, result, effects, and checked narration. The play
   screen offers **Swear the inciting vow** while the pending vow is unsworn, opening the
   move composer on `Swear an Iron Vow` for the roller at +heart, with the vow's words,
   rank and sharing crew shown and the player's adds available. A server test with loaded
   dice asserts one formidable track shared by the three crew members, momentum changed on
   the roller only, and the checked narration committing.
+  *As built:* the server test drives narration through  and
+  . It found a 9.0h defect. The swear is  the activation,
+  and the beat scope walked every  link up to the chain's root, so it reached the
+  activation command, found no move there, and refused to narrate. A chain is now moves
+  caused by moves. A move caused by anything else starts its own chain. In the composer the
+  vow is shown, the roll is +heart only, no ally can aid it, and an add row is always offered
+  for the adds the player is due. Walked in the browser: offered, sworn, the vow's track
+  created, the result card, and a narrated passage. The offer is gone once the vow exists.
 - [ ] 9.5 Transition into the existing play screen without a reload-only state gap. After
   activation, play opens on the new scene, named at its settlement (9.0i), with the vow
   offered (9.4), from the same invalidated reads, with no reload. Assert in the browser.

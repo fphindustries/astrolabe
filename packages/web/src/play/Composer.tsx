@@ -15,6 +15,7 @@ import { WhatNow } from './moves/WhatNow.js';
 import { BeginSession } from './session/BeginSession.js';
 import { EndSession } from './session/EndSession.js';
 import { toSessionView } from './session/session.js';
+import { pendingVowView, SWEAR_AN_IRON_VOW } from './pending-vow.js';
 import styles from './Composer.module.css';
 
 /**
@@ -46,6 +47,7 @@ export function Composer({
   const { selectMove, openPayThePrice, payThePriceResolved, reset } = useMoveFlowActions();
   const narration = useNarrationStream();
   const session = useCampaignState(campaignId, toSessionView);
+  const vow = useCampaignState(campaignId, pendingVowView);
   // D-148: a suggestion the composer can't play still carries its words into
   // the prompt; bumping `version` remounts the prompt with them.
   const [draft, setDraft] = useState({ text: '', version: 0 });
@@ -132,6 +134,27 @@ export function Composer({
         )}
       </div>
 
+      {flow.step === 'idle' && vow.data !== undefined && (
+        // D-201: Session 1's first beat is the real Swear an Iron Vow.
+        <div className={styles.notice} aria-label="The inciting vow">
+          <span>
+            The inciting vow is not yet sworn: {vow.data.text} ({vow.data.rank}).{' '}
+            {vow.data.rollerName} swears it.
+          </span>
+          <button
+            type="button"
+            className={styles.dismiss}
+            onClick={() => {
+              const rollerId = vow.data!.rollerId;
+              onSetActing(rollerId);
+              selectMove(SWEAR_AN_IRON_VOW, rollerId, undefined, undefined, true);
+            }}
+          >
+            Swear the inciting vow
+          </button>
+        </div>
+      )}
+
       {flow.step === 'idle' && actor !== undefined && (
         <WhatNow
           campaignId={campaignId}
@@ -175,6 +198,7 @@ export function Composer({
             ? { chainedFromCommandId: flow.chainedFromCommandId }
             : {})}
           {...(flow.prefill !== undefined ? { prefill: flow.prefill } : {})}
+          {...(flow.pendingVow === true && vow.data !== undefined ? { pendingVow: vow.data } : {})}
           onResolved={() => {
             /* move-flow already transitions to 'result' via moveResolved */
           }}

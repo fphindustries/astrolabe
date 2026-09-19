@@ -17,6 +17,8 @@ import { aiKeys, useProposeAmount } from '../../api/narration.js';
 import { isSubmitChord } from '../../ui/keys.js';
 import type { CrewCardView } from '../crew/crew.js';
 
+import type { PendingVowView } from '../pending-vow.js';
+
 import { SuggestionWhy } from './ActionPrompt.js';
 import { AidAllyPicker } from './AidAllyPicker.js';
 import { proposalText } from './harm-proposal.js';
@@ -64,6 +66,7 @@ export function MoveComposer({
   actorCharacterId,
   chainedFromCommandId,
   prefill,
+  pendingVow,
   crew,
   onResolved,
   onCancel,
@@ -74,13 +77,21 @@ export function MoveComposer({
   readonly chainedFromCommandId?: CommandId;
   /** D-135: the words typed before a move was picked, and the Guide's suggestion if it came from one. */
   readonly prefill?: ComposerPrefill;
+  /**
+   * D-201: this swears the campaign's pending inciting vow. The server writes
+   * the vow from the incident; here it is shown, the roll is +heart, and no
+   * ally aids it, because the vow is its roller's (A39).
+   */
+  readonly pendingVow?: PendingVowView;
   readonly crew: readonly CrewCardView[];
   readonly onResolved: () => void;
   readonly onCancel: () => void;
 }) {
   const move = STARFORGED.moves.find((m) => m.id === moveId);
   const automation = MOVE_AUTOMATION_SPECS.get(moveId);
-  const rollOptions = rollOptionsFor(moveId);
+  const rollOptions = rollOptionsFor(moveId).filter(
+    (option) => pendingVow === undefined || (option.using === 'stat' && option.stat === 'heart'),
+  );
   const preRollEffect = automation?.preRoll?.effects.find(
     (e) => e.effect.kind === 'proposed_amount',
   )?.effect;
@@ -175,6 +186,7 @@ export function MoveComposer({
         : {}),
       ...(suggestion !== undefined ? { suggestionEventId: suggestion.eventId } : {}),
       ...(chainedFromCommandId !== undefined ? { chainedFromCommandId } : {}),
+      ...(pendingVow !== undefined ? { swearsPendingVow: true as const } : {}),
     });
     // D-136: a typed action is checked against the trigger, unless the Guide already suggested this move.
     const checkTrigger = actionText.trim().length > 0 && suggestion === undefined;
@@ -206,6 +218,19 @@ export function MoveComposer({
         </div>
       )}
 
+      {pendingVow !== undefined && (
+        <div className={styles.suggested} aria-label="The vow being sworn">
+          <span className={styles.badge}>Vow</span>
+          <span>
+            {pendingVow.text} ({pendingVow.rank}). {pendingVow.rollerName} swears it
+            {pendingVow.sharedWith.length > 0
+              ? `, shared with ${pendingVow.sharedWith.join(', ')}`
+              : ''}
+            . Roll +heart.
+          </span>
+        </div>
+      )}
+
       {rollOptions.length > 1 && (
         <fieldset className={styles.rollOptions}>
           <legend>Roll with</legend>
@@ -221,6 +246,30 @@ export function MoveComposer({
             </label>
           ))}
         </fieldset>
+      )}
+
+      {pendingVow !== undefined && applicableAbilities.length === 0 && (
+        <div className={styles.abilities}>
+          <p className={styles.abilityText}>
+            Any add you are due, such as for a bond with those you swear to, is yours to set.
+          </p>
+          <div className={styles.addRow}>
+            <input
+              type="text"
+              placeholder="What applies (e.g. a bond)"
+              value={addLabel}
+              onChange={(event) => setAddLabel(event.target.value)}
+              className={styles.addLabel}
+            />
+            <input
+              type="number"
+              placeholder="+/-"
+              value={addAmount}
+              onChange={(event) => setAddAmount(event.target.value)}
+              className={styles.addAmount}
+            />
+          </div>
+        </div>
       )}
 
       {applicableAbilities.length > 0 && (
@@ -275,12 +324,14 @@ export function MoveComposer({
         </label>
       )}
 
-      <AidAllyPicker
-        crew={crew}
-        actorCharacterId={actorCharacterId}
-        aidingAllyId={aidingAllyId}
-        onChange={setAidingAllyId}
-      />
+      {pendingVow === undefined && (
+        <AidAllyPicker
+          crew={crew}
+          actorCharacterId={actorCharacterId}
+          aidingAllyId={aidingAllyId}
+          onChange={setAidingAllyId}
+        />
+      )}
 
       <label className={styles.field}>
         <span className={styles.label}>What do you do?</span>

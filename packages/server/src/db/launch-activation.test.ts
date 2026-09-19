@@ -12,6 +12,7 @@ import {
   type EventId,
 } from '@astrolabe/shared';
 
+import { StubProvider } from '../ai/stub.js';
 import { actionRoll } from '../fixtures/loaded-dice.js';
 import { buildLaunchWorkspace } from '../launch/workspace.js';
 
@@ -36,6 +37,7 @@ import {
   type SaveLaunchLocationRequest,
 } from './launch-commands.js';
 import { invokeMove, MoveRejectedError, type InvokeMoveRequest } from './move-commands.js';
+import { prepareBeatNarration, runBeatNarration } from './narration-commands.js';
 import { createTestDatabase, hasTestDatabase, type TestDatabase } from './testing.js';
 import { uuidv7 } from './uuid.js';
 
@@ -673,6 +675,89 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
       await expect(
         swear(campaignId, characterId, { aidingAllyId: otherCharacterId! }),
       ).rejects.toThrow(/roller alone/);
+    });
+
+    // 9.4: Session 1's first beat, end to end below HTTP: the vow shared by
+    // three, loaded dice, the effect on the roller alone, and the narration.
+    it('swears a vow three share, moves only the roller, and narrates it', async () => {
+      const { campaignId, characterId, otherCharacterId } = await readyCampaign({
+        secondCrew: true,
+      });
+      const { characterId: third } = await createCharacter(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        draft: {
+          name: 'Juno Marr',
+          callsign: 'Juno',
+          stats: { edge: 1, heart: 2, iron: 1, shadow: 2, wits: 3 },
+          assets: paths,
+        },
+        backgroundVow: { title: 'Clear the family debt', rank: 'dangerous' },
+        launch: { appearance: 'Ink-stained hands', backstory: { kind: 'discover_in_play' } },
+      });
+      const crew = [characterId, otherCharacterId!, third];
+      await acceptLaunchIncident(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        incident: { participants: crew },
+      });
+      await activateLaunch(db.sql, { campaignId, commandId: newId<CommandId>(), actor: PLAYER });
+      const before = project(await readEvents(db.sql, campaignId));
+
+      const moveCommandId = newId<CommandId>();
+      const sworn = await swear(campaignId, characterId, {
+        rng: actionRoll(5, [3, 4]),
+        commandId: moveCommandId,
+      });
+
+      expect(sworn.roll.tier).toBe('strong_hit');
+      const state = project(await readEvents(db.sql, campaignId));
+      const vow = state.tracks[state.launch.activation!.vowTrackId!]!;
+      expect(vow).toMatchObject({ kind: 'vow', rank: 'formidable', ticks: 0 });
+      expect(vow.participantCharacterIds).toEqual(crew);
+      // A39: +2 momentum on the roller; the others who share the vow are untouched.
+      for (const id of crew)
+        expect(state.characters[id]!.momentum.value - before.characters[id]!.momentum.value).toBe(
+          id === characterId ? 2 : 0,
+        );
+
+      const prepared = await prepareBeatNarration(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        afterCommandId: moveCommandId,
+      });
+      if (prepared.kind !== 'run') throw new Error('expected a narration to run');
+      const narrated = await runBeatNarration(
+        db.sql,
+        new StubProvider({
+          responses: [
+            {
+              kind: 'structured',
+              value: {
+                segments: [
+                  {
+                    about: 'world',
+                    character: null,
+                    basis: [],
+                    text: 'The beacon’s call sign repeats, patient and cold.',
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+        new StubProvider(),
+        prepared,
+        { delta: () => {}, reset: () => {}, checking: () => {}, withdrawn: () => {} },
+      );
+      if (!narrated.ok) throw new Error(narrated.message);
+      const passage = (await readEvents(db.sql, campaignId)).find(
+        (event) => event.id === narrated.eventId,
+      );
+      expect(passage?.type).toBe('narration.written');
     });
 
     it('refuses before launch', async () => {

@@ -43,6 +43,8 @@ export interface InvokeMoveInput {
   /** D-135: the Guide's suggestion this move was filled from. */
   readonly suggestionEventId?: EventId;
   readonly chainedFromCommandId?: CommandId;
+  /** D-201: this Swear an Iron Vow swears the campaign's pending vow. */
+  readonly swearsPendingVow?: true;
 }
 
 /**

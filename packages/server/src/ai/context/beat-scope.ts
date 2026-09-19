@@ -75,7 +75,13 @@ export function resolveBeatScope(
       (e) => e.commandId === rootCommandId && e.causedBy !== null,
     )?.causedBy;
     const parent = parentId === null || parentId === undefined ? undefined : byId.get(parentId);
-    if (parent === undefined || seen.has(parent.commandId)) {
+    // A chain is moves caused by moves. A move caused by something else, as
+    // the pending vow's swear is by the activation (D-201), starts its own.
+    if (
+      parent === undefined ||
+      seen.has(parent.commandId) ||
+      !events.some((e) => e.commandId === parent.commandId && e.type === 'move.invoked')
+    ) {
       break;
     }
     rootCommandId = parent.commandId;
