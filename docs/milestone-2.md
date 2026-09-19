@@ -1799,13 +1799,12 @@ implementation note.
     field. (11) "Roll the whole settlement" left a planetside or orbital settlement without
     the planet its copy promised. It now rolls the class and a shallow planet, as the
     Guide's whole sector does on the server.
-  - **Not fixed, for a decision.** With no provider, play opens paused (D-116) and hides the
-    composer, so the pending vow cannot be sworn in the browser. The HTTP path can (10.3).
-    Whether the swear should stay reachable while narration is paused is D-116's call, and
-    the non-negotiable that dice never wait on the AI bears on it.
-    (12) "Add a settlement" opened its editor fourteen stops above the button and left focus
-    on the button. The editor's heading now takes focus. (13) The three incident options'
-    "Choose this" buttons read alike. Each is now described by its option's title.
+  - **Decided and fixed: the no-provider vow (D-207).** With no provider, play opened
+    paused (D-116) and hid the composer, so the pending vow could not be sworn in the
+    browser, only over HTTP (10.3). Asked, and decided: the pause banner still offers Swear
+    the inciting vow. The move commits as it would with a Guide; only its narration waits
+    for Retry. Walked with no provider: the vow was sworn with a real roll, the track
+    created, and the banner returned with Retry.
   - **Keyboard.** Every section was completed by keyboard alone, with the focus ring visible
     at every stop. That was Foundation, the vow choices and the launch dialog on the first
     campaign, and Truths (with a nested choice), Crew, Starship, Sector, Connection and
@@ -1819,24 +1818,21 @@ implementation note.
     campaign and after activation, focus starts at the top of the new page, not on its
     heading. Within the launch workspace it is handled (fix 1). (c) Once, a tab stopped
     responding for about 45 s on leaving a test page, and a fresh tab loaded the same URL
-    at once. It did not happen again.
+    at once. Later a tab stalled for about 30 s after Roll, then showed the committed roll.
+    Both were on the production build, and both recovered by themselves. That fits group
+    7's unexplained Vite freeze, so the freeze is not only a dev-server artefact. It
+    remains unexplained.
   Verified with Postgres: 137 files, 1608 tests, zero skipped files. typecheck, lint,
   format:check and the web build clean.
 
 ---
 
-## Milestone 2 status
+## Milestone 2 complete
 
 Every task in groups 1 to 10 is done. The golden launch runs from a blank campaign to a
 narrated first vow through the HTTP routes with loaded dice and stubbed providers (10.2).
 It is the foundation the Session 1 and golden-session fixtures now stand on (10.1). It
 completes with no provider (10.3), and a fresh install opens it (10.6). It was walked in the
 browser on the dev stub, with no provider, and by keyboard (10.4), and run once against the
-live Guide (10.5).
-
-**One question decides whether "done" is met.** The Done-when asks that "the same flow
-remain completable with no AI provider". With no provider, the launch completes and
-activates, but play opens paused (D-116), so the pending vow cannot be sworn in the browser.
-If the no-provider flow ends at activation, as the golden launch's compatibility check
-reads, Milestone 2 is complete. If it ends at the sworn vow, the swear must stay reachable
-while narration is paused, and that needs a decision beside D-116.
+live Guide (10.5). With no provider the flow ends where the stubbed one does, at a sworn
+first vow; only the narration waits (D-207).
