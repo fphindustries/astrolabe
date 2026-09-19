@@ -1141,10 +1141,16 @@ D-202 (`track.revised` carries participants).
   vow is shown, the roll is +heart only, no ally can aid it, and an add row is always offered
   for the adds the player is due. Walked in the browser: offered, sworn, the vow's track
   created, the result card, and a narrated passage. The offer is gone once the vow exists.
-- [ ] 9.5 Transition into the existing play screen without a reload-only state gap. After
+- [x] 9.5 Transition into the existing play screen without a reload-only state gap. After
   activation, play opens on the new scene, named at its settlement (9.0i), with the vow
   offered (9.4), from the same invalidated reads, with no reload. Assert in the browser.
   The launch workspace URL then says launch is closed, as 4.4 decided.
+  *As built:* no new code. The review screen already navigated to the campaign on
+  activation, and 9.0i and 9.4 supplied the settlement name and the vow offer. Walked in the
+  browser on a campaign built through the HTTP routes. The review page chose the vow, and
+  the confirmation launched. Play opened on "The dock at Ember Hold", named at Ember Hold,
+  with **Swear the inciting vow** offered and no reload. The launch URL then said Campaign
+  Launch is closed.
 
 **Scope fences.** The Connection move family beyond the automatic strong hit stays
 Reference (D-167). There is no amendment screen: the post-launch amendment commands exist
@@ -1503,4 +1509,41 @@ implementation note.
     groups 5–7 use, and every Write and Roll path is independent of it, but 10.3 and 10.4
     own the proof.
   Verified with Postgres: 127 files, 1542 tests, zero skipped files. typecheck, lint,
+  format:check and the web build clean.
+- **Group 9 complete.** Connection and Troubles, then Incident and Launch, through the
+  first sworn vow. Planning found the connection's aggregate unrevisable and its proposal
+  unused, the incident proposal neither projected nor launch-scoped, acceptance keyed by a
+  client id, and no path from the pending vow to a sworn one. Four questions were asked
+  before planning (D-199–D-202) and one during it (D-203). The review found a sixth, a
+  contradiction in D-201 (D-204).
+  - **The pending vow is sworn by the real move (9.0h, 9.4, D-201).** One `move.invoke`
+    command writes the vow's `track.created` from the incident, then rolls. The fold marks
+    the vow sworn by `incidentId`, and a second swear is refused under the campaign lock.
+    The test found the beat walk climbing from the swear to the activation that caused it
+    and refusing to narrate. The first fix cut world passes off from their moves and failed
+    the golden session, which the next commit repaired. The walk now stops only when it
+    stands on a move whose cause is not one.
+  - **The review page owns the vow's choices (9.0g, 9.3, D-200).** Beat 11 accepts the words,
+    rank and citations; beat 12 the roller, sharing crew and scene title. A revision carries
+    forward everything it omits, the words and the Guide's acceptance included, so saving
+    the choices never turns the Guide's incident into the player's.
+  - **Milestone 1's no-roll vow is fenced by what D-201 owns (9.0j, D-204).** The
+    session-one fixture has a launch by D-201's own wording, so the fence is an accepted
+    incident or an activation, until 10.1.
+  - **Citations are accepted facts (9.0f).** An option's `drawsOn` ids resolve to the events
+    of accepted launch facts. A roll is not a citation.
+  - **D-183 a fourth time (9.0k), and a fifth in the play client (9.0i).** Play context
+    now knows the incident and the unsworn vow. The scene header and Begin Session name a
+    launch settlement.
+  - **The roller shares the vow with the others, not with themselves.** The review found
+    the context line and then the review summary each naming the roller among the sharers.
+  - **The dev stub** left out `launchFacts`, so once a campaign had a connection, a request
+    for stub incidents got no answer. It was found in the browser.
+  - **Browser.** Walked at 1280x720 on the dev stub, on the production build. The connection
+    was proposed, taken whole, accepted as `guide_proposal`, and revised to add a sharer.
+    The incidents were proposed, one was chosen and edited, and it was accepted as
+    `guide_proposal_edited`. The vow's choices were set, launch confirmed, play opened
+    without a reload, the vow was sworn, and the result was narrated. **Not walked:** the
+    no-provider path (A42) in the browser, as in group 8. 10.3 and 10.4 own it.
+  Verified with Postgres: 133 files, 1590 tests, zero skipped files. typecheck, lint,
   format:check and the web build clean.
