@@ -49,7 +49,7 @@ describe('the sector trouble (8.5)', () => {
   });
 
   it('keeps the roll as grounding, and names the Guide’s reading once taken', () => {
-    const rolled = applySectorTroubleRoll(EMPTY_SECTOR_TROUBLE, [
+    const rolled = applySectorTroubleRoll([
       { slot: 'trouble', eventId: id(1), text: 'Blockade prevents trade with other sectors' },
     ]);
     const taken = takeSectorTroubleProposal(rolled, {
@@ -65,7 +65,7 @@ describe('the sector trouble (8.5)', () => {
   });
 
   it('reads a trouble row that embeds other tables whole, citing every roll (8.5)', () => {
-    const rolled = applySectorTroubleRoll(EMPTY_SECTOR_TROUBLE, [
+    const rolled = applySectorTroubleRoll([
       { slot: 'trouble', eventId: id(1), text: 'Deliver' },
       { slot: 'trouble', eventId: id(2), text: 'Discovery' },
     ]);

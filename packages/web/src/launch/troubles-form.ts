@@ -42,9 +42,11 @@ export function setSectorTroubleText(form: SectorTroubleForm, text: string): Sec
   return { ...form, text };
 }
 
-/** The sector-trouble recipe lands: its row is the trouble, the roll its grounding (A41). */
+/**
+ * The sector-trouble recipe lands: its row is the trouble, the roll its
+ * grounding (A41). A roll replaces the trouble outright, so it takes no form.
+ */
 export function applySectorTroubleRoll(
-  _form: SectorTroubleForm,
   results: readonly { readonly slot: string; readonly eventId: EventId; readonly text: string }[],
 ): SectorTroubleForm {
   // Every result the slot yielded: a trouble row can embed other tables (8.5).

@@ -1281,15 +1281,15 @@ implementation note.
     against the saved layout alone. Focus follows the pointer, so the arrow keys move what
     was just touched.
   - **A draft that outlives its acceptance.** Accepting a settlement writes its new id back
-    into the form and saves the draft, so a reload shows it once. **Not fixed, and group 6's
-    to check:** `initialCrewForm` appears to have the same shape. A crew member drafted and
-    then accepted without a later save keeps a draft entry with no `characterId`, which
-    would show beside the accepted character after a reload. This was read in the code, not
-    reproduced.
+    into the form and saves the draft, so a reload shows it once. **Crew had the same defect
+    (group 6), fixed here:** a crew member drafted and then accepted kept a draft entry with
+    no `characterId`, so a reload showed them twice. A test reproduced it. The Crew screen
+    now saves the draft again after an acceptance, as the sector does.
   - **Test setup, not an app defect:** the server indexes `packages/web/dist` when it
     starts, so after a web rebuild it serves the old asset names. The page then loads blank
-    with no console error. Restart the server after each web build. This may be the freeze
-    group 7 recorded under the Vite dev server; it was not investigated there.
+    with no console error. Restart the server after each web build. **This is distinct from
+    the freeze group 7 recorded**, which happened under the Vite dev server and never on the
+    production build; this one happens only on the production build, after a rebuild.
   - **Browser.** Walked at 1280x720 on the dev stub, on the production build. Beat 7 went
     through the whole-sector path: the name and a settlement with its planet were accepted
     as `guide_proposal` with their rolls, and the other proposals survived a reload. The
@@ -1301,5 +1301,5 @@ implementation note.
     in the browser. The proposal actions are disabled from the same `useAiStatus` signal
     groups 5–7 use, and every Write and Roll path is independent of it, but 10.3 and 10.4
     own the proof.
-  Verified with Postgres: 127 files, 1540 tests, zero skipped files. typecheck, lint,
+  Verified with Postgres: 127 files, 1542 tests, zero skipped files. typecheck, lint,
   format:check and the web build clean.

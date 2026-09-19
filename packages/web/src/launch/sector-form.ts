@@ -1052,7 +1052,12 @@ export function forgetOther(form: SectorForm, draftId: string): SectorForm {
   return { ...form, others: form.others.filter((other) => other.draftId !== draftId) };
 }
 
-/** "2 of 3 settlements": accepted ones against the region's floor (A31). */
+/**
+ * Accepted settlements against the region's floor (A31), counted from the
+ * fold, the same count readiness gates on. It is worded as the sector's count
+ * rather than as a summary of the rows below it, whose "accepted" comes from
+ * the form.
+ */
 export function settlementProgress(
   state: CampaignState,
   region: LaunchRegion | '',

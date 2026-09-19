@@ -125,8 +125,8 @@ export function SectorPlaces({
         </h3>
         <p className={styles.help} role="status">
           {progress.required === undefined
-            ? `${progress.accepted} accepted. Choose a region to see how many it asks for.`
-            : `${progress.accepted} of ${progress.required} settlements accepted.${
+            ? `${progress.accepted} accepted in this sector. Choose a region to see how many it asks for.`
+            : `${progress.accepted} accepted in this sector; the region asks for at least ${progress.required}.${
                 progress.accepted >= progress.required
                   ? ' The region’s floor is met; more are welcome.'
                   : ''

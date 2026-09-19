@@ -275,6 +275,23 @@ describe('opening the form on what the server holds', () => {
     expect(crew[0]?.characterId).toBeUndefined();
   });
 
+  // Found during group 8, where the sector had the same shape. A member drafted
+  // and then accepted keeps a draft entry with no `characterId` until the
+  // draft is saved again, so reopening showed them twice.
+  it('shows a member twice when the draft predates their acceptance (the defect)', () => {
+    const stale = { characters: [{ draftId: 'draft-vesna', name: 'Vesna Kade' }] };
+    expect(initialCrewForm(withCrew([character()], stale, 1))).toHaveLength(2);
+  });
+
+  it('shows them once when the draft is saved again after acceptance, as the screen now does', () => {
+    const drafted = [{ ...emptyCrewMember('draft-vesna'), name: 'Vesna Kade' }];
+    const accepted = replaceMember(drafted, markAccepted(drafted[0]!, VESNA));
+    const crew = initialCrewForm(withCrew([character()], toDraftSnapshot(accepted), 9));
+
+    expect(crew).toHaveLength(1);
+    expect(crew[0]).toMatchObject({ draftId: 'draft-vesna', characterId: VESNA });
+  });
+
   it('prefers the accepted character when the draft is older (D-182)', () => {
     const crew = initialCrewForm(
       withCrew(

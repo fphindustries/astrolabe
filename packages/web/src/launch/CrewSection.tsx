@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { CHALLENGE_RANKS, STARFORGED, STAT_IDS, type AssetId, type StatId } from '@astrolabe/rules';
 import type { LaunchWorkspaceResponse } from '@astrolabe/shared';
@@ -85,6 +85,10 @@ export function CrewSection({
   // that a baseline captured once said it forever, including after a save.
   const baseline = initialCrewForm(workspace.state);
   const [crew, setCrew] = useState<readonly CrewMemberForm[]>(baseline);
+  // The latest crew, so what is saved after the server answers is what the
+  // screen shows then, not what it showed when Accept was pressed.
+  const latest = useRef(crew);
+  latest.current = crew;
   const [openId, setOpenId] = useState<string | undefined>(() => baseline[0]?.draftId);
   const [step, setStep] = useState<CrewStep>('identity');
   const [saved, setSaved] = useState<string | undefined>(undefined);
@@ -155,7 +159,14 @@ export function CrewSection({
           // accepted character "not accepted" and a second Accept creates a
           // duplicate instead of revising. Found in the browser.
           onSuccess: (response) => {
-            setCrew((current) => replaceMember(current, markAccepted(open, response.characterId)));
+            const next = replaceMember(latest.current, markAccepted(open, response.characterId));
+            latest.current = next;
+            setCrew(next);
+            // Save the draft again with the new id in it. A draft saved before
+            // acceptance names no character, so a reload showed the member
+            // twice: once accepted, once as the work they were built from.
+            // Found in group 8, where the sector had the same shape.
+            saveDraft.mutate({ section: 'crew', snapshot: toDraftSnapshot(next) });
             setSaved(accepted);
           },
         },

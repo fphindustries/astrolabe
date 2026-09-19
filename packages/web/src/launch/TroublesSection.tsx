@@ -97,7 +97,7 @@ export function TroublesSection({
                         .map((result) => `${result.roll}: ${result.text}`)
                         .join(' · '),
                     );
-                    edit(applySectorTroubleRoll(form, response.results));
+                    edit(applySectorTroubleRoll(response.results));
                   },
                 },
               )
