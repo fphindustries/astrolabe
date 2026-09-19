@@ -213,6 +213,18 @@ describe('launch readiness can be satisfied', () => {
     ).toBe(true);
   });
 
+  it('waits for the vow’s choices, which beat 11 leaves to the review page (D-200)', () => {
+    const { rollerId: _roller, participants: _crew, ...words } = readyInput().incident!;
+
+    const readiness = check({ ...readyInput(), incident: words });
+
+    expect(readiness.ready).toBe(false);
+    expect(readiness.problems.map((p) => p.code)).toEqual(['incident_vow_choices_missing']);
+    expect(readiness.sections.incident_launch.blockers.map((p) => p.path)).toEqual([
+      'incident.vow',
+    ]);
+  });
+
   it('blocks on a missing premise but not on the campaign settings (D-181)', () => {
     const ready = readyInput();
     const { premise: _dropped, ...withoutPremise } = ready;

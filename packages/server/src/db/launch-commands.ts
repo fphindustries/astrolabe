@@ -705,7 +705,7 @@ export async function saveLaunchTrouble(
     commandId: request.commandId,
     kind: previous === undefined ? 'launch.trouble.establish' : 'launch.trouble.revise',
     actor: request.actor,
-    ...(accepted === undefined ? {} : { causedBy: accepted.eventId }),
+    ...(accepted?.eventId === undefined ? {} : { causedBy: accepted.eventId }),
     events: [
       previous === undefined
         ? { type: 'trouble.established', payload }
@@ -1424,6 +1424,14 @@ const AMENDABLE_SUBJECTS: Partial<Record<EventType, LaunchAmendmentSubject>> = {
  * Every citation, the option's or the player's own, must be an accepted launch
  * fact, the set activation cites (3R.9f). A non-draft event is not enough:
  * an `oracle.rolled` is a roll, not a fact the incident draws on.
+ *
+ * The vow's choices (who swears, who shares, the opening scene's title) are
+ * optional (D-200): beat 11 accepts without them and the review page sets them
+ * by revision. A revision that leaves one out keeps the one before, and one
+ * given is checked as crew. The scene opens at the starting settlement, which
+ * the server stamps (D-168). A revision that names no proposal carries the
+ * previous acceptance forward, so saving the review page does not turn the
+ * Guide's incident into the player's or drop what it cited.
  */
 export async function acceptLaunchIncident(
   sql: Sql,
@@ -1434,10 +1442,12 @@ export async function acceptLaunchIncident(
   requireLaunchOpen(state, 'The incident changes by amendment after launch.');
   const crew = state.characters;
   const incident = request.incident;
+  const previous = state.launch.incident;
   if (
-    crew[incident.rollerId] === undefined ||
-    incident.participants.length === 0 ||
-    incident.participants.some((id) => crew[id] === undefined)
+    (incident.rollerId !== undefined && crew[incident.rollerId] === undefined) ||
+    (incident.participants !== undefined &&
+      (incident.participants.length === 0 ||
+        incident.participants.some((id) => crew[id] === undefined)))
   ) {
     throw new LaunchRejectedError('invalid_incident_crew', 'The incident must name launch crew.');
   }
@@ -1445,7 +1455,8 @@ export async function acceptLaunchIncident(
   if (text === '')
     throw new LaunchRejectedError('incident_text_required', 'The incident needs its own words.');
 
-  let accepted: Acceptance | undefined;
+  // No proposal event when a revision carries the acceptance forward.
+  let accepted: (Omit<Acceptance, 'eventId'> & { readonly eventId?: EventId }) | undefined;
   let drawnOn: readonly EventId[] = [];
   if (request.proposal !== undefined) {
     const held = state.launch.incidentProposal;
@@ -1465,6 +1476,16 @@ export async function acceptLaunchIncident(
       groundedIn: option.groundedIn,
     };
     drawnOn = drawnOnFacts(state, option.drawsOn);
+  } else if (
+    previous?.provenance === 'guide_proposal' ||
+    previous?.provenance === 'guide_proposal_edited'
+  ) {
+    // Carried forward: the Guide's words stay the Guide's, edited if changed.
+    const unchanged = sameWords(previous.text, text) && previous.rank === incident.rank;
+    accepted = {
+      provenance: unchanged ? previous.provenance : 'guide_proposal_edited',
+      groundedIn: previous.groundedIn,
+    };
   }
 
   const facts = new Set(
@@ -1473,7 +1494,9 @@ export async function acceptLaunchIncident(
   // What the option drew on is the server's own lookup; a fact it names that
   // is not an accepted launch fact (a Milestone 1 `truth.set`, say) is simply
   // not cited. What the player adds must be one, or it is refused.
-  const extra = incident.citedFactEventIds ?? [];
+  const extra =
+    incident.citedFactEventIds ??
+    (request.proposal === undefined ? (previous?.citedFactEventIds ?? []) : []);
   const cited = [...new Set([...drawnOn.filter((id) => facts.has(id)), ...extra])];
   if (extra.some((id) => !facts.has(id))) {
     throw new LaunchRejectedError(
@@ -1482,16 +1505,26 @@ export async function acceptLaunchIncident(
     );
   }
 
-  const previous = state.launch.incident;
   const incidentId = previous?.incidentId ?? (uuidv7() as EntityId);
+  const rollerId = incident.rollerId ?? previous?.rollerId;
+  const participants = incident.participants ?? previous?.participants;
+  const sceneTitle = incident.openingScene?.title ?? previous?.openingScene?.title;
+  const settlementId = state.launch.startingSettlementId;
   const payload = {
     incidentId,
     text,
     citedFactEventIds: cited,
     rank: incident.rank,
-    rollerId: incident.rollerId,
-    participants: [...incident.participants],
-    openingScene: incident.openingScene,
+    ...(rollerId === undefined ? {} : { rollerId }),
+    ...(participants === undefined ? {} : { participants: [...participants] }),
+    ...(sceneTitle === undefined
+      ? {}
+      : {
+          openingScene: {
+            title: sceneTitle,
+            ...(settlementId === undefined ? {} : { locationId: settlementId }),
+          },
+        }),
     provenance: accepted?.provenance ?? ('player_written' as const),
     groundedIn: [...(accepted?.groundedIn ?? [])],
   };
@@ -1936,6 +1969,13 @@ export async function activateLaunch(
   const incident = state.launch.incident;
   if (incident === undefined)
     throw new LaunchRejectedError('incident_missing', 'Choose an incident first.');
+  // Readiness has already refused these as `incident_vow_choices_missing` (D-200).
+  const { rollerId, participants, openingScene } = incident;
+  if (rollerId === undefined || participants === undefined || openingScene === undefined)
+    throw new LaunchRejectedError('not_ready', 'Choose the vow’s swearer, crew and scene first.');
+  // The scene opens at the starting settlement as it is now (D-168), whatever
+  // it was when the incident's choices were saved.
+  const sceneLocationId = state.launch.startingSettlementId ?? openingScene.locationId;
   const sessionId = uuidv7() as SessionId;
   const sceneId = uuidv7() as SceneId;
   const activationId = uuidv7() as EventId;
@@ -1973,8 +2013,8 @@ export async function activateLaunch(
           pendingVow: {
             incidentId: incident.incidentId,
             rank: incident.rank,
-            rollerId: incident.rollerId,
-            participants: incident.participants,
+            rollerId,
+            participants,
           },
           readinessVersion: READINESS_VERSION,
         },
@@ -1989,10 +2029,8 @@ export async function activateLaunch(
         type: 'scene.started',
         payload: {
           sceneId,
-          title: incident.openingScene.title,
-          ...(incident.openingScene.locationId === undefined
-            ? {}
-            : { locationId: incident.openingScene.locationId }),
+          title: openingScene.title,
+          ...(sceneLocationId === undefined ? {} : { locationId: sceneLocationId }),
         },
         sessionId,
         sceneId,

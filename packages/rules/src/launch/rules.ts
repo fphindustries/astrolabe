@@ -108,9 +108,10 @@ export interface LaunchConnection {
 export interface LaunchIncident {
   readonly text: string;
   readonly rank: ChallengeRank;
-  readonly rollerId: string;
-  readonly participants: readonly string[];
-  readonly openingScene: string;
+  /** D-200: the vow's choices, made on the review page; absent until then. */
+  readonly rollerId?: string;
+  readonly participants?: readonly string[];
+  readonly openingScene?: string;
 }
 export interface LaunchReadinessInput {
   readonly campaignName: string;
@@ -276,17 +277,21 @@ export function validateLaunchReadiness(
       'Campaign Launch needs an inciting incident.',
     );
   else {
-    if (!nonblank(input.incident.text) || !nonblank(input.incident.openingScene))
+    const { rollerId, participants, openingScene } = input.incident;
+    if (!nonblank(input.incident.text))
+      add('incident_launch', 'incident_incomplete', 'incident', 'The incident needs its words.');
+    // D-200: beat 11 accepts the incident without these; the review page sets them.
+    if (rollerId === undefined || participants === undefined || !nonblank(openingScene))
       add(
         'incident_launch',
-        'incident_incomplete',
-        'incident',
-        'The incident and opening scene are required.',
+        'incident_vow_choices_missing',
+        'incident.vow',
+        'Choose who swears the vow, who shares it, and the opening scene.',
       );
-    if (
-      !crewIds.includes(input.incident.rollerId) ||
-      input.incident.participants.length === 0 ||
-      input.incident.participants.some((id) => !crewIds.includes(id))
+    else if (
+      !crewIds.includes(rollerId) ||
+      participants.length === 0 ||
+      participants.some((id) => !crewIds.includes(id))
     )
       add(
         'incident_launch',

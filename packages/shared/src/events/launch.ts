@@ -260,9 +260,18 @@ const IncidentSchema = z.object({
   text: z.string().min(1),
   citedFactEventIds: z.array(EventIdSchema),
   rank: ChallengeRankSchema,
-  rollerId: CharacterIdSchema,
-  participants: z.array(CharacterIdSchema).min(1),
-  openingScene: z.object({ title: z.string().min(1), locationId: EntityIdSchema.optional() }),
+  /**
+   * The vow's choices (D-200): who swears it, who shares it, and the opening
+   * scene. Beat 11 accepts the incident without them and the review page sets
+   * them by revision, so they are optional on the fact and readiness waits for
+   * them. Rank is not among them: it sizes the vow track.
+   */
+  rollerId: CharacterIdSchema.optional(),
+  participants: z.array(CharacterIdSchema).min(1).optional(),
+  /** The location is the starting settlement, stamped by the server (D-168). */
+  openingScene: z
+    .object({ title: z.string().min(1), locationId: EntityIdSchema.optional() })
+    .optional(),
 });
 
 /**
@@ -272,6 +281,8 @@ const IncidentSchema = z.object({
  */
 export const LaunchIncidentDetailsSchema = IncidentSchema.omit({ incidentId: true }).extend({
   citedFactEventIds: z.array(EventIdSchema).optional(),
+  /** Only the title: where the scene opens is the server's to say (D-168, 9.0g). */
+  openingScene: z.object({ title: z.string().min(1) }).optional(),
 });
 export type LaunchIncidentDetails = z.infer<typeof LaunchIncidentDetailsSchema>;
 

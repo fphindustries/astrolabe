@@ -104,7 +104,11 @@ export function LaunchReviewScreen({
           <>
             <Fact
               label="Sworn by"
-              value={`${summary.incident.rollerName} (${summary.incident.rank}), shared with ${summary.incident.participantNames.join(', ')}`}
+              value={
+                summary.incident.rollerName === null || summary.incident.participantNames === null
+                  ? null
+                  : `${summary.incident.rollerName} (${summary.incident.rank}), shared with ${summary.incident.participantNames.join(', ')}`
+              }
             />
             <Fact label="Opening scene" value={summary.incident.openingScene} />
           </>

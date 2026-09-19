@@ -248,9 +248,11 @@ function readinessInput(state: CampaignState): LaunchReadinessInput {
           incident: {
             text: incident.text,
             rank: incident.rank,
-            rollerId: incident.rollerId,
-            participants: incident.participants,
-            openingScene: incident.openingScene.title,
+            ...(incident.rollerId === undefined ? {} : { rollerId: incident.rollerId }),
+            ...(incident.participants === undefined ? {} : { participants: incident.participants }),
+            ...(incident.openingScene === undefined
+              ? {}
+              : { openingScene: incident.openingScene.title }),
           },
         }),
   };

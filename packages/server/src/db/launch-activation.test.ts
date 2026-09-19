@@ -222,7 +222,7 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
         rank: 'formidable',
         rollerId: characterId,
         participants: [characterId],
-        openingScene: { title: 'The dock at Ember Hold', locationId: emberHold },
+        openingScene: { title: 'The dock at Ember Hold' },
       },
     });
 
@@ -240,7 +240,7 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
   });
 
   it('begins Session 1 and its scene, and leaves the vow pending (A38)', async () => {
-    const { campaignId, characterId } = await readyCampaign();
+    const { campaignId, characterId, startingSettlementId } = await readyCampaign();
 
     const result = await activateLaunch(db.sql, {
       campaignId,
@@ -254,6 +254,8 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
     expect(state.launch.phase).toBe('active');
     expect(state.session?.number).toBe(1);
     expect(state.scene?.title).toBe('The dock at Ember Hold');
+    // D-168: the scene opens at the starting settlement, which the client never sent.
+    expect(state.scene?.locationId).toBe(startingSettlementId);
     expect(state.launch.activation?.sessionId).toBe(
       (result.response as { sessionId?: string } | null)?.sessionId,
     );

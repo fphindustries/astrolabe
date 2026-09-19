@@ -34,9 +34,10 @@ export interface LaunchSummary {
   readonly incident: {
     readonly text: string;
     readonly rank: string;
-    readonly rollerName: string;
-    readonly participantNames: readonly string[];
-    readonly openingScene: string;
+    /** D-200: null until the review page chooses them. */
+    readonly rollerName: string | null;
+    readonly participantNames: readonly string[] | null;
+    readonly openingScene: string | null;
   } | null;
 }
 
@@ -104,9 +105,10 @@ export function buildReview(
         ? {
             text: launch.incident.text,
             rank: launch.incident.rank,
-            rollerName: nameOf(launch.incident.rollerId),
-            participantNames: launch.incident.participants.map(nameOf),
-            openingScene: launch.incident.openingScene.title,
+            rollerName:
+              launch.incident.rollerId === undefined ? null : nameOf(launch.incident.rollerId),
+            participantNames: launch.incident.participants?.map(nameOf) ?? null,
+            openingScene: launch.incident.openingScene?.title ?? null,
           }
         : null,
     },

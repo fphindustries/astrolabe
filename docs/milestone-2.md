@@ -1019,7 +1019,7 @@ D-202 (`track.revised` carries participants).
     `truth.set`, say) is left out of the citations rather than refused. A citation the
     player adds must be one, or it is `invalid_incident_citation`. The accepted event is
     `causedBy` the proposal.
-  - [ ] **9.0g The vow choices are optional until the review (D-200).** On the incident,
+  - [x] **9.0g The vow choices are optional until the review (D-200).** On the incident,
     `rollerId`, `participants` and `openingScene` become optional. Beat 11 accepts the words,
     the citations and the option's proposed rank, and beat 12 picks the rest. **Rank stays
     required** because it sizes the vow track. The review page confirms it or changes it,
@@ -1029,6 +1029,15 @@ D-202 (`track.revised` carries participants).
     location is stamped by the server as the starting settlement (D-168: "at the starting
     settlement"), never taken from the client, and activation writes the scene there. The
     fields become optional, which is additive, so no upcaster is owed.
+    *As built:* a revision that leaves a choice out keeps the one before, so beat 11 asking
+    again does not undo beat 12. A revision without a proposal carries the previous
+    acceptance forward: the Guide's incident stays `guide_proposal`, becomes
+    `guide_proposal_edited` if its words or rank change, and keeps its citations and
+    grounding. Otherwise saving the review page would have turned it into the player's own.
+    The request's opening scene is a title alone. Activation opens the scene at the starting
+    settlement as it is at launch, since the settlement can change after the choices are
+    saved. No readiness-version bump: an incident without these fields could not exist
+    before, so no campaign is admitted or refused differently.
   - [ ] **9.0h One move command swears the pending vow (D-201).** `invokeMove` gains a
     pending-vow mode for `Swear an Iron Vow`. It is refused unless the campaign is active
     with an unsworn `pendingVow`, the actor is its roller, and the roll is +heart. In one

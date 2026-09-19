@@ -621,10 +621,11 @@ export const EVENT_TYPE_META: MetaTable = {
     mutatesState: true,
     voidable: false,
     introduces: (p) => [entity(p.incidentId)],
+    // D-200: the vow's choices may not be made yet.
     references: (p) => [
-      character(p.rollerId),
-      ...p.participants.map(character),
-      ...(p.openingScene.locationId === undefined ? [] : [entity(p.openingScene.locationId)]),
+      ...(p.rollerId === undefined ? [] : [character(p.rollerId)]),
+      ...(p.participants ?? []).map(character),
+      ...(p.openingScene?.locationId === undefined ? [] : [entity(p.openingScene.locationId)]),
     ],
   },
   'incident.revised': {
@@ -635,8 +636,9 @@ export const EVENT_TYPE_META: MetaTable = {
     introduces: none,
     references: (p) => [
       entity(p.incidentId),
-      character(p.rollerId),
-      ...p.participants.map(character),
+      ...(p.rollerId === undefined ? [] : [character(p.rollerId)]),
+      ...(p.participants ?? []).map(character),
+      ...(p.openingScene?.locationId === undefined ? [] : [entity(p.openingScene.locationId)]),
     ],
   },
   'campaign.activated': {
