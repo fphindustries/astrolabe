@@ -1295,7 +1295,7 @@ of them stays). D-170 retires the production seed, and was approved with the mil
     launch commands: a launch settlement, and crew accepted through `/launch/crew`. The move
     tests' characters come from the command. D-206 records that it amends D-189: no path
     remains to add a character to a campaign in play.
-- [ ] 10.2 Implement `golden-launch.test.ts` through HTTP routes with loaded dice and
+- [x] 10.2 Implement `golden-launch.test.ts` through HTTP routes with loaded dice and
   scripted providers, covering A22–A44. It asserts on 10.1b's run, beat by beat, and names
   the criterion each block covers, with a table from A22–A44 to their tests so none is
   claimed without one. It adds the final sign-off's server checks: **resume**, where every
@@ -1303,6 +1303,15 @@ of them stays). D-170 retires the production seed, and was approved with the mil
   (the process restart); **cold projection**, where the complete log projects from nothing
   to the state the routes served; and **replay**, where re-sending a launch command's id
   returns its first answer and writes nothing.
+  *As built:* 27 assertions over the run, with the A22–A44 table at the head of the file.
+  A42 points at 10.3's test, and A43 at `legacy-log.test.ts` and the fixtures' launch-routes
+  check. The resume check saves one draft in each of the seven sections, then reads them
+  back through a second `buildApp` over the same database, with nothing accepted and a
+  missing truth still blocking. Cold projection compares `project(readEvents(...))` with
+  the workspace state the routes served at the end of the launch, and they are equal.
+  Replay re-sends a truth decision's command id and gets the same answer with the event
+  count unchanged. Replay runs on an open campaign, because a closed launch refuses
+  before it would replay.
 - [ ] 10.3 Test manual/oracle completion with an unconfigured provider and proposal failure
   without blocking unrelated setup. The same launch, through the harness, with an
   unconfigured Claude provider (the shipped default without a key): every section is
