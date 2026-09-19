@@ -1055,9 +1055,11 @@ D-202 (`track.revised` carries participants).
     refused, because the pending vow is its roller's. `track.created` now references
     the vow's participants and incident, so neither can be voided out from under it
     (D-83).
-  - [ ] **9.0i Play knows where Session 1 opens (8.0j's defect, client side).** `play/scene.ts`
+  - [x] **9.0i Play knows where Session 1 opens (8.0j's defect, client side).** `play/scene.ts`
     and `SceneHeader` resolve a scene's location against the launch locations as well as
     entities. Assert that the opening scene shows its settlement by name.
+    *As built:* the Begin Session view (`session/session.ts`) resolved the carried-forward
+    scene's location the same entity-only way, so it reads the launch locations too.
   - [ ] **9.0j Milestone 1's inciting-vow command cannot write a launched campaign's vow.**
     `swearIncitingVow` and `POST /inciting-vow` still create a vow track from an incident
     with no roll. The session-one fixture uses them, so they stay until 10.1 rebuilds the

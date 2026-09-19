@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { EntityId, EntityState, SceneId, SessionId } from '@astrolabe/shared';
+import type { CampaignState, EntityId, EntityState, SceneId, SessionId } from '@astrolabe/shared';
 
 import { toSessionView } from './session.js';
 
@@ -48,5 +48,19 @@ describe('toSessionView (D-146)', () => {
       sceneTitle: 'The derelict relay station',
       locationName: 'Varga Relay',
     });
+  });
+
+  it('names Session 1’s launch settlement when the next session carries it forward (9.0i)', () => {
+    const locations = {
+      ['loc-1']: { name: 'Ember Hold' },
+    } as unknown as CampaignState['launch']['locations'];
+    expect(
+      toSessionView({
+        session: { ...session, endedAt: '2026-09-14T03:00:00Z' as never },
+        scene: { id: 'scn-1' as SceneId, title: 'The dock', locationId: 'loc-1' as never },
+        entities: {},
+        launch: { locations },
+      }),
+    ).toMatchObject({ kind: 'next', locationName: 'Ember Hold' });
   });
 });
