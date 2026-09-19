@@ -38,6 +38,7 @@ import {
 } from './launch-commands.js';
 import { invokeMove, MoveRejectedError, type InvokeMoveRequest } from './move-commands.js';
 import { prepareBeatNarration, runBeatNarration } from './narration-commands.js';
+import { prepareWorldPass } from './world-commands.js';
 import { createTestDatabase, hasTestDatabase, type TestDatabase } from './testing.js';
 import { uuidv7 } from './uuid.js';
 
@@ -758,6 +759,16 @@ describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)',
         (event) => event.id === narrated.eventId,
       );
       expect(passage?.type).toBe('narration.written');
+
+      // The world pass that follows reaches the swear as its move, and stops
+      // there: the activation that caused it is not part of the chain.
+      const world = await prepareWorldPass(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        passageEventId: narrated.eventId,
+      });
+      expect(world.kind).toBe('run');
     });
 
     it('refuses before launch', async () => {

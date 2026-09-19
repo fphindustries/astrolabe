@@ -1537,6 +1537,15 @@ implementation note.
     launch settlement.
   - **The roller shares the vow with the others, not with themselves.** The review found
     the context line and then the review summary each naming the roller among the sharers.
+  - **Vow references (9.0h).** `track.created` now references a vow's sharing crew and its
+    incident for every vow, the connection's track included, not just the pending vow's.
+    This is intended: a crew member who shares a vow, or the incident it was sworn for,
+    cannot be voided out from under it (D-83). It is the conservative direction.
+  - **Asking again (9.2, found in review).** An option chosen before asking again was
+    still named on acceptance, and the server refused the old proposal. The request now
+    names an option only while its proposal is the one held. The words left in the form are
+    then the player's. The connection and the starship keep the same shape; neither was
+    changed here.
   - **The dev stub** left out `launchFacts`, so once a campaign had a connection, a request
     for stub incidents got no answer. It was found in the browser.
   - **Browser.** Walked at 1280x720 on the dev stub, on the production build. The connection
@@ -1545,5 +1554,5 @@ implementation note.
     `guide_proposal_edited`. The vow's choices were set, launch confirmed, play opened
     without a reload, the vow was sworn, and the result was narrated. **Not walked:** the
     no-provider path (A42) in the browser, as in group 8. 10.3 and 10.4 own it.
-  Verified with Postgres: 133 files, 1590 tests, zero skipped files. typecheck, lint,
+  Verified with Postgres: 133 files, 1591 tests, zero skipped files. typecheck, lint,
   format:check and the web build clean.

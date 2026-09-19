@@ -86,14 +86,20 @@ export function writeOwn(form: IncidentForm): IncidentForm {
  * The accepting body, or `null` without words. Only the words and rank, and
  * the option they came from (D-200). A revision without an option carries
  * the earlier acceptance and the vow's choices forward on the server.
+ *
+ * An option is named only while its proposal is still the one held. Asking
+ * again replaces the options (9.0e), and the words left in the form are then
+ * the player's own; naming the old proposal would be refused.
  */
 export function toIncidentRequest(
   form: IncidentForm,
+  heldEventId: EventId | undefined,
 ): Omit<AcceptLaunchIncidentRequestBody, 'commandId'> | null {
   if (form.text.trim() === '') return null;
+  const source = form.source?.eventId === heldEventId ? form.source : undefined;
   return {
     incident: { text: form.text.trim(), rank: form.rank },
-    ...(form.source === undefined ? {} : { proposal: form.source }),
+    ...(source === undefined ? {} : { proposal: source }),
   };
 }
 

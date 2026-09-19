@@ -50,7 +50,7 @@ export function IncidentSection({
   const failure = propose.error ?? accept.error ?? saveDraft.error;
   const held = heldIncidentOptions(state);
   const accepted = state.launch.incident !== undefined;
-  const request = toIncidentRequest(form);
+  const request = toIncidentRequest(form, held?.eventId);
   const blockers = workspace.readiness.sections.incident_launch.blockers;
 
   const edit = (next: IncidentForm) => {
@@ -155,7 +155,7 @@ export function IncidentSection({
         <label className={styles.label} htmlFor={fieldAnchorId('incident')}>
           The incident, as the vow is sworn
         </label>
-        {form.source !== undefined && (
+        {form.source !== undefined && form.source.eventId === held?.eventId && (
           <p className={styles.help}>
             From the Guide’s option. Edit it freely; it is recorded as the Guide’s, edited.{' '}
             <button type="button" className={styles.secondary} onClick={() => edit(writeOwn(form))}>

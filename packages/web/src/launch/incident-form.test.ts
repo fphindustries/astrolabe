@@ -42,23 +42,30 @@ describe('the inciting incident (9.2)', () => {
   it('accepts the chosen option’s words and rank, naming the option, and nothing of the vow', () => {
     const chosen = chooseOption(id(9), 2, OPTION);
 
-    expect(toIncidentRequest(chosen)).toEqual({
+    expect(toIncidentRequest(chosen, id(9))).toEqual({
       incident: { text: 'Answer the beacon', rank: 'dangerous' },
       proposal: { eventId: id(9), optionIndex: 2 },
     });
     // Editing keeps the option: the server records it as the Guide's, edited.
-    expect(toIncidentRequest(setIncidentText(chosen, 'Answer it now'))?.proposal).toEqual({
+    expect(toIncidentRequest(setIncidentText(chosen, 'Answer it now'), id(9))?.proposal).toEqual({
       eventId: id(9),
       optionIndex: 2,
     });
   });
 
-  it('writes your own from the words so far, without the option', () => {
-    const own = writeOwn(chooseOption(id(9), 0, OPTION));
-    expect(toIncidentRequest(own)).toEqual({
+  it('stops naming an option once the Guide is asked again', () => {
+    // The words stay; the proposal they came from is no longer held (9.0e).
+    expect(toIncidentRequest(chooseOption(id(9), 1, OPTION), id(8))).toEqual({
       incident: { text: 'Answer the beacon', rank: 'dangerous' },
     });
-    expect(toIncidentRequest(EMPTY_INCIDENT_FORM)).toBeNull();
+  });
+
+  it('writes your own from the words so far, without the option', () => {
+    const own = writeOwn(chooseOption(id(9), 0, OPTION));
+    expect(toIncidentRequest(own, id(9))).toEqual({
+      incident: { text: 'Answer the beacon', rank: 'dangerous' },
+    });
+    expect(toIncidentRequest(EMPTY_INCIDENT_FORM, undefined)).toBeNull();
   });
 
   it('names what an option drew on, fact by fact (A37)', () => {
