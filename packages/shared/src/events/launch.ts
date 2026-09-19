@@ -319,6 +319,23 @@ export type SettlementProposal = z.infer<typeof SettlementProposalSchema>;
  * the player's to draw.
  */
 const SectorProposalSchema = z.object({ name: ProposedTextSchema });
+/**
+ * A proposed local connection (9.0b, D-167): the NPC as the Guide reads the
+ * NPC recipe's rolls, per field with its reason and rolls (7.0d's shape).
+ * The rank and the sharing crew are the player's (beat 10), so the Guide
+ * proposes neither.
+ */
+export const ConnectionProposalSchema = z.object({
+  npcName: ProposedTextSchema,
+  role: ProposedTextSchema,
+  goal: ProposedTextSchema,
+  firstLook: ProposedTextSchema,
+  disposition: ProposedTextSchema,
+});
+export type ConnectionProposal = z.infer<typeof ConnectionProposalSchema>;
+/** The one `targetId` a connection proposal can have: there is one starting connection. */
+export const CONNECTION_PROPOSAL_TARGET = 'connection';
+
 /** The one `targetId` a sector-name proposal can have; a campaign has one starting sector. */
 export const SECTOR_PROPOSAL_TARGET = 'sector';
 /** Discriminated like the accepted trouble, so the owner rule binds before acceptance too. */
@@ -540,7 +557,7 @@ export const CreationProposalSchema = z.discriminatedUnion('targetKind', [
   z.object({ targetKind: z.literal('starship'), proposal: StarshipProposalSchema }),
   z.object({ targetKind: z.literal('settlement'), proposal: SettlementProposalSchema }),
   z.object({ targetKind: z.literal('sector'), proposal: SectorProposalSchema }),
-  z.object({ targetKind: z.literal('connection'), proposal: ConnectionSchema.partial() }),
+  z.object({ targetKind: z.literal('connection'), proposal: ConnectionProposalSchema }),
   z.object({ targetKind: z.literal('trouble'), proposal: TroubleProposalSchema }),
   z.object({ targetKind: z.literal('incident'), proposal: IncidentSchema.partial() }),
 ]);

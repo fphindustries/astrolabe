@@ -40,6 +40,7 @@ import type {
   SharedStarshipDetails,
 } from '@astrolabe/shared';
 import {
+  CONNECTION_PROPOSAL_TARGET,
   SECTOR_PROPOSAL_TARGET,
   STARSHIP_PROPOSAL_TARGET,
   troubleProposalTarget,
@@ -350,6 +351,14 @@ export async function proposeLaunchCreation(
     throw new LaunchRejectedError(
       'invalid_proposal_target',
       `A starship proposal targets "${STARSHIP_PROPOSAL_TARGET}": a campaign has one ship.`,
+    );
+  if (
+    request.proposal.targetKind === 'connection' &&
+    request.targetId !== CONNECTION_PROPOSAL_TARGET
+  )
+    throw new LaunchRejectedError(
+      'invalid_proposal_target',
+      `A connection proposal targets "${CONNECTION_PROPOSAL_TARGET}": there is one starting connection.`,
     );
   if (request.proposal.targetKind === 'sector' && request.targetId !== SECTOR_PROPOSAL_TARGET)
     throw new LaunchRejectedError(

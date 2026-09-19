@@ -975,7 +975,7 @@ D-202 (`track.revised` carries participants).
     shared vow's or a connection's sharers were written and unreadable, the group 5–8 shape
     again. `TrackState` now carries them, and the revision reaches them. The NPC is restated
     under its own id (D-203, asked).
-  - [ ] **9.0b A per-field connection proposal (7.0d's shape).** `ConnectionProposalSchema`
+  - [x] **9.0b A per-field connection proposal (7.0d's shape).** `ConnectionProposalSchema`
     has the NPC's name, role, goal, first look and disposition, each as
     `ProposedTextSchema` with its reason and rolls. The rank and the sharing crew are the
     player's (beat 10), so the Guide proposes neither. The target is the fixed

@@ -4,6 +4,7 @@ import { STARFORGED } from '@astrolabe/rules';
 import {
   DEFAULT_CAMPAIGN_SETTINGS,
   LOCAL_PLAYER_ID,
+  CONNECTION_PROPOSAL_TARGET,
   SECTOR_PROPOSAL_TARGET,
   STARSHIP_PROPOSAL_TARGET,
   troubleProposalTarget,
@@ -322,6 +323,31 @@ describe.skipIf(!hasTestDatabase)('Campaign Launch workspace commands (3.1–3.2
       await expect(propose(campaignId, deepSpace, 'draft-x')).rejects.toMatchObject({
         reason: 'deep_space_planet',
       });
+    });
+
+    // 9.0b — the connection is proposed field by field, under one fixed target.
+    it('holds a per-field connection proposal under the fixed target, and refuses any other', async () => {
+      const campaignId = await campaign();
+      const connection = {
+        targetKind: 'connection' as const,
+        proposal: {
+          npcName: text('Juno Marr'),
+          role: text('Dockmaster'),
+          goal: text('Keep the ice flowing'),
+          firstLook: text('Frost-rimed coat'),
+          disposition: text('Wary'),
+        },
+      };
+
+      await expect(propose(campaignId, connection, 'npc-1')).rejects.toMatchObject({
+        reason: 'invalid_proposal_target',
+      });
+      await propose(campaignId, connection, CONNECTION_PROPOSAL_TARGET);
+
+      const held = project(await readEvents(db.sql, campaignId)).launch.proposals[
+        CONNECTION_PROPOSAL_TARGET
+      ];
+      expect(held).toMatchObject({ targetKind: 'connection', proposal: connection.proposal });
     });
 
     it('keys the sector name by the fixed target and refuses any other', async () => {
