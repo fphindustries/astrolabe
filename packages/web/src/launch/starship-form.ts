@@ -304,8 +304,15 @@ export type SaveStarshipBody = Omit<SaveSharedStarshipRequestBody, 'commandId'>;
 /**
  * The body of the accepting command, or `null` while the rules would refuse
  * it: sending it anyway would turn a disabled button into a 422.
+ *
+ * A proposal is named only while it is the one the fold holds (10.0a, 9.2's
+ * rule). Asking again replaces it, and the words left in the form are then the
+ * player's own; naming the old one would be refused.
  */
-export function toSaveRequest(form: StarshipForm): SaveStarshipBody | null {
+export function toSaveRequest(
+  form: StarshipForm,
+  heldEventId: EventId | undefined,
+): SaveStarshipBody | null {
   if (detailProblems(form).length > 0) return null;
   const groundedIn = groundingOf(form);
   return {
@@ -315,7 +322,9 @@ export function toSaveRequest(form: StarshipForm): SaveStarshipBody | null {
       history: form.history.trim(),
       quirks: form.quirks.map((quirk) => quirk.trim()),
     },
-    ...(form.proposalEventId === undefined ? {} : { proposalEventId: form.proposalEventId }),
+    ...(form.proposalEventId === undefined || form.proposalEventId !== heldEventId
+      ? {}
+      : { proposalEventId: form.proposalEventId }),
     ...(groundedIn.length > 0 ? { groundedIn: [...groundedIn] } : {}),
   };
 }

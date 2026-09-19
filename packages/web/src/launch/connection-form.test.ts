@@ -64,12 +64,15 @@ describe('the local connection (9.1)', () => {
   it('starts shared by the whole crew, and needs a name, role and someone sharing it', () => {
     const empty = emptyConnectionForm(withCrew());
     expect(empty.participants).toEqual([VESNA, ROOK]);
-    expect(toConnectionRequest(empty)).toBeNull();
+    expect(toConnectionRequest(empty, id(9))).toBeNull();
 
     const named = setField(setField(empty, 'npcName', 'Esme Varga'), 'role', 'Dockmaster');
-    expect(toConnectionRequest(named)).toMatchObject({ npcName: 'Esme Varga', rank: 'dangerous' });
+    expect(toConnectionRequest(named, id(9))).toMatchObject({
+      npcName: 'Esme Varga',
+      rank: 'dangerous',
+    });
     const nobody = toggleParticipant(toggleParticipant(named, VESNA, false), ROOK, false);
-    expect(toConnectionRequest(nobody)).toBeNull();
+    expect(toConnectionRequest(nobody, id(9))).toBeNull();
   });
 
   it('cites a field roll, and a name’s two rolls read as one name', () => {
@@ -78,7 +81,7 @@ describe('the local connection (9.1)', () => {
       { eventId: id(2), text: 'Varga' },
     ]);
     expect(rolled.npcName).toBe('Esme Varga');
-    const body = toConnectionRequest(setField(rolled, 'role', 'Dockmaster'));
+    const body = toConnectionRequest(setField(rolled, 'role', 'Dockmaster'), id(9));
     expect(body?.groundedIn).toEqual([id(1), id(2)]);
   });
 
@@ -103,7 +106,7 @@ describe('the local connection (9.1)', () => {
     expect(taken.npcName).toBe('Esme Varga');
     expect(taken.role).toBe('Dockmaster');
     expect(taken.participants).toEqual([VESNA]);
-    const body = toConnectionRequest(taken)!;
+    const body = toConnectionRequest(taken, id(9))!;
     expect(body.proposalEventId).toBe(id(9));
     // The role's own roll is shed: its words come from the proposal now.
     expect(body.groundedIn).toBeUndefined();
@@ -113,6 +116,17 @@ describe('the local connection (9.1)', () => {
       'firstLook',
       'disposition',
     ]);
+  });
+
+  it('stops naming a proposal once the Guide is asked again (10.0a)', () => {
+    const state = withCrew();
+    const held = { eventId: id(8), proposal: PROPOSAL, rationale: 'r' };
+    const body = toConnectionRequest(
+      takeConnectionProposal(emptyConnectionForm(state), held),
+      id(9),
+    );
+    expect(body?.proposalEventId).toBeUndefined();
+    expect(body?.npcName).toBe('Esme Varga');
   });
 
   it('opens on the accepted connection with its NPC’s fields, or on a newer draft', () => {

@@ -1178,11 +1178,15 @@ Decisions behind this group: D-205 (the golden launch is one HTTP script, and it
 fixture foundation), D-206 (Milestone 1's creation write paths are retired, and every read
 of them stays). D-170 retires the production seed, and was approved with the milestone.
 
-- [ ] 10.0 Prerequisite found while planning.
-  - [ ] **10.0a Asking again stops naming the old proposal, for the connection and the
+- [x] 10.0 Prerequisite found while planning.
+  - [x] **10.0a Asking again stops naming the old proposal, for the connection and the
     starship.** 9.2's fix, applied to the other two forms that keep a proposal id: a
     request names a proposal only while it is the one held, and otherwise sends the
     player's words as their own. Starts with a failing form test for each.
+    *As built:* `toConnectionRequest` and `toSaveRequest` take the fold's proposal id, as
+    `toIncidentRequest` does. The sections pass the proposal the fold holds, not the one the
+    panel shows: discarding hides a proposal without un-holding it, and a hidden proposal is
+    still a valid acceptance target.
 - [ ] 10.1 Extract a reusable Lantern Wake campaign-launch fixture and rebuild the three
   existing fixtures on top of it as active campaigns.
   - [ ] **10.1a One HTTP fixture harness.** Move what `golden-session.ts` builds for itself

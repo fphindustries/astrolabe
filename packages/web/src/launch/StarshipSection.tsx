@@ -110,7 +110,7 @@ export function StarshipSection({
   };
 
   const handleAccept = () => {
-    const request = toSaveRequest(form);
+    const request = toSaveRequest(form, found?.eventId);
     if (request === null) {
       setSubmitted(true);
       return;

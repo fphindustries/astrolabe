@@ -237,8 +237,15 @@ export type SaveConnectionBody = Omit<EstablishLaunchConnectionRequestBody, 'com
 /**
  * The body of the accepting command, or `null` while the command would refuse
  * it: it needs a name, a role and at least one crew member sharing it.
+ *
+ * A proposal is named only while it is the one the fold holds (10.0a, 9.2's
+ * rule). Asking again replaces it, and the words left in the form are then the
+ * player's own; naming the old one would be refused.
  */
-export function toConnectionRequest(form: ConnectionForm): SaveConnectionBody | null {
+export function toConnectionRequest(
+  form: ConnectionForm,
+  heldEventId: EventId | undefined,
+): SaveConnectionBody | null {
   if (form.npcName.trim() === '' || form.role.trim() === '' || form.participants.length === 0)
     return null;
   const details = {
@@ -253,7 +260,9 @@ export function toConnectionRequest(form: ConnectionForm): SaveConnectionBody | 
     rank: form.rank,
     participants: [...form.participants],
     ...(Object.keys(details).length > 0 ? { details } : {}),
-    ...(form.proposalEventId === undefined ? {} : { proposalEventId: form.proposalEventId }),
+    ...(form.proposalEventId === undefined || form.proposalEventId !== heldEventId
+      ? {}
+      : { proposalEventId: form.proposalEventId }),
     ...(groundedIn.length > 0 ? { groundedIn: [...groundedIn] } : {}),
   };
 }

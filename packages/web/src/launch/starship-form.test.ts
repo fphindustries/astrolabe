@@ -218,7 +218,7 @@ describe('proposals (7.0c, D-166)', () => {
 
 describe('what the step sends', () => {
   it('refuses to build a request the rules would refuse', () => {
-    expect(toSaveRequest(EMPTY_STARSHIP_FORM)).toBeNull();
+    expect(toSaveRequest(EMPTY_STARSHIP_FORM, undefined)).toBeNull();
     expect(detailProblems(EMPTY_STARSHIP_FORM).map((problem) => problem.field)).toEqual([
       'name',
       'appearance',
@@ -232,7 +232,7 @@ describe('what the step sends', () => {
       eventId: id(8),
       text: '  Rolled Wake  ',
     });
-    expect(toSaveRequest(form)).toEqual({
+    expect(toSaveRequest(form, id(9))).toEqual({
       starship: {
         name: 'Rolled Wake',
         appearance: 'A patched hull.',
@@ -242,6 +242,13 @@ describe('what the step sends', () => {
       proposalEventId: id(9),
       groundedIn: [id(8)],
     });
+  });
+
+  it('stops naming a proposal once the Guide is asked again (10.0a)', () => {
+    // The words stay, as the player's own; the proposal they came from is gone.
+    const body = toSaveRequest(takeProposal(EMPTY_STARSHIP_FORM, held), id(7));
+    expect(body?.proposalEventId).toBeUndefined();
+    expect(body?.starship.name).toBe('Lantern Wake');
   });
 
   it('saves a draft with a blank quirk rather than refusing it (7.0g)', () => {

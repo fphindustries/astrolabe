@@ -77,7 +77,8 @@ export function ConnectionSection({
   const blockers = workspace.readiness.sections.connection_troubles.blockers.filter((problem) =>
     problem.path.startsWith('connection'),
   );
-  const request = toConnectionRequest(form);
+  // The fold's proposal, not the panel's: discarding hides it without un-holding it.
+  const request = toConnectionRequest(form, found?.eventId);
 
   const edit = (next: ConnectionForm) => {
     setSaved(undefined);
