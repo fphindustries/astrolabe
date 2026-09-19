@@ -10,18 +10,17 @@ import { ErrorSummary } from '../ui/ErrorSummary.js';
 import { launchErrorSummary } from './errors.js';
 import { LaunchConfirmDialog } from './LaunchConfirmDialog.js';
 import { buildReview } from './review.js';
+import { VowChoicesPanel } from './VowChoicesPanel.js';
 import { launchOverviewPath } from './sections.js';
 import styles from './LaunchReviewScreen.module.css';
 
 /**
  * Review and launch (task 4.3).
  *
- * Group 4 builds the shell: what is accepted, what still blocks, and the
- * irreversible confirmation. It does not choose who swears the vow, who shares
- * it, at what rank, or which scene opens — `POST /launch/activate` takes a
- * `commandId` and nothing else, because all four are already part of the
- * accepted incident. Group 9's incident screen owns those; here they are shown
- * read-only, or their absence is stated.
+ * What is accepted, what still blocks, and the irreversible confirmation
+ * (group 4). The inciting vow's choices are made here too (9.3, beat 12,
+ * D-200), saved as a revision of the incident, so activation takes nothing
+ * but a `commandId`. Blockers stay the server's (D-176).
  */
 export function LaunchReviewScreen({
   campaignId,
@@ -85,6 +84,10 @@ export function LaunchReviewScreen({
         </div>
       )}
 
+      {workspace.state.launch.incident !== undefined && (
+        <VowChoicesPanel campaignId={campaignId} workspace={workspace} />
+      )}
+
       <dl className={styles.summary}>
         <Fact label="Campaign" value={summary.campaignName} />
         <Fact label="Premise" value={summary.premise} />
@@ -107,7 +110,10 @@ export function LaunchReviewScreen({
               value={
                 summary.incident.rollerName === null || summary.incident.participantNames === null
                   ? null
-                  : `${summary.incident.rollerName} (${summary.incident.rank}), shared with ${summary.incident.participantNames.join(', ')}`
+                  : `${summary.incident.rollerName} (${summary.incident.rank})` +
+                    (summary.incident.participantNames.length > 0
+                      ? `, shared with ${summary.incident.participantNames.join(', ')}`
+                      : '')
               }
             />
             <Fact label="Opening scene" value={summary.incident.openingScene} />

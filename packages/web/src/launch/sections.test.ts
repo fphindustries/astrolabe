@@ -40,9 +40,9 @@ describe('the launch section catalogue', () => {
     expect(SECTION_ARRIVES_IN.starship).toBeNull();
     expect(SECTION_ARRIVES_IN.sector).toBeNull();
     expect(SECTION_ARRIVES_IN.connection_troubles).toBeNull();
+    // 9.3: every section has its editor; none is a placeholder any more.
     const pending = LAUNCH_SECTION_ORDER.filter((section) => SECTION_ARRIVES_IN[section] !== null);
-    expect(pending).toHaveLength(1);
-    for (const section of pending) expect(SECTION_ARRIVES_IN[section]).toMatch(/group \d/);
+    expect(pending).toHaveLength(0);
   });
 
   it('recognises a section segment and nothing else', () => {

@@ -103,4 +103,30 @@ describe('the launch review', () => {
       incident: null,
     });
   });
+
+  it('names who shares the vow besides its roller (9.3)', () => {
+    const vesna = 'aaaa6666-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const rook = 'aaaa7777-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const base = emptyCampaignState({
+      incident: {
+        text: 'Answer the beacon',
+        rank: 'formidable',
+        rollerId: vesna,
+        participants: [vesna, rook],
+        openingScene: { title: 'The dock' },
+      } as never,
+    });
+    const state = {
+      ...base,
+      ...NAMED_CAMPAIGN,
+      characters: { [vesna]: { name: 'Vesna Kade' }, [rook]: { name: 'Rook Ilari' } } as never,
+    };
+
+    const { summary } = buildReview('c1', { state, readiness: readiness([]) });
+
+    expect(summary.incident).toMatchObject({
+      rollerName: 'Vesna Kade',
+      participantNames: ['Rook Ilari'],
+    });
+  });
 });

@@ -86,21 +86,16 @@ describe('the launch dashboard view model', () => {
     expect(odd.cards.find((card) => card.section === 'sector')!.statusText).toBe('In progress');
   });
 
-  it('marks a section complete even when its editor is still ahead', () => {
-    // Someone drove the API directly, or a legacy campaign already carries the
-    // facts. A placeholder reports the truth about the campaign, not about
-    // whether group 4 built its form.
-    // Incident and Launch is the example now that Starting Sector has its
-    // editor; Connection and Troubles is half built after 8.5, so it would not
-    // be a whole placeholder to point at.
+  it('reports the server’s status on every section, each with its editor (9.3)', () => {
+    // Group 9 built the last placeholder, so no card says an editor is ahead.
     const { cards } = buildDashboard(
       'c1',
       readiness({ incident_launch: { status: 'complete', blockers: [] } }),
     );
     const incident = cards.find((card) => card.section === 'incident_launch')!;
 
-    expect(incident).toMatchObject({ statusText: 'Complete', implemented: false });
-    expect(incident.arrivesIn).toBe('Incident and Launch (group 9)');
+    expect(incident).toMatchObject({ statusText: 'Complete', implemented: true, arrivesIn: null });
+    expect(cards.every((card) => card.implemented)).toBe(true);
   });
 
   it('points at the first unfinished section, and says start or continue', () => {

@@ -7,12 +7,11 @@ import { launchSectionPath, LAUNCH_SECTION_ORDER, SECTION_LABELS } from './secti
 /**
  * The review page's view model (task 4.3).
  *
- * Group 4 builds the shell: the blockers, the summary, and the one-way Launch
- * confirmation. It does **not** choose who swears the vow, who shares it, at
- * what rank, or which scene opens — `POST /launch/activate` takes a
- * `commandId` and nothing else, because all four are already part of the
- * accepted incident. Those pickers belong to group 9's incident screen; here
- * they are read back.
+ * Group 4 built the shell: the blockers, the summary, and the one-way Launch
+ * confirmation. The review page also chooses who swears the vow, who shares
+ * it, its rank and the opening scene's title (9.3, D-200), saved as a revision
+ * of the accepted incident by `VowChoicesPanel`, so `POST /launch/activate`
+ * still takes a `commandId` and nothing else. Here they are read back.
  */
 
 export interface ProblemGroup {
@@ -36,6 +35,7 @@ export interface LaunchSummary {
     readonly rank: string;
     /** D-200: null until the review page chooses them. */
     readonly rollerName: string | null;
+    /** Those who share the vow besides its roller; empty when the roller swears alone. */
     readonly participantNames: readonly string[] | null;
     readonly openingScene: string | null;
   } | null;
@@ -107,7 +107,10 @@ export function buildReview(
             rank: launch.incident.rank,
             rollerName:
               launch.incident.rollerId === undefined ? null : nameOf(launch.incident.rollerId),
-            participantNames: launch.incident.participants?.map(nameOf) ?? null,
+            participantNames:
+              launch.incident.participants
+                ?.filter((id) => id !== launch.incident?.rollerId)
+                .map(nameOf) ?? null,
             openingScene: launch.incident.openingScene?.title ?? null,
           }
         : null,

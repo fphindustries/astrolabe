@@ -1109,7 +1109,7 @@ D-202 (`track.revised` carries participants).
   browser: three options with roll chips and what each draws on, the second chosen and
   edited, then accepted as `guide_proposal_edited` with its citation and grounding. The
   vow's choices were left to the review page.
-- [ ] 9.3 Build the launch review and activation flow. The review page picks the
+- [x] 9.3 Build the launch review and activation flow. The review page picks the
   swearing character, the sharing crew, the rank and the opening scene's title (beat 12,
   D-200), and saves them as an incident revision. The starting settlement is shown as
   where the scene opens. Blockers stay the server's (D-176). Launch is enabled only when
@@ -1117,6 +1117,14 @@ D-202 (`track.revised` carries participants).
   `SECTION_ARRIVES_IN.incident_launch` becomes null; no section is a placeholder any more,
   so the catalogue test asserts zero pending. `review.ts`'s comment about the pickers
   belonging elsewhere is corrected.
+  *As built:* the choices panel sends the choices alone. The server carries the incident's
+  words, citations and provenance forward (9.0g), so saving them does not make the Guide's
+  incident the player's. The one who swears the vow always shares it and cannot be unticked.
+  The summary names the other sharers, and nobody when the roller swears alone. The
+  dashboard test that pointed at a placeholder section now asserts that every section has
+  its editor. Walked in the browser: the roller, sharing crew and scene title were chosen,
+  the incident's blocker cleared, the scene was stamped at the starting settlement, and
+  provenance was kept.
 - [ ] 9.4 Run the real `Swear an Iron Vow` move as Session 1's first beat, including actor,
   sharing crew, loaded dice in tests, result, effects, and checked narration. The play
   screen offers **Swear the inciting vow** while the pending vow is unsworn, opening the

@@ -56,7 +56,7 @@ export const SECTION_ARRIVES_IN: Readonly<Record<LaunchSection, string | null>> 
   starship: null,
   sector: null,
   connection_troubles: null,
-  incident_launch: 'Incident and Launch (group 9)',
+  incident_launch: null,
 };
 
 /**
