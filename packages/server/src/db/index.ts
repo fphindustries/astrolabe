@@ -116,6 +116,7 @@ export {
 export {
   proposeCharacter,
   proposeIncidents,
+  proposeSector,
   proposeSettlement,
   proposeStarship,
   proposeTrouble,

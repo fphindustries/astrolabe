@@ -1,9 +1,11 @@
 import {
   PLANET_CLASS_RECIPE,
+  REGION_BASELINES,
   planetClassFromRow,
   rollOracle,
   settlementLocationFromRow,
   STARFORGED,
+  type LaunchRecipeSelector,
   type OracleId,
   type RandomSource,
 } from '@astrolabe/rules';
@@ -20,6 +22,8 @@ import type {
   ProposalRoll,
   ProposeCharacterResponse,
   ProposeIncidentsResponse,
+  ProposeSectorNameResponse,
+  ProposeSectorResponse,
   ProposeSettlementResponse,
   ProposeStarshipResponse,
   ProposeTroubleResponse,
@@ -56,8 +60,12 @@ import {
   type StarshipProposalOutput,
 } from '../ai/context/starship.js';
 import {
+  buildSectorNameRequest,
   buildSettlementProposalRequest,
   buildTroubleProposalRequest,
+  sectorNameRolls,
+  sectorNameSchema,
+  type SectorNameOutput,
   checkSettlementProposal,
   settlementProposalRolls,
   settlementProposalSchema,
@@ -94,8 +102,8 @@ import {
   recordStatus,
   withEnvelope,
 } from './narration-commands.js';
-import { launchClosedReason } from './launch-commands.js';
-import { uuidv7 } from './uuid.js';
+import { launchClosedReason, rollLaunchRecipe } from './launch-commands.js';
+import { derivedUuid, uuidv7 } from './uuid.js';
 
 /**
  * AI proposals the player reviews before anything becomes canon (D-124):
@@ -971,6 +979,161 @@ export async function proposeTrouble(
     ok: true,
     proposalEventId: outcome.event.id,
     targetId: payload.targetId,
+    proposal: payload.proposal,
+    rolls: outcome.rolls,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// The whole sector (task 8.6, D-196)
+// ---------------------------------------------------------------------------
+
+/**
+ * Ask the Guide for a whole sector, one proposal per object (8.6, D-196).
+ *
+ * The server rolls every declared recipe itself: the sector name, and the
+ * region's baseline count of settlements, each with a planet class and that
+ * class's shallow planet when the settlement is planetside or orbital (D-173:
+ * class before its class-specific recipe). The Guide is then asked for the
+ * name and for each settlement, and each answer is its own held proposal,
+ * reviewed and accepted one at a time through the paths a lone proposal uses.
+ * Passages and layout are never proposed: the player draws them (beat 8).
+ *
+ * Every step is its own command with an id derived from this request's, so
+ * retrying the request replays what was written rather than rolling again,
+ * and a provider failure part-way keeps the rolls and proposals already made.
+ */
+export async function proposeSector(
+  sql: Sql,
+  ai: AiProvider,
+  request: ProposalRequest,
+  status?: AiStatus,
+): Promise<ProposeSectorResponse> {
+  const state = project(await readEvents(sql, request.campaignId));
+  const closed = launchClosedReason(state);
+  if (closed !== undefined)
+    throw new AiRequestRefusedError(closed, 'Campaign Launch is closed for this campaign.');
+  const sector = state.launch.sector;
+  if (sector === undefined)
+    throw new AiRequestRefusedError(
+      'no_sector',
+      'Choose the sector’s region before asking for its settlements.',
+    );
+  const step = (purpose: string) => derivedUuid(request.commandId, purpose) as CommandId;
+  const roll = async (purpose: string, selector: LaunchRecipeSelector) =>
+    (
+      await rollLaunchRecipe(sql, {
+        campaignId: request.campaignId,
+        commandId: step(purpose),
+        actor: request.actor,
+        selector,
+        ...(request.rng === undefined ? {} : { rng: request.rng }),
+      })
+    ).events;
+
+  const nameEvents = await roll('sector-name-roll', { kind: 'sector_name' });
+  const name = await proposeSectorName(
+    sql,
+    ai,
+    { ...request, commandId: step('sector-name') },
+    nameEvents.map((event) => event.id),
+    status,
+  );
+
+  const settlements: ProposeSettlementResponse[] = [];
+  for (let index = 0; index < REGION_BASELINES[sector.region].settlements; index++) {
+    const rolled = await roll(`settlement-${index}-roll`, {
+      kind: 'settlement',
+      region: sector.region,
+      projectCount: 1,
+    });
+    const ids = rolled.map((event) => event.id);
+    const locationRow = rolled.find(
+      (event) => event.type === 'oracle.rolled' && event.payload.slot === 'location',
+    );
+    const location = settlementLocationFromRow(
+      locationRow?.type === 'oracle.rolled' ? locationRow.payload.rowText : '',
+    );
+    if (location === 'planetside' || location === 'orbital') {
+      const classEvents = await roll(`settlement-${index}-class`, { kind: 'planet_class' });
+      const classRow = classEvents[0];
+      const planetClass = planetClassFromRow(
+        classRow?.type === 'oracle.rolled' ? classRow.payload.rowText : '',
+      );
+      if (planetClass !== undefined) {
+        const planetEvents = await roll(`settlement-${index}-planet`, {
+          kind: 'planet',
+          planetClass,
+          depth: 'shallow',
+        });
+        ids.push(...classEvents.map((event) => event.id), ...planetEvents.map((event) => event.id));
+      }
+    }
+    settlements.push(
+      await proposeSettlement(
+        sql,
+        ai,
+        {
+          ...request,
+          commandId: step(`settlement-${index}`),
+          // The draft key the client adopts for this settlement (D-196).
+          targetId: derivedUuid(request.commandId, `settlement-${index}-draft`),
+          groundedIn: ids,
+        },
+        status,
+      ),
+    );
+  }
+  return { name, settlements };
+}
+
+/** The Guide's reading of the sector-name roll, held under the fixed `'sector'` target. */
+async function proposeSectorName(
+  sql: Sql,
+  ai: AiProvider,
+  request: ProposalRequest,
+  groundedIn: readonly EventId[],
+  status?: AiStatus,
+): Promise<ProposeSectorNameResponse> {
+  const events = await readEvents(sql, request.campaignId);
+  const slots = sectorNameRolls();
+  const provided = rollsForProposal(events, groundedIn, slots);
+  if (provided.length !== slots.length)
+    throw new AiRequestRefusedError('no_rolls', 'Roll the sector name before asking the Guide.');
+  const keys = slots.map((slot) => slot.key);
+  const outcome = await runProposal<SectorNameOutput, 'creation.proposed'>(
+    sql,
+    ai,
+    request,
+    {
+      kind: PROPOSAL_COMMAND_KINDS[6],
+      contentType: 'creation.proposed',
+      rolls: slots,
+      provided,
+      build: (current, rolled) => ({
+        request: buildSectorNameRequest(current, rolled),
+        schema: sectorNameSchema(keys),
+      }),
+      toPayload: (value, eventIdsOf) => ({
+        targetKind: 'sector',
+        targetId: SECTOR_PROPOSAL_TARGET,
+        rationale: value.reason,
+        groundedIn: provided.flatMap((roll) => roll.eventIds),
+        proposal: {
+          name: { ...value.name, groundedIn: value.name.groundedIn.flatMap(eventIdsOf) },
+        },
+      }),
+    },
+    status,
+  );
+  if (!outcome.ok) return outcome;
+  const payload = outcome.event.payload;
+  if (payload.targetKind !== 'sector') {
+    throw new Error('A sector-name proposal wrote a different target kind.');
+  }
+  return {
+    ok: true,
+    proposalEventId: outcome.event.id,
     proposal: payload.proposal,
     rolls: outcome.rolls,
   };

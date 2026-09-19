@@ -924,7 +924,7 @@ proposal per object), D-197 (the map is hand-rolled SVG).
   result's recipe and slot on `oracle.rolled`, fields D-142 already defined. The matcher
   takes every result of a slot, including embedded tables, and a proposal cites them all.
   The client reads a slot's results as one field.
-- [ ] 8.6 Add whole-sector orchestration that still reviews objects one at a time (D-196).
+- [x] 8.6 Add whole-sector orchestration that still reviews objects one at a time (D-196).
   One command rolls the sector-name recipe and the region's baseline count of settlement
   recipes. For each planetside or orbital result, it rolls a planet class and then the
   shallow planet recipe. It appends one `creation.proposed` for the name and one per

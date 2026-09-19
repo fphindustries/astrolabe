@@ -7,6 +7,7 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type {
   ConfigureLaunchSectorResponse,
+  ProposeSectorResponse,
   ProposeSettlementResponse,
   ProposeTroubleResponse,
   RollLaunchRecipeResponse,
@@ -257,6 +258,25 @@ export function useAskForSettlement(campaignId: string) {
         ...(input.fields === undefined ? {} : { fields: input.fields }),
       });
     },
+    onSettled: () => {
+      invalidate();
+      void queryClient.invalidateQueries({ queryKey: aiKeys.status });
+    },
+  });
+}
+
+/**
+ * Ask the Guide for the whole sector (8.6, D-196). The server rolls every
+ * recipe and answers one proposal per object; nothing is accepted here.
+ */
+export function useProposeSector(campaignId: string) {
+  const invalidate = useInvalidateCampaign(campaignId);
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiPost<ProposeSectorResponse>(`/campaigns/${campaignId}/sector-proposals`, {
+        commandId: commandId(),
+      }),
     onSettled: () => {
       invalidate();
       void queryClient.invalidateQueries({ queryKey: aiKeys.status });

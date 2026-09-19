@@ -6,6 +6,7 @@ import { useRollLaunchOracle } from '../api/crew.js';
 import { useAiStatus } from '../api/narration.js';
 import {
   useAskForSettlement,
+  useProposeSector,
   useRemoveLocation,
   useRollLaunchRecipe,
   useSaveLocation,
@@ -20,6 +21,7 @@ import {
   PROPOSED_FIELD_LABELS,
   SETTLEMENT_FIELD_LABELS,
   addOther,
+  addProposedSettlements,
   addSettlement,
   applySettlementFieldRoll,
   applySettlementRecipe,
@@ -84,8 +86,30 @@ export function SectorPlaces({
   readonly persist: (form: SectorForm) => void;
 }) {
   const [open, setOpen] = useState<string | undefined>(form.settlements[0]?.draftId);
+  const [wholeFailure, setWholeFailure] = useState<string | undefined>(undefined);
   const progress = settlementProgress(workspace.state, form.region);
   const configured = workspace.state.launch.sector !== undefined;
+  const whole = useProposeSector(campaignId);
+  const guide = useAiStatus();
+
+  // 8.6 (D-196): one proposal per object. Each proposed settlement joins the
+  // form under the key the server minted for it, and the draft is saved, so a
+  // reload keeps them; each is reviewed and accepted on its own, like any other.
+  const askForWholeSector = () => {
+    setWholeFailure(undefined);
+    whole.mutate(undefined, {
+      onSuccess: (response) => {
+        const targets = response.settlements.flatMap((settlement) =>
+          settlement.ok ? [settlement.targetId] : [],
+        );
+        const failed = [response.name, ...response.settlements].find((part) => !part.ok);
+        if (failed !== undefined && !failed.ok) setWholeFailure(proposalFailureText(failed));
+        if (targets.length === 0) return;
+        persist(update((current) => addProposedSettlements(current, targets)));
+        setOpen(targets[0]);
+      },
+    });
+  };
 
   const addNew = () => {
     const draftId = crypto.randomUUID();
@@ -111,6 +135,34 @@ export function SectorPlaces({
         {!configured && (
           <p className={styles.help}>Accept the region and name first; settlements belong to it.</p>
         )}
+
+        <section className={styles.panel} aria-label="Ask the Guide for the whole sector">
+          <p className={styles.help}>
+            The server rolls a name and as many settlements as the region asks for, each with its
+            planet where it has one; the Guide reads each into a proposal. You review them one at a
+            time below, and draw the passages yourself.
+          </p>
+          {guide.data?.available !== true && (
+            <p className={styles.unavailable} role="status">
+              No Guide is available. Every settlement can still be written or rolled.
+            </p>
+          )}
+          {wholeFailure !== undefined && (
+            <p className={styles.unavailable} role="status">
+              {wholeFailure} The rolls and any proposals already made are still yours.
+            </p>
+          )}
+          <div className={styles.actions}>
+            <button
+              type="button"
+              className={styles.primary}
+              disabled={!configured || guide.data?.available !== true || whole.isPending}
+              onClick={askForWholeSector}
+            >
+              {whole.isPending ? 'Asking…' : 'Ask the Guide for the whole sector'}
+            </button>
+          </div>
+        </section>
 
         <ul className={styles.roster}>
           {form.settlements.map((settlement) => (

@@ -19,11 +19,13 @@ import {
   applyNameRoll,
   baselineOf,
   headerProblems,
+  heldSectorNameProposal,
   initialSectorForm,
   isHeaderDirty,
   sectorBlockers,
   setName,
   setRegion,
+  takeNameProposal,
   toConfigureRequest,
   toDraftSnapshot,
   type SectorForm,
@@ -125,6 +127,7 @@ export function SectorSection({
 
       <SectorHeader
         campaignId={campaignId}
+        state={workspace.state}
         form={form}
         submitted={submitted}
         onEdit={edit}
@@ -197,6 +200,7 @@ export function SectorSection({
  */
 function SectorHeader({
   campaignId,
+  state,
   form,
   submitted,
   onEdit,
@@ -206,6 +210,7 @@ function SectorHeader({
   onConfigure,
 }: {
   readonly campaignId: string;
+  readonly state: LaunchWorkspaceResponse['state'];
   readonly form: SectorForm;
   readonly submitted: boolean;
   readonly onEdit: (next: SectorForm) => void;
@@ -217,6 +222,7 @@ function SectorHeader({
   const roll = useRollLaunchRecipe(campaignId);
   const [rolled, setRolled] = useState<string | undefined>(undefined);
   const baseline = form.region === '' ? undefined : baselineOf(form.region);
+  const heldName = heldSectorNameProposal(state);
 
   const rollName = () =>
     roll.mutate(
@@ -291,6 +297,21 @@ function SectorHeader({
           </button>
         </div>
         {rolled !== undefined && <p className={styles.rolled}>Rolled {rolled}</p>}
+        {heldName !== null && form.nameProposalEventId !== heldName.eventId && (
+          <div className={styles.panel}>
+            <p className={styles.value}>The Guide proposes: {heldName.name}</p>
+            <p className={styles.reason}>{heldName.reason}</p>
+            <div className={styles.actions}>
+              <button
+                type="button"
+                className={styles.secondary}
+                onClick={() => onEdit(takeNameProposal(form, heldName))}
+              >
+                Use this name
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <StarFields campaignId={campaignId} form={form} update={update} configured={configured} />

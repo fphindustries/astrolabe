@@ -8,6 +8,7 @@ import {
   ProposeAmountRequestBodySchema,
   ProposeCharacterRequestBodySchema,
   ProposeIncidentsRequestBodySchema,
+  ProposeSectorRequestBodySchema,
   ProposeSettlementRequestBodySchema,
   ProposeStarshipRequestBodySchema,
   ProposeTroubleRequestBodySchema,
@@ -32,6 +33,7 @@ import {
   type ProposeAmountResponse,
   type ProposeCharacterResponse,
   type ProposeIncidentsResponse,
+  type ProposeSectorResponse,
   type ProposeSettlementResponse,
   type ProposeStarshipResponse,
   type ProposeTroubleResponse,
@@ -55,6 +57,7 @@ import {
   proposeAmount,
   proposeCharacter,
   proposeIncidents,
+  proposeSector,
   proposeSettlement,
   proposeStarship,
   proposeTrouble,
@@ -607,6 +610,37 @@ export function registerAiRoutes(
             groundedIn: parsedBody.data.groundedIn,
             ...(parsedBody.data.fields === undefined ? {} : { fields: parsedBody.data.fields }),
           },
+          status,
+        );
+        reply.code(201);
+        return result;
+      } catch (error) {
+        return refusal(error, reply);
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/sector-proposals',
+    async (
+      request,
+      reply,
+    ): Promise<ProposeSectorResponse | NarrationRefusalResponse | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
+        return undefined;
+      }
+      const parsedBody = ProposeSectorRequestBodySchema.safeParse(request.body);
+      if (!parsedBody.success) {
+        reply.code(400);
+        return undefined;
+      }
+
+      try {
+        const result = await proposeSector(
+          sql,
+          ai,
+          { ...dice, campaignId: id, commandId: parsedBody.data.commandId, actor: PLAYER },
           status,
         );
         reply.code(201);

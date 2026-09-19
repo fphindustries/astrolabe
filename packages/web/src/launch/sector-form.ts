@@ -20,7 +20,7 @@ import type {
   SaveLaunchLocationRequestBody,
   SaveLaunchTroubleRequestBody,
 } from '@astrolabe/shared';
-import { troubleProposalTarget } from '@astrolabe/shared';
+import { SECTOR_PROPOSAL_TARGET, troubleProposalTarget } from '@astrolabe/shared';
 
 /**
  * The Starting Sector section's form (group 8): what it opens with, how it
@@ -1348,4 +1348,52 @@ export function toSettlementTroubleRequest(settlement: SettlementForm): TroubleR
 /** The settlements the player may choose to start at: accepted ones only (A35). */
 export function startingChoices(form: SectorForm): readonly SettlementForm[] {
   return form.settlements.filter((settlement) => settlement.locationId !== undefined);
+}
+
+// ---------------------------------------------------------------------------
+// The whole sector (8.6, D-196)
+// ---------------------------------------------------------------------------
+
+export interface HeldSectorNameProposal {
+  readonly eventId: EventId;
+  readonly name: string;
+  readonly reason: string;
+  readonly groundedIn: readonly EventId[];
+}
+
+/** The Guide's name for the sector, from the fold, under the fixed `'sector'` target. */
+export function heldSectorNameProposal(state: CampaignState): HeldSectorNameProposal | null {
+  const held = state.launch.proposals[SECTOR_PROPOSAL_TARGET];
+  if (held?.targetKind !== 'sector') return null;
+  return {
+    eventId: held.eventId,
+    name: held.proposal.name.value,
+    reason: held.proposal.name.reason,
+    groundedIn: held.proposal.name.groundedIn,
+  };
+}
+
+/**
+ * Take the Guide's name. Its id comes with it, so acceptance names it and the
+ * server grounds the name in the proposal's rolls (8.0f); a name rolled here
+ * before no longer describes these words, so its rolls go.
+ */
+export function takeNameProposal(form: SectorForm, held: HeldSectorNameProposal): SectorForm {
+  return { ...form, name: held.name, nameRolls: [], nameProposalEventId: held.eventId };
+}
+
+/**
+ * The settlements a whole-sector proposal made, added to the form under the
+ * draft keys the server minted for them (D-196), so each opens beside its own
+ * held proposal. One already in the form is not added twice.
+ */
+export function addProposedSettlements(form: SectorForm, targetIds: readonly string[]): SectorForm {
+  const known = new Set(form.settlements.map((settlement) => settlement.draftId));
+  return {
+    ...form,
+    settlements: [
+      ...form.settlements,
+      ...targetIds.filter((id) => !known.has(id)).map((id) => emptySettlement(id)),
+    ],
+  };
 }

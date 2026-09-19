@@ -1058,6 +1058,10 @@ export const ProposeSettlementRequestBodySchema = z.object({
 });
 export type ProposeSettlementRequestBody = z.infer<typeof ProposeSettlementRequestBodySchema>;
 
+/** `POST /campaigns/:id/sector-proposals` (8.6, D-196): the whole sector, one proposal per object. */
+export const ProposeSectorRequestBodySchema = z.object({ commandId: CommandIdSchema });
+export type ProposeSectorRequestBody = z.infer<typeof ProposeSectorRequestBodySchema>;
+
 /** `POST /campaigns/:id/trouble-proposals` (8.0e, D-194). */
 export const ProposeTroubleRequestBodySchema = z.intersection(
   z.object({
@@ -1195,6 +1199,31 @@ type ProposalFor<K extends CreationTargetKind> = Extract<
   PayloadFor<'creation.proposed'>,
   { readonly targetKind: K }
 >['proposal'];
+
+/** The Guide's sector name. Not canon: accepted through `configureLaunchSector` (8.0f). */
+export type ProposeSectorNameResponse =
+  | {
+      readonly ok: true;
+      readonly proposalEventId: EventId;
+      readonly proposal: ProposalFor<'sector'>;
+      readonly rolls: readonly ProposalRoll[];
+    }
+  | {
+      readonly ok: false;
+      readonly errorKind: AiErrorKind;
+      readonly message: string;
+      readonly rolls: readonly ProposalRoll[];
+    };
+
+/**
+ * A whole-sector proposal (8.6, D-196): the name and each settlement, each its
+ * own held proposal. A settlement's `targetId` is the draft key the client
+ * adopts for it.
+ */
+export interface ProposeSectorResponse {
+  readonly name: ProposeSectorNameResponse;
+  readonly settlements: readonly ProposeSettlementResponse[];
+}
 
 /** The Guide's settlement. Not canon: accepted through `saveLaunchLocation` (8.0f). */
 export type ProposeSettlementResponse =

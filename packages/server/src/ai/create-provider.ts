@@ -197,6 +197,9 @@ function devStubResponse(
   if (mode === 'structured' && request.purpose === 'settlement_proposal') {
     return { kind: 'structured', value: stubSettlementProposal(request.user) };
   }
+  if (mode === 'structured' && request.purpose === 'sector_name_proposal') {
+    return { kind: 'structured', value: stubSectorName(request.user) };
+  }
   if (mode === 'structured' && request.purpose === 'trouble_proposal') {
     return { kind: 'structured', value: stubTroubleProposal(request.user) };
   }
@@ -281,6 +284,23 @@ function stubSettlementProposal(user: string) {
  */
 function oracleRollsOf(user: string): string {
   return /<oracle_rolls>([\s\S]*?)<\/oracle_rolls>/.exec(user)?.[1] ?? '';
+}
+
+/** A sector name read straight off its prefix and suffix (8.6). */
+function stubSectorName(user: string) {
+  const rolls = oracleRollsOf(user);
+  const part = (key: string) =>
+    new RegExp(`^- ${key} \\([^)]*\\): (.*)$`, 'm').exec(rolls)?.[1]?.trim();
+  return {
+    name: {
+      value:
+        [part('prefix'), part('suffix')].filter((word) => word !== undefined).join(' ') ||
+        'Stub Reach',
+      reason: 'Stub proposal: the two name rolls, together.',
+      groundedIn: ['prefix', 'suffix'],
+    },
+    reason: 'Stub proposal: the sector as the rolls name it.',
+  };
 }
 
 /** A trouble read straight off its roll (8.0e). */

@@ -5,7 +5,10 @@ import type { EntityId, EventId } from '@astrolabe/shared';
 import { emptyCampaignState } from './state-fixture.js';
 import {
   EMPTY_SECTOR_FORM,
+  addProposedSettlements,
   addSettlement,
+  heldSectorNameProposal,
+  takeNameProposal,
   bySlot,
   applyStartingRecipe,
   setFirstLook,
@@ -589,6 +592,37 @@ describe('a slot that yields several results (8.5)', () => {
     expect(findSettlement(form, 'd-1')).toMatchObject({
       trouble: 'Deliver + Discovery',
       troubleRolls: [id(2), id(3)],
+    });
+  });
+});
+
+describe('the whole sector (8.6, D-196)', () => {
+  it('adds each proposed settlement under the key the server minted, once', () => {
+    const form = addProposedSettlements(addSettlement(EMPTY_SECTOR_FORM, 'a'), ['a', 'b', 'c']);
+    expect(form.settlements.map((settlement) => settlement.draftId)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('takes the Guide’s name and names the proposal, leaving grounding to the server', () => {
+    const state = emptyCampaignState({
+      proposals: {
+        sector: {
+          targetKind: 'sector',
+          targetId: 'sector',
+          proposal: {
+            name: { value: 'Ashen Anvil', reason: 'The two rolls.', groundedIn: [id(1), id(2)] },
+          },
+          rationale: 'r',
+          groundedIn: [id(1), id(2)],
+          eventId: id(9),
+        },
+      },
+    });
+    const held = heldSectorNameProposal(state)!;
+    const form = takeNameProposal({ ...EMPTY_SECTOR_FORM, nameRolls: [id(5)] }, held);
+    expect(form).toMatchObject({ name: 'Ashen Anvil', nameRolls: [], nameProposalEventId: id(9) });
+    expect(toConfigureRequest(setRegion(form, 'outlands'))).toEqual({
+      sector: { name: 'Ashen Anvil', region: 'outlands' },
+      proposalEventId: id(9),
     });
   });
 });

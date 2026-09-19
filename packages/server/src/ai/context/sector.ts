@@ -5,6 +5,7 @@ import {
   PLANET_CLASS_RECIPE,
   PLANET_CLASSES,
   planetClassFromRow,
+  SECTOR_NAME_RECIPE,
   SECTOR_TROUBLE_RECIPE,
   settlementLocationFromRow,
   STARFORGED,
@@ -263,3 +264,42 @@ export function troubleProposalSchema(rollKeys: readonly string[]) {
 }
 
 export type TroubleProposalOutput = z.infer<ReturnType<typeof troubleProposalSchema>>;
+
+/** The sector name's two rolls as proposal keys (8.6, D-196). */
+export function sectorNameRolls(): readonly SectorProposalRoll[] {
+  return SECTOR_NAME_RECIPE.rolls.map(toRoll());
+}
+
+const SECTOR_NAME_RULES = `You are the Guide for a game of Ironsworn: Starforged, helping a player name their starting sector before play begins.
+
+The server has rolled a prefix and a suffix. Read them together into the sector's name, adapting the wording only as much as the campaign needs, and cite both rolls. Give one short reason for the name and one overall reason. You propose; the player decides.`;
+
+export function buildSectorNameRequest(
+  state: CampaignState,
+  rolls: readonly RolledForProposal[],
+): AiRequest {
+  return {
+    purpose: 'sector_name_proposal',
+    system: [{ text: SECTOR_NAME_RULES }],
+    user: [
+      `<campaign>\n${renderSetup(state)}\n</campaign>`,
+      `<oracle_rolls>\n${rolls.map((r) => `- ${r.key} (${r.label}): ${r.rowText}`).join('\n')}\n</oracle_rolls>`,
+      'Propose the sector name.',
+    ].join('\n\n'),
+    effort: 'low',
+  };
+}
+
+export function sectorNameSchema(rollKeys: readonly string[]) {
+  const reason = z.string().min(1).max(300);
+  return z.object({
+    name: z.object({
+      value: z.string().min(1).max(80),
+      reason,
+      groundedIn: z.array(z.enum(rollKeys as [string, ...string[]])).min(1),
+    }),
+    reason,
+  });
+}
+
+export type SectorNameOutput = z.infer<ReturnType<typeof sectorNameSchema>>;

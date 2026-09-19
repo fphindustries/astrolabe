@@ -28,7 +28,7 @@ import {
   setStartingSettlement,
 } from './launch-commands.js';
 import { AiRequestRefusedError } from './narration-commands.js';
-import { proposeSettlement, proposeTrouble } from './proposal-commands.js';
+import { proposeSector, proposeSettlement, proposeTrouble } from './proposal-commands.js';
 import { beginSession } from './session-commands.js';
 import { createTestDatabase, hasTestDatabase, type TestDatabase } from './testing.js';
 import { uuidv7 } from './uuid.js';
@@ -323,6 +323,43 @@ describe.skipIf(!hasTestDatabase)('proposing a settlement or a trouble (8.0e)', 
 
     expect(result.ok).toBe(true);
     expect(result.ok && result.proposal.text.groundedIn).toEqual(trouble);
+  });
+
+  // 8.6 — the whole sector, one proposal per object (D-196).
+  it('proposes the name and the region’s baseline of settlements, each on its own', async () => {
+    const campaignId = await campaign();
+    const request = {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      rng: PLANETSIDE,
+    };
+
+    const result = await proposeSector(db.sql, devStub(), request);
+
+    expect(result.name.ok).toBe(true);
+    // Outlands asks for three settlements (D-174); each is its own proposal.
+    expect(result.settlements).toHaveLength(3);
+    expect(result.settlements.every((settlement) => settlement.ok)).toBe(true);
+    const targets = result.settlements.flatMap((settlement) =>
+      settlement.ok ? [settlement.targetId] : [],
+    );
+    expect(new Set(targets).size).toBe(3);
+    // Every roll was 31, so each settlement is planetside and comes with its planet.
+    expect(result.settlements.every((s) => s.ok && s.proposal.planet !== undefined)).toBe(true);
+
+    const events = await readEvents(db.sql, campaignId);
+    const state = project(events);
+    expect(state.launch.proposals[SECTOR_PROPOSAL_TARGET]?.targetKind).toBe('sector');
+    for (const target of targets)
+      expect(state.launch.proposals[target]?.targetKind).toBe('settlement');
+    // Proposed, not established (D-161), and no passage is ever proposed.
+    expect(state.launch.locations).toEqual({});
+    expect(state.launch.routes).toEqual([]);
+
+    // A retry replays what was written rather than rolling again.
+    await proposeSector(db.sql, devStub(), request);
+    expect(await readEvents(db.sql, campaignId)).toHaveLength(events.length);
   });
 
   it('is refused for a campaign already in play (D-178)', async () => {

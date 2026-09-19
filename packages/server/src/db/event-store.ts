@@ -419,6 +419,7 @@ export const PROPOSAL_COMMAND_KINDS = [
   'launch.propose.starship',
   'launch.propose.settlement',
   'launch.propose.trouble',
+  'launch.propose.sector',
 ] as const;
 
 /**
