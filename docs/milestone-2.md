@@ -900,7 +900,7 @@ proposal per object), D-197 (the map is hand-rolled SVG).
   inspect and remove every passage and exit without dragging. The screen states that
   layout has no distance or travel meaning (A34). Planets and the star appear in the
   detail drawer.
-- [ ] 8.5 Add starting-settlement selection, first looks, settlement trouble, and sector
+- [x] 8.5 Add starting-settlement selection, first looks, settlement trouble, and sector
   trouble. Once the start is selected, the player rolls the starting-settlement recipe, or
   writes the details. Selecting does not roll by itself. The Guide interprets
   the first looks and the trouble, and the player edits the interpretation without
@@ -914,7 +914,16 @@ proposal per object), D-197 (the map is hand-rolled SVG).
   placeholder note rather than null, and group 4's two placeholder properties survive. The
   next useful action still points here while the connection is missing. The status is the
   server's for the whole section (D-176), so it reads In progress with the sector trouble
-  accepted and the connection absent.
+  accepted and the connection absent. *As built (D-198):* the Guide reads the rolled trouble,
+  and first looks are rolled or written. **Found in the browser:** a recipe slot can yield
+  several results, a roll-twice row or a row that embeds other tables such as Action + Theme.
+  The client kept only the first result, so a trouble read "Deliver" where the roll was
+  "Deliver + Discovery". The server matched a proposal's rolls to slots by table id, so an
+  embedded table's result matched no slot and the Guide was refused. The same defect was
+  latent in the starship and character proposals. `rollLaunchRecipe` now records each
+  result's recipe and slot on `oracle.rolled`, fields D-142 already defined. The matcher
+  takes every result of a slot, including embedded tables, and a proposal cites them all.
+  The client reads a slot's results as one field.
 - [ ] 8.6 Add whole-sector orchestration that still reviews objects one at a time (D-196).
   One command rolls the sector-name recipe and the region's baseline count of settlement
   recipes. For each planetside or orbital result, it rolls a planet class and then the

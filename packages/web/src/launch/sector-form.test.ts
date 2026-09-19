@@ -6,6 +6,14 @@ import { emptyCampaignState } from './state-fixture.js';
 import {
   EMPTY_SECTOR_FORM,
   addSettlement,
+  bySlot,
+  applyStartingRecipe,
+  setFirstLook,
+  setFirstLookCount,
+  setSettlementTrouble,
+  startingChoices,
+  takeTroubleProposal,
+  toSettlementTroubleRequest,
   applyPlanetClassRoll,
   applyPlanetFieldRoll,
   applyPlanetRecipe,
@@ -485,6 +493,102 @@ describe('planets and the star (8.3, A33, D-195)', () => {
     expect(toStarRequest(setStar(rolled, 'name', 'Cinder').star)).toEqual({
       location: { kind: 'star', name: 'Cinder', details: { description: 'Smoldering red star' } },
       groundedIn: [id(1)],
+    });
+  });
+});
+
+describe('the starting settlement (8.5, A35, D-198)', () => {
+  const accepted = markSettlementAccepted(
+    addSettlement(setRegion(EMPTY_SECTOR_FORM, 'outlands'), 'd-1'),
+    'd-1',
+    EMBER,
+  );
+
+  it('offers only accepted settlements as the start', () => {
+    const withDraft = addSettlement(accepted, 'd-2');
+    expect(startingChoices(withDraft).map((settlement) => settlement.draftId)).toEqual(['d-1']);
+  });
+
+  it('splits the starting recipe: first looks cite the settlement, the trouble cites itself', () => {
+    const form = applyStartingRecipe(accepted, 'd-1', [
+      { slot: 'first_look_1', eventId: id(1), text: 'Built within repurposed ship' },
+      { slot: 'first_look_2', eventId: id(2), text: 'Defensible location' },
+      { slot: 'trouble', eventId: id(3), text: 'Battle for leadership' },
+    ]);
+    const settlement = findSettlement(form, 'd-1')!;
+    expect(settlement).toMatchObject({
+      firstLooks: ['Built within repurposed ship', 'Defensible location'],
+      trouble: 'Battle for leadership',
+      troubleRolls: [id(3)],
+    });
+    expect(settlement.rolls).toEqual([id(1), id(2)]);
+    expect(toSettlementTroubleRequest(settlement)).toEqual({
+      trouble: { kind: 'settlement', ownerId: EMBER, text: 'Battle for leadership' },
+      groundedIn: [id(3)],
+    });
+  });
+
+  it('takes the Guide’s reading of the trouble, and names it on acceptance (D-198)', () => {
+    const rolled = applyStartingRecipe(accepted, 'd-1', [
+      { slot: 'trouble', eventId: id(3), text: 'Battle for leadership' },
+    ]);
+    const taken = takeTroubleProposal(rolled, 'd-1', {
+      eventId: id(9),
+      rationale: 'r',
+      proposal: {
+        kind: 'settlement',
+        ownerId: EMBER,
+        text: { value: 'Two captains claim the dock.', reason: 'The roll.', groundedIn: [id(3)] },
+      },
+    });
+    expect(toSettlementTroubleRequest(findSettlement(taken, 'd-1')!)).toEqual({
+      trouble: { kind: 'settlement', ownerId: EMBER, text: 'Two captains claim the dock.' },
+      proposalEventId: id(9),
+      groundedIn: [id(3)],
+    });
+  });
+
+  it('refuses to send a trouble for a settlement not yet accepted', () => {
+    const draft = setSettlementTrouble(
+      addSettlement(EMPTY_SECTOR_FORM, 'd-9'),
+      'd-9',
+      'Something is wrong.',
+    );
+    expect(toSettlementTroubleRequest(findSettlement(draft, 'd-9')!)).toBeNull();
+  });
+
+  it('keeps one or two first looks', () => {
+    const two = setFirstLookCount(accepted, 'd-1', 2);
+    expect(findSettlement(two, 'd-1')?.firstLooks).toEqual(['', '']);
+    const edited = setFirstLook(two, 'd-1', 1, 'Moving or transforming');
+    expect(findSettlement(setFirstLookCount(edited, 'd-1', 1), 'd-1')?.firstLooks).toEqual(['']);
+  });
+});
+
+describe('a slot that yields several results (8.5)', () => {
+  it('groups results by slot, reading them as one and keeping every roll', () => {
+    expect(
+      bySlot([
+        { slot: 'first_look_1', eventId: id(1), text: 'Defensible location' },
+        { slot: 'trouble', eventId: id(2), text: '[Deliver](id:oracle:core/action)' },
+        { slot: 'trouble', eventId: id(3), text: 'Discovery' },
+      ]),
+    ).toEqual([
+      { slot: 'first_look_1', eventIds: [id(1)], text: 'Defensible location' },
+      { slot: 'trouble', eventIds: [id(2), id(3)], text: 'Deliver + Discovery' },
+    ]);
+  });
+
+  it('gives the starting settlement a whole trouble, not its first half', () => {
+    const accepted = markSettlementAccepted(addSettlement(EMPTY_SECTOR_FORM, 'd-1'), 'd-1', EMBER);
+    const form = applyStartingRecipe(accepted, 'd-1', [
+      { slot: 'first_look_1', eventId: id(1), text: 'Defensible location' },
+      { slot: 'trouble', eventId: id(2), text: 'Deliver' },
+      { slot: 'trouble', eventId: id(3), text: 'Discovery' },
+    ]);
+    expect(findSettlement(form, 'd-1')).toMatchObject({
+      trouble: 'Deliver + Discovery',
+      troubleRolls: [id(2), id(3)],
     });
   });
 });

@@ -10,6 +10,7 @@ import { SectionPlaceholder } from './SectionPlaceholder.js';
 import { SectionStatusChip } from './SectionStatusChip.js';
 import { SectorSection } from './SectorSection.js';
 import { StarshipSection } from './StarshipSection.js';
+import { TroublesSection } from './TroublesSection.js';
 import { TruthsSection } from './TruthsSection.js';
 import { launchOverviewPath } from './sections.js';
 import styles from './LaunchSectionScreen.module.css';
@@ -57,6 +58,12 @@ export function LaunchSectionScreen({
         <StarshipSection campaignId={campaignId} workspace={workspace} />
       ) : section === 'sector' ? (
         <SectorSection campaignId={campaignId} workspace={workspace} />
+      ) : section === 'connection_troubles' ? (
+        // The first half-built section (8.5): troubles here, the connection ahead.
+        <>
+          <TroublesSection campaignId={campaignId} workspace={workspace} />
+          <SectionPlaceholder card={card} part="The local connection" />
+        </>
       ) : (
         <SectionPlaceholder card={card} />
       )}

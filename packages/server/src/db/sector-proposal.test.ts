@@ -292,6 +292,39 @@ describe.skipIf(!hasTestDatabase)('proposing a settlement or a trouble (8.0e)', 
     });
   });
 
+  // 8.5, found in the browser: a slot can yield several results, and a row
+  // that embeds other tables records them under those tables' ids.
+  it('grounds a trouble whose roll embeds Action + Theme in both of its rolls', async () => {
+    const campaignId = await campaign();
+    const settlementId = await acceptSettlement(campaignId);
+    // Every d100 lands on 96: the trouble table's "[Action] + [Theme]" row.
+    const rolled = await roll(
+      campaignId,
+      { kind: 'starting_settlement', firstLookCount: 1 },
+      { next: () => 0.955 },
+    );
+    const events = (await readEvents(db.sql, campaignId)).filter((e) => rolled.includes(e.id));
+    // Each result says which slot it fills, whatever table rolled it. At 96
+    // the first-look table rolls twice too, the other shape of the same case.
+    const slotOf = (e: (typeof events)[number]) =>
+      e.type === 'oracle.rolled' ? e.payload.slot : undefined;
+    const trouble = events.filter((e) => slotOf(e) === 'trouble').map((e) => e.id);
+    expect(trouble).toHaveLength(2);
+    expect(events.every((e) => slotOf(e) !== undefined)).toBe(true);
+
+    const result = await proposeTrouble(db.sql, devStub(), {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      kind: 'settlement',
+      ownerId: settlementId,
+      groundedIn: rolled,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.proposal.text.groundedIn).toEqual(trouble);
+  });
+
   it('is refused for a campaign already in play (D-178)', async () => {
     const campaignId = await campaign();
     const groundedIn = await planetsideRolls(campaignId);

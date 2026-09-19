@@ -442,7 +442,17 @@ export async function rollLaunchRecipe(
       id: result.eventId,
       type: 'oracle.rolled' as const,
       actor: { kind: 'system' as const },
-      payload: { oracleId: result.oracleId, roll: result.roll, rowText: result.text },
+      // The recipe and slot are recorded, as D-142 does for a world-pass roll:
+      // a slot can yield several results (a roll-twice row, or a row that
+      // embeds other tables), and without the slot a proposal could match its
+      // rolls to slots only by table id, which an embedded table defeats (8.5).
+      payload: {
+        oracleId: result.oracleId,
+        roll: result.roll,
+        rowText: result.text,
+        recipeId: recipe.id,
+        slot: result.slot,
+      },
     })),
     response: { recipeId: recipe.id, results },
   });

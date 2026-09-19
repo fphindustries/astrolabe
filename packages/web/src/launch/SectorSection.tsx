@@ -11,6 +11,7 @@ import { launchErrorSummary } from './errors.js';
 import { StarFields } from './SectorDetails.js';
 import { SectorMap } from './SectorMap.js';
 import { SectorPlaces } from './SectorPlaces.js';
+import { SectorStart } from './SectorStart.js';
 import {
   REGIONS,
   REGION_DESCRIPTIONS,
@@ -142,6 +143,14 @@ export function SectorSection({
       />
 
       <SectorMap campaignId={campaignId} workspace={workspace} />
+
+      <SectorStart
+        campaignId={campaignId}
+        workspace={workspace}
+        form={form}
+        update={update}
+        persist={persist}
+      />
 
       {blockers.length > 0 && (
         <section className={styles.panelPlain} aria-labelledby="sector-blockers-heading">

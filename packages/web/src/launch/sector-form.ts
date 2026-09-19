@@ -18,7 +18,9 @@ import type {
   LaunchDraftFor,
   PayloadFor,
   SaveLaunchLocationRequestBody,
+  SaveLaunchTroubleRequestBody,
 } from '@astrolabe/shared';
+import { troubleProposalTarget } from '@astrolabe/shared';
 
 /**
  * The Starting Sector section's form (group 8): what it opens with, how it
@@ -76,6 +78,10 @@ export interface SettlementForm {
   readonly proposalEventId?: EventId;
   /** The key that proposal was made under (D-196): the draft's key or the settlement's id. */
   readonly proposalTargetId?: string;
+  /** The roll behind the trouble, kept apart: the trouble is its own fact (8.5). */
+  readonly troubleRolls?: readonly EventId[];
+  /** The Guide's reading of the trouble, while the words are still its (D-198). */
+  readonly troubleProposalEventId?: EventId;
 }
 
 /** A known non-settlement location, such as Kessel Drift (8.2). */
@@ -303,6 +309,7 @@ function settlementFromFact(
       : {}),
     firstLooks: [...(location.firstLooks ?? [])],
     trouble: trouble?.text ?? '',
+    ...(trouble === undefined ? {} : { troubleRolls: [...trouble.groundedIn] }),
     rolls: [...location.groundedIn],
   };
 }
@@ -338,6 +345,49 @@ function settlementFromDraft(entry: DraftSettlement, base: SettlementForm): Sett
 }
 
 // ---------------------------------------------------------------------------
+// A recipe roll's results, by slot (8.5)
+// ---------------------------------------------------------------------------
+
+export interface RecipeResult {
+  readonly slot: string;
+  readonly eventId: EventId;
+  readonly text: string;
+}
+
+/** One slot's results together: every roll it yielded, and their words read as one. */
+export interface SlotResult {
+  readonly slot: string;
+  readonly eventIds: readonly EventId[];
+  readonly text: string;
+}
+
+/**
+ * Group a recipe roll's results by slot, in order. A slot can yield several
+ * results — a roll-twice row, or a row that embeds other tables such as an
+ * Action + Theme — and a field built from it is built from all of them.
+ * Found in the browser: a settlement trouble of "Deliver", where the roll was
+ * "Deliver + Discovery".
+ */
+export function bySlot(results: readonly RecipeResult[]): readonly SlotResult[] {
+  const groups: { slot: string; eventIds: EventId[]; texts: string[] }[] = [];
+  for (const result of results) {
+    const group = groups.find((candidate) => candidate.slot === result.slot);
+    const text = withoutLinks(result.text).trim();
+    if (group === undefined)
+      groups.push({ slot: result.slot, eventIds: [result.eventId], texts: [text] });
+    else {
+      group.eventIds.push(result.eventId);
+      group.texts.push(text);
+    }
+  }
+  return groups.map((group) => ({
+    slot: group.slot,
+    eventIds: group.eventIds,
+    text: group.texts.join(' + '),
+  }));
+}
+
+// ---------------------------------------------------------------------------
 // The region and the name (8.1)
 // ---------------------------------------------------------------------------
 
@@ -366,7 +416,8 @@ export function applyNameRoll(
   form: SectorForm,
   rolls: readonly { readonly slot: string; readonly eventId: EventId; readonly text: string }[],
 ): SectorForm {
-  const part = (slot: string) => rolls.find((roll) => roll.slot === slot)?.text.trim() ?? '';
+  const groups = bySlot(rolls);
+  const part = (slot: string) => groups.find((group) => group.slot === slot)?.text ?? '';
   const name = [part('prefix'), part('suffix')].filter((word) => word !== '').join(' ');
   const { nameProposalEventId: _dropped, ...rest } = form;
   return { ...rest, name, nameRolls: rolls.map((roll) => roll.eventId) };
@@ -635,15 +686,31 @@ export function applySettlementRecipe(
   draftId: string,
   results: readonly { readonly slot: string; readonly eventId: EventId; readonly text: string }[],
 ): SectorForm {
-  const projects = results.filter((result) => result.slot.startsWith('project_')).length;
+  const groups = bySlot(results);
+  const projects = groups.filter((group) => group.slot.startsWith('project_')).length;
   let next = setProjectCount(form, draftId, projects >= 2 ? 2 : 1);
-  for (const result of results)
-    if (isSettlementRollField(result.slot))
-      next = applySettlementFieldRoll(next, draftId, result.slot, result);
+  for (const group of groups)
+    if (isSettlementRollField(group.slot))
+      next = withRolls(
+        applySettlementFieldRoll(next, draftId, group.slot, {
+          eventId: group.eventIds[0]!,
+          text: group.text,
+        }),
+        draftId,
+        group.eventIds,
+      );
   return replaceSettlement(next, draftId, (settlement) => {
     const { proposalEventId: _dropped, proposalTargetId: _target, ...rest } = settlement;
     return rest;
   });
+}
+
+/** Cite every roll a slot yielded, not only the first (8.5). */
+function withRolls(form: SectorForm, draftId: string, eventIds: readonly EventId[]): SectorForm {
+  return replaceSettlement(form, draftId, (settlement) => ({
+    ...settlement,
+    rolls: [...new Set([...settlement.rolls, ...eventIds])],
+  }));
 }
 
 function isSettlementRollField(slot: string): slot is SettlementRollField {
@@ -1101,9 +1168,17 @@ export function applyPlanetRecipe(
   results: readonly { readonly slot: string; readonly eventId: EventId; readonly text: string }[],
 ): SectorForm {
   let next = form;
-  for (const result of results) {
-    const field = PLANET_SLOTS[result.slot];
-    if (field !== undefined) next = applyPlanetFieldRoll(next, draftId, field, result);
+  for (const group of bySlot(results)) {
+    const field = PLANET_SLOTS[group.slot];
+    if (field === undefined) continue;
+    next = applyPlanetFieldRoll(next, draftId, field, {
+      eventId: group.eventIds[0]!,
+      text: group.text,
+    });
+    next = replacePlanet(next, draftId, (planet) => ({
+      ...planet,
+      rolls: [...new Set([...planet.rolls, ...group.eventIds])],
+    }));
   }
   return next;
 }
@@ -1154,4 +1229,123 @@ export function toStarRequest(star: StarForm): SettlementRequestBody | null {
 
 export function markStarAccepted(form: SectorForm, locationId: EntityId): SectorForm {
   return { ...form, star: { ...form.star, locationId } };
+}
+
+// ---------------------------------------------------------------------------
+// The starting settlement: first looks and its trouble (8.5, beat 9, D-198)
+// ---------------------------------------------------------------------------
+
+export function setFirstLook(
+  form: SectorForm,
+  draftId: string,
+  index: number,
+  text: string,
+): SectorForm {
+  return replaceSettlement(form, draftId, (settlement) => ({
+    ...settlement,
+    firstLooks: settlement.firstLooks.map((look, i) => (i === index ? text : look)),
+  }));
+}
+
+/** One or two first looks, as the starting-settlement recipe rolls them. */
+export function setFirstLookCount(form: SectorForm, draftId: string, count: 1 | 2): SectorForm {
+  return replaceSettlement(form, draftId, (settlement) => ({
+    ...settlement,
+    firstLooks:
+      count === 2
+        ? [settlement.firstLooks[0] ?? '', settlement.firstLooks[1] ?? '']
+        : [settlement.firstLooks[0] ?? ''],
+  }));
+}
+
+export function setSettlementTrouble(form: SectorForm, draftId: string, text: string): SectorForm {
+  return replaceSettlement(form, draftId, (settlement) => ({ ...settlement, trouble: text }));
+}
+
+/**
+ * The starting-settlement recipe lands (8.0c): its first looks fill the
+ * settlement's first looks, cited by the settlement, and its trouble fills
+ * the trouble, cited by the trouble. The two are separate facts, so each
+ * keeps only its own rolls. A trouble proposal made before this roll no
+ * longer describes the trouble, so its link goes.
+ */
+export function applyStartingRecipe(
+  form: SectorForm,
+  draftId: string,
+  results: readonly { readonly slot: string; readonly eventId: EventId; readonly text: string }[],
+): SectorForm {
+  const groups = bySlot(results);
+  const looks = groups.filter((group) => group.slot.startsWith('first_look_'));
+  const trouble = groups.find((group) => group.slot === 'trouble');
+  return replaceSettlement(form, draftId, (settlement) => {
+    const { troubleProposalEventId: _dropped, ...rest } = settlement;
+    return {
+      ...rest,
+      firstLooks: looks.map((look) => look.text),
+      rolls: [...new Set([...settlement.rolls, ...looks.flatMap((look) => look.eventIds)])],
+      ...(trouble === undefined ? {} : { trouble: trouble.text, troubleRolls: trouble.eventIds }),
+    };
+  });
+}
+
+export type TroubleProposal = Extract<
+  PayloadFor<'creation.proposed'>,
+  { readonly targetKind: 'trouble' }
+>['proposal'];
+
+export interface HeldTroubleProposal {
+  readonly eventId: EventId;
+  readonly proposal: TroubleProposal;
+  readonly rationale: string;
+}
+
+/** The Guide's reading of a trouble, from the fold, under its prefixed key (8.0d). */
+export function heldTroubleProposal(
+  state: CampaignState,
+  target: { readonly kind: 'sector' } | { readonly kind: 'settlement'; readonly ownerId: string },
+): HeldTroubleProposal | null {
+  const held = state.launch.proposals[troubleProposalTarget(target)];
+  if (held?.targetKind !== 'trouble') return null;
+  return { eventId: held.eventId, proposal: held.proposal, rationale: held.rationale };
+}
+
+/** Take the Guide's reading: its words, and its id so acceptance can name it (8.0f). */
+export function takeTroubleProposal(
+  form: SectorForm,
+  draftId: string,
+  held: HeldTroubleProposal,
+): SectorForm {
+  return replaceSettlement(form, draftId, (settlement) => ({
+    ...settlement,
+    trouble: held.proposal.text.value,
+    troubleProposalEventId: held.eventId,
+  }));
+}
+
+export type TroubleRequestBody = Omit<SaveLaunchTroubleRequestBody, 'commandId'>;
+
+/**
+ * The settlement trouble as its command takes it, or `null` until the
+ * settlement is accepted and the trouble has words. The server keeps the
+ * trouble's id; the owner says which trouble this is (8.0f).
+ */
+export function toSettlementTroubleRequest(settlement: SettlementForm): TroubleRequestBody | null {
+  if (settlement.locationId === undefined || settlement.trouble.trim() === '') return null;
+  const rolls = settlement.troubleRolls ?? [];
+  return {
+    trouble: {
+      kind: 'settlement',
+      ownerId: settlement.locationId,
+      text: settlement.trouble.trim(),
+    },
+    ...(settlement.troubleProposalEventId === undefined
+      ? {}
+      : { proposalEventId: settlement.troubleProposalEventId }),
+    ...(rolls.length > 0 ? { groundedIn: [...rolls] } : {}),
+  };
+}
+
+/** The settlements the player may choose to start at: accepted ones only (A35). */
+export function startingChoices(form: SectorForm): readonly SettlementForm[] {
+  return form.settlements.filter((settlement) => settlement.locationId !== undefined);
 }

@@ -113,7 +113,17 @@ export interface ProposalRollSpec {
   readonly key: string;
   readonly label: string;
   readonly oracleId: OracleId;
+  /** The recipe slot, where the proposal's key renames it (a planet's `name`). */
+  readonly slot?: string;
 }
+
+/** A slot's rolls as a proposal cites them: every result the slot yielded (8.5). */
+export type ProvidedRoll = ProposalRollSpec & {
+  readonly eventId: EventId;
+  readonly eventIds: readonly EventId[];
+  readonly roll: number;
+  readonly rowText: string;
+};
 
 export interface ProposalRequest {
   readonly campaignId: CampaignId;
@@ -136,11 +146,7 @@ interface ProposalSpec<T, E extends EventType> {
    * and writes no roll events: they exist already, and re-rolling would ground
    * the Guide in dice the player never saw.
    */
-  readonly provided?: readonly (ProposalRollSpec & {
-    readonly eventId: EventId;
-    readonly roll: number;
-    readonly rowText: string;
-  })[];
+  readonly provided?: readonly ProvidedRoll[];
   build(
     state: CampaignState,
     rolled: readonly RolledForProposal[],
@@ -150,11 +156,16 @@ interface ProposalSpec<T, E extends EventType> {
     readonly check?: (value: T) => string | undefined;
   };
   /**
-   * The proposal event, with each roll key already resolved to its event id.
-   * `state` is the state `build` was given, for resolving anything else the
-   * answer names.
+   * The proposal event, with each roll key resolved to its events: every
+   * result the slot yielded, so a roll-twice row or an embedded table is
+   * cited whole (8.5). `state` is the state `build` was given, for resolving
+   * anything else the answer names.
    */
-  toPayload(value: T, eventIdOf: (key: string) => EventId, state: CampaignState): PayloadFor<E>;
+  toPayload(
+    value: T,
+    eventIdsOf: (key: string) => readonly EventId[],
+    state: CampaignState,
+  ): PayloadFor<E>;
 }
 
 type ProposalOutcome<E extends EventType> =
@@ -201,14 +212,21 @@ async function runProposal<T, E extends EventType>(
         throw new Error(`Proposal oracle "${roll.oracleId}" is not in the ruleset.`);
       }
       const result = rollOracle(rng, table);
-      return { ...roll, eventId: uuidv7() as EventId, roll: result.roll, rowText: result.row.text };
+      const eventId = uuidv7() as EventId;
+      return {
+        ...roll,
+        eventId,
+        eventIds: [eventId],
+        roll: result.roll,
+        rowText: result.row.text,
+      };
     });
-  const eventIdOf = (key: string): EventId => {
+  const eventIdsOf = (key: string): readonly EventId[] => {
     const found = rolled.find((r) => r.key === key);
     if (found === undefined) {
       throw new Error(`A proposal cited "${key}", which was not rolled.`);
     }
-    return found.eventId;
+    return found.eventIds;
   };
 
   const { request: aiRequest, schema, check } = spec.build(state, rolled);
@@ -238,7 +256,7 @@ async function runProposal<T, E extends EventType>(
             withEnvelope(
               {
                 type: spec.contentType,
-                payload: spec.toPayload(outcome.value, eventIdOf, state),
+                payload: spec.toPayload(outcome.value, eventIdsOf, state),
               } as NewEvent,
               envelope,
             ),
@@ -317,39 +335,59 @@ export interface ProposeCharacterRequest extends ProposalRequest {
  * Match the cited roll events to the recipe's slots, in the recipe's order.
  *
  * The client sends event ids and nothing else, so it cannot mislabel a roll:
- * which slot each one fills is decided here, by walking the declared slots and
- * taking the next unused event on that table. Two backstory slots share one
- * oracle, so order is what separates them — which is exactly why D-186 made
- * them two slots rather than one rolled twice.
+ * which slot each fills is decided here. A roll recorded with its recipe slot
+ * (8.5) is matched by that slot and by table, where the table may be one the
+ * slot's own table embeds; **every** result the slot yielded is taken, so a
+ * roll-twice row and an Action + Theme row are cited whole. A roll recorded
+ * before slots were written falls back to the next unused event on the slot's
+ * table, which is why two backstory slots over one table are two slots
+ * (D-186).
  */
 function rollsForProposal(
   events: readonly AstrolabeEvent[],
   groundedIn: readonly EventId[],
   slots: readonly ProposalRollSpec[],
-): readonly (ProposalRollSpec & {
-  readonly eventId: EventId;
-  readonly roll: number;
-  readonly rowText: string;
-})[] {
-  const cited = groundedIn
-    .map((id) => events.find((event) => event.id === id))
-    .filter((event) => event?.type === 'oracle.rolled');
+): readonly ProvidedRoll[] {
+  const cited = groundedIn.flatMap((id) => {
+    const event = events.find((candidate) => candidate.id === id);
+    return event?.type === 'oracle.rolled' ? [event] : [];
+  });
   const taken = new Set<EventId>();
   return slots.flatMap((slot) => {
-    const event = cited.find(
-      (candidate) => candidate!.payload.oracleId === slot.oracleId && !taken.has(candidate!.id),
+    const tables = tablesOf(slot.oracleId);
+    const recipeSlot = slot.slot ?? slot.key;
+    const bySlot = cited.filter(
+      (event) =>
+        !taken.has(event.id) &&
+        event.payload.slot === recipeSlot &&
+        tables.has(event.payload.oracleId),
     );
-    if (event === undefined) return [];
-    taken.add(event.id);
+    const byTable = cited.find(
+      (event) =>
+        !taken.has(event.id) &&
+        event.payload.slot === undefined &&
+        event.payload.oracleId === slot.oracleId,
+    );
+    const matched = bySlot.length > 0 ? bySlot : byTable === undefined ? [] : [byTable];
+    const first = matched[0];
+    if (first === undefined) return [];
+    for (const event of matched) taken.add(event.id);
     return [
       {
         ...slot,
-        eventId: event.id,
-        roll: event.payload.roll,
-        rowText: event.payload.rowText,
+        eventId: first.id,
+        eventIds: matched.map((event) => event.id),
+        roll: first.payload.roll,
+        rowText: matched.map((event) => event.payload.rowText).join(' + '),
       },
     ];
   });
+}
+
+/** A table and every table its rows embed: the results one slot can yield. */
+function tablesOf(oracleId: OracleId): ReadonlySet<string> {
+  const table = STARFORGED.oracles.find((candidate) => candidate.id === oracleId);
+  return new Set([oracleId, ...(table?.rows ?? []).flatMap((row) => row.embeddedOracles ?? [])]);
 }
 
 export async function proposeCharacter(
@@ -389,15 +427,18 @@ export async function proposeCharacter(
         schema: characterProposalSchema(keys),
         check: (value) => checkCharacterProposal(value, keys, concept),
       }),
-      toPayload: (value, eventIdOf) => ({
+      toPayload: (value, eventIdsOf) => ({
         targetKind: 'character',
         targetId: request.targetId,
         rationale: value.stats.reason,
         groundedIn: [...request.groundedIn],
         proposal: {
           concept,
-          name: { ...value.name, groundedIn: value.name.groundedIn.map(eventIdOf) },
-          callsign: { ...value.callsign, groundedIn: value.callsign.groundedIn.map(eventIdOf) },
+          name: { ...value.name, groundedIn: value.name.groundedIn.flatMap(eventIdsOf) },
+          callsign: {
+            ...value.callsign,
+            groundedIn: value.callsign.groundedIn.flatMap(eventIdsOf),
+          },
           appearance: value.appearance,
           backstory: {
             value:
@@ -405,14 +446,14 @@ export async function proposeCharacter(
                 ? { kind: 'written' as const, text: value.backstory.text ?? '' }
                 : { kind: 'discover_in_play' as const },
             reason: value.backstory.reason,
-            groundedIn: value.backstory.groundedIn.map(eventIdOf),
+            groundedIn: value.backstory.groundedIn.flatMap(eventIdsOf),
           },
           stats: value.stats,
           assets: value.assets,
           backgroundVow: value.backgroundVow,
           hooks: value.hooks.map((hook) => ({
             ...hook,
-            groundedIn: hook.groundedIn.map(eventIdOf),
+            groundedIn: hook.groundedIn.flatMap(eventIdsOf),
           })),
           ...(value.pronouns.value !== null
             ? { pronouns: { value: value.pronouns.value, reason: value.pronouns.reason } }
@@ -477,13 +518,13 @@ export async function proposeIncidents(
           check: (value) => checkIncidentProposal(value, offered),
         };
       },
-      toPayload: (value, eventIdOf, state) => ({
+      toPayload: (value, eventIdsOf, state) => ({
         options: value.options.map((option) => ({
           title: option.title,
           rank: option.rank,
           situation: option.situation,
           reason: option.reason,
-          groundedIn: [...new Set(option.groundedIn)].map(eventIdOf),
+          groundedIn: [...new Set(option.groundedIn)].flatMap(eventIdsOf),
           drawsOn: resolveDrawsOn(option.drawsOn, incidentContext(state)),
         })),
       }),
@@ -644,18 +685,18 @@ export async function proposeStarship(
         schema: starshipProposalSchema(keys, quirkCount),
         check: (value) => checkStarshipProposal(value, keys),
       }),
-      toPayload: (value, eventIdOf) => ({
+      toPayload: (value, eventIdsOf) => ({
         targetKind: 'starship',
         targetId: STARSHIP_PROPOSAL_TARGET,
         rationale: value.reason,
         groundedIn: provided.map((roll) => roll.eventId),
         proposal: {
-          name: { ...value.name, groundedIn: value.name.groundedIn.map(eventIdOf) },
+          name: { ...value.name, groundedIn: value.name.groundedIn.flatMap(eventIdsOf) },
           appearance: value.appearance,
-          history: { ...value.history, groundedIn: value.history.groundedIn.map(eventIdOf) },
+          history: { ...value.history, groundedIn: value.history.groundedIn.flatMap(eventIdsOf) },
           quirks: value.quirks.map((quirk) => ({
             ...quirk,
-            groundedIn: quirk.groundedIn.map(eventIdOf),
+            groundedIn: quirk.groundedIn.flatMap(eventIdsOf),
           })),
         },
       }),
@@ -780,7 +821,7 @@ export async function proposeSettlement(
         schema: settlementProposalSchema(keys, shape),
         check: (value) => checkSettlementProposal(value, rolled),
       }),
-      toPayload: (value, eventIdOf) => {
+      toPayload: (value, eventIdsOf) => {
         const text = (field: {
           readonly value: string;
           readonly reason: string;
@@ -788,7 +829,7 @@ export async function proposeSettlement(
         }) => ({
           value: field.value,
           reason: field.reason,
-          groundedIn: field.groundedIn.map(eventIdOf),
+          groundedIn: field.groundedIn.flatMap(eventIdsOf),
         });
         return {
           targetKind: 'settlement',
@@ -797,7 +838,10 @@ export async function proposeSettlement(
           groundedIn: provided.map((roll) => roll.eventId),
           proposal: {
             name: text(value.name),
-            location: { ...value.location, groundedIn: value.location.groundedIn.map(eventIdOf) },
+            location: {
+              ...value.location,
+              groundedIn: value.location.groundedIn.flatMap(eventIdsOf),
+            },
             population: text(value.population),
             authority: text(value.authority),
             projects: value.projects.map(text),
@@ -807,7 +851,7 @@ export async function proposeSettlement(
                   planet: {
                     planetClass: {
                       ...value.planet.planetClass,
-                      groundedIn: value.planet.planetClass.groundedIn.map(eventIdOf),
+                      groundedIn: value.planet.planetClass.groundedIn.flatMap(eventIdsOf),
                     },
                     name: text(value.planet.name),
                   },
@@ -904,14 +948,14 @@ export async function proposeTrouble(
         ),
         schema: troubleProposalSchema(keys),
       }),
-      toPayload: (value, eventIdOf) => ({
+      toPayload: (value, eventIdsOf) => ({
         targetKind: 'trouble',
         targetId: troubleProposalTarget(trouble),
         rationale: value.reason,
         groundedIn: provided.map((roll) => roll.eventId),
         proposal: {
           ...trouble,
-          text: { ...value.text, groundedIn: value.text.groundedIn.map(eventIdOf) },
+          text: { ...value.text, groundedIn: value.text.groundedIn.flatMap(eventIdsOf) },
         },
       }),
     },

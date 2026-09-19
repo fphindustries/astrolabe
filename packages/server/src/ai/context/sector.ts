@@ -38,12 +38,15 @@ export interface SectorProposalRoll {
   readonly key: string;
   readonly label: string;
   readonly oracleId: OracleId;
+  readonly slot: string;
 }
 
 const toRoll =
   (rename?: (slot: string) => string) =>
   (slot: OracleRecipeSlot): SectorProposalRoll => ({
     key: rename === undefined ? slot.slot : rename(slot.slot),
+    // The recipe's own slot name, which a renamed key no longer says (8.5).
+    slot: slot.slot,
     label:
       slot.label ??
       STARFORGED.oracles.find((oracle) => oracle.id === slot.oracle)?.name ??
