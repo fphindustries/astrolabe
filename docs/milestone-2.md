@@ -1767,7 +1767,9 @@ implementation note.
     median: character 19.8 s (max 26.4), incident 24.9 s, starship 15.5 s, connection
     11.9 s, settlement 10.0 s, trouble 7.1 s, sector name 6.0 s, the swear passage 7.6 s,
     its check 8.6 s, the world plan 4.1 s. `world_plan` runs on the narrator's model; only
-    the scene frame's plan uses the planner (D-141). No prompt defect was found.
+    the scene frame's plan uses the planner (D-141). No prompt defect was found. The eval
+    records provider results, so a rejection by the server's own check, after a parse, is
+    outside what it can see as well.
   - **10.4, the browser pass.** Production build, 1280x720 checked by rendering every launch
     view and play in a 1280x720 frame, since the browser window could not be resized; no
     view scrolls sideways. One fresh campaign went through every section on the dev stub and
@@ -1801,23 +1803,40 @@ implementation note.
     composer, so the pending vow cannot be sworn in the browser. The HTTP path can (10.3).
     Whether the swear should stay reachable while narration is paused is D-116's call, and
     the non-negotiable that dice never wait on the AI bears on it.
-  - **Not fixed, noted.** After Create campaign and after activation, focus starts at the
-    top of the new page, not on its heading. Within the launch workspace it is handled
-    (fix 1).
-  - **Not walked.** Every section by keyboard alone. Foundation, the error summaries of
-    Foundation, Starship and the crew Review, the map, the vow choices and the launch
-    dialog were done by keyboard. The other sections were driven by pointer and script.
+    (12) "Add a settlement" opened its editor fourteen stops above the button and left focus
+    on the button. The editor's heading now takes focus. (13) The three incident options'
+    "Choose this" buttons read alike. Each is now described by its option's title.
+  - **Keyboard.** Every section was completed by keyboard alone, with the focus ring visible
+    at every stop. That was Foundation, the vow choices and the launch dialog on the first
+    campaign, and Truths (with a nested choice), Crew, Starship, Sector, Connection and
+    Troubles and Incident on a third. Error summaries took focus and their links reached
+    their fields.
+  - **Not fixed, noted.** (a) 59 launch buttons use native `disabled`, and those disabled
+    only while their request is pending lose focus when pressed; focus falls to the
+    document. Chrome resumes Tab from where the button was, so keyboard use goes on, but a
+    screen reader loses its place. The fix is `aria-disabled` with a guarded handler, as
+    `TruthCard` already does, across groups 4–9: a refactor of its own. (b) After Create
+    campaign and after activation, focus starts at the top of the new page, not on its
+    heading. Within the launch workspace it is handled (fix 1). (c) Once, a tab stopped
+    responding for about 45 s on leaving a test page, and a fresh tab loaded the same URL
+    at once. It did not happen again.
   Verified with Postgres: 137 files, 1608 tests, zero skipped files. typecheck, lint,
   format:check and the web build clean.
 
 ---
 
-## Milestone 2 complete
+## Milestone 2 status
 
-Groups 1 to 10 are done. The golden launch runs from a blank campaign to a sworn first vow
-through the HTTP routes with loaded dice and stubbed providers (10.2). It is the foundation
-the Session 1 and golden-session fixtures now stand on (10.1). It completes with no provider
-(10.3), and a fresh install opens it (10.6). It was walked in the browser on the dev stub
-and with no provider (10.4), and run once against the live Guide (10.5). One question is
-left for the design record: whether the inciting vow can be sworn while play is paused
-without a Guide (D-116).
+Every task in groups 1 to 10 is done. The golden launch runs from a blank campaign to a
+narrated first vow through the HTTP routes with loaded dice and stubbed providers (10.2).
+It is the foundation the Session 1 and golden-session fixtures now stand on (10.1). It
+completes with no provider (10.3), and a fresh install opens it (10.6). It was walked in the
+browser on the dev stub, with no provider, and by keyboard (10.4), and run once against the
+live Guide (10.5).
+
+**One question decides whether "done" is met.** The Done-when asks that "the same flow
+remain completable with no AI provider". With no provider, the launch completes and
+activates, but play opens paused (D-116), so the pending vow cannot be sworn in the browser.
+If the no-provider flow ends at activation, as the golden launch's compatibility check
+reads, Milestone 2 is complete. If it ends at the sworn vow, the swear must stay reachable
+while narration is paused, and that needs a decision beside D-116.
