@@ -1189,12 +1189,17 @@ of them stays). D-170 retires the production seed, and was approved with the mil
     still a valid acceptance target.
 - [ ] 10.1 Extract a reusable Lantern Wake campaign-launch fixture and rebuild the three
   existing fixtures on top of it as active campaigns.
-  - [ ] **10.1a One HTTP fixture harness.** Move what `golden-session.ts` builds for itself
+  - [x] **10.1a One HTTP fixture harness.** Move what `golden-session.ts` builds for itself
     into `fixtures/http-script.ts`: typed route calls that fail on a non-2xx with the beat
     named, NDJSON streams read to `committed`, loaded dice per step that fail on a die left
     over, a Guide scripted per purpose that names an unscripted call, and command ids derived
     from the fixture's name. The golden session moves onto it unchanged, and its test still
     passes before anything else changes.
+    *As built:* `openScript(sql, { fixture, campaignId, provider? })` also has PUT, DELETE,
+    a campaign-list POST, and `attempt` for a script that expects a refusal. The optional
+    provider replaces the scripted Guide, checker and planner, for 10.3. Baseline before the
+    launch: the DB-backed suite runs in 7.8 s of wall time, and the two fixture test files in
+    3.4 s.
   - [ ] **10.1b The Lantern Wake launch (D-205).** `playLanternWakeLaunch` plays
     golden-launch beats 1–13 through the harness, exactly as the narrative gives them, with
     every route the screens use. That covers the premise and settings, all fourteen truths
