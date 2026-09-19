@@ -3,7 +3,6 @@ import {
   DEFAULT_CAMPAIGN_SETTINGS,
   type ActivateLaunchResponse,
   type CampaignId,
-  type CommandId,
   type CreateCharacterResponse,
   type EntityId,
   type EstablishLaunchConnectionResponse,

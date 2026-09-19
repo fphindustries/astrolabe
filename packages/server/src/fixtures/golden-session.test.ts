@@ -58,6 +58,10 @@ describe.skipIf(!hasTestDatabase)('the golden session, end to end (10.4, D-152)'
     Object.values(state.characters).find((c) => c.callsign === name)!;
   const byId = (id: string) => events.find((e) => e.id === id)!;
   const purposes = () => run.requests.map((r) => r.purpose);
+  // By name and by role: the launch brings an NPC (the connection) and four
+  // more vows (three background vows and the connection's) of its own.
+  const valda = () => Object.values(state.entities).find((e) => e.name === 'Valda Thorn');
+  const inciting = () => state.tracks[state.launch.activation!.vowTrackId!];
   const committedId = (frames: readonly NarrationFrame[]) => {
     const last = frames.at(-1);
     return last?.type === 'committed' ? last.eventId : undefined;
@@ -75,10 +79,10 @@ describe.skipIf(!hasTestDatabase)('the golden session, end to end (10.4, D-152)'
 
     it('shows the location, the vow and every character’s meters from state (A1)', () => {
       expect(state.scene?.title).toBe('The derelict relay station');
-      expect(
-        Object.values(state.entities).find((e) => e.id === state.scene?.locationId)?.name,
-      ).toBe('Varga Relay');
-      const vow = Object.values(state.tracks).find((t) => t.kind === 'vow');
+      // 10.1c: the relay is a launch location, and the inciting vow is the one
+      // Vesna swore at launch, among the crew's background vows (D-205).
+      expect(state.launch.locations[state.scene!.locationId!]?.name).toBe('Varga Relay');
+      const vow = inciting();
       expect(vow?.title).toBe("Recover the flight recorder of Meridian's Hope");
       expect(Object.values(state.characters)).toHaveLength(3);
     });
@@ -182,7 +186,7 @@ describe.skipIf(!hasTestDatabase)('the golden session, end to end (10.4, D-152)'
 
   describe('Beat 6 — the world gets a new face', () => {
     it('establishes the NPC as a tracked entity badged as AI-established (A10)', () => {
-      const npc = Object.values(state.entities).find((e) => e.kind === 'npc');
+      const npc = valda();
       expect(npc).toMatchObject({
         name: 'Valda Thorn',
         provenance: { establishedBy: 'ai', recipeId: 'recipe:npc' },
@@ -200,7 +204,7 @@ describe.skipIf(!hasTestDatabase)('the golden session, end to end (10.4, D-152)'
         voidedBy: [{ kind: 'reroll', reason: expect.stringContaining('evacuation logs') }],
       });
       expect(survivor?.voided).toBe(false);
-      const npc = Object.values(state.entities).find((e) => e.kind === 'npc')!;
+      const npc = valda()!;
       expect(npc.provenance.groundedIn).toContain(survivor!.event.id);
       expect(npc.provenance.groundedIn).not.toContain(discarded!.event.id);
     });
@@ -294,7 +298,7 @@ describe.skipIf(!hasTestDatabase)('the golden session, end to end (10.4, D-152)'
         },
       });
       // Reach a Milestone is the player's call: nothing marked progress on the vow.
-      expect(Object.values(state.tracks).find((t) => t.kind === 'vow')?.ticks).toBe(0);
+      expect(inciting()?.ticks).toBe(0);
     });
 
     it('feeds the next session’s recap (A17 → A1)', async () => {

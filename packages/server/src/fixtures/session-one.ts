@@ -1,4 +1,4 @@
-import type { AssetId, CharacterId, MoveId, OutcomeTier, StatId, TrackId } from '@astrolabe/rules';
+import type { CharacterId, MoveId, OutcomeTier, StatId, TrackId } from '@astrolabe/rules';
 import {
   LOCAL_PLAYER_ID,
   type Actor,
@@ -10,21 +10,14 @@ import {
 import type { Sql } from 'postgres';
 
 import { StubProvider } from '../ai/stub.js';
-import {
-  addSectorLocation,
-  addSectorRoute,
-  createCampaign,
-  swearIncitingVow,
-} from '../db/campaign-commands.js';
-import { decideTruth } from '../db/launch-commands.js';
 import { appendCommand } from '../db/event-store.js';
-import { beginSession, endSession, proposeSessionSummary } from '../db/session-commands.js';
+import { endSession, proposeSessionSummary } from '../db/session-commands.js';
 import { setComplication } from '../db/complication-commands.js';
 import { applyMoveChoice, invokeMove } from '../db/move-commands.js';
 import { prepareBeatNarration, runBeatNarration } from '../db/narration-commands.js';
 
 import { fixtureUuid } from './ids.js';
-import { createLegacyCharacter } from './legacy-character.js';
+import { playLanternWakeLaunch } from './lantern-wake-launch.js';
 import { actionRoll } from './loaded-dice.js';
 
 /**
@@ -91,124 +84,14 @@ export async function playSessionOne(
   const campaignId = key<CampaignId>('campaign');
   const base = { campaignId, actor: PLAYER };
 
-  // --- The campaign and its truths ---------------------------------------
-  await createCampaign(sql, {
-    ...base,
-    commandId: key('campaign:create'),
-    name: campaignName,
-    settings: { narrationLatitude: 'color', narrationLength: 'standard', rerollCap: 2 },
-  });
-  // D-183: one truth representation. This used to call `setTruth`, which no
-  // longer exists; `truth.set` stays readable for campaigns that already have
-  // them, but nothing writes it.
-  // Cataclysm's first option carries a nested subchoice, which `decideTruth`
-  // requires as part of the accepted truth (A25) — the legacy command had no
-  // concept of one, which is half of why D-162 called it the M1 omission.
-  const subchoices: Readonly<Record<string, { id: string; index: number } | undefined>> = {
-    'oracle:cataclysm': { id: 'oracle:cataclysm/0', index: 0 },
-  };
-  for (const oracle of ['oracle:cataclysm', 'oracle:communities', 'oracle:iron'] as const) {
-    const nested = subchoices[oracle];
-    await decideTruth(sql, {
-      ...base,
-      commandId: key(`truth:${oracle}`),
-      truthId: oracle as never,
-      resolution: 'selected',
-      optionIndex: 0,
-      ...(nested === undefined
-        ? {}
-        : { subchoiceId: nested.id, subchoiceOptionIndex: nested.index }),
-    });
-  }
-
-  // --- The sector ---------------------------------------------------------
-  const location = async (name: string, description: string) =>
-    (
-      await addSectorLocation(sql, {
-        ...base,
-        commandId: key(`location:${name}`),
-        name,
-        description,
-      })
-    ).locationId;
-  const anchorage = await location(
-    'Deepwater Anchorage',
-    'A ring of lashed-together hulls where the crew trades and refuels.',
-  );
-  const drift = await location(
-    'Kessel Drift',
-    'A slow river of broken ice and old wreckage between the anchorage and the rim.',
-  );
-  const relay = await location(
-    'Varga Relay',
-    'A derelict relay station at the edge of the sector, dark for a generation.',
-  );
-  for (const [name, from, to] of [
-    ['anchorage-drift', anchorage, drift],
-    ['drift-relay', drift, relay],
-  ] as const) {
-    await addSectorRoute(sql, {
-      ...base,
-      commandId: key(`route:${name}`),
-      fromLocationId: from,
-      toLocationId: to,
-    });
-  }
-
-  // --- The crew and the vow ----------------------------------------------
-  // A Milestone 1 crew, written as Milestone 1 wrote it: each character
-  // carries the granted Starship (D-89), which the fold keeps off their sheet
-  // and the crew shares (D-193). 10.1 rebuilds this on a launched ship.
-  const character = async (
-    name: string,
-    callsign: string,
-    stats: Record<StatId, number>,
-    assets: readonly string[],
-    pronouns?: string,
-  ) =>
-    createLegacyCharacter(sql, {
-      ...base,
-      commandId: key(`character:${callsign}`),
-      draft: { name, callsign, stats, assets: assets as readonly AssetId[] },
-      ...(pronouns !== undefined ? { pronouns } : {}),
-    });
-  // D-131: the golden session calls Vesna "her" (Beat 5) and never gives
-  // Rook's or Juno's pronouns, so theirs stay unrecorded.
-  const vesna = await character(
-    'Vesna Kade',
-    'Vesna',
-    { edge: 3, heart: 2, iron: 1, shadow: 1, wits: 2 },
-    ['asset:path/ace', 'asset:path/navigator', 'asset:module/sensor-array'],
-    'she/her',
-  );
-  const rook = await character(
-    'Rook Ilari',
-    'Rook',
-    { edge: 2, heart: 1, iron: 3, shadow: 1, wits: 2 },
-    ['asset:path/veteran', 'asset:path/armored', 'asset:path/gunner'],
-  );
-  const juno = await character(
-    'Juno Marr',
-    'Juno',
-    { edge: 1, heart: 1, iron: 2, shadow: 2, wits: 3 },
-    ['asset:path/gearhead', 'asset:path/scavenger', 'asset:companion/utility-bot'],
-  );
-
-  const { vowTrackId: vowId } = await swearIncitingVow(sql, {
-    ...base,
-    commandId: key('vow:inciting'),
-    title: "Recover the flight recorder of Meridian's Hope",
-    rank: 'formidable',
-  });
-
-  // --- Session 1 ------------------------------------------------------------
-  const sessionId = key<SessionId>('session:1');
-  await beginSession(sql, {
-    ...base,
-    commandId: key('session:1:begin'),
-    scene: { title: 'A beacon at Deepwater Anchorage', locationId: anchorage },
-    ids: { sessionId, sceneId: key<SceneId>('scene:anchorage') },
-  });
+  // --- The launch (D-205) -------------------------------------------------
+  // The golden launch through HTTP: the campaign, its truths, the crew, the
+  // ship, the Outlands, and Session 1 begun by activation at Deepwater
+  // Anchorage, whose first beat is the vow Vesna swears.
+  const launch = await playLanternWakeLaunch(sql, { fixture, campaignId, campaignName });
+  const { vesna, rook, juno } = launch.characters;
+  const { anchorage, drift, relay } = launch.locations;
+  const { sessionId, vowId } = launch;
 
   const ai = new StubProvider({
     fallback: () => {
@@ -348,25 +231,65 @@ export async function playSessionOne(
     ],
   ]);
 
+  // Vesna secures her advantage before the Drift, taking the +1 rather than
+  // momentum: the swear's +2 came first (D-205), and the Drift's roll spends
+  // the +1, so session 1 still ends at Vesna +7 and nothing carries forward.
+  const advantage = await move(
+    'vesna-approach',
+    {
+      moveId: SECURE_AN_ADVANTAGE,
+      actorCharacterId: vesna,
+      stat: 'edge',
+      actionText: "Vesna plots a line through the Drift's slow currents before committing to it.",
+    },
+    [3, [2, 9]],
+    'weak_hit',
+  );
+  if (advantage.pendingChoice === undefined) {
+    throw new Error(`Fixture ${fixture}, vesna-approach: expected a weak-hit choice.`);
+  }
+  await applyMoveChoice(sql, {
+    ...base,
+    commandId: key('vesna-approach:choice'),
+    rollEventId: advantage.pendingChoice.rollEventId,
+    choiceId: advantage.pendingChoice.choiceId,
+    optionIds: ['bonus'],
+  });
+  await narrate('vesna-approach', [
+    ['character_does', 'Vesna', ['F2'], "Vesna plots a line through the Drift's slow currents."],
+    [
+      'world',
+      null,
+      ['F3'],
+      'The ice moves in long, lazy tides. There is a gap in it, if the ship is quick.',
+    ],
+  ]);
+
   await move(
     'vesna-drift',
     {
       moveId: FACE_DANGER,
       actorCharacterId: vesna,
       stat: 'edge',
-      actionText: 'Vesna threads the Lantern Wake through the ice of Kessel Drift.',
+      actionText:
+        "Vesna threads the Lantern Wake through the ice of Kessel Drift and into the relay's sensor shadow.",
     },
     [4, [5, 1]],
     'strong_hit',
   );
   await narrate('vesna-drift', [
-    ['character_does', 'Vesna', ['F2'], 'Vesna threads the Lantern Wake into the Drift.'],
+    [
+      'character_does',
+      'Vesna',
+      ['F2'],
+      "Vesna threads the Lantern Wake through the Drift and tucks it into the relay's blind side.",
+    ],
     [
       'world',
       null,
       ['F3'],
-      'Ice grinds along the hull plating and slides away. The ship comes out the other side ' +
-        'clean, with Varga Relay a cold smudge on the forward scopes.',
+      'Ice grinds along the hull plating and slides away. Close enough now to see the scorched ' +
+        'docking collar of Varga Relay, and the one row of windows that are not dark.',
     ],
   ]);
 
@@ -386,44 +309,6 @@ export async function playSessionOne(
       },
     ],
   });
-
-  const advantage = await move(
-    'vesna-approach',
-    {
-      moveId: SECURE_AN_ADVANTAGE,
-      actorCharacterId: vesna,
-      stat: 'edge',
-      actionText:
-        "Vesna parks the Lantern Wake in the relay's sensor shadow before they go closer.",
-    },
-    [3, [2, 9]],
-    'weak_hit',
-  );
-  if (advantage.pendingChoice === undefined) {
-    throw new Error(`Fixture ${fixture}, vesna-approach: expected a weak-hit choice.`);
-  }
-  await applyMoveChoice(sql, {
-    ...base,
-    commandId: key('vesna-approach:choice'),
-    rollEventId: advantage.pendingChoice.rollEventId,
-    choiceId: advantage.pendingChoice.choiceId,
-    optionIds: ['momentum'],
-  });
-  await narrate('vesna-approach', [
-    [
-      'character_does',
-      'Vesna',
-      ['F2'],
-      "Vesna tucks the Lantern Wake behind a tumbling slab of ice in the relay's blind side.",
-    ],
-    [
-      'world',
-      null,
-      ['F3'],
-      'From there the station is close enough to see the scorched docking collar and the one ' +
-        'row of windows that are not dark.',
-    ],
-  ]);
 
   // --- Ending session 1 (D-149) -------------------------------------------
   // The Guide's proposal, scripted, then committed unedited.

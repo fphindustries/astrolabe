@@ -15,7 +15,7 @@ import type { AiRequest } from '../provider.js';
 import type { BeatFact, BeatFacts, FactKind } from './describe-beat.js';
 import { narrationBudget } from './length.js';
 import { systemBlocks } from './prompt.js';
-import { renderState } from './render-state.js';
+import { placeOf, renderState } from './render-state.js';
 import { renderFacts, segmentContext, segmentInstructions } from './segments.js';
 
 /**
@@ -88,10 +88,7 @@ export function describeRecap(
     }
     switch (event.type) {
       case 'scene.started': {
-        const location =
-          event.payload.locationId === undefined
-            ? undefined
-            : state.entities[event.payload.locationId];
+        const location = placeOf(state, event.payload.locationId);
         push(
           'scene',
           event.id,

@@ -99,6 +99,27 @@ function renderSectorPlaces(state: CampaignState): string[] {
     });
 }
 
+/**
+ * A place by id, as every reader of a scene names it (10.1c, D-183): a
+ * Milestone 1 location entity or a launch location, with what it records.
+ * Session 1 opens at a launch location (D-168), which is not an entity, so a
+ * reader that looked only at `entities` put a launched campaign's scenes at
+ * no place at all. `detail` is the entity's fields or the location's typed
+ * detail, empty when it records nothing.
+ */
+export function placeOf(
+  state: CampaignState,
+  id: EntityId | undefined,
+): { readonly name: string; readonly detail: string } | undefined {
+  if (id === undefined) return undefined;
+  const entity = state.entities[id];
+  if (entity !== undefined)
+    return { name: entity.name, detail: Object.values(entity.fields).join(' ') };
+  const location = state.launch.locations[id];
+  if (location === undefined) return undefined;
+  return { name: location.name, detail: launchLocationDetail(state, id) };
+}
+
 export function renderState(state: CampaignState): string {
   const sections: string[] = [];
 

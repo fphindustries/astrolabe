@@ -7,7 +7,7 @@ import { computeVoidState, isSuppressed } from '../../projection/void-state.js';
 import type { AiRequest } from '../provider.js';
 
 import { rubricText } from './authority-rubric.js';
-import { renderState } from './render-state.js';
+import { placeOf, renderState } from './render-state.js';
 
 /**
  * "What now?" (task 9.3, A6, D-10, D-148). Pure, like the rest of this
@@ -33,8 +33,7 @@ export function whatNowAnchors(
   const lines: string[] = [];
 
   if (state.scene !== null) {
-    const location =
-      state.scene.locationId === undefined ? undefined : state.entities[state.scene.locationId];
+    const location = placeOf(state, state.scene.locationId);
     lines.push(
       `The scene: ${state.scene.title}${location === undefined ? '' : `, at ${location.name}`}.`,
     );

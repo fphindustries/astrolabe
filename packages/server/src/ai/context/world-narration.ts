@@ -12,7 +12,7 @@ import type { AiRequest } from '../provider.js';
 import type { BeatFact, BeatFacts } from './describe-beat.js';
 import { narrationBudget } from './length.js';
 import { recentNarration, systemBlocks } from './prompt.js';
-import { renderState } from './render-state.js';
+import { placeOf, renderState } from './render-state.js';
 import { renderFacts, segmentContext, segmentInstructions } from './segments.js';
 import { QUESTION_RULES, WORLD_RULES, describeAnswer, planName } from './world.js';
 
@@ -136,11 +136,11 @@ export function describeScene(
   rolls: readonly (PayloadFor<'oracle.rolled'> & { readonly eventId: EventId })[],
 ): BeatFacts {
   const scene = state.scene;
-  const location = scene?.locationId === undefined ? undefined : state.entities[scene.locationId];
+  const location = placeOf(state, scene?.locationId);
   const where =
     location === undefined
       ? ''
-      : ` It takes place at ${location.name}${Object.values(location.fields).length > 0 ? `: ${Object.values(location.fields).join(' ')}` : '.'}`;
+      : ` It takes place at ${location.name}${location.detail.length > 0 ? `: ${location.detail}` : '.'}`;
   return factsOf([
     {
       kind: 'scene',

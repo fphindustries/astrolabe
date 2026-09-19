@@ -95,14 +95,10 @@ describe.skipIf(!hasTestDatabase)('the Campaign Launch routes (3.1–3.9)', () =
     ]);
   });
 
-  it('serves the workspace for a Milestone 1 fixture, closed rather than broken (A43, D-178)', async () => {
-    // 4.4 makes this endpoint the front door for *every* campaign open, active
-    // and legacy ones included. It runs the launch validator over characters
-    // created under the Milestone 1 rules — which carry the per-character
-    // Starship grant D-171 makes invalid for a launch — so the thing worth
-    // asserting is that a legacy campaign yields *blockers and a closed
-    // workspace*, not a 500. 3R.10b proved these campaigns refuse launch
-    // commands; nothing proved the launch read survives them.
+  it('serves the workspace for a built-in fixture, closed as launched (A43, D-205)', async () => {
+    // 10.1c: the built-in fixtures stand on the golden launch, so each is an
+    // active campaign whose launch is closed. A Milestone 1 campaign's read,
+    // the other half of A43, is proved on the frozen legacy log (10.1d).
     for (const name of [SESSION_ONE, SESSION_TWO_OPEN, GOLDEN_SESSION]) {
       const fixture = FIXTURES.get(name)!;
       await seedFixture(db.sql, name);
@@ -116,12 +112,12 @@ describe.skipIf(!hasTestDatabase)('the Campaign Launch routes (3.1–3.9)', () =
       const body = response.json() as LaunchWorkspaceResponse;
       expect({ name, ...body }).toMatchObject({
         launchOpen: false,
-        closedReason: 'campaign_in_play',
+        closedReason: 'campaign_active',
       });
-      // The phase alone would have said `draft` and sent A43 to the wrong screen.
-      expect(body.state.launch.phase, name).toBe('draft');
+      expect(body.state.launch.phase, name).toBe('active');
     }
-  });
+    // Each fixture replays the whole launch before its sessions (D-205).
+  }, 60_000);
 
   it('404s the workspace for a campaign that does not exist', async () => {
     const response = await app.inject({
@@ -600,7 +596,7 @@ describe.skipIf(!hasTestDatabase)('the Campaign Launch routes (3.1–3.9)', () =
       expect(response.statusCode).toBe(422);
     });
 
-    it('refuses both on a campaign already in play (D-178)', async () => {
+    it('refuses both on a launched campaign (D-178)', async () => {
       const fixture = FIXTURES.get(SESSION_ONE)!;
       await seedFixture(db.sql, SESSION_ONE);
       const characterId = (
@@ -626,7 +622,7 @@ describe.skipIf(!hasTestDatabase)('the Campaign Launch routes (3.1–3.9)', () =
       });
 
       expect(revised.statusCode).toBe(422);
-      expect(revised.json()).toMatchObject({ reason: 'campaign_in_play' });
+      expect(revised.json()).toMatchObject({ reason: 'campaign_active' });
       expect(removed.statusCode).toBe(422);
     });
   });

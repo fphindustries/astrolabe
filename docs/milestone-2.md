@@ -1230,7 +1230,7 @@ of them stays). D-170 retires the production seed, and was approved with the mil
     every fact but a truth, which A41's links satisfy. The swear is a strong hit: Vesna
     +4, Rook and Juno +2. Wall time is measured once 10.1c lands, since the launch alone
     does not yet replay under the other fixtures.
-  - [ ] **10.1c Rebuild the three fixtures on it.** `session-1` continues from the launch:
+  - [x] **10.1c Rebuild the three fixtures on it.** `session-1` continues from the launch:
     Session 1 is the activation's, and the swear is its first beat. The existing moves,
     passages, relay scene and ending follow. **Session 1 absorbs the swear's momentum.**
     Momentum adds to no action roll, so its dice and tiers stay as they are. Its momentum
@@ -1240,6 +1240,30 @@ of them stays). D-170 retires the production seed, and was approved with the mil
     foundation did: the relay is a launch location, NPCs are found by name, the inciting vow
     is found as the vow sworn for the incident (there are five vows now), and the context
     carries a launched ship rather than D-193's legacy line. Each moved assertion is listed.
+    *As built:* **Session 1's one changed choice.** Vesna's Secure an Advantage (same dice,
+    same weak hit) now comes before the Drift. It takes the +1 on her next move rather than
+    +2 momentum, and the Drift's Face Danger spends that +1: still a strong hit, 8 against
+    5 and 1. So nothing carries into session 2. The two actions and passages were reworded
+    to fit: plotting the line, then threading the Drift into the relay's sensor shadow.
+    Session 1 ends at Vesna +7, Rook +2 and Juno +3 as before. **The golden session played
+    through unchanged**, every die, tier, momentum value and burn offer. **Moved
+    assertions:** the golden-session test resolves the relay among launch locations, finds
+    Valda Thorn by name (the connection's NPC comes first by kind), and takes the inciting
+    vow from the activation (there are five vows now). The session-1 fixture test now
+    expects launch locations with no location entities, 14 truths, an active phase, and
+    five moves and passages with five beat narrations. The session-2-open test finds the
+    relay among launch locations. The session lifecycle test expects the drift's new words
+    and five session-1 beats. The launch-routes test now proves the fixtures are launched
+    (`campaign_active`, phase `active`); the Milestone 1 half of A43 moves to 10.1d.
+    **Two defects the rebuilt fixture exposed, fixed:** "What now?" and the recap placed a
+    launched campaign's scene nowhere, and so did world narration's scene fact. All three
+    looked up the place among entities only, the same lookup 8.0j and 9.0i fixed elsewhere.
+    `placeOf` in `render-state.ts` is now the one lookup all three use. `beginSession`'s
+    location check keeps entities only, because it places only a first session, and a
+    launched campaign's first session is activation's. **Wall time:** the DB-backed suite
+    went from 7.8 s to 15.0 s. The two fixture test files went from 3.4 s to 8.6 s, since the
+    launch now replays under each fixture. The launch-routes fixture test now takes a
+    60-second timeout.
   - [ ] **10.1d Freeze a Milestone 1 log before its commands go (D-206).** While the
     Milestone 1 commands still exist, run them once and dump the events they write into
     `fixtures/legacy-log.ts`, a test helper that appends that log directly. It covers truths,
