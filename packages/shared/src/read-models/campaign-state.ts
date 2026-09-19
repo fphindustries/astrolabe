@@ -181,6 +181,12 @@ export interface TrackState {
   readonly ticks: number;
   readonly maxTicks: number;
   readonly lastChangedBy: FieldProvenance;
+  /**
+   * Who shares the track (D-168, D-202): a shared vow's or a connection's
+   * participants. `track.created` has carried them since group 2, and nothing
+   * projected them until 9.0a, so the shared crew was written and unreadable.
+   */
+  readonly participantCharacterIds?: readonly CharacterId[];
 }
 
 export interface EntityState {

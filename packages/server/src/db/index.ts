@@ -25,6 +25,7 @@ export {
   saveSharedStarship,
   configureLaunchSector,
   establishLaunchConnection,
+  reviseLaunchConnection,
   acceptLaunchIncident,
   amendLaunchFact,
   removeLaunchLocation,

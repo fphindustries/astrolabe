@@ -92,4 +92,10 @@ export const TrackRevisedSchema = z.object({
   trackId: TrackIdSchema,
   title: z.string().min(1),
   rank: ChallengeRankSchema.optional(),
+  /**
+   * D-202: who shares the track, replaced whole when given. A connection's
+   * sharing crew can change before launch; progress, kind and the swearing
+   * character still cannot change here.
+   */
+  participantCharacterIds: z.array(CharacterIdSchema).min(1).optional(),
 });

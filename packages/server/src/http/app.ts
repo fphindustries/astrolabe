@@ -122,6 +122,7 @@ import {
   saveSharedStarship,
   configureLaunchSector,
   establishLaunchConnection,
+  reviseLaunchConnection,
   acceptLaunchIncident,
   amendLaunchFact,
   removeLaunchLocation,
@@ -915,6 +916,44 @@ export function buildApp({
       }
       try {
         const result = await establishLaunchConnection(sql, {
+          campaignId: id,
+          commandId: parsed.data.commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          npcName: parsed.data.npcName,
+          role: parsed.data.role,
+          rank: parsed.data.rank,
+          participants: parsed.data.participants,
+        });
+        reply.code(201);
+        return result.response as EstablishLaunchConnectionResponse;
+      } catch (error) {
+        if (error instanceof LaunchRejectedError) {
+          reply.code(422);
+          return { problem: error.message, reason: error.reason };
+        }
+        throw error;
+      }
+    },
+  );
+
+  // 9.0a: revise the starting connection before launch, in place (D-202, D-203).
+  app.put<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/launch/connection',
+    async (
+      request,
+      reply,
+    ): Promise<
+      EstablishLaunchConnectionResponse | { problem: string; reason: string } | undefined
+    > => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = EstablishLaunchConnectionRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        const result = await reviseLaunchConnection(sql, {
           campaignId: id,
           commandId: parsed.data.commandId,
           actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },

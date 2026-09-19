@@ -1410,7 +1410,7 @@ export async function establishLaunchConnection(
   if (state.launch.connection !== undefined)
     throw new LaunchRejectedError(
       'connection_exists',
-      'Revise the existing starting connection instead.',
+      'Revise the existing starting connection instead (PUT /launch/connection).',
     );
   if (
     request.participants.length === 0 ||
@@ -1474,6 +1474,112 @@ export async function establishLaunchConnection(
       },
     ],
     response: { connectionId, npcId, trackId },
+  });
+}
+
+/**
+ * Revise the starting connection before launch (9.0a, D-202, D-203).
+ *
+ * The connection, its NPC and its progress track keep their ids; the
+ * revision supersedes the accepted connection, read from the fold rather
+ * than named by the client. What changed reaches everything that states it,
+ * in the same command: the track's title, rank and sharing crew
+ * (`track.revised`, D-202), and the NPC's name and role, restated under the
+ * NPC's own id (D-203) because nothing amends an entity (D-86) and before
+ * launch nothing in play has met it yet. The automatic strong hit is still
+ * the outcome; nothing rolls (D-167).
+ */
+export async function reviseLaunchConnection(
+  sql: Sql,
+  request: EstablishLaunchConnectionRequest,
+): Promise<AppendResult> {
+  const state = project(await readEvents(sql, request.campaignId));
+  requireLaunchOpen(state, 'The connection changes by amendment after launch.');
+  const current = state.launch.connection;
+  if (current === undefined)
+    throw new LaunchRejectedError(
+      'no_connection',
+      'There is no starting connection to revise; establish one first.',
+    );
+  if (
+    request.participants.length === 0 ||
+    request.participants.some((id) => state.characters[id] === undefined)
+  )
+    throw new LaunchRejectedError(
+      'invalid_participants',
+      'Choose one or more launch crew members.',
+    );
+  const npcName = request.npcName.trim();
+  const role = request.role.trim();
+  if (npcName === '' || role === '')
+    throw new LaunchRejectedError(
+      'connection_fields_required',
+      'The connection needs an NPC name and role.',
+    );
+  const npc = state.entities[current.npcId];
+  const npcChanged = npc === undefined || npc.name !== npcName || npc.fields['role'] !== role;
+  const sameCrew =
+    current.participants.length === request.participants.length &&
+    current.participants.every((id) => request.participants.includes(id));
+  const trackChanged = current.npcName !== npcName || current.rank !== request.rank || !sameCrew;
+  return appendCommand(sql, {
+    campaignId: request.campaignId,
+    commandId: request.commandId,
+    kind: 'launch.connection.revise',
+    actor: request.actor,
+    events: [
+      ...(npcChanged
+        ? [
+            {
+              type: 'entity.established' as const,
+              payload: {
+                entityId: current.npcId,
+                kind: 'npc' as const,
+                name: npcName,
+                fields: { ...(npc?.fields ?? {}), role },
+                provenance: {
+                  establishedBy: npc?.provenance.establishedBy ?? ('player' as const),
+                  groundedIn: [...(npc?.provenance.groundedIn ?? [])],
+                },
+              },
+            },
+          ]
+        : []),
+      ...(trackChanged
+        ? [
+            {
+              type: 'track.revised' as const,
+              payload: {
+                trackId: current.trackId,
+                title: `Connection: ${npcName}`,
+                rank: request.rank,
+                participantCharacterIds: [...request.participants],
+              },
+            },
+          ]
+        : []),
+      {
+        type: 'connection.revised',
+        payload: {
+          connectionId: current.connectionId,
+          npcId: current.npcId,
+          npcName,
+          role,
+          rank: request.rank,
+          trackId: current.trackId,
+          participants: [...request.participants],
+          automaticStrongHit: true,
+          provenance: 'player_written',
+          groundedIn: [],
+          supersedesEventId: current.eventId,
+        },
+      },
+    ],
+    response: {
+      connectionId: current.connectionId,
+      npcId: current.npcId,
+      trackId: current.trackId,
+    },
   });
 }
 

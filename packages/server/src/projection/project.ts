@@ -237,6 +237,9 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
         ...(payload.kind === 'clock'
           ? { ticks: 0, maxTicks: payload.segments }
           : { rank: payload.rank, ticks: 0, maxTicks: PROGRESS_TRACK_MAX_TICKS }),
+        ...(payload.kind === 'vow' && payload.participantCharacterIds !== undefined
+          ? { participantCharacterIds: payload.participantCharacterIds }
+          : {}),
         lastChangedBy: {
           ...by,
           ...(reason?.kind === 'ai_judgement' ? { reason: reason.reason } : {}),
@@ -504,8 +507,8 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
       };
     }
     case 'track.revised':
-      // D-188: the words, and only the words. A vow's progress, kind and owner
-      // are not what a revision changed.
+      // D-188, D-202: the words and who shares the track. A vow's progress,
+      // kind and swearing character are not what a revision changed.
       return state.tracks[event.payload.trackId] === undefined
         ? state
         : {
@@ -516,6 +519,9 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
                 ...state.tracks[event.payload.trackId]!,
                 title: event.payload.title,
                 ...(event.payload.rank !== undefined ? { rank: event.payload.rank } : {}),
+                ...(event.payload.participantCharacterIds !== undefined
+                  ? { participantCharacterIds: event.payload.participantCharacterIds }
+                  : {}),
               },
             },
           };

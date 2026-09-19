@@ -965,12 +965,16 @@ D-202 (`track.revised` carries participants).
   update `design-event-log.md`: the connection and incident arms of `creation.proposed`,
   `incident.proposed`'s projection, the incident's optional vow choices, `track.revised`'s
   participants, the vow track's `incidentId`, and `launch.activation.vowTrackId` in §8.
-  - [ ] **9.0a The connection can be revised (D-202).** Add `reviseLaunchConnection` and
+  - [x] **9.0a The connection can be revised (D-202).** Add `reviseLaunchConnection` and
     its route, guarded by `requireLaunchOpen`, filling `supersedesEventId` from the
     projected connection rather than trusting the client. A changed name or rank changes
     the track's title and rank, and a changed sharing crew changes its participants. Both
     go through `track.revised` in the same command, as D-188 does for a background vow.
     `establishLaunchConnection`'s refusal then points at a command that exists.
+    *Found while implementing:* `track.created`'s participants were never projected, so a
+    shared vow's or a connection's sharers were written and unreadable, the group 5–8 shape
+    again. `TrackState` now carries them, and the revision reaches them. The NPC is restated
+    under its own id (D-203, asked).
   - [ ] **9.0b A per-field connection proposal (7.0d's shape).** `ConnectionProposalSchema`
     has the NPC's name, role, goal, first look and disposition, each as
     `ProposedTextSchema` with its reason and rolls. The rank and the sharing crew are the

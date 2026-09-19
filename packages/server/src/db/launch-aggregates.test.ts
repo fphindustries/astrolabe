@@ -26,6 +26,7 @@ import {
   proposeLaunchCreation,
   removeLaunchLocation,
   removeLaunchRoute,
+  reviseLaunchConnection,
   rollLaunchRecipe,
   saveLaunchLocation,
   saveLaunchRoute,
@@ -178,6 +179,83 @@ describe.skipIf(!hasTestDatabase)('the launch aggregates', () => {
           participants: [newId<CharacterId>()],
         }),
       ).rejects.toThrow(LaunchRejectedError);
+    });
+
+    // 9.0a — the connection can be revised, and what changed reaches everything
+    // that states it (D-202, D-203).
+    it('revises the connection, its NPC, and its track’s title, rank and sharers', async () => {
+      const campaignId = await campaign();
+      const vesna = await crewMember(campaignId, 'Vesna Kade', 'Map');
+      const rook = await crewMember(campaignId, 'Rook Ilari', 'Rook');
+      const established = await establishLaunchConnection(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        npcName: 'Juno Marr',
+        role: 'Dockmaster',
+        rank: 'dangerous',
+        participants: [vesna],
+      });
+      const { npcId, trackId } = established.response as { npcId: EntityId; trackId: string };
+      expect(project(await readEvents(db.sql, campaignId)).tracks[trackId as never]).toMatchObject({
+        participantCharacterIds: [vesna],
+      });
+
+      const revised = await reviseLaunchConnection(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        npcName: 'Juno Marrow',
+        role: 'Harbourmaster',
+        rank: 'formidable',
+        participants: [vesna, rook],
+      });
+
+      expect(revised.events.map((event) => event.type)).toEqual([
+        'entity.established',
+        'track.revised',
+        'connection.revised',
+      ]);
+      const state = project(await readEvents(db.sql, campaignId));
+      expect(state.launch.connection).toMatchObject({
+        npcId,
+        trackId,
+        npcName: 'Juno Marrow',
+        rank: 'formidable',
+        participants: [vesna, rook],
+        supersedesEventId: established.events.at(-1)!.id,
+      });
+      expect(state.entities[npcId]).toMatchObject({
+        name: 'Juno Marrow',
+        fields: { role: 'Harbourmaster' },
+      });
+      expect(state.tracks[trackId as never]).toMatchObject({
+        title: 'Connection: Juno Marrow',
+        rank: 'formidable',
+        participantCharacterIds: [vesna, rook],
+        ticks: 0,
+      });
+      // Still the automatic strong hit: nothing rolled (D-167).
+      expect(
+        (await readEvents(db.sql, campaignId)).some((event) => event.type === 'dice.rolled'),
+      ).toBe(false);
+    });
+
+    it('refuses to revise a connection that does not exist', async () => {
+      const campaignId = await campaign();
+      const vesna = await crewMember(campaignId, 'Vesna Kade', 'Map');
+
+      await expect(
+        reviseLaunchConnection(db.sql, {
+          campaignId,
+          commandId: newId<CommandId>(),
+          actor: PLAYER,
+          npcName: 'Juno Marr',
+          role: 'Dockmaster',
+          rank: 'dangerous',
+          participants: [vesna],
+        }),
+      ).rejects.toMatchObject({ reason: 'no_connection' });
     });
 
     it('refuses a second connection, directing the player to revise', async () => {
