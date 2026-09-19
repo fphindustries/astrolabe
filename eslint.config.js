@@ -150,15 +150,24 @@ export default tseslint.config(
         'error',
         {
           paths: [
-            { name: 'postgres', message: 'Context assembly does no I/O; the command layer reads the log.' },
+            {
+              name: 'postgres',
+              message: 'Context assembly does no I/O; the command layer reads the log.',
+            },
             {
               name: '@anthropic-ai/sdk',
               message: 'Context assembly builds a request; only a provider sends one.',
             },
           ],
           patterns: [
-            { group: ['node:*', 'fs', 'path', 'crypto'], message: 'Context assembly is pure: no I/O.' },
-            { group: ['**/db/**'], message: 'Context assembly does no I/O; the command layer reads the log.' },
+            {
+              group: ['node:*', 'fs', 'path', 'crypto'],
+              message: 'Context assembly is pure: no I/O.',
+            },
+            {
+              group: ['**/db/**'],
+              message: 'Context assembly does no I/O; the command layer reads the log.',
+            },
             {
               group: ['../claude.js', '../stub.js', '../create-provider.js'],
               message: 'Context assembly is provider-independent; import only the request types.',
@@ -181,5 +190,19 @@ export default tseslint.config(
     ignores: ['packages/web/**/*.test.{ts,tsx}'],
     plugins: { 'react-hooks': reactHooks },
     rules: reactHooks.configs['recommended-latest'].rules,
+  },
+  {
+    // A busy or blocked launch button stays focusable (D-208): use guarded() from ui/guarded.ts.
+    files: ['packages/web/src/launch/**/*.tsx', 'packages/web/src/campaigns/**/*.tsx'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "JSXOpeningElement[name.name='button'] > JSXAttribute[name.name='disabled']",
+          message:
+            'A native disabled button leaves the tab order and drops focus (D-208). Use guarded() from ui/guarded.ts.',
+        },
+      ],
+    },
   },
 );

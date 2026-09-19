@@ -1,4 +1,9 @@
-import { CampaignIdSchema, EntityIdSchema, EventIdSchema } from '@astrolabe/shared';
+import {
+  CampaignIdSchema,
+  CharacterIdSchema,
+  EntityIdSchema,
+  EventIdSchema,
+} from '@astrolabe/shared';
 import type { FastifyReply } from 'fastify';
 import type { Sql } from 'postgres';
 
@@ -54,4 +59,14 @@ export async function requireCampaignExists(
     return false;
   }
   return true;
+}
+
+/** Same shape as `parseCampaignId`, for the `:characterId` crew routes (6.0d). */
+export function parseCharacterId(raw: string, reply: FastifyReply) {
+  const parsed = CharacterIdSchema.safeParse(raw);
+  if (!parsed.success) {
+    reply.code(400);
+    return undefined;
+  }
+  return parsed.data;
 }

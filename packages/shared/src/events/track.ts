@@ -1,7 +1,8 @@
 import * as z from 'zod';
+import { CHALLENGE_RANKS } from '@astrolabe/rules';
 
 import { ChangeCauseSchema } from '../cause.js';
-import { CharacterIdSchema, TrackIdSchema } from '../ids.js';
+import { CharacterIdSchema, EntityIdSchema, TrackIdSchema } from '../ids.js';
 
 /**
  * Starforged's five challenge ranks. A game constant rather than imported
@@ -14,13 +15,7 @@ import { CharacterIdSchema, TrackIdSchema } from '../ids.js';
  * count is resolved at write time and stored, so projection does no rank
  * arithmetic at all.
  */
-export const ChallengeRankSchema = z.enum([
-  'troublesome',
-  'dangerous',
-  'formidable',
-  'extreme',
-  'epic',
-]);
+export const ChallengeRankSchema = z.enum(CHALLENGE_RANKS);
 
 export type ChallengeRank = z.infer<typeof ChallengeRankSchema>;
 
@@ -44,6 +39,14 @@ export const TrackCreatedSchema = z.discriminatedUnion('kind', [
      * existed still projects, with its vows unattributed.
      */
     characterId: CharacterIdSchema.optional(),
+    /** D-168: one vow can be shared while retaining one swearing character. */
+    participantCharacterIds: z.array(CharacterIdSchema).min(1).optional(),
+    /**
+     * D-201: the inciting incident this vow was sworn for, set only when the
+     * pending vow's `Swear an Iron Vow` writes it. The fold reads it to mark
+     * the pending vow sworn.
+     */
+    incidentId: EntityIdSchema.optional(),
   }),
   z.object({
     kind: z.literal('expedition'),
@@ -76,4 +79,29 @@ export const TrackAdvancedSchema = z.object({
   cause: ChangeCauseSchema,
   /** The verbatim rule clause, where a rule rather than AI judgement caused it. */
   clause: z.string().min(1).optional(),
+});
+
+/**
+ * A track's own words changed (D-188).
+ *
+ * Only the words. `reviseCharacter` makes a background vow editable before
+ * launch, and D-105 wrote the vow and its track as one decision — so a revised
+ * vow has to reach its track or the two disagree permanently. There is no
+ * undoing `track.created`: void is bounded to the current session (D-84) and
+ * every pre-launch event has a null session, so `planVoid` refuses.
+ *
+ * Rename, not re-swear. Progress, kind and owner are untouched, and abandoning
+ * a vow is a different act that this event does not express. `rank` is absent
+ * for a clock, which has none.
+ */
+export const TrackRevisedSchema = z.object({
+  trackId: TrackIdSchema,
+  title: z.string().min(1),
+  rank: ChallengeRankSchema.optional(),
+  /**
+   * D-202: who shares the track, replaced whole when given. A connection's
+   * sharing crew can change before launch; progress, kind and the swearing
+   * character still cannot change here.
+   */
+  participantCharacterIds: z.array(CharacterIdSchema).min(1).optional(),
 });

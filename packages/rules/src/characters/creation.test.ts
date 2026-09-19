@@ -194,14 +194,15 @@ describe('the asset slots (D-89)', () => {
     expect(problems.map((p) => p.code)).toContain('forbidden_category');
   });
 
-  it('does not count the granted starship against the slots', () => {
-    // Ownership is narrative; the asset occupies no slot either way.
+  it('refuses a starship as a character asset: it is the crew’s (7.3, D-164, D-193)', () => {
+    // It was granted and filtered out of the slot count until 7.3; now it is
+    // an asset no slot accepts.
     expect(
       validateCharacterDraft(
         draft({ assets: [...paths.slice(0, 2), ...companion, ...starship] }),
         STARFORGED,
-      ),
-    ).toEqual([]);
+      ).map((problem) => problem.code),
+    ).not.toEqual([]);
   });
 
   it('leaves a half-filled draft alone', () => {

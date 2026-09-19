@@ -26,6 +26,8 @@ export type MoveFlowState =
       readonly chainedFromCommandId?: CommandId;
       /** D-135: typed words, and a Guide suggestion, carried into the composer. */
       readonly prefill?: ComposerPrefill;
+      /** D-201: this Swear an Iron Vow swears the pending inciting vow. */
+      readonly pendingVow?: true;
     }
   | {
       readonly step: 'result';
@@ -58,6 +60,7 @@ type MoveFlowAction =
       readonly actorCharacterId: CharacterId;
       readonly chainedFromCommandId?: CommandId;
       readonly prefill?: ComposerPrefill;
+      readonly pendingVow?: true;
     }
   | {
       readonly type: 'move-resolved';
@@ -92,6 +95,7 @@ function moveFlowReducer(_state: MoveFlowState, action: MoveFlowAction): MoveFlo
           ? { chainedFromCommandId: action.chainedFromCommandId }
           : {}),
         ...(action.prefill !== undefined ? { prefill: action.prefill } : {}),
+        ...(action.pendingVow === true ? { pendingVow: true } : {}),
       };
     case 'move-resolved':
       return {
@@ -151,6 +155,7 @@ export function useMoveFlowActions(): {
     actorCharacterId: CharacterId,
     chainedFromCommandId?: CommandId,
     prefill?: ComposerPrefill,
+    pendingVow?: true,
   ) => void;
   moveResolved: (
     moveId: MoveId,
@@ -173,13 +178,14 @@ export function useMoveFlowActions(): {
     throw new Error('useMoveFlowActions must be used within a MoveFlowProvider');
   }
   return {
-    selectMove: (moveId, actorCharacterId, chainedFromCommandId, prefill) =>
+    selectMove: (moveId, actorCharacterId, chainedFromCommandId, prefill, pendingVow) =>
       dispatch({
         type: 'select-move',
         moveId,
         actorCharacterId,
         ...(chainedFromCommandId !== undefined ? { chainedFromCommandId } : {}),
         ...(prefill !== undefined ? { prefill } : {}),
+        ...(pendingVow === true ? { pendingVow } : {}),
       }),
     moveResolved: (moveId, actorCharacterId, invoked, commandId, aidingAllyId, checkTrigger) =>
       dispatch({

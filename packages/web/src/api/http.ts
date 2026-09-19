@@ -27,9 +27,27 @@ export async function apiGet<T>(path: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-export async function apiPost<T>(path: string, body: unknown): Promise<T> {
+export const apiPost = <T>(path: string, body: unknown) => send<T>('POST', path, body);
+
+/**
+ * PUT, for the writes that replace what is already there rather than adding to
+ * it: a section's saved draft and the sector's map layout. Which verb a launch
+ * route takes is the server's statement about the write, so the client matches
+ * it rather than posting everything.
+ */
+export const apiPut = <T>(path: string, body: unknown) => send<T>('PUT', path, body);
+
+/**
+ * DELETE with a body, which is unusual and deliberate: removing a crew member
+ * before launch is append-only like every other launch change (A40), so the
+ * command carries the reason the log has to record. The verb says what the
+ * caller means; the body says why.
+ */
+export const apiDelete = <T>(path: string, body: unknown) => send<T>('DELETE', path, body);
+
+async function send<T>(method: 'POST' | 'PUT' | 'DELETE', path: string, body: unknown): Promise<T> {
   const response = await fetch(`/api${path}`, {
-    method: 'POST',
+    method,
     headers: { accept: 'application/json', 'content-type': 'application/json' },
     body: JSON.stringify(body),
   });

@@ -1,10 +1,9 @@
-import type { MoveId, OutcomeTier, RandomSource } from '@astrolabe/rules';
+import type { MoveId, OutcomeTier } from '@astrolabe/rules';
 import type {
   BeginSessionResponse,
   CampaignId,
   CampaignStateResponse,
   CheckTriggerResponse,
-  CommandId,
   EndSessionResponse,
   EventId,
   InvokeMoveResponse,
@@ -20,15 +19,12 @@ import type {
   SuggestMoveResponse,
   VoidEventResponse,
 } from '@astrolabe/shared';
-import type { FastifyInstance } from 'fastify';
 import type { Sql } from 'postgres';
 
 import type { AiRequest } from '../ai/provider.js';
-import { StubProvider, type StubResponse } from '../ai/stub.js';
-import { buildApp } from '../http/app.js';
 
+import { action, d100, nothingNew, openScript, segments } from './http-script.js';
 import { fixtureUuid } from './ids.js';
-import { loadedDice, type Face, type LoadedDice } from './loaded-dice.js';
 import { playSessionOne, type SessionOneRun } from './session-one.js';
 
 /**
@@ -103,113 +99,19 @@ export interface GoldenSessionRun extends SessionOneRun {
   readonly requests: readonly AiRequest[];
 }
 
-/** One passage segment: `[about, character, basis, text]`. */
-type Segment = readonly [
-  about: string,
-  character: string | null,
-  basis: readonly string[],
-  text: string,
-];
-
-const segments = (...list: readonly Segment[]): StubResponse => ({
-  kind: 'structured',
-  value: {
-    segments: list.map(([about, character, basis, text]) => ({ about, character, basis, text })),
-  },
-});
-
 export async function playGoldenSession(sql: Sql): Promise<GoldenSessionRun> {
   const run = await playSessionOne(sql, {
     fixture: GOLDEN_SESSION,
     campaignName: 'Lantern Wake (golden session)',
   });
-  const key = <T extends string>(name: string): T => fixtureUuid<T>(GOLDEN_SESSION, name);
   const { campaignId } = run;
   const { vesna, rook, juno } = run.characters;
-
-  // --- The scripted Guide ---------------------------------------------------
-  // One queue per purpose, so a beat scripts what it expects to be asked and
-  // an unscripted call names itself.
-  const scripts = new Map<string, StubResponse[]>();
-  const say = (purpose: string, ...responses: StubResponse[]) =>
-    scripts.set(purpose, [...(scripts.get(purpose) ?? []), ...responses]);
-  let beat = 'setup';
-  const guide = new StubProvider({
-    fallback: (request) => {
-      const next = scripts.get(request.purpose)?.shift();
-      if (next === undefined) {
-        throw new Error(
-          `Fixture ${GOLDEN_SESSION}, ${beat}: an unscripted ${request.purpose} call.\n${request.user}`,
-        );
-      }
-      return next;
-    },
-  });
-  // Passes every check: the scripted passages are written to pass D-127–D-130.
-  const checker = new StubProvider();
-
-  // --- Loaded dice, step by step --------------------------------------------
-  let dice: LoadedDice = loadedDice([]);
-  const rng: RandomSource = { next: () => dice.next() };
-  const rolling = async <T>(faces: readonly Face[], work: () => Promise<T>): Promise<T> => {
-    dice = loadedDice(faces);
-    const result = await work();
-    if (dice.remaining !== 0) {
-      throw new Error(`Fixture ${GOLDEN_SESSION}, ${beat}: ${dice.remaining} die/dice left over.`);
-    }
-    dice = loadedDice([]);
-    return result;
-  };
-  const action = (d6: number, [a, b]: readonly [number, number]): Face[] => [
-    { sides: 6, face: d6 },
-    { sides: 10, face: a },
-    { sides: 10, face: b },
-  ];
-  const d100 = (...faces: number[]): Face[] => faces.map((face) => ({ sides: 100, face }));
-
-  const app = buildApp({ sql, ai: guide, checker, planner: guide, rng });
+  // The harness every fixture played through HTTP shares (10.1a).
+  const script = openScript(sql, { fixture: GOLDEN_SESSION, campaignId });
+  const { http, id, rolling, say, move, narrate, worldPass, guide } = script;
   try {
-    const http = routes(app, campaignId, () => beat);
-    const id = (name: string) => key<CommandId>(name);
-
-    const move = async (
-      label: string,
-      body: Record<string, unknown>,
-      faces: readonly Face[],
-      expected: OutcomeTier,
-    ): Promise<InvokeMoveResponse> => {
-      const invoked = await rolling(faces, () =>
-        http.post<InvokeMoveResponse>('/moves', {
-          commandId: id(`${label}:move`),
-          adds: [],
-          ...body,
-        }),
-      );
-      if (invoked.roll.tier !== expected) {
-        throw new Error(
-          `Fixture ${GOLDEN_SESSION}, ${beat}: scripted a ${expected}, the rules scored ${invoked.roll.tier}.`,
-        );
-      }
-      return invoked;
-    };
-    const narrate = async (label: string, afterCommandId: CommandId, passage: StubResponse) => {
-      say('beat', passage);
-      return http.committed(
-        await http.stream('/narrations', { commandId: id(`${label}:narration`), afterCommandId }),
-      );
-    };
-    /** The world pass the client asks for after every beat passage (D-138). */
-    const worldPass = async (label: string, passageEventId: EventId, faces: readonly Face[] = []) =>
-      rolling(faces, () =>
-        http.stream('/world-passes', { commandId: id(`${label}:world`), passageEventId }),
-      );
-    const nothingNew = (review: string): StubResponse => ({
-      kind: 'structured',
-      value: { review, recipes: [], questions: [], clocks: { create: [], tick: [] } },
-    });
-
     // --- Beat 1: opening the session ----------------------------------------
-    beat = 'Beat 1';
+    script.at('Beat 1');
     const began = await http.post<BeginSessionResponse>('/sessions', {
       commandId: id('session:2:begin'),
     });
@@ -236,7 +138,7 @@ export async function playGoldenSession(sql: Sql): Promise<GoldenSessionRun> {
     http.committed(recap);
 
     // --- Beat 2: framing the scene -------------------------------------------
-    beat = 'Beat 2';
+    script.at('Beat 2');
     say('scene_frame_plan', {
       kind: 'structured',
       value: {
@@ -277,7 +179,7 @@ export async function playGoldenSession(sql: Sql): Promise<GoldenSessionRun> {
     http.committed(frame);
 
     // --- Beat 3: a player decision gets depth --------------------------------
-    beat = 'Beat 3';
+    script.at('Beat 3');
     const junoAction = 'Juno jacks into the docking port and pulls the station logs.';
     // A19: had Christopher typed the action without picking a move, the Guide would suggest one.
     say('move_suggestion', {
@@ -347,7 +249,7 @@ export async function playGoldenSession(sql: Sql): Promise<GoldenSessionRun> {
     );
     if (!options.ok) {
       throw new Error(
-        `Fixture ${GOLDEN_SESSION}, ${beat}: no complication options — ${options.message}`,
+        `Fixture ${GOLDEN_SESSION}, ${script.beat}: no complication options — ${options.message}`,
       );
     }
     const complication = await http.post<SetComplicationResponse>('/complications', {
@@ -387,7 +289,7 @@ export async function playGoldenSession(sql: Sql): Promise<GoldenSessionRun> {
     http.committed(await worldPass('juno-logs', junoPassage));
 
     // --- Beat 4: the stall and the nudge ---------------------------------------
-    beat = 'Beat 4';
+    script.at('Beat 4');
     say('what_now', {
       kind: 'structured',
       value: {
@@ -421,7 +323,7 @@ export async function playGoldenSession(sql: Sql): Promise<GoldenSessionRun> {
     });
 
     // --- Beat 5: helping an ally, and a momentum decision ----------------------
-    beat = 'Beat 5';
+    script.at('Beat 5');
     const rookAid = await move(
       'rook-airlock',
       {
@@ -481,7 +383,7 @@ export async function playGoldenSession(sql: Sql): Promise<GoldenSessionRun> {
     });
 
     // --- Beat 6: the world gets a new face --------------------------------------
-    beat = 'Beat 6';
+    script.at('Beat 6');
     const vesnaPassage = await narrate(
       'vesna-scan',
       id('vesna-scan:move'),
@@ -562,7 +464,7 @@ export async function playGoldenSession(sql: Sql): Promise<GoldenSessionRun> {
     http.committed(firstContact);
 
     // --- Beat 7: a miss and the price ---------------------------------------------
-    beat = 'Beat 7';
+    script.at('Beat 7');
     const bulkhead = 'Rook forces the sealed bulkhead between the crew and the survivor.';
     const rookEdge = await move(
       'rook-bulkhead-edge',
@@ -616,7 +518,9 @@ export async function playGoldenSession(sql: Sql): Promise<GoldenSessionRun> {
       chainedFromCommandId: id('rook-bulkhead:price'),
     });
     if (!proposal.ok) {
-      throw new Error(`Fixture ${GOLDEN_SESSION}, ${beat}: no harm proposal — ${proposal.message}`);
+      throw new Error(
+        `Fixture ${GOLDEN_SESSION}, ${script.beat}: no harm proposal — ${proposal.message}`,
+      );
     }
     // Rook's armor took the worst of it.
     const endureHarm = await move(
@@ -672,7 +576,7 @@ export async function playGoldenSession(sql: Sql): Promise<GoldenSessionRun> {
     );
 
     // --- Beat 8: pressure builds ------------------------------------------------------
-    beat = 'Beat 8';
+    script.at('Beat 8');
     say('world_plan', {
       kind: 'structured',
       value: {
@@ -696,7 +600,7 @@ export async function playGoldenSession(sql: Sql): Promise<GoldenSessionRun> {
     http.committed(clockPass);
 
     // --- Beat 9: corrections --------------------------------------------------------------
-    beat = 'Beat 9';
+    script.at('Beat 9');
     say('revision', {
       kind: 'text',
       text:
@@ -720,7 +624,7 @@ export async function playGoldenSession(sql: Sql): Promise<GoldenSessionRun> {
     });
 
     // --- Beat 10: ending the session ----------------------------------------------------------
-    beat = 'Beat 10';
+    script.at('Beat 10');
     const summaryText =
       'At Varga Relay, Juno pulled the station logs and found the relay abandoned, with one ' +
       'life-support circuit still drawing power. Vesna traced it to a sealed compartment and a ' +
@@ -741,7 +645,7 @@ export async function playGoldenSession(sql: Sql): Promise<GoldenSessionRun> {
       commandId: id('session:2:summary'),
     });
     if (!summary.ok) {
-      throw new Error(`Fixture ${GOLDEN_SESSION}, ${beat}: no summary — ${summary.message}`);
+      throw new Error(`Fixture ${GOLDEN_SESSION}, ${script.beat}: no summary — ${summary.message}`);
     }
     const ended = await http.post<EndSessionResponse>('/session-ends', {
       commandId: id('session:2:end'),
@@ -750,13 +654,7 @@ export async function playGoldenSession(sql: Sql): Promise<GoldenSessionRun> {
       openThreads: summary.openThreads,
     });
 
-    for (const [purpose, left] of scripts) {
-      if (left.length > 0) {
-        throw new Error(
-          `Fixture ${GOLDEN_SESSION}: ${left.length} scripted ${purpose} answer(s) never asked for.`,
-        );
-      }
-    }
+    script.assertSpent();
 
     return {
       ...run,
@@ -793,57 +691,6 @@ export async function playGoldenSession(sql: Sql): Promise<GoldenSessionRun> {
       requests: guide.requests,
     };
   } finally {
-    await app.close();
+    await script.close();
   }
-}
-
-/** The campaign's routes, as the play screen calls them, failing loudly on anything but success. */
-function routes(app: FastifyInstance, campaignId: string, beat: () => string) {
-  const base = `/api/campaigns/${campaignId}`;
-  const fail = (method: string, path: string, status: number, body: string): never => {
-    throw new Error(
-      `Fixture ${GOLDEN_SESSION}, ${beat()}: ${method} ${path} answered ${status}: ${body}`,
-    );
-  };
-  return {
-    async get<T>(path: string): Promise<T> {
-      const response = await app.inject({ method: 'GET', url: `${base}${path}` });
-      if (response.statusCode !== 200) fail('GET', path, response.statusCode, response.body);
-      return response.json<T>();
-    },
-    async post<T>(path: string, payload: Record<string, unknown>): Promise<T> {
-      const response = await app.inject({ method: 'POST', url: `${base}${path}`, payload });
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        fail('POST', path, response.statusCode, response.body);
-      }
-      const answer = response.json<T & { ok?: boolean; message?: string }>();
-      if (answer.ok === false) fail('POST', path, response.statusCode, response.body);
-      return answer;
-    },
-    /** A streamed route's frames, in order (D-111). */
-    async stream(
-      path: string,
-      payload: Record<string, unknown>,
-    ): Promise<readonly NarrationFrame[]> {
-      const response = await app.inject({ method: 'POST', url: `${base}${path}`, payload });
-      if (response.statusCode !== 200) fail('POST', path, response.statusCode, response.body);
-      return response.body
-        .split('\n')
-        .filter((line) => line.length > 0)
-        .map((line) => JSON.parse(line) as NarrationFrame);
-    },
-    /** The committed event a stream closed on; a withdrawal or failure throws. */
-    committed(frames: readonly NarrationFrame[]): EventId {
-      const last = frames.at(-1);
-      const withdrawn = frames.filter((f) => f.type === 'withdrawn');
-      if (last?.type !== 'committed' || withdrawn.length > 0) {
-        throw new Error(
-          `Fixture ${GOLDEN_SESSION}, ${beat()}: the stream did not commit cleanly: ${JSON.stringify(
-            frames.filter((f) => f.type !== 'delta'),
-          )}`,
-        );
-      }
-      return last.eventId;
-    },
-  };
 }

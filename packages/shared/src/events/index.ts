@@ -11,6 +11,34 @@ import { CharacterCreatedSchema, CharacterProposedSchema } from './character.js'
 import { EntityEstablishedSchema } from './entity.js';
 import { IncidentProposedSchema } from './incident.js';
 import {
+  CampaignActivatedSchema,
+  CampaignFoundationSetSchema,
+  CharacterRemovedSchema,
+  CharacterRevisedSchema,
+  ConnectionEstablishedSchema,
+  ConnectionRevisedSchema,
+  CreationProposedSchema,
+  IncidentAcceptedSchema,
+  IncidentRevisedSchema,
+  LaunchDraftSavedSchema,
+  LaunchFactAmendedSchema,
+  LocationAddedSchema,
+  LocationRemovedSchema,
+  LocationRevisedSchema,
+  RouteAddedSchema,
+  RouteRemovedSchema,
+  RouteRevisedSchema,
+  SectorConfiguredSchema,
+  SectorLayoutChangedSchema,
+  StarshipEstablishedSchema,
+  StarshipRevisedSchema,
+  StartingSettlementSelectedSchema,
+  TroubleEstablishedSchema,
+  TroubleRevisedSchema,
+  TruthDecidedSchema,
+} from './launch.js';
+import * as launchSchemas from './launch.js';
+import {
   DiceRolledSchema,
   MomentumBurnedSchema,
   MoveChainedSchema,
@@ -32,7 +60,7 @@ import { SceneStartedSchema } from './scene.js';
 import { SectorRouteAddedSchema } from './sector.js';
 import { SessionBeganSchema, SessionEndedSchema, SessionSummaryProposedSchema } from './session.js';
 import { StateChangedSchema, StateOverriddenSchema } from './state.js';
-import { TrackAdvancedSchema, TrackCreatedSchema } from './track.js';
+import { TrackAdvancedSchema, TrackCreatedSchema, TrackRevisedSchema } from './track.js';
 import { TruthSetSchema } from './truth.js';
 import { EventVoidedSchema } from './void.js';
 
@@ -79,6 +107,7 @@ export const PAYLOAD_SCHEMAS = {
   'state.overridden': StateOverriddenSchema,
   'track.created': TrackCreatedSchema,
   'track.advanced': TrackAdvancedSchema,
+  'track.revised': TrackRevisedSchema,
   'entity.established': EntityEstablishedSchema,
   'narration.written': NarrationWrittenSchema,
   'narration.correction_requested': NarrationCorrectionRequestedSchema,
@@ -96,11 +125,74 @@ export const PAYLOAD_SCHEMAS = {
   'session.summary_proposed': SessionSummaryProposedSchema,
   'complication.offered': ComplicationOfferedSchema,
   'complication.set': ComplicationSetSchema,
+  'launch.draft_saved': LaunchDraftSavedSchema,
+  'creation.proposed': CreationProposedSchema,
+  'campaign.foundation_set': CampaignFoundationSetSchema,
+  'truth.decided': TruthDecidedSchema,
+  'character.revised': CharacterRevisedSchema,
+  'character.removed': CharacterRemovedSchema,
+  'starship.established': StarshipEstablishedSchema,
+  'starship.revised': StarshipRevisedSchema,
+  'sector.configured': SectorConfiguredSchema,
+  'location.added': LocationAddedSchema,
+  'location.revised': LocationRevisedSchema,
+  'location.removed': LocationRemovedSchema,
+  'route.added': RouteAddedSchema,
+  'route.revised': RouteRevisedSchema,
+  'route.removed': RouteRemovedSchema,
+  'sector.layout_changed': SectorLayoutChangedSchema,
+  'starting_settlement.selected': StartingSettlementSelectedSchema,
+  'trouble.established': TroubleEstablishedSchema,
+  'trouble.revised': TroubleRevisedSchema,
+  'connection.established': ConnectionEstablishedSchema,
+  'connection.revised': ConnectionRevisedSchema,
+  'incident.accepted': IncidentAcceptedSchema,
+  'incident.revised': IncidentRevisedSchema,
+  'campaign.activated': CampaignActivatedSchema,
+  'launch.fact_amended': LaunchFactAmendedSchema,
 } as const;
 
 export type EventType = keyof typeof PAYLOAD_SCHEMAS;
 
 export const EVENT_TYPES = Object.keys(PAYLOAD_SCHEMAS) as readonly EventType[];
+
+/**
+ * Every payload schema declared in `launch.ts`, by identity.
+ *
+ * Deriving the launch set from the module rather than restating its members
+ * means a new launch event joins the set the moment it is registered above.
+ * A hand-written list would let a twenty-sixth type default to
+ * `voidable: true` (D-177) and escape context stripping (D-161) with nothing
+ * failing — the exact drift this catalogue has already suffered once.
+ */
+const LAUNCH_PAYLOAD_SCHEMAS: ReadonlySet<unknown> = new Set(Object.values(launchSchemas));
+
+/**
+ * The Campaign Launch catalogue: every type appended before Session 1 exists,
+ * plus the post-activation amendment that corrects one.
+ *
+ * These are campaign-scoped, so their events carry no `sessionId`. That has
+ * two consequences the rest of the code depends on, and both are asserted
+ * rather than assumed:
+ *
+ * - **None is voidable** (D-177). `planVoid` refuses any target outside the
+ *   current session (D-84), and "outside" includes belonging to no session at
+ *   all. A launch fact is corrected by revision before activation and by
+ *   `launch.fact_amended` after it.
+ * - **Drafts and proposals among them are not canon** (D-161), so AI context
+ *   assembly strips them rather than filtering by name at each call site.
+ */
+export const LAUNCH_EVENT_TYPES = EVENT_TYPES.filter((type) =>
+  LAUNCH_PAYLOAD_SCHEMAS.has(PAYLOAD_SCHEMAS[type] as unknown),
+);
+
+export type LaunchEventType = EventType;
+
+/** Non-canonical launch events: resumable setup and unaccepted proposals (D-161). */
+export const NON_CANONICAL_LAUNCH_EVENT_TYPES = [
+  'launch.draft_saved',
+  'creation.proposed',
+] as const satisfies readonly EventType[];
 
 /** The payload type for one event type, readonly all the way down. */
 export type PayloadFor<T extends EventType> = DeepReadonly<z.infer<(typeof PAYLOAD_SCHEMAS)[T]>>;
@@ -148,6 +240,7 @@ export const EventSchema = z.discriminatedUnion('type', [
   eventMember('state.overridden'),
   eventMember('track.created'),
   eventMember('track.advanced'),
+  eventMember('track.revised'),
   eventMember('entity.established'),
   eventMember('narration.written'),
   eventMember('narration.correction_requested'),
@@ -165,6 +258,31 @@ export const EventSchema = z.discriminatedUnion('type', [
   eventMember('session.summary_proposed'),
   eventMember('complication.offered'),
   eventMember('complication.set'),
+  eventMember('launch.draft_saved'),
+  eventMember('creation.proposed'),
+  eventMember('campaign.foundation_set'),
+  eventMember('truth.decided'),
+  eventMember('character.revised'),
+  eventMember('character.removed'),
+  eventMember('starship.established'),
+  eventMember('starship.revised'),
+  eventMember('sector.configured'),
+  eventMember('location.added'),
+  eventMember('location.revised'),
+  eventMember('location.removed'),
+  eventMember('route.added'),
+  eventMember('route.revised'),
+  eventMember('route.removed'),
+  eventMember('sector.layout_changed'),
+  eventMember('starting_settlement.selected'),
+  eventMember('trouble.established'),
+  eventMember('trouble.revised'),
+  eventMember('connection.established'),
+  eventMember('connection.revised'),
+  eventMember('incident.accepted'),
+  eventMember('incident.revised'),
+  eventMember('campaign.activated'),
+  eventMember('launch.fact_amended'),
 ]);
 
 /**
@@ -229,9 +347,11 @@ export * from './campaign.js';
 export * from './character.js';
 export * from './entity.js';
 export * from './incident.js';
+export * from './launch.js';
 export * from './move.js';
 export * from './narration.js';
 export * from './oracle.js';
+export * from './provenance.js';
 export * from './scene.js';
 export * from './sector.js';
 export * from './session.js';

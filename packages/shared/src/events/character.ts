@@ -2,6 +2,7 @@ import * as z from 'zod';
 
 import { AssetIdSchema, CharacterIdSchema, EventIdSchema } from '../ids.js';
 
+import { LaunchProvenanceSchema } from './provenance.js';
 import { ChallengeRankSchema } from './track.js';
 
 /**
@@ -51,6 +52,28 @@ export const CharacterCreatedSchema = z.object({
   hooks: z.array(z.string().min(1)).max(3).optional(),
   /** D-131: the player's words ("she/her"). Absent means not recorded, never a default. Optional, so no version bump. */
   pronouns: z.string().min(1).max(40).optional(),
+  /** Campaign Launch fields are optional for v1 fixture compatibility. */
+  appearance: z.string().min(1).optional(),
+  backstory: z
+    .discriminatedUnion('kind', [
+      z.object({ kind: z.literal('written'), text: z.string().min(1) }),
+      z.object({ kind: z.literal('discover_in_play') }),
+    ])
+    .optional(),
+  backgroundVow: z.object({ title: z.string().min(1), rank: ChallengeRankSchema }).optional(),
+  signatureGear: z.string().min(1).optional(),
+  /**
+   * D-184: how this crew member came to be, and the rolls behind it (A41).
+   *
+   * Optional, and absent on every Milestone 1 character — `character.created`
+   * recorded no provenance at all, which is why accepting the Guide's build
+   * was indistinguishable from a player who chose the same fields unaided.
+   * Optional fields are a non-breaking addition, so no payload version bump
+   * and no upcaster. `character.revised` carries the full `AcceptanceSchema`
+   * already; only creation was missing it.
+   */
+  provenance: LaunchProvenanceSchema.optional(),
+  groundedIn: z.array(EventIdSchema).optional(),
 });
 
 /**

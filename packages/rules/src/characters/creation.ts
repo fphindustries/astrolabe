@@ -160,12 +160,10 @@ function validateAssets(
     resolved.push(asset);
   }
 
-  const granted = new Set(rules.grants.map((grant) => grant.category));
   const forbidden = new Map(rules.forbidden.map((entry) => [entry.category, entry]));
-  // A granted category occupies no slot, so it is filtered out before the
-  // slots are counted rather than rejected — a client may well send the
-  // starship back with the rest of the sheet.
-  const occupying = resolved.filter((asset) => !granted.has(asset.categoryId));
+  // Every chosen asset occupies a slot. The starship used to be granted and
+  // filtered out here (D-89); it is the crew's since 7.3 (D-164, D-193).
+  const occupying = resolved;
 
   for (const asset of occupying) {
     if (forbidden.has(asset.categoryId)) {
@@ -226,18 +224,4 @@ export function isValidCharacterDraft(
   rules: CharacterCreationRules = CHARACTER_CREATION,
 ): boolean {
   return validateCharacterDraft(draft, ruleset, rules).length === 0;
-}
-
-/**
- * The assets a character is given outright at creation, occupying no slot
- * (D-89). Ownership of the starship — sole, shared, or another
- * character's — is narrative and deliberately unmodelled: it has no effect
- * on how the asset is used in play.
- */
-export function grantedAssets(
-  ruleset: RulesetForCreation,
-  rules: CharacterCreationRules = CHARACTER_CREATION,
-): readonly AssetId[] {
-  const categories = new Set(rules.grants.map((grant) => grant.category));
-  return ruleset.assets.filter((asset) => categories.has(asset.categoryId)).map((a) => a.id);
 }

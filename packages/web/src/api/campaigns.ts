@@ -23,6 +23,8 @@ export const campaignKeys = {
   all: ['campaigns'] as const,
   list: () => [...campaignKeys.all, 'list'] as const,
   state: (campaignId: string) => [...campaignKeys.all, campaignId, 'state'] as const,
+  /** The Campaign Launch workspace: its own read, with readiness beside it (D-176). */
+  launch: (campaignId: string) => [...campaignKeys.all, campaignId, 'launch'] as const,
   log: (campaignId: string) => [...campaignKeys.all, campaignId, 'log'] as const,
 };
 
@@ -82,12 +84,32 @@ export function useOwedPassages(campaignId: string) {
   });
 }
 
-/** Invalidates a campaign's state and log — call after a command writes. */
+/**
+ * Invalidates a campaign's state, log and launch workspace — call after a
+ * command writes. The launch read is included because a launch command changes
+ * both: the facts in `state`, and the readiness derived from them.
+ */
 export function useInvalidateCampaign(campaignId: string) {
-  const queryClient = useQueryClient();
+  const settled = useInvalidateCampaignSettled(campaignId);
   return () => {
-    void queryClient.invalidateQueries({ queryKey: campaignKeys.state(campaignId) });
-    void queryClient.invalidateQueries({ queryKey: campaignKeys.log(campaignId) });
+    void settled();
+  };
+}
+
+/**
+ * The same invalidation, resolving once what it refetches has landed. Activation
+ * waits on it: the dispatcher at `/campaigns/:id` reads the launch query, and
+ * navigating on stale data would show the launch workspace for a moment, take
+ * focus (D-209), and drop it again when play replaced it.
+ */
+export function useInvalidateCampaignSettled(campaignId: string) {
+  const queryClient = useQueryClient();
+  return async (): Promise<void> => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: campaignKeys.state(campaignId) }),
+      queryClient.invalidateQueries({ queryKey: campaignKeys.log(campaignId) }),
+      queryClient.invalidateQueries({ queryKey: campaignKeys.launch(campaignId) }),
+    ]);
   };
 }
 

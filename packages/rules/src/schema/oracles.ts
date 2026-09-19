@@ -39,7 +39,20 @@ export interface OracleRecipe {
    * frame's narration only (D-139): Milestone 1 frames an established
    * derelict and amends no entity (D-86).
    */
-  readonly entityKind: 'npc' | 'location' | 'derelict' | 'faction';
+  readonly entityKind:
+    | 'npc'
+    | 'location'
+    | 'derelict'
+    | 'faction'
+    | 'starship'
+    | 'settlement'
+    | 'planet'
+    | 'connection'
+    | 'trouble'
+    | 'incident'
+    | 'character'
+    | 'sector'
+    | 'star';
   readonly rolls: readonly OracleRecipeSlot[];
 }
 
@@ -49,4 +62,11 @@ export interface OracleRecipeSlot {
   readonly oracle: OracleId;
   /** A name roll: it grounds the entity's name, not a field of its own. */
   readonly name?: true;
+  /**
+   * Words for this roll, where the slot name alone is not enough — the prompt
+   * that cites it and the chip a player reads (D-186). Optional: most recipes
+   * never leave their own layer, and `OracleRecipe.label` already does this
+   * job for the recipe as a whole.
+   */
+  readonly label?: string;
 }

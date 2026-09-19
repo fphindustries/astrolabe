@@ -28,8 +28,11 @@ describe('the catalogue', () => {
     // incident.proposed (4.6, D-132), move.suggested (7.12, D-135) and
     // move.trigger_noted (7.13, D-136) one each, and complication.offered and
     // complication.set (8.7, D-143), and actions.suggested (9.3, D-148) and
-    // session.summary_proposed (9.4, D-149).
-    expect(EVENT_TYPES).toHaveLength(36);
+    // session.summary_proposed (9.4, D-149). Campaign Launch brought its own
+    // catalogue, and track.revised (6.0d, D-188) joins them: a background vow
+    // that a pre-launch revision renamed has to reach its track, and
+    // track.created cannot be undone before a session exists.
+    expect(EVENT_TYPES).toHaveLength(62);
   });
 
   it('exposes every type through isEventType, and rejects anything else', () => {
@@ -389,5 +392,112 @@ describe('sector.route_added', () => {
         rawEvent('sector.route_added', { fromLocationId: 'not-a-uuid', toLocationId: SURVIVOR }),
       ).success,
     ).toBe(false);
+  });
+});
+
+describe('a crew draft holds work in progress (6.0e, A23, D-161)', () => {
+  const member = (overrides: Record<string, unknown> = {}) => ({
+    draftId: 'draft-vesna',
+    ...overrides,
+  });
+  const draft = (...characters: Record<string, unknown>[]) =>
+    rawEvent('launch.draft_saved', { section: 'crew', snapshot: { characters } });
+
+  it('identifies each member, so a save can be matched to the one it belongs to', () => {
+    // 3R.4d typed this snapshot and gave an in-progress character no key at
+    // all, so nothing could tell one half-built crew member from another, and
+    // D-182's per-member precedence had nothing to compare.
+    expect(safeParseEvent(draft(member())).success).toBe(true);
+    expect(safeParseEvent(draft({ name: 'Vesna Kade' })).success).toBe(false);
+  });
+
+  it('names the character a draft revises, once there is one', () => {
+    expect(safeParseEvent(draft(member({ characterId: VESNA }))).success).toBe(true);
+  });
+
+  it('accepts a field the player has started and not finished', () => {
+    // The point of the section. A draft is incomplete by nature (D-161), so an
+    // empty string is work in progress, not a validation failure — the same
+    // looseness the connection_troubles arm already keeps deliberately.
+    expect(
+      safeParseEvent(
+        draft(
+          member({
+            name: '',
+            callsign: 'Ma',
+            appearance: '',
+            backstory: { kind: 'written', text: '' },
+            backgroundVow: { title: '' },
+            hooks: ['', 'She still hears the channel'],
+          }),
+        ),
+      ).success,
+    ).toBe(true);
+  });
+
+  it('holds a whole crew, each member on its own', () => {
+    expect(
+      safeParseEvent(
+        draft(
+          member({ draftId: 'draft-vesna', name: 'Vesna Kade' }),
+          member({ draftId: 'draft-rook', name: 'Rook' }),
+        ),
+      ).success,
+    ).toBe(true);
+  });
+
+  it('drops the values the server derives rather than storing them', () => {
+    // Meters and momentum come from the rules at acceptance and are
+    // snapshotted by the command (D-105), so the draft schema does not name
+    // them. Zod strips what it does not name, which is the behaviour wanted
+    // here: a client that sends them is ignored rather than refused, and
+    // nothing downstream can mistake a draft for a source of starting health.
+    const parsed = safeParseEvent(
+      draft(
+        member({
+          meters: {
+            health: { value: 5, min: 0, max: 5 },
+            spirit: { value: 5, min: 0, max: 5 },
+            supply: { value: 5, min: 0, max: 5 },
+          },
+          momentum: 2,
+        }),
+      ),
+    );
+
+    expect(parsed.success).toBe(true);
+    const snapshot =
+      parsed.success && parsed.data.type === 'launch.draft_saved'
+        ? parsed.data.payload.snapshot
+        : undefined;
+    const stored = (snapshot as { characters: Record<string, unknown>[] }).characters[0]!;
+    expect(Object.hasOwn(stored, 'meters')).toBe(false);
+    expect(Object.hasOwn(stored, 'momentum')).toBe(false);
+  });
+});
+
+describe('the starship draft (7.0g)', () => {
+  it('accepts a blank quirk, which a draft is allowed to have', () => {
+    const parsed = PAYLOAD_SCHEMAS['launch.draft_saved'].safeParse({
+      section: 'starship',
+      snapshot: { starship: { name: 'Lantern Wake', quirks: ['Late clocks', ''] } },
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it('still parses a snapshot saved in the earlier, fuller shape', () => {
+    const parsed = PAYLOAD_SCHEMAS['launch.draft_saved'].safeParse({
+      section: 'starship',
+      snapshot: {
+        starship: {
+          starshipId: STATION,
+          name: 'Lantern Wake',
+          integrity: { value: 5, min: 0, max: 5 },
+          assetId: 'asset:command-vehicle/starship',
+          modules: [],
+        },
+      },
+    });
+    expect(parsed.success).toBe(true);
   });
 });

@@ -115,12 +115,14 @@ describe.skipIf(!hasTestDatabase)('the session-1 fixture (D-72, D-122)', () => {
         title: "Recover the flight recorder of Meridian's Hope",
       }),
     );
-    expect(
-      Object.values(state.entities)
-        .filter((e) => e.kind === 'location')
-        .map((e) => e.name),
-    ).toEqual(['Deepwater Anchorage', 'Kessel Drift', 'Varga Relay']);
-    expect(Object.keys(state.truths)).toHaveLength(3);
+    // 10.1c: the places are the launch's, not Milestone 1 entities (D-205).
+    expect(Object.values(state.launch.locations).map((l) => l.name)).toEqual(
+      expect.arrayContaining(['Deepwater Anchorage', 'Kessel Drift', 'Varga Relay']),
+    );
+    expect(Object.values(state.entities).filter((e) => e.kind === 'location')).toEqual([]);
+    // Every truth is decided through the launch, one of them left open (A24).
+    expect(Object.keys(state.launch.truthDecisions)).toHaveLength(14);
+    expect(state.launch.phase).toBe('active');
   });
 
   it('ends session 1 with a summary and open threads for the next recap', () => {
@@ -137,11 +139,14 @@ describe.skipIf(!hasTestDatabase)('the session-1 fixture (D-72, D-122)', () => {
   it('narrates every move beat through the real narration command', () => {
     const moves = events.filter((e) => e.type === 'move.invoked');
     const passages = events.filter((e) => e.type === 'narration.written');
-    expect(moves).toHaveLength(4);
-    expect(passages).toHaveLength(4);
-    // One narration call and one authority check per passage (D-128), and
-    // the same for the session summary (D-149).
-    expect(events.filter((e) => e.type === 'ai.completed')).toHaveLength(10);
+    // The vow Vesna swears at launch is Session 1's first beat (D-201, D-205).
+    expect(moves).toHaveLength(5);
+    expect(passages).toHaveLength(5);
+    // One narration call per passage, each checked (D-128), and the summary (D-149).
+    const calls = (purpose: string) =>
+      events.filter((e) => e.type === 'ai.completed' && e.payload.purpose === purpose);
+    expect(calls('beat')).toHaveLength(5);
+    expect(calls('session_summary')).toHaveLength(1);
     expect(events.filter((e) => e.type === 'narration.withdrawn')).toHaveLength(0);
   });
 
@@ -203,7 +208,7 @@ describe.skipIf(!hasTestDatabase)('the session-2-open fixture (D-122)', () => {
     expect(state.session).toMatchObject({ number: 2 });
     expect(state.session?.endedAt).toBeUndefined();
     expect(state.canon.sessionSummaries).toHaveLength(1);
-    const relay = Object.values(state.entities).find((e) => e.name === 'Varga Relay');
+    const relay = Object.values(state.launch.locations).find((l) => l.name === 'Varga Relay');
     expect(state.scene).toMatchObject({
       title: 'The derelict relay station',
       locationId: relay?.id,

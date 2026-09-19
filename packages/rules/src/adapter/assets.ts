@@ -6,6 +6,7 @@ import type {
   AssetAttachments,
   AssetCategory,
   AssetCategoryId,
+  AssetConditionMeter,
 } from '../schema/assets.js';
 import type { MoveId } from '../schema/ids.js';
 
@@ -44,8 +45,19 @@ interface RawAsset {
   readonly shared?: boolean;
   readonly requirement?: string;
   readonly attachments?: RawAssetAttachments;
+  readonly controls?: Record<string, RawAssetControl>;
   readonly abilities: readonly RawAssetAbility[];
   readonly _source: Datasworn.SourceInfo;
+}
+
+interface RawAssetControl {
+  readonly label: string;
+  readonly field_type: string;
+  readonly min?: number;
+  readonly max?: number;
+  readonly value?: unknown;
+  readonly is_impact?: boolean;
+  readonly controls?: Record<string, RawAssetControl>;
 }
 
 interface RawAssetCollection {
@@ -155,6 +167,33 @@ function mapAssetAbility(raw: RawAssetAbility, allMoveSourceIds: readonly string
   };
 }
 
+/** Only condition meters are imported; card flips and the like carry no starting value. */
+function mapConditionMeters(
+  controls: Record<string, RawAssetControl> | undefined,
+): AssetConditionMeter[] {
+  return Object.entries(controls ?? {}).flatMap(([key, control]) => {
+    if (control.field_type !== 'condition_meter') return [];
+    if (
+      typeof control.min !== 'number' ||
+      typeof control.max !== 'number' ||
+      typeof control.value !== 'number'
+    )
+      throw new Error(`Condition meter "${key}" is missing its min, max or value.`);
+    return [
+      {
+        key,
+        label: control.label,
+        min: control.min,
+        max: control.max,
+        value: control.value,
+        impacts: Object.entries(control.controls ?? {}).flatMap(([impactKey, impact]) =>
+          impact.is_impact === true ? [{ key: impactKey, label: impact.label }] : [],
+        ),
+      },
+    ];
+  });
+}
+
 function mapAsset(
   raw: RawAsset,
   categoryId: AssetCategoryId,
@@ -162,6 +201,7 @@ function mapAsset(
   allMoveSourceIds: readonly string[],
 ): Asset {
   const attachments = mapAttachments(raw.attachments);
+  const conditionMeters = mapConditionMeters(raw.controls);
   return {
     id: requireAssetId(raw._id),
     categoryId,
@@ -171,6 +211,7 @@ function mapAsset(
     ...(raw.requirement !== undefined ? { requirement: rewriteLinks(raw.requirement) } : {}),
     shared: raw.shared ?? false,
     ...(attachments !== undefined ? { attachments } : {}),
+    ...(conditionMeters.length > 0 ? { conditionMeters } : {}),
     abilities: raw.abilities.map((ability) => mapAssetAbility(ability, allMoveSourceIds)),
     source: mapProvenance(raw._id, version, raw._source),
   };

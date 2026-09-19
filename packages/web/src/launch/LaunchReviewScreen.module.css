@@ -1,0 +1,139 @@
+.review {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.back {
+  align-self: flex-start;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.back:hover {
+  color: var(--text-primary);
+}
+
+.heading {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+}
+
+.ready,
+.why {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-base);
+}
+
+.why {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.blocked {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--outcome-miss);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+}
+
+.blockedHeading {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.groupName {
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.problems {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: var(--space-4);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+}
+
+.fact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.factLabel {
+  flex: none;
+  width: 10rem;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  line-height: 1.7;
+}
+
+.factValue,
+.factMissing {
+  flex: 1 1 14rem;
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.factValue {
+  color: var(--text-primary);
+}
+
+.factMissing {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.primary {
+  composes: primary from '../ui/controls.module.css';
+}
+
+/* `aria-disabled` keeps the button focusable, so it has to look unavailable
+   on its own — `:disabled` never matches it. */
+.primary[aria-disabled='true'] {
+  border-color: var(--surface-border-strong);
+  background: var(--surface-3);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}

@@ -2,6 +2,8 @@ import type { CharacterId } from '@astrolabe/rules';
 import type { EventId } from '@astrolabe/shared';
 import { describe, expect, it } from 'vitest';
 
+import { devStubResponse } from '../create-provider.js';
+
 import type { BeatFact } from './describe-beat.js';
 import {
   beatNarrationSchema,
@@ -9,6 +11,7 @@ import {
   checkSegmentTags,
   checkSegmentText,
   joinSegments,
+  namedCharacter,
   renderFacts,
   resolveSegments,
   segmentInstructions,
@@ -219,5 +222,26 @@ describe('segmented passages (D-127)', () => {
     expect(checkSegments([segment('world', null, [], '   ')], ctx())).toBe(
       'The passage was empty.',
     );
+  });
+});
+
+// 10.4: the browser pass found every dev-stub narration withdrawn once the
+// crew came from the dev stub's own character, whose callsign was "Stub".
+describe('the dev stub against its own crew (10.4)', () => {
+  it('narrates without naming the character it proposes', () => {
+    const character = devStubResponse({ purpose: 'character_proposal', user: '' }, 'structured');
+    const beat = devStubResponse({ purpose: 'beat', user: '' }, 'structured');
+    if (character.kind !== 'structured' || beat.kind !== 'structured') throw new Error('no stub');
+    const proposed = character.value as {
+      name: { value: string };
+      callsign: { value: string };
+    };
+    const [segment] = (beat.value as { segments: { text: string }[] }).segments;
+
+    expect(
+      namedCharacter(segment!.text, [
+        { id: 'c' as never, name: proposed.name.value, callsign: proposed.callsign.value },
+      ]),
+    ).toBeUndefined();
   });
 });

@@ -41,6 +41,13 @@ export interface NewEvent<T extends EventType = EventType> {
   readonly payload: PayloadFor<T>;
   /** Defaults to the command's actor — most events are authored by whoever issued the command. */
   readonly actor?: Actor;
+  /**
+   * A server-authored causal link for an individual event in a compound
+   * command.  Activation uses this to make the session and opening scene
+   * consequences of the activation event without exposing causality to the
+   * HTTP boundary.
+   */
+  readonly causedBy?: EventId | null;
   readonly sessionId?: SessionId | null;
   readonly sceneId?: SceneId | null;
   readonly subjectCharacterId?: CharacterId | null;
@@ -71,6 +78,19 @@ export interface AppendRequest {
   readonly response?: JsonValue;
   /** Present only on a campaign's first command, which creates its bookkeeping row. */
   readonly createCampaign?: { readonly name: string };
+  /**
+   * A last check, run inside the write transaction while the campaign row
+   * lock is already held, so a decision made from the log cannot be
+   * invalidated by a concurrent writer between reading and appending.
+   * Throwing rejects the command and rolls the whole append back.
+   *
+   * Campaign activation needs this: it revalidates launch readiness over the
+   * log and must not race a launch command that lands in between (D-168).
+   * The alternative it replaces — opening an outer transaction and passing
+   * the handle in as `Sql` — could not work, because a postgres.js
+   * transaction has no `begin` of its own and this function always opens one.
+   */
+  readonly precondition?: (tx: Sql) => Promise<void>;
 }
 
 export type JsonValue =
@@ -135,6 +155,12 @@ export async function appendCommand(sql: Sql, request: AppendRequest): Promise<A
         throw new Error(`Campaign ${request.campaignId} does not exist.`);
       }
       const firstSeq = Number(after.next_seq) - request.events.length;
+
+      // The bump above took the campaign row lock, so anything the
+      // precondition reads from the log is stable through to the insert.
+      if (request.precondition !== undefined) {
+        await request.precondition(tx as unknown as Sql);
+      }
 
       const events = request.events.map((event, index) =>
         buildEvent(request, event, firstSeq + index, occurredAt),
@@ -212,7 +238,7 @@ function buildEvent(
     seq,
     id: event.id ?? uuidv7(),
     commandId: request.commandId,
-    causedBy: request.causedBy ?? null,
+    causedBy: event.causedBy ?? request.causedBy ?? null,
     sessionId: event.sessionId ?? null,
     sceneId: event.sceneId ?? null,
     actor: event.actor ?? request.actor,
@@ -348,7 +374,8 @@ export async function readNarrativeEvents(
        and type = any(${[...NARRATIVE_EVENT_TYPES]})
        and command_id not in (
          select id from commands
-          where campaign_id = ${campaignId} and kind = any(${[...PROPOSAL_COMMAND_KINDS]})
+          where campaign_id = ${campaignId}
+            and (kind = any(${[...PROPOSAL_COMMAND_KINDS]}) or kind like ${LAUNCH_COMMAND_PREFIX})
        )
        ${options.sessionId === undefined ? sql`` : sql`and session_id = ${options.sessionId}`}
        ${options.before === undefined ? sql`` : sql`and seq < ${options.before}`}
@@ -385,7 +412,35 @@ const EVENTS_PER_BEAT_ALLOWANCE = 4;
  * story, so the narrative log leaves them out. Accepting writes an ordinary
  * command that the log does show.
  */
-export const PROPOSAL_COMMAND_KINDS = ['character.propose', 'campaign.propose_incidents'] as const;
+export const PROPOSAL_COMMAND_KINDS = [
+  'character.propose',
+  'campaign.propose_incidents',
+  'launch.propose.truth',
+  'launch.propose.starship',
+  'launch.propose.settlement',
+  'launch.propose.trouble',
+  'launch.propose.sector',
+  'launch.propose.connection',
+] as const;
+
+/**
+ * Every Campaign Launch command, by prefix.
+ *
+ * This was `launch.propose.%`, because `proposeLaunchCreation` mints its kind
+ * from the target and a list of eight would go stale. Broadened in 6.3, when
+ * moving the character rolls into their own command (D-186) made a launch
+ * oracle roll show up in the narrative log as an unexplained beat. It had
+ * always been able to: `launch.recipe.roll.*` and `launch.oracle.roll` write
+ * `oracle.rolled`, which is a narrative type, and only the *proposal* kinds
+ * were excluded. Nothing had noticed because every other launch roll happened
+ * to be read back session-scoped.
+ *
+ * The rule is the one the narrower prefix already stated — setting a campaign
+ * up is not a beat of playing it — and every command that does it is named
+ * `launch.*`. Accepting a character is not (`character.create`), and should
+ * not be: a crew member joining is a fact about the campaign.
+ */
+const LAUNCH_COMMAND_PREFIX = 'launch.%';
 
 const AMENDMENT_TYPES = [
   'event.voided',

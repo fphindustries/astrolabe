@@ -4,6 +4,7 @@ import type { Asset, AssetCategory } from '../schema/assets.js';
 import type { GameRules } from '../schema/game-rules.js';
 import type { Move } from '../schema/moves.js';
 import type { OracleTable } from '../schema/oracles.js';
+import type { SettingTruth } from '../schema/truths.js';
 
 import { mapAssetCategories, mapAssets } from './assets.js';
 import { mapGameRules } from './game-rules.js';
@@ -18,8 +19,8 @@ export interface AdaptedRuleset {
   readonly assets: readonly Asset[];
   /** Imported as entities: their descriptions carry rules nothing else does (D-89). */
   readonly assetCategories: readonly AssetCategory[];
-  /** Setting truths (task 4.2) — each one an `OracleTable`, not a parallel schema (see `truths.ts`). */
-  readonly truths: readonly OracleTable[];
+  /** Setting truths preserve their oracle shape plus launch-only metadata. */
+  readonly truths: readonly SettingTruth[];
 }
 
 /**

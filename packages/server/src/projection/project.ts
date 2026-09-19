@@ -1,4 +1,9 @@
-import { applyMomentumDelta, momentumMax, momentumResetValue } from '@astrolabe/rules';
+import {
+  applyMomentumDelta,
+  momentumMax,
+  momentumResetValue,
+  STARSHIP_ASSET_ID,
+} from '@astrolabe/rules';
 import type { CharacterId, ImpactId, MeterId, TrackId } from '@astrolabe/rules';
 import type {
   AstrolabeEvent,
@@ -8,6 +13,7 @@ import type {
   EntityId,
   FieldProvenance,
   MeterState,
+  SupersededCharacter,
   TokenUsage,
   TrackState,
 } from '@astrolabe/shared';
@@ -107,10 +113,28 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
         momentum: { value: payload.momentum, max: 0, resetValue: 0, lastChangedBy: by },
         impacts: {},
         markedImpacts: 0,
-        assets: payload.assets,
+        // D-193: a Milestone 1 character's granted Starship is the crew's ship,
+        // not one of their assets. The event keeps it forever; the fold moves
+        // it to a flag, so readiness, the crew form, the move composer and
+        // world context all see one answer.
+        assets: payload.assets.filter((asset) => asset !== STARSHIP_ASSET_ID),
+        ...(payload.assets.includes(STARSHIP_ASSET_ID)
+          ? { legacyStarshipGrant: true as const }
+          : {}),
         vowTrackIds: [],
         hooks: payload.hooks ?? [],
         pronouns: payload.pronouns ?? null,
+        ...(payload.appearance !== undefined ? { appearance: payload.appearance } : {}),
+        ...(payload.backstory !== undefined ? { backstory: payload.backstory } : {}),
+        ...(payload.backgroundVow !== undefined ? { backgroundVow: payload.backgroundVow } : {}),
+        ...(payload.signatureGear !== undefined ? { signatureGear: payload.signatureGear } : {}),
+        // D-184. The log facts are knowable for every character; the two
+        // acceptance fields are absent on a Milestone 1 one, which recorded
+        // neither.
+        eventId: event.id,
+        seq: event.seq,
+        ...(payload.provenance !== undefined ? { provenance: payload.provenance } : {}),
+        ...(payload.groundedIn !== undefined ? { groundedIn: payload.groundedIn } : {}),
       });
       return withCharacter(state, character);
     }
@@ -169,7 +193,6 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
     case 'move.chained':
     case 'oracle.rolled':
     case 'character.proposed':
-    case 'incident.proposed':
     case 'move.suggested':
     case 'actions.suggested':
     case 'session.summary_proposed':
@@ -213,12 +236,29 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
         ...(payload.kind === 'clock'
           ? { ticks: 0, maxTicks: payload.segments }
           : { rank: payload.rank, ticks: 0, maxTicks: PROGRESS_TRACK_MAX_TICKS }),
+        ...(payload.kind === 'vow' && payload.participantCharacterIds !== undefined
+          ? { participantCharacterIds: payload.participantCharacterIds }
+          : {}),
         lastChangedBy: {
           ...by,
           ...(reason?.kind === 'ai_judgement' ? { reason: reason.reason } : {}),
         },
       };
-      const withTrack = { ...state, tracks: { ...state.tracks, [track.id]: track } };
+      const activation = state.launch.activation;
+      const swornPending =
+        payload.kind === 'vow' &&
+        payload.incidentId !== undefined &&
+        activation !== undefined &&
+        activation.vowTrackId === undefined &&
+        activation.pendingVow.incidentId === payload.incidentId;
+      const withTrack = {
+        ...state,
+        tracks: { ...state.tracks, [track.id]: track },
+        // D-201: the pending vow is sworn once its track exists.
+        ...(swornPending
+          ? { launch: { ...state.launch, activation: { ...activation, vowTrackId: track.id } } }
+          : {}),
+      };
       // A vow belongs to the character who swore it, so the sheet can list
       // it without scanning every track in the campaign.
       if (payload.kind !== 'vow' || payload.characterId === undefined) {
@@ -290,12 +330,41 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
       return state;
 
     case 'truth.set': {
+      // D-183: one truth representation. No command writes this type any more,
+      // but every Milestone 1 campaign has them, so the arm stays and folds
+      // into the same read model rather than a second one.
+      //
+      // Not an upcaster: the versioning rule is explicit that a genuinely
+      // different fact is a new type, not a new version. It maps only what the
+      // event already stored — there is no option index to recover, and the
+      // projector may not read rules content to find one (D-176).
       const { payload } = event;
       return {
         ...state,
-        truths: {
-          ...state.truths,
-          [payload.oracleId]: { text: payload.text, source: payload.source },
+        launch: {
+          ...state.launch,
+          truthDecisions: {
+            ...state.launch.truthDecisions,
+            [payload.oracleId]: {
+              truthId: payload.oracleId,
+              resolution:
+                payload.source === 'picked'
+                  ? 'selected'
+                  : payload.source === 'rolled'
+                    ? 'rolled'
+                    : 'custom',
+              text: payload.text,
+              provenance:
+                payload.source === 'picked'
+                  ? 'official_choice'
+                  : payload.source === 'rolled'
+                    ? 'oracle_roll'
+                    : 'player_written',
+              groundedIn: [],
+              eventId: event.id,
+              seq: event.seq,
+            },
+          },
         },
       };
     }
@@ -312,6 +381,369 @@ export function applyEvent(state: CampaignState, event: AstrolabeEvent): Campaig
         },
       };
     }
+
+    case 'launch.draft_saved':
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          // D-182: the snapshot plus where it sits, so a section's form can
+          // tell a draft saved after an accepted fact from one saved before it.
+          drafts: {
+            ...state.launch.drafts,
+            [event.payload.section]: { snapshot: event.payload.snapshot, seq: event.seq },
+          },
+        },
+      };
+    case 'creation.proposed':
+      // Projected so acceptance can resolve a proposal's causality and A41 can
+      // link an accepted fact back to the proposal it came from. Still not
+      // canon: nothing reads it as an established fact (D-161).
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          proposals: {
+            ...state.launch.proposals,
+            [event.payload.targetId]: { ...event.payload, eventId: event.id },
+          },
+        },
+      };
+    case 'campaign.foundation_set':
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          foundation: { ...event.payload, eventId: event.id, seq: event.seq },
+        },
+      };
+    case 'truth.decided': {
+      // A26: the answer this one supersedes stays readable. Projection is
+      // latest-wins by design and `truth.decided` never reaches the narrative
+      // log, so without keeping the chain here the earlier answer is written
+      // and unreadable.
+      const superseded = state.launch.truthDecisions[event.payload.truthId];
+      const history = state.launch.truthHistory[event.payload.truthId] ?? [];
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          truthDecisions: {
+            ...state.launch.truthDecisions,
+            [event.payload.truthId]: { ...event.payload, eventId: event.id, seq: event.seq },
+          },
+          ...(superseded === undefined
+            ? {}
+            : {
+                truthHistory: {
+                  ...state.launch.truthHistory,
+                  [event.payload.truthId]: [...history, superseded],
+                },
+              }),
+        },
+      };
+    }
+    case 'character.revised': {
+      // Read before replacing: `updateCharacter` overwrites in place, so by the
+      // time its callback returns the superseded version is gone. Same
+      // read-then-push ordering `truth.decided` uses, for the same reason.
+      const superseded = state.characters[event.payload.characterId];
+      const withHistory =
+        superseded === undefined
+          ? state
+          : {
+              ...state,
+              launch: {
+                ...state.launch,
+                crewHistory: {
+                  ...state.launch.crewHistory,
+                  [event.payload.characterId]: [
+                    ...(state.launch.crewHistory[event.payload.characterId] ?? []),
+                    supersededCharacter(superseded),
+                  ],
+                },
+              },
+            };
+      return updateCharacter(withHistory, event.payload.characterId, (current) => ({
+        ...current,
+        name: event.payload.character.name,
+        callsign: event.payload.character.callsign,
+        stats: event.payload.character.stats,
+        // `...current` keeps a legacy grant's flag; the revision's own assets
+        // are filtered the same way, though the launch validator already
+        // refuses a character-owned command vehicle (D-171).
+        assets: event.payload.character.assets.filter((asset) => asset !== STARSHIP_ASSET_ID),
+        hooks: event.payload.character.hooks ?? [],
+        pronouns: event.payload.character.pronouns ?? null,
+        appearance: event.payload.character.appearance,
+        backstory: event.payload.character.backstory,
+        backgroundVow: event.payload.character.backgroundVow,
+        ...(event.payload.character.signatureGear !== undefined
+          ? { signatureGear: event.payload.character.signatureGear }
+          : {}),
+        // The revision is now the event that accepted this character, so it is
+        // what the next revision supersedes and what D-182 compares (D-184).
+        eventId: event.id,
+        seq: event.seq,
+        provenance: event.payload.provenance,
+        groundedIn: event.payload.groundedIn,
+      }));
+    }
+    case 'character.removed': {
+      const removed = state.characters[event.payload.characterId];
+      if (removed === undefined) return state;
+      const { [event.payload.characterId]: _dropped, ...characters } = state.characters;
+      // The character's own vow tracks go with them (6.0d). Nothing else can
+      // drop a track — void is bounded to the current session (D-84) and every
+      // pre-launch event has none — so leaving them would strand a vow on a
+      // crew member who is not there. A shared vow cannot be caught by this:
+      // it is created at activation, after which removal is refused.
+      const tracks = Object.fromEntries(
+        Object.entries(state.tracks).filter(([id]) => !removed.vowTrackIds.includes(id as TrackId)),
+      );
+      return {
+        ...state,
+        characters,
+        tracks,
+        launch: {
+          ...state.launch,
+          // What was removed stays answerable (A40): the final version joins
+          // the history rather than being orphaned beside it.
+          crewHistory: {
+            ...state.launch.crewHistory,
+            [event.payload.characterId]: [
+              ...(state.launch.crewHistory[event.payload.characterId] ?? []),
+              supersededCharacter(removed),
+            ],
+          },
+        },
+      };
+    }
+    case 'track.revised':
+      // D-188, D-202: the words and who shares the track. A vow's progress,
+      // kind and swearing character are not what a revision changed.
+      return state.tracks[event.payload.trackId] === undefined
+        ? state
+        : {
+            ...state,
+            tracks: {
+              ...state.tracks,
+              [event.payload.trackId]: {
+                ...state.tracks[event.payload.trackId]!,
+                title: event.payload.title,
+                ...(event.payload.rank !== undefined ? { rank: event.payload.rank } : {}),
+                ...(event.payload.participantCharacterIds !== undefined
+                  ? { participantCharacterIds: event.payload.participantCharacterIds }
+                  : {}),
+              },
+            },
+          };
+    case 'starship.established':
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          starship: { ...withoutModules(event.payload), eventId: event.id, seq: event.seq },
+        },
+      };
+    case 'starship.revised':
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          // 7.0f: the version this replaces stays readable, with its own
+          // acceptance rather than the revision's.
+          starshipHistory:
+            state.launch.starship === undefined
+              ? state.launch.starshipHistory
+              : [...state.launch.starshipHistory, state.launch.starship],
+          // The revision nests the ship and keeps its acceptance alongside, so
+          // both halves are carried; the projected fact has one shape either way.
+          starship: {
+            ...withoutModules(event.payload.starship),
+            provenance: event.payload.provenance,
+            groundedIn: event.payload.groundedIn,
+            ...(event.payload.supersedesEventId === undefined
+              ? {}
+              : { supersedesEventId: event.payload.supersedesEventId }),
+            eventId: event.id,
+            seq: event.seq,
+          },
+        },
+      };
+    case 'sector.configured':
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          // 8.0h: the version this replaces stays readable (A40).
+          sectorHistory:
+            state.launch.sector === undefined
+              ? state.launch.sectorHistory
+              : [...state.launch.sectorHistory, state.launch.sector],
+          sector: { ...event.payload, eventId: event.id, seq: event.seq },
+        },
+      };
+    case 'location.added':
+    case 'location.revised': {
+      // Read before replacing, as `truth.decided` does (8.0h, A40).
+      const superseded = state.launch.locations[event.payload.id];
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          locations: {
+            ...state.launch.locations,
+            [event.payload.id]: { ...event.payload, eventId: event.id, seq: event.seq },
+          },
+          ...(superseded === undefined
+            ? {}
+            : {
+                locationHistory: withHistory(
+                  state.launch.locationHistory,
+                  event.payload.id,
+                  superseded,
+                ),
+              }),
+        },
+      };
+    }
+    case 'location.removed': {
+      // Removed means gone from the projection; the log still holds the
+      // add and the removal. The tombstone this used to leave behind was
+      // shaped like nothing else in `locations`, and every reader had to
+      // remember to filter it out by guessing at its fields.
+      const { [event.payload.locationId]: removed, ...locations } = state.launch.locations;
+      // Its map position goes with it (8.0g). Left behind, the client's next
+      // complete-layout write would name a node the command no longer knows,
+      // and be refused for a position the player never saw.
+      const { [event.payload.locationId]: _placed, ...layout } = state.launch.layout;
+      // What was removed stays answerable, as a removed crew member does (8.0h).
+      const locationHistory =
+        removed === undefined
+          ? state.launch.locationHistory
+          : withHistory(state.launch.locationHistory, event.payload.locationId, removed);
+      return { ...state, launch: { ...state.launch, locations, layout, locationHistory } };
+    }
+    case 'route.added':
+    case 'route.revised':
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          // A revision replaces the route it supersedes. Appending it left two
+          // entries for one passage, which counted twice against the region's
+          // baseline (A31).
+          routes: [
+            ...state.launch.routes.filter(
+              (route) => route.eventId !== event.payload.supersedesEventId,
+            ),
+            { ...event.payload, eventId: event.id, seq: event.seq },
+          ],
+        },
+      };
+    case 'route.removed':
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          // `supersedesEventId` names the event that *added* the route, so the
+          // match is against that route's own `eventId`. It used to compare
+          // against the route's acceptance `supersedesEventId`, which is
+          // undefined on a freshly added route, so nothing was ever removed —
+          // and a tombstone was appended, inflating the passage count instead.
+          routes: state.launch.routes.filter(
+            (route) => route.eventId !== event.payload.supersedesEventId,
+          ),
+        },
+      };
+    case 'sector.layout_changed':
+      return { ...state, launch: { ...state.launch, layout: event.payload.coordinates } };
+    case 'starting_settlement.selected':
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          startingSettlementId: event.payload.settlementId,
+          startingSettlementEventId: event.id,
+        },
+      };
+    case 'trouble.established':
+    case 'trouble.revised': {
+      const superseded = state.launch.troubles[event.payload.troubleId];
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          troubles: {
+            ...state.launch.troubles,
+            [event.payload.troubleId]: { ...event.payload, eventId: event.id, seq: event.seq },
+          },
+          ...(superseded === undefined
+            ? {}
+            : {
+                troubleHistory: withHistory(
+                  state.launch.troubleHistory,
+                  event.payload.troubleId,
+                  superseded,
+                ),
+              }),
+        },
+      };
+    }
+    case 'incident.proposed':
+      // 9.0e: the latest options, held for review; a newer ask replaces them.
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          incidentProposal: { ...event.payload, eventId: event.id, seq: event.seq },
+        },
+      };
+    case 'connection.established':
+    case 'connection.revised':
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          connection: { ...event.payload, eventId: event.id, seq: event.seq },
+        },
+      };
+    case 'incident.accepted':
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          incident: { ...event.payload, eventId: event.id, seq: event.seq },
+        },
+      };
+    case 'incident.revised':
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          incident: { ...event.payload, eventId: event.id, seq: event.seq },
+        },
+      };
+    case 'campaign.activated':
+      return {
+        ...state,
+        launch: {
+          ...state.launch,
+          phase: 'active',
+          activation: {
+            eventId: event.id,
+            sessionId: event.payload.sessionId,
+            sceneId: event.payload.sceneId,
+            pendingVow: event.payload.pendingVow,
+          },
+        },
+      };
+    case 'launch.fact_amended':
+      return {
+        ...state,
+        launch: { ...state.launch, amendments: [...state.launch.amendments, event.payload] },
+      };
 
     case 'ai.completed':
     case 'ai.failed': {
@@ -363,6 +795,34 @@ function normaliseCharacter(character: CharacterState): CharacterState {
       max: momentumMax(markedImpacts),
       resetValue: momentumResetValue(markedImpacts),
     },
+  };
+}
+
+/**
+ * The launch-relevant half of a character, for `crewHistory` (6.0c, D-184).
+ *
+ * Field by field, never by spreading the character: a `CharacterState` also
+ * carries meters, momentum, impacts and vow tracks, and a revision changes
+ * none of them. Optional fields are omitted rather than set to `undefined`,
+ * because `exactOptionalPropertyTypes` treats those as different things and
+ * the cold-rebuild comparison does not.
+ */
+function supersededCharacter(character: CharacterState): SupersededCharacter {
+  return {
+    name: character.name,
+    callsign: character.callsign,
+    stats: character.stats,
+    assets: character.assets,
+    hooks: character.hooks,
+    pronouns: character.pronouns,
+    eventId: character.eventId,
+    seq: character.seq,
+    ...(character.appearance !== undefined ? { appearance: character.appearance } : {}),
+    ...(character.backstory !== undefined ? { backstory: character.backstory } : {}),
+    ...(character.backgroundVow !== undefined ? { backgroundVow: character.backgroundVow } : {}),
+    ...(character.signatureGear !== undefined ? { signatureGear: character.signatureGear } : {}),
+    ...(character.provenance !== undefined ? { provenance: character.provenance } : {}),
+    ...(character.groundedIn !== undefined ? { groundedIn: character.groundedIn } : {}),
   };
 }
 
@@ -523,3 +983,22 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 export type { CharacterId, EntityId, TrackId };
+
+/**
+ * A ship without the module list events before D-191 carried. Installed
+ * modules are derived from the crew, so the stored list is read and dropped
+ * rather than projected beside the derived one.
+ */
+function withoutModules<T extends { readonly modules?: unknown }>(ship: T): Omit<T, 'modules'> {
+  const { modules: _stored, ...rest } = ship;
+  return rest;
+}
+
+/** Append a superseded version to its key's history, oldest first (8.0h, A40). */
+function withHistory<K extends string, T>(
+  history: Readonly<Record<K, readonly T[]>>,
+  key: K,
+  superseded: T,
+): Readonly<Record<K, readonly T[]>> {
+  return { ...history, [key]: [...(history[key] ?? []), superseded] };
+}

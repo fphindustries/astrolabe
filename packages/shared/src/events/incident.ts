@@ -24,6 +24,12 @@ export const IncidentOptionSchema = z.object({
     truths: z.array(OracleIdSchema),
     locations: z.array(EntityIdSchema),
     characters: z.array(CharacterIdSchema),
+    /**
+     * The remaining accepted launch facts an option cited (D-168): the shared
+     * starship, a trouble, the local connection. Optional because Milestone 1
+     * proposals predate them.
+     */
+    launchFacts: z.array(EntityIdSchema).optional(),
   }),
 });
 

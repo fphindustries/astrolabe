@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { EVENT_TYPES, parseEvent, type EventType } from './events/index.js';
+import { EVENT_TYPES, LAUNCH_EVENT_TYPES, parseEvent, type EventType } from './events/index.js';
 import {
   EVENT_TYPE_META,
   NARRATIVE_EVENT_TYPES,
@@ -39,9 +39,54 @@ describe('the metadata table', () => {
     expect(Object.keys(EVENT_TYPE_META).sort()).toEqual([...EVENT_TYPES].sort());
   });
 
-  it('exempts exactly token accounting and voids from being voided (D-85)', () => {
+  it('exempts token accounting, voids, and the launch catalogue (D-85, D-177)', () => {
     const exempt = EVENT_TYPES.filter((type) => !EVENT_TYPE_META[type].voidable);
-    expect(exempt.sort()).toEqual(['ai.completed', 'ai.failed', 'event.voided']);
+    expect(exempt.sort()).toEqual(
+      ['ai.completed', 'ai.failed', 'event.voided', ...LAUNCH_EVENT_TYPES].sort(),
+    );
+  });
+
+  it('derives the launch catalogue from launch.ts, and names it so additions are visible', () => {
+    // The set is derived, so a new launch event is covered automatically.
+    // This assertion is the other half: it fails when the catalogue changes,
+    // so the change is a decision someone makes rather than one that happens.
+    expect([...LAUNCH_EVENT_TYPES].sort()).toEqual(
+      [
+        'campaign.activated',
+        'campaign.foundation_set',
+        'character.removed',
+        'character.revised',
+        'connection.established',
+        'connection.revised',
+        'creation.proposed',
+        'incident.accepted',
+        'incident.revised',
+        'launch.draft_saved',
+        'launch.fact_amended',
+        'location.added',
+        'location.removed',
+        'location.revised',
+        'route.added',
+        'route.removed',
+        'route.revised',
+        'sector.configured',
+        'sector.layout_changed',
+        'starship.established',
+        'starship.revised',
+        'starting_settlement.selected',
+        'trouble.established',
+        'trouble.revised',
+        'truth.decided',
+      ].sort(),
+    );
+  });
+
+  it('never claims voidability an event of that type could not be granted (D-84, D-177)', () => {
+    // A launch event is campaign-scoped and carries no `sessionId`, and
+    // `planVoid` refuses anything outside the current session. A `voidable:
+    // true` here would be unreachable rather than permissive — which is what
+    // the launch catalogue originally claimed.
+    for (const type of LAUNCH_EVENT_TYPES) expect(EVENT_TYPE_META[type].voidable).toBe(false);
   });
 
   it('treats every significant type as narrative too, except session boundaries', () => {
@@ -50,7 +95,9 @@ describe('the metadata table', () => {
     const significantButNotNarrative = SIGNIFICANT_EVENT_TYPES.filter(
       (type) => !EVENT_TYPE_META[type].narrative,
     );
-    expect(significantButNotNarrative).toEqual(['session.began']);
+    expect(significantButNotNarrative).toContain('session.began');
+    expect(significantButNotNarrative).toContain('campaign.activated');
+    expect(significantButNotNarrative).toContain('truth.decided');
   });
 
   it('derives the narrative and significant type lists from the table', () => {
@@ -105,8 +152,14 @@ describe('introduces and references, across the whole catalogue', () => {
     const introducing = EVENT_TYPES.filter((type) => refsFor(type).introduces.length > 0);
     expect(introducing.sort()).toEqual([
       'character.created',
+      'connection.established',
       'entity.established',
+      'incident.accepted',
+      'location.added',
+      'sector.configured',
+      'starship.established',
       'track.created',
+      'trouble.established',
     ]);
   });
 });

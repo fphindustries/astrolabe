@@ -1,7 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 
-import { createSeededRandomSource, type CharacterId, type MoveId } from '@astrolabe/rules';
+import {
+  createSeededRandomSource,
+  STARFORGED,
+  type CharacterId,
+  type MoveId,
+} from '@astrolabe/rules';
 import {
   LOCAL_PLAYER_ID,
   type AiStatusResponse,
@@ -264,8 +269,28 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
     });
   });
 
-  it('proposes a character from a concept, and accepting it keeps the hooks (3.3, D-124)', async () => {
-    const { campaignId } = await moveMade();
+  it('proposes a character from a concept, and accepting it keeps the hooks (3.3, D-124, D-189)', async () => {
+    // A campaign still in Campaign Launch, not one in play: asking the Guide
+    // for a character grounds itself in a declared launch recipe, which a
+    // campaign with a session refuses (D-178, D-189). The manual path is what
+    // remains available in play.
+    const campaignId = newId<CampaignId>();
+    await appendCommand(db.sql, {
+      campaignId,
+      commandId: newId(),
+      kind: 'campaign.create',
+      actor: PLAYER,
+      createCampaign: { name: 'Lantern Wake' },
+      events: [
+        {
+          type: 'campaign.created',
+          payload: {
+            name: 'Lantern Wake',
+            settings: { narrationLatitude: 'color', narrationLength: 'standard', rerollCap: 2 },
+          },
+        },
+      ],
+    });
     ai.enqueue({
       kind: 'structured',
       value: {
@@ -287,20 +312,43 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
           { text: 'She owes a rival.', reason: 'Prompt.', groundedIn: ['backstory-2'] },
         ],
         pronouns: { value: null, reason: 'The concept states none.' },
+        appearance: { value: 'A worn flight jacket.', reason: 'A working pilot.' },
+        backstory: {
+          kind: 'written',
+          text: 'She flew the last shuttle out.',
+          reason: 'From the prompts.',
+          groundedIn: ['backstory-1', 'backstory-2'],
+        },
+        signatureGear: { value: null, reason: 'Nothing the concept names.' },
       },
     });
     const proposalCommandId = newId<CommandId>();
 
+    // D-186: the recipe is rolled by its own command, and the proposal cites it.
+    const rolled = await app.inject({
+      method: 'POST',
+      url: `/api/campaigns/${campaignId}/launch/recipe-rolls`,
+      payload: { commandId: newId<CommandId>(), selector: { kind: 'character' } },
+    });
+    expect(rolled.statusCode).toBe(201);
+    const groundedIn = rolled.json().results.map((result: { eventId: string }) => result.eventId);
+
     const proposed = await app.inject({
       method: 'POST',
       url: `/api/campaigns/${campaignId}/character-proposals`,
-      payload: { commandId: proposalCommandId, concept: 'A pilot who answers every call.' },
+      payload: {
+        commandId: proposalCommandId,
+        concept: 'A pilot who answers every call.',
+        targetId: 'draft-vesna',
+        groundedIn,
+      },
     });
     expect(proposed.statusCode).toBe(201);
     const body = proposed.json();
     expect(body).toMatchObject({ ok: true, proposal: { callsign: { value: 'Lantern' } } });
     expect(body.rolls).toHaveLength(5);
-    // A session is open here, but a proposal is not a beat of it.
+    // A proposal belongs to no session. Before launch there is none to belong
+    // to, which is the point D-189 settles — this is where crew is built.
     const proposalEvents = (await readEvents(db.sql, campaignId)).filter(
       (e) => e.commandId === proposalCommandId,
     );
@@ -308,9 +356,10 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
     const log = await app.inject({ method: 'GET', url: `/api/campaigns/${campaignId}/log` });
     expect(log.body).not.toContain(body.rolls[0].eventId);
 
+    // Accepted where crew is built: the launch route (D-206 retired the other).
     const created = await app.inject({
       method: 'POST',
-      url: `/api/campaigns/${campaignId}/characters`,
+      url: `/api/campaigns/${campaignId}/launch/crew`,
       payload: {
         commandId: newId(),
         draft: {
@@ -319,8 +368,10 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
           stats: body.proposal.stats.value,
           assets: ['asset:path/ace', 'asset:path/navigator', 'asset:module/sensor-array'],
         },
+        backgroundVow: { title: 'Find the lost settlement', rank: 'dangerous' },
         hooks: ['A lost settlement still broadcasts.'],
         proposalCommandId,
+        launch: { appearance: 'A lantern on a chain', backstory: { kind: 'discover_in_play' } },
       },
     });
     expect(created.statusCode).toBe(201);
@@ -336,10 +387,39 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
     expect(empty.statusCode).toBe(400);
   });
 
-  it('proposes inciting incidents, and swearing one names the proposal as its cause (4.6, D-132)', async () => {
-    const { campaignId } = await moveMade();
-    const state = project(await readEvents(db.sql, campaignId));
-    const [rook] = Object.values(state.characters);
+  // D-132's incident proposal, launch-scoped since 9.0e (D-178): proposed
+  // while launch is open, refused once a campaign is in play. Swearing the
+  // chosen incident is activation's and the vow move's now (D-201); the
+  // Milestone 1 inciting-vow route is retired (D-206).
+  it('proposes inciting incidents during launch, and refuses them in play (4.6, D-132, 9.0e)', async () => {
+    const campaignId = newId<CampaignId>();
+    await appendCommand(db.sql, {
+      campaignId,
+      commandId: newId(),
+      kind: 'campaign.create',
+      actor: PLAYER,
+      createCampaign: { name: 'Lantern Wake' },
+      events: [
+        {
+          type: 'campaign.created',
+          payload: {
+            name: 'Lantern Wake',
+            settings: { narrationLatitude: 'color', narrationLength: 'standard', rerollCap: 2 },
+          },
+        },
+      ],
+    });
+    const { characterId } = await createCharacter(db.sql, {
+      campaignId,
+      commandId: newId(),
+      actor: PLAYER,
+      draft: {
+        name: 'Juno Marr',
+        callsign: 'Juno',
+        stats: { edge: 1, heart: 2, iron: 1, shadow: 2, wits: 3 },
+        assets: [],
+      },
+    });
     ai.enqueue({
       kind: 'structured',
       value: {
@@ -349,16 +429,15 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
           situation: `Incident ${n} has reached the relay.`,
           reason: `Roll ${n}.`,
           groundedIn: [`incident-${n}`],
-          drawsOn: { crew: [rook?.callsign] },
+          drawsOn: { crew: ['Juno'] },
         })),
       },
     });
-    const proposalCommandId = newId<CommandId>();
 
     const proposed = await app.inject({
       method: 'POST',
       url: `/api/campaigns/${campaignId}/incident-proposals`,
-      payload: { commandId: proposalCommandId },
+      payload: { commandId: newId() },
     });
     expect(proposed.statusCode).toBe(201);
     const body = proposed.json();
@@ -367,33 +446,28 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
     expect(body.proposal.options[0].drawsOn).toEqual({
       truths: [],
       locations: [],
-      characters: [rook?.id],
+      characters: [characterId],
     });
-    const log = await app.inject({ method: 'GET', url: `/api/campaigns/${campaignId}/log` });
-    expect(log.body).not.toContain(body.rolls[0].eventId);
-
-    const sworn = await app.inject({
-      method: 'POST',
-      url: `/api/campaigns/${campaignId}/inciting-vow`,
-      payload: {
-        commandId: newId(),
-        title: 'Answer incident 2, at the relay',
-        rank: 'formidable',
-        proposalCommandId,
-      },
+    // Held for review, so a reload keeps it (9.0e).
+    expect(project(await readEvents(db.sql, campaignId)).launch.incidentProposal).toMatchObject({
+      eventId: body.proposalEventId,
     });
-    expect(sworn.statusCode).toBe(201);
-    const vow = (await readEvents(db.sql, campaignId)).find(
-      (e) => e.type === 'track.created' && e.payload.title === 'Answer incident 2, at the relay',
+    // And its rolls resolve as chips in the workspace (A41).
+    const workspace = await app.inject({
+      method: 'GET',
+      url: `/api/campaigns/${campaignId}/launch`,
+    });
+    expect(Object.keys(workspace.json().chips)).toEqual(
+      expect.arrayContaining(body.rolls.map((roll: { eventId: string }) => roll.eventId)),
     );
-    expect(vow?.causedBy).toBe(body.proposalEventId);
 
-    const unknown = await app.inject({
+    const { campaignId: inPlay } = await moveMade();
+    const refused = await app.inject({
       method: 'POST',
-      url: `/api/campaigns/${campaignId}/inciting-vow`,
-      payload: { commandId: newId(), title: 'x', rank: 'dangerous', proposalCommandId: newId() },
+      url: `/api/campaigns/${inPlay}/incident-proposals`,
+      payload: { commandId: newId() },
     });
-    expect(unknown.statusCode).toBe(422);
+    expect(refused.statusCode).toBe(422);
 
     const malformed = await app.inject({
       method: 'POST',
@@ -401,6 +475,52 @@ describe.skipIf(!hasTestDatabase)('the AI routes (group 7)', () => {
       payload: {},
     });
     expect(malformed.statusCode).toBe(400);
+  });
+
+  it('proposes a setting truth over HTTP, and answers a failure as an outcome (5.3, A42)', async () => {
+    const { campaignId } = await moveMade();
+    const truth = STARFORGED.truths[0]!;
+
+    ai.enqueue({
+      kind: 'structured',
+      value: { resolution: 'selected', optionIndex: 0, reason: 'It fits what is established.' },
+    });
+    const proposed = await app.inject({
+      method: 'POST',
+      url: `/api/campaigns/${campaignId}/truth-proposals`,
+      payload: { commandId: crypto.randomUUID(), truthId: truth.id },
+    });
+
+    expect(proposed.statusCode).toBe(201);
+    expect(proposed.json()).toMatchObject({
+      ok: true,
+      truthId: truth.id,
+      proposal: { targetKind: 'truth', proposal: { resolution: 'selected', optionIndex: 0 } },
+    });
+
+    // A provider failure is a 201 outcome the screen renders, not a 5xx — the
+    // same contract every other proposal route follows (D-116).
+    ai.enqueue({ kind: 'error', errorKind: 'unavailable', message: 'No provider.' });
+    const failed = await app.inject({
+      method: 'POST',
+      url: `/api/campaigns/${campaignId}/truth-proposals`,
+      payload: { commandId: crypto.randomUUID(), truthId: truth.id },
+    });
+
+    expect(failed.statusCode).toBe(201);
+    expect(failed.json()).toMatchObject({ ok: false, errorKind: 'unavailable' });
+  });
+
+  it('rejects a truth-proposal body the schema does not accept with 400', async () => {
+    const { campaignId } = await moveMade();
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/campaigns/${campaignId}/truth-proposals`,
+      payload: { commandId: crypto.randomUUID(), truthId: 'not-an-oracle-id' },
+    });
+
+    expect(response.statusCode).toBe(400);
   });
 
   it('suggests a move for a described action, and a move filled from it names it (7.12, D-135)', async () => {

@@ -1,0 +1,763 @@
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+
+import { STARFORGED, type CharacterId } from '@astrolabe/rules';
+import {
+  DEFAULT_CAMPAIGN_SETTINGS,
+  LOCAL_PLAYER_ID,
+  type Actor,
+  type CampaignId,
+  type CommandId,
+  type AstrolabeEvent,
+  type EntityId,
+  type EventId,
+} from '@astrolabe/shared';
+
+import { StubProvider } from '../ai/stub.js';
+import { actionRoll } from '../fixtures/loaded-dice.js';
+import { buildLaunchWorkspace } from '../launch/workspace.js';
+
+import { createCampaign } from './campaign-commands.js';
+import { createCharacter } from './character-commands.js';
+import { readEvents } from './event-store.js';
+import { project } from '../projection/project.js';
+import {
+  acceptLaunchIncident,
+  activateLaunch,
+  amendLaunchFact,
+  configureLaunchSector,
+  decideTruth,
+  establishLaunchConnection,
+  LaunchRejectedError,
+  saveLaunchLocation,
+  saveLaunchRoute,
+  saveLaunchTrouble,
+  saveSharedStarship,
+  setLaunchFoundation,
+  setStartingSettlement,
+  type SaveLaunchLocationRequest,
+} from './launch-commands.js';
+import { invokeMove, MoveRejectedError, type InvokeMoveRequest } from './move-commands.js';
+import { prepareBeatNarration, runBeatNarration } from './narration-commands.js';
+import { prepareWorldPass } from './world-commands.js';
+import { createTestDatabase, hasTestDatabase, type TestDatabase } from './testing.js';
+import { uuidv7 } from './uuid.js';
+
+/**
+ * Task 3.8 end to end (A38, A40).
+ *
+ * `ready.test.ts` proves the validator *can* say yes, but it hand-builds its
+ * input. The defect this guards against was in the translation from projected
+ * facts to that input, so this drives every fact through its real command and
+ * asserts activation succeeds — the one assertion that would have failed while
+ * trouble facts were projected and never read.
+ */
+
+const PLAYER: Actor = { kind: 'player', playerId: LOCAL_PLAYER_ID };
+const newId = <T>() => uuidv7() as T;
+
+/** Add a node and return the id the server minted for it (8.0a). */
+async function addLocation(
+  sql: Parameters<typeof saveLaunchLocation>[0],
+  request: SaveLaunchLocationRequest,
+): Promise<EntityId> {
+  const result = await saveLaunchLocation(sql, request);
+  return (result.response as { locationId: EntityId }).locationId;
+}
+
+const paths = STARFORGED.assets
+  .filter((asset) => asset.categoryId === 'path')
+  .slice(0, 3)
+  .map((asset) => asset.id);
+
+describe.skipIf(!hasTestDatabase)('activating a ready campaign (3.8, A38, A40)', () => {
+  let db: TestDatabase;
+
+  beforeAll(async () => {
+    db = await createTestDatabase('launch_activation');
+  }, 30_000);
+
+  afterAll(async () => {
+    await db?.close();
+  });
+
+  /** Every fact a launch needs, each through its own command. */
+  async function readyCampaign(options: { readonly secondCrew?: boolean } = {}): Promise<{
+    campaignId: CampaignId;
+    characterId: CharacterId;
+    startingSettlementId: EntityId;
+    /** A crew member who is not the vow's roller, when asked for. */
+    otherCharacterId?: CharacterId;
+  }> {
+    const { campaignId } = await createCampaign(db.sql, {
+      campaignId: newId<CampaignId>(),
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      name: 'Lantern Wake',
+    });
+
+    await setLaunchFoundation(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      premise: 'A crew chasing a signal out past the Drift.',
+      settings: DEFAULT_CAMPAIGN_SETTINGS,
+    });
+
+    // D-162: explicitly left open is a decision, not an omission.
+    for (const truth of STARFORGED.truths)
+      await decideTruth(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        truthId: truth.id,
+        resolution: 'leave_open',
+      });
+
+    const { characterId } = await createCharacter(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      draft: {
+        name: 'Vesna Kade',
+        callsign: 'Map',
+        stats: { edge: 3, heart: 2, iron: 2, shadow: 1, wits: 1 },
+        assets: paths,
+      },
+      backgroundVow: { title: 'Find the lost colony', rank: 'formidable' },
+      launch: {
+        appearance: 'Weathered flight jacket',
+        backstory: { kind: 'discover_in_play' },
+      },
+    });
+
+    const otherCharacterId =
+      options.secondCrew === true
+        ? (
+            await createCharacter(db.sql, {
+              campaignId,
+              commandId: newId<CommandId>(),
+              actor: PLAYER,
+              draft: {
+                name: 'Rook Ilari',
+                callsign: 'Rook',
+                stats: { edge: 2, heart: 1, iron: 3, shadow: 2, wits: 1 },
+                assets: paths,
+              },
+              backgroundVow: { title: 'Pay back the Syndicate', rank: 'dangerous' },
+              launch: {
+                appearance: 'Scarred knuckles',
+                backstory: { kind: 'discover_in_play' },
+              },
+            })
+          ).characterId
+        : undefined;
+
+    await saveSharedStarship(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      starship: {
+        name: 'Lantern Wake',
+        appearance: 'Old freighter, patched hull',
+        history: 'Won in a wager',
+        quirks: ['The clocks run slow'],
+      },
+    });
+
+    await configureLaunchSector(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      sector: { name: 'Lantern Reach', region: 'expanse' },
+    });
+
+    const emberHold = await addLocation(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      location: {
+        kind: 'settlement',
+        name: 'Ember Hold',
+        location: 'deep_space',
+        population: 'Hundreds',
+        authority: 'Corporate',
+        projects: ['Rebuilding the relay'],
+        firstLooks: ['Cold corridors, warm voices'],
+      },
+    });
+    const stillHarbor = await addLocation(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      location: {
+        kind: 'settlement',
+        name: 'Still Harbor',
+        location: 'deep_space',
+        population: 'Dozens',
+        authority: 'Ineffectual',
+        projects: ['Salvage rights'],
+      },
+    });
+    await saveLaunchRoute(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      route: { from: emberHold, to: stillHarbor },
+    });
+    await setStartingSettlement(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      settlementId: emberHold,
+    });
+
+    await saveLaunchTrouble(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      trouble: {
+        kind: 'settlement',
+        ownerId: emberHold,
+        text: 'The dock crews have not been paid in three cycles.',
+      },
+    });
+    await saveLaunchTrouble(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      trouble: {
+        kind: 'sector',
+        text: 'The relay grid is failing, one node at a time.',
+      },
+    });
+
+    await establishLaunchConnection(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      npcName: 'Juno Marr',
+      role: 'Dockmaster',
+      rank: 'dangerous',
+      participants: [characterId],
+    });
+
+    await acceptLaunchIncident(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      incident: {
+        text: 'A distress beacon carries the lost colony’s call sign.',
+        citedFactEventIds: [],
+        rank: 'formidable',
+        rollerId: characterId,
+        participants: [characterId],
+        openingScene: { title: 'The dock at Ember Hold' },
+      },
+    });
+
+    return {
+      campaignId,
+      characterId,
+      startingSettlementId: emberHold,
+      ...(otherCharacterId === undefined ? {} : { otherCharacterId }),
+    };
+  }
+
+  it('reaches ready once every launch fact is accepted through its command', async () => {
+    const { campaignId } = await readyCampaign();
+
+    const { state, readiness } = buildLaunchWorkspace(await readEvents(db.sql, campaignId));
+
+    expect(readiness.problems).toEqual([]);
+    expect(readiness.ready).toBe(true);
+    expect(state.launch.phase).toBe('ready');
+  });
+
+  it('begins Session 1 and its scene, and leaves the vow pending (A38)', async () => {
+    const { campaignId, characterId, startingSettlementId } = await readyCampaign();
+
+    const result = await activateLaunch(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+    });
+
+    // The command reporting success is not enough: the events it appended
+    // have to be ones the projector actually picks up.
+    const { state } = buildLaunchWorkspace(await readEvents(db.sql, campaignId));
+    expect(state.launch.phase).toBe('active');
+    expect(state.session?.number).toBe(1);
+    expect(state.scene?.title).toBe('The dock at Ember Hold');
+    // D-168: the scene opens at the starting settlement, which the client never sent.
+    expect(state.scene?.locationId).toBe(startingSettlementId);
+    expect(state.launch.activation?.sessionId).toBe(
+      (result.response as { sessionId?: string } | null)?.sessionId,
+    );
+
+    // D-168: activation does not pre-resolve Swear an Iron Vow.
+    const events = await readEvents(db.sql, campaignId);
+    expect(events.some((event) => event.type === 'move.invoked')).toBe(false);
+    const activated = events.find((event) => event.type === 'campaign.activated');
+    // 3R.9f: the cited ids are accepted launch facts, not every event that is
+    // not a draft. A roll grounds a fact; it is not one.
+    const cited = new Set(
+      (activated?.payload as { readonly launchFactEventIds: readonly string[] }).launchFactEventIds,
+    );
+    const citedTypes = new Set(
+      events.filter((event) => cited.has(event.id)).map((event) => event.type),
+    );
+    expect(citedTypes).not.toContain('oracle.rolled');
+    expect(citedTypes).not.toContain('campaign.created');
+    expect(citedTypes).toContain('trouble.established');
+    expect(citedTypes).toContain('incident.accepted');
+    expect(activated?.payload).toMatchObject({
+      pendingVow: { rank: 'formidable', rollerId: characterId, participants: [characterId] },
+    });
+  });
+
+  it('is one-way: a second activation is refused (A40)', async () => {
+    const { campaignId } = await readyCampaign();
+    await activateLaunch(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+    });
+
+    await expect(
+      activateLaunch(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+      }),
+    ).rejects.toThrow(LaunchRejectedError);
+  });
+
+  it('refuses to activate while a required fact is missing', async () => {
+    const { campaignId } = await createCampaign(db.sql, {
+      campaignId: newId<CampaignId>(),
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      name: 'Half a campaign',
+    });
+
+    await expect(
+      activateLaunch(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+      }),
+    ).rejects.toThrow(/Complete every launch requirement/);
+  });
+
+  it('amends a launch fact after activation, deriving the subject (3.9, A40)', async () => {
+    const { campaignId } = await readyCampaign();
+    await activateLaunch(db.sql, { campaignId, commandId: newId<CommandId>(), actor: PLAYER });
+
+    const events = await readEvents(db.sql, campaignId);
+    const sectorTrouble = events.find(
+      (event) => event.type === 'trouble.established' && event.payload.kind === 'sector',
+    )!;
+
+    const result = await amendLaunchFact(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+      amendment: {
+        subject: 'trouble',
+        replacement: {
+          kind: 'sector',
+          troubleId: (sectorTrouble.payload as { troubleId: EntityId }).troubleId,
+          text: 'The relay grid is being jammed, not failing.',
+        },
+      },
+      reason: 'The crew learned it was deliberate.',
+      supersedesEventId: sectorTrouble.id,
+    });
+
+    // The subject is read off the superseded event, not taken on trust.
+    expect(result.response).toMatchObject({ subject: 'trouble' });
+    const amendments = project(await readEvents(db.sql, campaignId)).launch.amendments;
+    expect(amendments).toHaveLength(1);
+    expect(amendments[0]).toMatchObject({
+      subject: 'trouble',
+      reason: 'The crew learned it was deliberate.',
+      supersedesEventId: sectorTrouble.id,
+    });
+  });
+
+  // 7.0j — the amendment path keeps 7.0a's and 7.0b's contract.
+  it('stamps a starship amendment with the ship’s own id, asset and integrity', async () => {
+    const { campaignId } = await readyCampaign();
+    await activateLaunch(db.sql, { campaignId, commandId: newId<CommandId>(), actor: PLAYER });
+    const events = await readEvents(db.sql, campaignId);
+    const established = events.find((event) => event.type === 'starship.established')!;
+    const ship = project(events).launch.starship!;
+    const amend = (name: string) =>
+      amendLaunchFact(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        amendment: {
+          subject: 'starship',
+          replacement: {
+            starshipId: newId<EntityId>(),
+            name,
+            appearance: ship.appearance,
+            history: ship.history,
+            quirks: [...ship.quirks],
+            integrity: { value: 9, min: 0, max: 99 },
+            assetId: 'asset:module/sensor-array' as never,
+          },
+        },
+        reason: 'The registry had it wrong.',
+        supersedesEventId: established.id,
+      });
+
+    await amend('Lantern Wake II');
+
+    const [amended] = project(await readEvents(db.sql, campaignId)).launch.amendments;
+    expect(amended).toMatchObject({
+      subject: 'starship',
+      replacement: {
+        name: 'Lantern Wake II',
+        starshipId: ship.starshipId,
+        assetId: ship.assetId,
+        integrity: ship.integrity,
+      },
+    });
+    await expect(amend('  ')).rejects.toMatchObject({ reason: 'invalid_starship' });
+  });
+
+  // 8.0k — the sector's aggregates keep 8.0a's and 8.0f's contract when amended.
+  it('stamps a sector, location or trouble amendment with the fact’s own identity', async () => {
+    const { campaignId } = await readyCampaign();
+    await activateLaunch(db.sql, { campaignId, commandId: newId<CommandId>(), actor: PLAYER });
+    const events = await readEvents(db.sql, campaignId);
+    const of = <T extends AstrolabeEvent['type']>(type: T) =>
+      events.find((event) => event.type === type) as Extract<AstrolabeEvent, { type: T }>;
+    const sector = of('sector.configured');
+    const location = of('location.added');
+    const trouble = events.find(
+      (event) => event.type === 'trouble.established' && event.payload.kind === 'settlement',
+    ) as Extract<AstrolabeEvent, { type: 'trouble.established' }>;
+    const amend = (amendment: Parameters<typeof amendLaunchFact>[1]['amendment'], id: EventId) =>
+      amendLaunchFact(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        amendment,
+        reason: 'The chart had it wrong.',
+        supersedesEventId: id,
+      });
+
+    await amend(
+      { subject: 'sector', replacement: { sectorId: newId(), name: 'Ashen Reach' } },
+      sector.id,
+    );
+    await amend(
+      {
+        subject: 'location',
+        replacement: {
+          kind: 'settlement',
+          id: newId(),
+          name: 'Ember Hold Station',
+          location: 'deep_space',
+          population: 'Hundreds',
+          authority: 'Corporate',
+          projects: ['Rebuilding the relay'],
+        },
+      },
+      location.id,
+    );
+    await amend(
+      {
+        subject: 'trouble',
+        replacement: { kind: 'settlement', troubleId: newId(), ownerId: newId(), text: 'Worse.' },
+      },
+      trouble.id,
+    );
+
+    const [sectorAmended, locationAmended, troubleAmended] = project(
+      await readEvents(db.sql, campaignId),
+    ).launch.amendments;
+    expect(sectorAmended?.replacement).toMatchObject({ sectorId: sector.payload.sectorId });
+    expect(locationAmended?.replacement).toMatchObject({
+      id: location.payload.id,
+      name: 'Ember Hold Station',
+    });
+    if (trouble.payload.kind !== 'settlement') throw new Error('expected a settlement trouble');
+    expect(troubleAmended?.replacement).toMatchObject({
+      troubleId: trouble.payload.troubleId,
+      ownerId: trouble.payload.ownerId,
+      text: 'Worse.',
+    });
+
+    // What a location is stays what it is.
+    await expect(
+      amend(
+        {
+          subject: 'location',
+          replacement: { kind: 'other', id: newId(), name: 'X', description: 'Y' },
+        },
+        location.id,
+      ),
+    ).rejects.toMatchObject({ reason: 'amendment_kind_changed' });
+  });
+
+  it('refuses an amendment whose subject contradicts the event it supersedes', async () => {
+    const { campaignId } = await readyCampaign();
+    await activateLaunch(db.sql, { campaignId, commandId: newId<CommandId>(), actor: PLAYER });
+
+    const events = await readEvents(db.sql, campaignId);
+    const sectorTrouble = events.find((event) => event.type === 'trouble.established')!;
+
+    await expect(
+      amendLaunchFact(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        amendment: {
+          subject: 'sector',
+          replacement: { sectorId: newId<EntityId>(), name: 'Somewhere else' },
+        },
+        reason: 'Wrong subject on purpose.',
+        supersedesEventId: sectorTrouble.id,
+      }),
+    ).rejects.toThrow(/states a trouble, not a sector/);
+  });
+
+  it('refuses to amend before activation (A40)', async () => {
+    const { campaignId } = await readyCampaign();
+    const events = await readEvents(db.sql, campaignId);
+    const trouble = events.find((event) => event.type === 'trouble.established')!;
+
+    await expect(
+      amendLaunchFact(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        amendment: {
+          subject: 'trouble',
+          replacement: { kind: 'sector', troubleId: newId<EntityId>(), text: 'Too early.' },
+        },
+        reason: 'Before launch this is a revision, not an amendment.',
+        supersedesEventId: trouble.id,
+      }),
+    ).rejects.toThrow(/only after activation/);
+  });
+
+  it('closes launch commands once active (A40)', async () => {
+    const { campaignId } = await readyCampaign();
+    await activateLaunch(db.sql, {
+      campaignId,
+      commandId: newId<CommandId>(),
+      actor: PLAYER,
+    });
+
+    await expect(
+      saveLaunchTrouble(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        trouble: {
+          kind: 'sector',
+
+          text: 'A late addition.',
+        },
+      }),
+    ).rejects.toThrow(/amendment after launch/);
+  });
+
+  // 9.0h (D-201): the pending vow is sworn by one real Swear an Iron Vow,
+  // which writes the vow's track from the incident in the same command.
+  describe('swearing the pending vow (9.0h, D-201)', () => {
+    async function launched(options: { readonly secondCrew?: boolean } = {}) {
+      const ready = await readyCampaign(options);
+      await activateLaunch(db.sql, {
+        campaignId: ready.campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+      });
+      return ready;
+    }
+
+    const swear = (
+      campaignId: CampaignId,
+      characterId: CharacterId,
+      overrides: Partial<InvokeMoveRequest> = {},
+    ) =>
+      invokeMove(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        moveId: 'move:quest/swear-an-iron-vow' as InvokeMoveRequest['moveId'],
+        actorCharacterId: characterId,
+        using: { using: 'stat', stat: 'heart' },
+        adds: [],
+        actionText: 'Juno swears to find the source of the beacon.',
+        swearsPendingVow: true,
+        rng: actionRoll(6, [2, 3]),
+        ...overrides,
+      });
+
+    it('writes the vow from the incident, then the move, in one command', async () => {
+      const { campaignId, characterId } = await launched();
+      const before = project(await readEvents(db.sql, campaignId));
+
+      const sworn = await swear(campaignId, characterId);
+
+      expect(sworn.roll.tier).toBe('strong_hit');
+      const written = sworn.result.events.map((event) => event.type);
+      expect(written.slice(0, 3)).toEqual(['track.created', 'move.invoked', 'dice.rolled']);
+      const events = await readEvents(db.sql, campaignId);
+      const created = events.find(
+        (event) =>
+          event.type === 'track.created' &&
+          (event.payload as { incidentId?: string }).incidentId !== undefined,
+      );
+      expect(created?.payload).toMatchObject({
+        kind: 'vow',
+        title: 'A distress beacon carries the lost colony’s call sign.',
+        rank: 'formidable',
+        characterId,
+        participantCharacterIds: [characterId],
+        incidentId: before.launch.incident!.incidentId,
+      });
+      expect(created?.causedBy).toBe(before.launch.activation!.eventId);
+      const state = project(events);
+      expect(state.launch.activation?.vowTrackId).toBe(
+        (created?.payload as { trackId: string }).trackId,
+      );
+      // A39: the move's own effect lands on the roller, through the ordinary spec.
+      expect(state.characters[characterId]!.momentum.value).toBe(
+        before.characters[characterId]!.momentum.value + 2,
+      );
+    });
+
+    it('refuses a second swear, a stranger, and a roll that is not +heart', async () => {
+      const { campaignId, characterId } = await launched();
+
+      await expect(
+        swear(campaignId, characterId, { using: { using: 'stat', stat: 'iron' } }),
+      ).rejects.toThrow(/\+heart/);
+      await expect(swear(campaignId, newId<CharacterId>())).rejects.toThrow(MoveRejectedError);
+
+      await swear(campaignId, characterId);
+      await expect(swear(campaignId, characterId)).rejects.toThrow(/already been sworn/);
+      const vows = (await readEvents(db.sql, campaignId)).filter(
+        (event) =>
+          event.type === 'track.created' &&
+          (event.payload as { incidentId?: string }).incidentId !== undefined,
+      );
+      expect(vows).toHaveLength(1);
+    });
+
+    it('refuses a crew member who is not the roller, and an aided swear', async () => {
+      const { campaignId, characterId, otherCharacterId } = await launched({ secondCrew: true });
+
+      await expect(swear(campaignId, otherCharacterId!)).rejects.toThrow(/chosen to swear it/);
+      await expect(
+        swear(campaignId, characterId, { aidingAllyId: otherCharacterId! }),
+      ).rejects.toThrow(/roller alone/);
+    });
+
+    // 9.4: Session 1's first beat, end to end below HTTP: the vow shared by
+    // three, loaded dice, the effect on the roller alone, and the narration.
+    it('swears a vow three share, moves only the roller, and narrates it', async () => {
+      const { campaignId, characterId, otherCharacterId } = await readyCampaign({
+        secondCrew: true,
+      });
+      const { characterId: third } = await createCharacter(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        draft: {
+          name: 'Juno Marr',
+          callsign: 'Juno',
+          stats: { edge: 1, heart: 2, iron: 1, shadow: 2, wits: 3 },
+          assets: paths,
+        },
+        backgroundVow: { title: 'Clear the family debt', rank: 'dangerous' },
+        launch: { appearance: 'Ink-stained hands', backstory: { kind: 'discover_in_play' } },
+      });
+      const crew = [characterId, otherCharacterId!, third];
+      await acceptLaunchIncident(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        incident: { participants: crew },
+      });
+      await activateLaunch(db.sql, { campaignId, commandId: newId<CommandId>(), actor: PLAYER });
+      const before = project(await readEvents(db.sql, campaignId));
+
+      const moveCommandId = newId<CommandId>();
+      const sworn = await swear(campaignId, characterId, {
+        rng: actionRoll(5, [3, 4]),
+        commandId: moveCommandId,
+      });
+
+      expect(sworn.roll.tier).toBe('strong_hit');
+      const state = project(await readEvents(db.sql, campaignId));
+      const vow = state.tracks[state.launch.activation!.vowTrackId!]!;
+      expect(vow).toMatchObject({ kind: 'vow', rank: 'formidable', ticks: 0 });
+      expect(vow.participantCharacterIds).toEqual(crew);
+      // A39: +2 momentum on the roller; the others who share the vow are untouched.
+      for (const id of crew)
+        expect(state.characters[id]!.momentum.value - before.characters[id]!.momentum.value).toBe(
+          id === characterId ? 2 : 0,
+        );
+
+      const prepared = await prepareBeatNarration(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        afterCommandId: moveCommandId,
+      });
+      if (prepared.kind !== 'run') throw new Error('expected a narration to run');
+      const narrated = await runBeatNarration(
+        db.sql,
+        new StubProvider({
+          responses: [
+            {
+              kind: 'structured',
+              value: {
+                segments: [
+                  {
+                    about: 'world',
+                    character: null,
+                    basis: [],
+                    text: 'The beacon’s call sign repeats, patient and cold.',
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+        new StubProvider(),
+        prepared,
+        { delta: () => {}, reset: () => {}, checking: () => {}, withdrawn: () => {} },
+      );
+      if (!narrated.ok) throw new Error(narrated.message);
+      const passage = (await readEvents(db.sql, campaignId)).find(
+        (event) => event.id === narrated.eventId,
+      );
+      expect(passage?.type).toBe('narration.written');
+
+      // The world pass that follows reaches the swear as its move, and stops
+      // there: the activation that caused it is not part of the chain.
+      const world = await prepareWorldPass(db.sql, {
+        campaignId,
+        commandId: newId<CommandId>(),
+        actor: PLAYER,
+        passageEventId: narrated.eventId,
+      });
+      expect(world.kind).toBe('run');
+    });
+
+    it('refuses before launch', async () => {
+      const { campaignId, characterId } = await readyCampaign();
+
+      await expect(swear(campaignId, characterId)).rejects.toThrow(MoveRejectedError);
+    });
+  });
+});

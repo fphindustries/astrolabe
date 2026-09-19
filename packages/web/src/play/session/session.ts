@@ -23,7 +23,10 @@ export type SessionView =
     };
 
 export function toSessionView(
-  state: Pick<CampaignState, 'session' | 'scene' | 'entities'>,
+  state: Pick<CampaignState, 'session' | 'scene' | 'entities'> & {
+    /** 9.0i: Session 1's scene opens at a launch location, not an entity. */
+    readonly launch?: Pick<CampaignState['launch'], 'locations'>;
+  },
 ): SessionView {
   const { session, scene, entities } = state;
   if (session === null) {
@@ -41,6 +44,9 @@ export function toSessionView(
     kind: 'next',
     number: session.number + 1,
     sceneTitle: scene?.title,
-    locationName: scene?.locationId === undefined ? undefined : entities[scene.locationId]?.name,
+    locationName:
+      scene?.locationId === undefined
+        ? undefined
+        : (entities[scene.locationId]?.name ?? state.launch?.locations[scene.locationId]?.name),
   };
 }

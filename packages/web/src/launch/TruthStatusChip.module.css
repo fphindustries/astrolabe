@@ -1,0 +1,29 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 0.375rem;
+  border: 1px solid currentcolor;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.not_decided {
+  color: var(--text-muted);
+}
+
+.answered {
+  color: var(--provenance-player);
+}
+
+.left_open {
+  color: var(--accent);
+}
+
+.needs_attention {
+  color: var(--outcome-miss);
+}

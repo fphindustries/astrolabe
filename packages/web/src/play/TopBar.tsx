@@ -1,4 +1,8 @@
+import { useRef } from 'react';
+
 import type { TokenUsage } from '@astrolabe/shared';
+
+import { useFocusOnArrival } from '../ui/focus.js';
 
 import { tokenCounter } from './tokens.js';
 import styles from './TopBar.module.css';
@@ -39,9 +43,15 @@ export function TopBar({
   readonly onOpenMoves: () => void;
 }) {
   const counter = tokenCounter(tokens, campaignTokens);
+  // The play screen's heading, so a screen reached by navigation, activation
+  // included, has somewhere to take focus (D-209).
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  useFocusOnArrival(headingRef);
   return (
     <div className={styles.bar}>
-      <span className={styles.campaign}>{campaignName}</span>
+      <h1 className={styles.campaign} ref={headingRef}>
+        {campaignName}
+      </h1>
       {sessionNumber !== undefined && (
         <span className={styles.session}>Session {sessionNumber}</span>
       )}

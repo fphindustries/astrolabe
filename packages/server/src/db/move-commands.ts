@@ -35,6 +35,7 @@ import { computeVoidState, isSuppressed } from '../projection/void-state.js';
 import { cryptoRandomSource } from '../random-source.js';
 
 import { appendCommand, readEvents, type AppendResult, type NewEvent } from './event-store.js';
+import { derivedUuid } from './uuid.js';
 
 /**
  * Resolving a move (task 6.x): the write API D-94 left for group 6 to add,
@@ -246,6 +247,53 @@ function requireLiveSuggestion(
   }
 }
 
+const SWEAR_AN_IRON_VOW = 'move:quest/swear-an-iron-vow' as MoveId;
+
+/**
+ * D-201: the vow track the pending vow's `Swear an Iron Vow` writes, or a
+ * refusal. The campaign must be active with its vow unsworn, the swearer must
+ * be the vow's roller, and the roll is +heart. The track takes the incident's
+ * words and rank, the roller as its character, the sharing crew, and the
+ * incident's id, which is what marks the pending vow sworn (A38, A39). Its id
+ * derives from the command, so a replay writes the same track.
+ */
+function pendingVowTrack(
+  state: CampaignState,
+  request: Pick<
+    InvokeMoveRequest,
+    'moveId' | 'actorCharacterId' | 'using' | 'commandId' | 'aidingAllyId'
+  >,
+): NewEvent {
+  const activation = state.launch.activation;
+  const incident = state.launch.incident;
+  if (request.moveId !== SWEAR_AN_IRON_VOW)
+    throw new MoveRejectedError('Only Swear an Iron Vow swears the pending vow.');
+  if (activation === undefined || incident === undefined)
+    throw new MoveRejectedError('This campaign has no pending vow.');
+  if (activation.vowTrackId !== undefined)
+    throw new MoveRejectedError('The inciting vow has already been sworn.');
+  const vow = activation.pendingVow;
+  if (request.actorCharacterId !== vow.rollerId)
+    throw new MoveRejectedError('The pending vow is sworn by the character chosen to swear it.');
+  if (request.using?.using !== 'stat' || request.using.stat !== 'heart')
+    throw new MoveRejectedError('Swear an Iron Vow rolls +heart.');
+  if (request.aidingAllyId !== undefined)
+    throw new MoveRejectedError('The pending vow is sworn by its roller alone.');
+  return {
+    type: 'track.created',
+    payload: {
+      kind: 'vow',
+      trackId: derivedUuid(request.commandId, 'pending-vow-track') as TrackId,
+      title: incident.text,
+      rank: vow.rank,
+      characterId: vow.rollerId,
+      participantCharacterIds: [...vow.participants],
+      incidentId: vow.incidentId,
+    },
+    subjectCharacterId: vow.rollerId,
+  };
+}
+
 export interface InvokeMoveRequest {
   readonly campaignId: CampaignId;
   readonly commandId: CommandId;
@@ -265,6 +313,8 @@ export interface InvokeMoveRequest {
   /** D-135: the Guide's live suggestion this invocation was filled from. */
   readonly suggestionEventId?: EventId;
   readonly chainedFromCommandId?: CommandId;
+  /** D-201: swear the campaign's pending vow; see `pendingVowTrack`. */
+  readonly swearsPendingVow?: true;
   /** Test-only override of the real RNG; defaults to `cryptoRandomSource()`. */
   readonly rng?: RandomSource;
 }
@@ -342,6 +392,8 @@ export async function invokeMove(sql: Sql, request: InvokeMoveRequest): Promise<
   if (request.chainedFromCommandId !== undefined) {
     causedBy = resolveChainedFrom(events, request.chainedFromCommandId, request.moveId);
   }
+  const vowTrack = request.swearsPendingVow === true ? pendingVowTrack(state, request) : undefined;
+  if (vowTrack !== undefined) causedBy ??= state.launch.activation?.eventId;
 
   let preRollMeter: 'health' | 'spirit' | 'supply' | undefined;
   if (automation.preRoll !== undefined) {
@@ -421,6 +473,8 @@ export async function invokeMove(sql: Sql, request: InvokeMoveRequest): Promise<
 
   const sessionId = state.session?.id ?? null;
   const newEvents: NewEvent[] = [
+    // D-201: the vow exists before the move that swears it rolls.
+    ...(vowTrack === undefined ? [] : [{ ...vowTrack, sessionId }]),
     {
       type: 'move.invoked',
       payload: {
@@ -531,6 +585,14 @@ export async function invokeMove(sql: Sql, request: InvokeMoveRequest): Promise<
     actor: request.actor,
     events: newEvents,
     ...(causedBy !== undefined ? { causedBy } : {}),
+    // Under the campaign lock, so two swears racing cannot both write the vow.
+    ...(vowTrack === undefined
+      ? {}
+      : {
+          precondition: async (tx: Sql) => {
+            pendingVowTrack(project(await readEvents(tx, request.campaignId)), request);
+          },
+        }),
   });
 
   const invocationEventId = result.events.find((e) => e.type === 'move.invoked')?.id;

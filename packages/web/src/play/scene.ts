@@ -1,4 +1,10 @@
-import type { EntityId, EntityState, SceneState, SessionState } from '@astrolabe/shared';
+import type {
+  CampaignState,
+  EntityId,
+  EntityState,
+  SceneState,
+  SessionState,
+} from '@astrolabe/shared';
 
 /**
  * Pure view-model for the scene header (task 5.3). Bound to `SceneState` as
@@ -17,15 +23,24 @@ export interface SceneHeaderView {
 
 const NO_SCENE: SceneHeaderView = { title: 'No scene yet' };
 
+/**
+ * A scene's location is an entity, or, for Session 1's opening scene, a
+ * launch location: activation opens it at the starting settlement, which is a
+ * launch fact and not an entity (D-168, 9.0i). Both are looked up by id.
+ */
 export function toSceneHeaderView(
   scene: SceneState | null,
   entities: Readonly<Record<EntityId, EntityState>>,
   session: SessionState | null = null,
+  launchLocations: CampaignState['launch']['locations'] = {},
 ): SceneHeaderView {
   if (scene === null) {
     return NO_SCENE;
   }
-  const location = scene.locationId === undefined ? undefined : entities[scene.locationId];
+  const location =
+    scene.locationId === undefined
+      ? undefined
+      : (entities[scene.locationId] ?? launchLocations[scene.locationId]);
   return {
     title: scene.title,
     ...(location !== undefined ? { locationName: location.name } : {}),

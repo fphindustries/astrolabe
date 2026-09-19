@@ -197,11 +197,15 @@ describe.skipIf(!hasTestDatabase)('the session lifecycle (group 9, D-146, D-147)
       expect(texts).toContain('summary: Left open: One row of windows on Varga Relay is lit.');
       expect(texts).toContain('scene: A scene: The derelict relay station, at Varga Relay.');
       expect(texts).toContain(
-        'declared_action: The player declared: "Vesna threads the Lantern Wake through the ice of Kessel Drift."',
+        `declared_action: The player declared: "Vesna threads the Lantern Wake through the ice of Kessel Drift and into the relay's sensor shadow."`,
       );
-      expect(texts.some((t) => t.startsWith('passage: As it was narrated: Vesna tucks'))).toBe(
-        true,
-      );
+      expect(
+        texts.some((t) =>
+          t.startsWith(
+            'passage: As it was narrated: Vesna threads the Lantern Wake through the Drift',
+          ),
+        ),
+      ).toBe(true);
       // Rolls aren't significant: the summary and passages carry what came of them.
       expect(texts.some((t) => t.includes('challenge dice'))).toBe(false);
       expect(facts.declaredAction).toBe(true);
@@ -322,7 +326,9 @@ describe.skipIf(!hasTestDatabase)('the session lifecycle (group 9, D-146, D-147)
             e.event.type === 'narration.written' ? [e.event.payload.role] : [],
           ),
         );
+      // Five beats: the vow sworn at launch, then session 1's four (D-205).
       expect(roles(sessionOneLog.json<NarrativeLogResponse>())).toEqual([
+        'beat',
         'beat',
         'beat',
         'beat',

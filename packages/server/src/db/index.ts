@@ -18,6 +18,45 @@ export {
 } from './event-store.js';
 export { uuidv7 } from './uuid.js';
 export { latestSessionId, readNarrativeEvents } from './event-store.js';
+export {
+  decideTruth,
+  activateLaunch,
+  saveLaunchDraft,
+  saveSharedStarship,
+  configureLaunchSector,
+  establishLaunchConnection,
+  reviseLaunchConnection,
+  acceptLaunchIncident,
+  amendLaunchFact,
+  removeLaunchLocation,
+  removeLaunchRoute,
+  saveLaunchLocation,
+  saveLaunchRoute,
+  setStartingSettlement,
+  setSectorLayout,
+  saveLaunchTrouble,
+  rollLaunchOracle,
+  rollLaunchRecipe,
+  proposeLaunchCreation,
+  setLaunchFoundation,
+  LaunchRejectedError,
+  type DecideTruthRequest,
+  type ActivateLaunchRequest,
+  type SaveLaunchDraftRequest,
+  type SaveSharedStarshipRequest,
+  type ConfigureLaunchSectorRequest,
+  type EstablishLaunchConnectionRequest,
+  type AcceptLaunchIncidentRequest,
+  type AmendLaunchFactRequest,
+  type SaveLaunchLocationRequest,
+  type SaveLaunchRouteRequest,
+  type SetStartingSettlementRequest,
+  type SetSectorLayoutRequest,
+  type SaveLaunchTroubleRequest,
+  type RollLaunchOracleRequest,
+  type ProposeLaunchCreationRequest,
+  type SetLaunchFoundationRequest,
+} from './launch-commands.js';
 export { previewVoid, voidEvent, VoidRefusedError, type VoidRequest } from './void-command.js';
 export {
   overrideState,
@@ -32,10 +71,16 @@ export {
 } from './amend-commands.js';
 export {
   createCharacter,
+  removeCharacter,
+  reviseCharacter,
   CharacterRejectedError,
+  LaunchCharacterRejectedError,
+  UnknownCharacterError,
   UnknownProposalError,
   type CreateCharacterRequest,
   type CreatedCharacter,
+  type RemoveCharacterRequest,
+  type ReviseCharacterRequest,
 } from './character-commands.js';
 export { listCampaigns } from './campaign-queries.js';
 export {
@@ -72,28 +117,20 @@ export {
 export {
   proposeCharacter,
   proposeIncidents,
+  proposeConnection,
+  proposeSector,
+  proposeSettlement,
+  proposeStarship,
+  proposeTrouble,
+  proposeTruth,
   type ProposalRequest,
   type ProposalRollSpec,
   type ProposeCharacterRequest,
 } from './proposal-commands.js';
 export {
   createCampaign,
-  setTruth,
-  addSectorLocation,
-  addSectorRoute,
-  swearIncitingVow,
-  TruthRejectedError,
-  SectorRouteRejectedError,
-  IncitingVowRejectedError,
   type CreateCampaignRequest,
   type CreatedCampaign,
-  type SetTruthRequest,
-  type SetTruth,
-  type AddSectorLocationRequest,
-  type AddedSectorLocation,
-  type AddSectorRouteRequest,
-  type SwearIncitingVowRequest,
-  type SwornIncitingVow,
 } from './campaign-commands.js';
 export {
   applyMoveChoice,

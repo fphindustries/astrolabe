@@ -15,7 +15,8 @@
     "harness": "tsx --env-file-if-exists=../../.env src/harness/cli.ts",
     "seed": "tsx --env-file-if-exists=../../.env src/fixtures/cli.ts seed",
     "reset": "tsx --env-file-if-exists=../../.env src/fixtures/cli.ts reset",
-    "eval:authority": "tsx --env-file-if-exists=../../.env src/ai/eval/authority-eval.ts"
+    "eval:authority": "tsx --env-file-if-exists=../../.env src/ai/eval/authority-eval.ts",
+    "eval:launch": "tsx --env-file-if-exists=../../.env src/ai/eval/launch-eval.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",

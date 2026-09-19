@@ -24,6 +24,8 @@ import { MoveDrawer } from './moves/MoveDrawer.js';
 import { MoveFlowProvider } from './moves/move-flow.js';
 import { NarrationStreamProvider } from './narration/narration-stream.js';
 import { AssetDrawer } from './assets/AssetDrawer.js';
+import { ShipCard } from '../ship/ShipCard.js';
+import { shipView } from '../ship/ship-view.js';
 import { PlayUiProvider, useDrawer, useDrawerActions } from './play-ui.js';
 import styles from './PlayScreen.module.css';
 
@@ -60,6 +62,14 @@ function PlayScreenContent({ campaignId }: { readonly campaignId: string }) {
     Object.values(state.characters).map(toCrewCard),
   );
   const entities = useCampaignState(campaignId, (state) => entityCards(state.entities));
+  // 7.2, D-164: the ship once, at crew level — a launched ship, or the one a
+  // Milestone 1 crew was granted, which the fold keeps off each sheet (D-193).
+  const ship = useCampaignState(campaignId, (state) =>
+    state.launch.starship !== undefined ||
+    Object.values(state.characters).some((c) => c.legacyStarshipGrant === true)
+      ? shipView(state)
+      : null,
+  );
   const drawer = useDrawer();
   // D-98: choosing the acting character is the composer's own control, not
   // the crew card's click — that still opens the character drawer.
@@ -105,6 +115,11 @@ function PlayScreenContent({ campaignId }: { readonly campaignId: string }) {
                 onOpen={openCharacterDrawer}
               />
             </div>
+            {ship.data !== null && ship.data !== undefined && (
+              <div className={styles.shipSection}>
+                <ShipCard view={ship.data} onOpenAsset={openAssetDrawer} />
+              </div>
+            )}
             <div className={styles.entitySection}>
               <EntityRail entities={entities.data ?? []} onOpen={openEntityDrawer} />
             </div>

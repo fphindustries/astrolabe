@@ -16,6 +16,10 @@
   flex: 0 0 auto;
 }
 
+.shipSection {
+  flex: 0 0 auto;
+}
+
 .entitySection {
   flex: 1 1 auto;
   min-height: 0;

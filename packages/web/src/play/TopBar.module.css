@@ -9,6 +9,7 @@
 }
 
 .campaign {
+  margin: 0;
   font-family: var(--font-display);
   font-weight: 600;
   font-size: var(--text-lg);

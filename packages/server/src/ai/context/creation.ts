@@ -1,5 +1,6 @@
 import {
   CHARACTER_CREATION,
+  CHARACTER_RECIPE,
   STARFORGED,
   STARTING_STAT_ARRAY,
   validateCharacterDraft,
@@ -21,30 +22,30 @@ import { renderState } from './render-state.js';
  * rules check out.
  */
 
-/** The oracle tables the server rolls before asking (D-123), in roll order. */
+/**
+ * The oracle tables the server rolls before asking (D-123), in roll order.
+ *
+ * Read from the declared recipe rather than restated (6.0h, D-186). These five
+ * were a second list here, which was sound — the server owned it and a client
+ * could never name a table — but it sat outside `rules`, outside task 1.3's
+ * enumeration and outside the materialization completeness test, which is the
+ * one thing D-166's "the server rolls a declared recipe" exists to guarantee.
+ *
+ * The recipe's slot names *are* the keys a proposal cites, so the schema's
+ * citation enum and `checkCharacterProposal` are both derived from the same
+ * declaration the roll came from. They cannot drift.
+ */
 export const CHARACTER_PROPOSAL_ROLLS: readonly {
   readonly key: string;
   readonly label: string;
   readonly oracleId: OracleId;
-}[] = [
-  { key: 'given-name', label: 'Given name', oracleId: 'oracle:characters/name/given' as OracleId },
-  {
-    key: 'family-name',
-    label: 'Family name',
-    oracleId: 'oracle:characters/name/family-name' as OracleId,
-  },
-  { key: 'callsign', label: 'Callsign', oracleId: 'oracle:characters/name/callsign' as OracleId },
-  {
-    key: 'backstory-1',
-    label: 'Backstory prompt',
-    oracleId: 'oracle:campaign-launch/backstory-prompts' as OracleId,
-  },
-  {
-    key: 'backstory-2',
-    label: 'Backstory prompt',
-    oracleId: 'oracle:campaign-launch/backstory-prompts' as OracleId,
-  },
-];
+}[] = CHARACTER_RECIPE.rolls.map((slot) => ({
+  key: slot.slot,
+  // A slot that declares no words is labelled by its own name, which is what
+  // the chip and the prompt fall back to anyway.
+  label: slot.label ?? slot.slot,
+  oracleId: slot.oracle,
+}));
 
 /** A rolled result, as the prompt and the proposal command see it. */
 export interface RolledForProposal {
@@ -55,7 +56,7 @@ export interface RolledForProposal {
 
 const CHOOSABLE_CATEGORIES = new Set(CHARACTER_CREATION.slots.flatMap((slot) => slot.allows));
 
-/** Every asset a creation slot can hold: no deeds, no starship (it is granted). */
+/** Every asset a creation slot can hold: no deeds, no starship (it is the crew's, D-164). */
 export const SELECTABLE_ASSETS = STARFORGED.assets.filter((asset) =>
   CHOOSABLE_CATEGORIES.has(asset.categoryId),
 );
@@ -81,12 +82,15 @@ export const CREATION_RULES = `You help a player create a character for Ironswor
 
 The build:
 - Stats: edge, heart, iron, shadow and wits take the values ${STARTING_STAT_ARRAY.join(', ')}, one value each, in whatever order fits the concept. That is exactly ${describeStatArray()}; check the count before answering.
-- Assets: exactly three. Two must be paths. The third may be a module, support vehicle, companion or another path. Never a deed. The crew's starship is granted separately and does not count. Use only asset ids from the catalogue.
+- Assets: exactly three. Two must be paths. The third may be a module, support vehicle, companion or another path. Never a deed. The crew's starship is shared by the whole crew, is not one of the character's assets, and does not count. Use only asset ids from the catalogue.
 - A background vow: one sentence the character has sworn, with a challenge rank (troublesome, dangerous, formidable, extreme or epic).
 - A name, a callsign, and two or three backstory hooks.
+- An appearance: a sentence on what someone notices first.
+- A backstory: either "written" with the text, or "discover_in_play" with no text, when the concept says the character's past is deliberately unknown. Discovering it in play is a real choice, not an empty field — take it when the player's concept points that way, and say so in the reason.
+- Signature gear: a short note on something they carry, or null if nothing suggests itself. It is optional.
 - Pronouns: only if the player's concept states them, copied as written; otherwise null. Never choose pronouns for the character. Unless the concept states them, refer to the character by name or callsign in hooks and reasons.
 
-Grounding: the server has rolled oracle results for the name, callsign and backstory. Build the name, callsign and hooks from those results. You may choose between them, combine them or adapt them to the concept, and the player's own words take precedence where they already give a name. List, for each of those fields, the keys of the rolls you drew on. Every hook cites at least one roll. A name or callsign the player already wrote in the concept is kept exactly as written and cites none. Do not invent other named people, places or factions.
+Grounding: the server has rolled oracle results for the name, callsign and backstory. Build the name, callsign, backstory and hooks from those results. You may choose between them, combine them or adapt them to the concept, and the player's own words take precedence where they already give a name. List, for each of those fields, the keys of the rolls you drew on. Every hook cites at least one roll. A name or callsign the player already wrote in the concept is kept exactly as written and cites none. Do not invent other named people, places or factions.
 
 Every field has a reason: one short sentence tying it to the concept or the roll. Keep the player's concept at the centre; do not decide the character's feelings or inner life beyond what the player described.`;
 
@@ -95,12 +99,19 @@ export function buildCharacterProposalRequest(
   state: CampaignState,
   concept: string,
   rolls: readonly RolledForProposal[],
+  fields?: readonly string[],
 ): AiRequest {
   const context = renderState(state);
   const user = [
     context.length > 0 ? `<campaign>\n${context}\n</campaign>` : '',
     `<oracle_rolls>\n${rolls.map((r) => `- ${r.key} (${r.label}): ${r.rowText}`).join('\n')}\n</oracle_rolls>`,
     `<concept>\n${concept}\n</concept>`,
+    // Beat 5: the player wanted help with two fields, not the whole sheet. The
+    // answer stays complete, so the review screen can show it beside what they
+    // already have; this only says where to put the thought.
+    fields !== undefined && fields.length > 0
+      ? `<wants_help_with>\n${fields.join(', ')}\n</wants_help_with>`
+      : '',
     'Propose the build.',
   ]
     .filter((part) => part.length > 0)
@@ -143,6 +154,16 @@ export function characterProposalSchema(rollKeys: readonly string[]) {
       .min(2)
       .max(3),
     pronouns: z.object({ value: z.string().min(1).max(40).nullable(), reason }),
+    // The Campaign Launch fields (6.3, A28). Beat 3 has the player keep the
+    // proposed appearance and backstory, so the Guide has to offer them.
+    appearance: z.object({ value: z.string().min(1).max(400), reason }),
+    backstory: z.object({
+      kind: z.enum(['written', 'discover_in_play']),
+      text: z.string().min(1).max(1200).optional(),
+      reason,
+      groundedIn: cites,
+    }),
+    signatureGear: z.object({ value: z.string().min(1).max(200).nullable(), reason }),
   });
 }
 
@@ -179,9 +200,18 @@ export function checkCharacterProposal(
     const words = wordsOf(text);
     return words.join('').length >= 2 && words.every((word) => conceptWords.has(word));
   };
+  // A written backstory is built from the rolled prompts, so it cites one; an
+  // explicit mystery is a decision about the character and cites nothing.
+  if (value.backstory.kind === 'written' && (value.backstory.text ?? '').trim() === '') {
+    problems.push('A written backstory needs its text.');
+  }
+  if (value.backstory.kind === 'discover_in_play' && value.backstory.text !== undefined) {
+    problems.push('A backstory discovered in play carries no text; leave it out.');
+  }
   const grounded = [
     ['name', value.name.groundedIn, inConcept(value.name.value)],
     ['callsign', value.callsign.groundedIn, inConcept(value.callsign.value)],
+    ['backstory', value.backstory.groundedIn, value.backstory.kind === 'discover_in_play'],
     ...value.hooks.map((hook, i) => [`hook ${i + 1}`, hook.groundedIn, false] as const),
   ] as const;
   // D-131: pronouns are only ever the player's own words.

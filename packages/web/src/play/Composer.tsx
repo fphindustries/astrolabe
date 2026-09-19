@@ -15,6 +15,7 @@ import { WhatNow } from './moves/WhatNow.js';
 import { BeginSession } from './session/BeginSession.js';
 import { EndSession } from './session/EndSession.js';
 import { toSessionView } from './session/session.js';
+import { pendingVowView, SWEAR_AN_IRON_VOW } from './pending-vow.js';
 import styles from './Composer.module.css';
 
 /**
@@ -26,7 +27,8 @@ import styles from './Composer.module.css';
  * Finishing a flow ("Done") is what asks the Guide to narrate it (D-110):
  * the flow's own commandId names the chain. While the Guide is unavailable
  * the composer is replaced by the pause banner (D-116) — state is intact,
- * but play does not go on without its narrator. While no session is open it
+ * but play does not go on without its narrator, except to swear a pending
+ * inciting vow (D-207). While no session is open it
  * is replaced by Begin Session (D-146).
  */
 export function Composer({
@@ -46,6 +48,7 @@ export function Composer({
   const { selectMove, openPayThePrice, payThePriceResolved, reset } = useMoveFlowActions();
   const narration = useNarrationStream();
   const session = useCampaignState(campaignId, toSessionView);
+  const vow = useCampaignState(campaignId, pendingVowView);
   // D-148: a suggestion the composer can't play still carries its words into
   // the prompt; bumping `version` remounts the prompt with them.
   const [draft, setDraft] = useState({ text: '', version: 0 });
@@ -66,10 +69,35 @@ export function Composer({
     );
   }
 
+  // D-201: Session 1's first beat is the real Swear an Iron Vow.
+  const swearOffer =
+    vow.data === undefined ? null : (
+      <div className={styles.notice} aria-label="The inciting vow">
+        <span>
+          The inciting vow is not yet sworn: {vow.data.text} ({vow.data.rank}).{' '}
+          {vow.data.rollerName} swears it.
+        </span>
+        <button
+          type="button"
+          className={styles.dismiss}
+          onClick={() => {
+            const rollerId = vow.data!.rollerId;
+            onSetActing(rollerId);
+            selectMove(SWEAR_AN_IRON_VOW, rollerId, undefined, undefined, true);
+          }}
+        >
+          Swear the inciting vow
+        </button>
+      </div>
+    );
+
   if (narration.paused && flow.step === 'idle') {
+    // D-207: the pending vow stays swearable while the Guide is away. The
+    // move resolves and commits; only its narration waits for Retry.
     return (
-      <div className={styles.composer} role="alert">
-        <div className={styles.paused}>
+      <div className={styles.composer}>
+        {swearOffer}
+        <div className={styles.paused} role="alert">
           <span className={styles.pausedTitle}>Guide unavailable — session paused</span>
           <span className={styles.pausedReason}>
             {narration.pauseReason ?? 'The Guide cannot be reached.'} Your campaign is saved as it
@@ -132,6 +160,8 @@ export function Composer({
         )}
       </div>
 
+      {flow.step === 'idle' && swearOffer}
+
       {flow.step === 'idle' && actor !== undefined && (
         <WhatNow
           campaignId={campaignId}
@@ -175,6 +205,7 @@ export function Composer({
             ? { chainedFromCommandId: flow.chainedFromCommandId }
             : {})}
           {...(flow.prefill !== undefined ? { prefill: flow.prefill } : {})}
+          {...(flow.pendingVow === true && vow.data !== undefined ? { pendingVow: vow.data } : {})}
           onResolved={() => {
             /* move-flow already transitions to 'result' via moveResolved */
           }}

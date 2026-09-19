@@ -39,8 +39,20 @@ export interface EventTypeMeta<T extends EventType> {
    */
   readonly mutatesState: boolean;
   /**
-   * Exempt from void (D-85). Only token accounting is: the tokens were
-   * spent whatever the fiction now says.
+   * Whether `planVoid` may void an event of this type at all.
+   *
+   * Three things are exempt, for three different reasons:
+   *
+   * - **Token accounting** (D-85): the tokens were spent whatever the
+   *   fiction now says.
+   * - **`event.voided` itself**: un-voiding is reinstatement, not a void.
+   * - **The Campaign Launch catalogue** (D-177): a launch fact is corrected
+   *   by revision before activation and by `launch.fact_amended` after it.
+   *   These events are campaign-scoped and carry no `sessionId`, and D-84
+   *   limits void to the current session — so claiming otherwise here would
+   *   describe a capability `planVoid` denies. `meta.test.ts` asserts the
+   *   flag and `cascade.test.ts` asserts the refusal, so the two cannot
+   *   drift apart.
    */
   readonly voidable: boolean;
   /**
@@ -232,9 +244,27 @@ export const EVENT_TYPE_META: MetaTable = {
     voidable: true,
     introduces: (p) => [track(p.trackId)],
     references: (p) =>
-      p.kind === 'vow' && p.characterId !== undefined ? [character(p.characterId)] : [],
+      p.kind === 'vow'
+        ? [
+            ...(p.characterId === undefined ? [] : [character(p.characterId)]),
+            ...(p.participantCharacterIds ?? []).map(character),
+            ...(p.incidentId === undefined ? [] : [entity(p.incidentId)]),
+          ]
+        : [],
   },
   'track.advanced': {
+    narrative: true,
+    significant: true,
+    mutatesState: true,
+    voidable: true,
+    introduces: none,
+    references: (p) => [track(p.trackId)],
+  },
+  // D-188. Narrative: a vow's words changing is a fact a reader wants to see,
+  // the way `track.created` is. Voidable on the ordinary session rules — it is
+  // not a launch event, merely unreachable by void before activation, as
+  // everything pre-launch is.
+  'track.revised': {
     narrative: true,
     significant: true,
     mutatesState: true,
@@ -329,13 +359,14 @@ export const EVENT_TYPE_META: MetaTable = {
     references: (p) => [entity(p.fromLocationId), entity(p.toLocationId)],
   },
   'incident.proposed': {
-    // D-132: a suggestion, like `character.proposed`. It changes nothing
-    // until a vow names it as its cause, and it belongs to no beat. What it
-    // draws on is not a reference: a suggestion nobody took must never
-    // block voiding the location or character it mentioned (D-83).
+    // D-132: a suggestion, like `character.proposed`, and not canon until the
+    // player accepts an option. It belongs to no beat. What it draws on is not
+    // a reference: a suggestion nobody took must never block voiding the
+    // location or character it mentioned (D-83). It is held in the launch
+    // fold for review (9.0e), which is the only state it changes.
     narrative: false,
     significant: false,
-    mutatesState: false,
+    mutatesState: true,
     voidable: true,
     introduces: none,
     references: none,
@@ -400,6 +431,239 @@ export const EVENT_TYPE_META: MetaTable = {
     significant: true,
     mutatesState: false,
     voidable: true,
+    introduces: none,
+    references: none,
+  },
+  'launch.draft_saved': {
+    narrative: false,
+    significant: false,
+    mutatesState: true,
+    voidable: false,
+    introduces: none,
+    references: none,
+  },
+  'creation.proposed': {
+    narrative: false,
+    significant: false,
+    // Held in `launch.proposals` so acceptance can resolve causality back to
+    // it (A41). Projected is not the same as canon: nothing reads a proposal
+    // as an established fact, and context assembly strips it (D-161).
+    mutatesState: true,
+    voidable: false,
+    introduces: none,
+    references: none,
+  },
+  'campaign.foundation_set': {
+    narrative: false,
+    significant: true,
+    mutatesState: true,
+    voidable: false,
+    introduces: none,
+    references: none,
+  },
+  'truth.decided': {
+    narrative: false,
+    significant: true,
+    mutatesState: true,
+    voidable: false,
+    introduces: none,
+    references: none,
+  },
+  'character.revised': {
+    narrative: false,
+    significant: true,
+    mutatesState: true,
+    voidable: false,
+    introduces: none,
+    references: (p) => [character(p.characterId)],
+  },
+  'character.removed': {
+    narrative: false,
+    significant: true,
+    mutatesState: true,
+    voidable: false,
+    introduces: none,
+    references: (p) => [character(p.characterId)],
+  },
+  'starship.established': {
+    narrative: false,
+    significant: true,
+    mutatesState: true,
+    voidable: false,
+    introduces: (p) => [entity(p.starshipId)],
+    // Only events written before D-191 name module owners; later ones name none.
+    references: (p) => (p.modules ?? []).map((m) => character(m.ownerCharacterId)),
+  },
+  'starship.revised': {
+    narrative: false,
+    significant: true,
+    mutatesState: true,
+    voidable: false,
+    introduces: none,
+    references: (p) => [
+      entity(p.starship.starshipId),
+      ...(p.starship.modules ?? []).map((m) => character(m.ownerCharacterId)),
+    ],
+  },
+  'sector.configured': {
+    narrative: false,
+    significant: true,
+    mutatesState: true,
+    voidable: false,
+    introduces: (p) => [entity(p.sectorId)],
+    references: none,
+  },
+  'location.added': {
+    narrative: false,
+    significant: true,
+    mutatesState: true,
+    voidable: false,
+    introduces: (p) => [entity(p.id)],
+    references: (p) =>
+      p.kind === 'settlement' && p.planetId !== undefined ? [entity(p.planetId)] : [],
+  },
+  'location.revised': {
+    narrative: false,
+    significant: true,
+    mutatesState: true,
+    voidable: false,
+    introduces: none,
+    references: (p) => [
+      entity(p.id),
+      ...(p.kind === 'settlement' && p.planetId !== undefined ? [entity(p.planetId)] : []),
+    ],
+  },
+  'location.removed': {
+    narrative: false,
+    significant: true,
+    mutatesState: true,
+    voidable: false,
+    introduces: none,
+    references: (p) => [entity(p.locationId)],
+  },
+  'route.added': {
+    narrative: false,
+    significant: true,
+    mutatesState: true,
+    voidable: false,
+    introduces: none,
+    references: (p) => [entity(p.from), ...(typeof p.to === 'string' ? [entity(p.to)] : [])],
+  },
+  'route.revised': {
+    narrative: false,
+    significant: true,
+    mutatesState: true,
+    voidable: false,
+    introduces: none,
+    references: (p) => [entity(p.from), ...(typeof p.to === 'string' ? [entity(p.to)] : [])],
+  },
+  'route.removed': {
+    narrative: false,
+    significant: true,
+    mutatesState: true,
+    voidable: false,
+    introduces: none,
+    references: none,
+  },
+  'sector.layout_changed': {
+    narrative: false,
+    significant: false,
+    mutatesState: true,
+    voidable: false,
+    introduces: none,
+    references: (p) => Object.keys(p.coordinates).map((id) => entity(id as EntityId)),
+  },
+  'starting_settlement.selected': {
+    narrative: false,
+    significant: true,
+    mutatesState: true,
+    voidable: false,
+    introduces: none,
+    references: (p) => [entity(p.settlementId)],
+  },
+  'trouble.established': {
+    narrative: false,
+    significant: true,
+    mutatesState: true,
+    voidable: false,
+    introduces: (p) => [entity(p.troubleId)],
+    references: (p) => (p.kind === 'settlement' ? [entity(p.ownerId)] : []),
+  },
+  'trouble.revised': {
+    narrative: false,
+    significant: true,
+    mutatesState: true,
+    voidable: false,
+    introduces: none,
+    references: (p) => [
+      entity(p.troubleId),
+      ...(p.kind === 'settlement' ? [entity(p.ownerId)] : []),
+    ],
+  },
+  'connection.established': {
+    narrative: false,
+    significant: true,
+    mutatesState: true,
+    voidable: false,
+    introduces: (p) => [entity(p.connectionId), entity(p.npcId), track(p.trackId)],
+    references: (p) => p.participants.map(character),
+  },
+  'connection.revised': {
+    narrative: false,
+    significant: true,
+    mutatesState: true,
+    voidable: false,
+    introduces: none,
+    references: (p) => [
+      entity(p.connectionId),
+      entity(p.npcId),
+      track(p.trackId),
+      ...p.participants.map(character),
+    ],
+  },
+  'incident.accepted': {
+    narrative: false,
+    significant: true,
+    mutatesState: true,
+    voidable: false,
+    introduces: (p) => [entity(p.incidentId)],
+    // D-200: the vow's choices may not be made yet.
+    references: (p) => [
+      ...(p.rollerId === undefined ? [] : [character(p.rollerId)]),
+      ...(p.participants ?? []).map(character),
+      ...(p.openingScene?.locationId === undefined ? [] : [entity(p.openingScene.locationId)]),
+    ],
+  },
+  'incident.revised': {
+    narrative: false,
+    significant: true,
+    mutatesState: true,
+    voidable: false,
+    introduces: none,
+    references: (p) => [
+      entity(p.incidentId),
+      ...(p.rollerId === undefined ? [] : [character(p.rollerId)]),
+      ...(p.participants ?? []).map(character),
+      ...(p.openingScene?.locationId === undefined ? [] : [entity(p.openingScene.locationId)]),
+    ],
+  },
+  'campaign.activated': {
+    narrative: false,
+    significant: true,
+    mutatesState: true,
+    voidable: false,
+    introduces: none,
+    references: (p) => [
+      entity(p.pendingVow.incidentId),
+      character(p.pendingVow.rollerId),
+      ...p.pendingVow.participants.map(character),
+    ],
+  },
+  'launch.fact_amended': {
+    narrative: false,
+    significant: true,
+    mutatesState: true,
+    voidable: false,
     introduces: none,
     references: none,
   },

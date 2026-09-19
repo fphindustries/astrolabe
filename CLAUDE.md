@@ -7,18 +7,21 @@ Astrolabe is a web app for playing *Ironsworn: Starforged* with a Generative AI 
 | Document | Why |
 |---|---|
 | `docs/design-record.md` | Source of truth. Charter, decision log (D-01…), authority model, rules scope, creation flows, play screen, architecture, NFRs |
-| `docs/milestone-1.md` | Current scope, acceptance criteria, task list |
-| `docs/golden-session.md` | The scripted slice of play that defines "done" |
+| `docs/design-event-log.md` | Event-store, projection, voiding, correction, and read-model design |
+| `docs/milestone-2.md` | Current scope, acceptance criteria, domain model, and task list |
+| `docs/golden-launch.md` | The Campaign Launch acceptance narrative that defines Milestone 2 "done" |
+| `docs/milestone-1.md` | Completed baseline and implementation record |
+| `docs/golden-session.md` | Milestone 1 regression narrative and intended play experience |
 
 The design record is authoritative. If code and the design record disagree, the design record wins until a decision is changed there explicitly.
 
 ## Rules of engagement
 
-**Scope.** Milestone 1 is exactly the golden session. If a task tempts you to build something the golden session doesn't exercise, stop and say so rather than building it. Scope creep is the failure mode this project is guarding against.
+**Scope.** Milestone 1 is complete and remains a regression baseline. Milestone 2 is exactly the Campaign Launch experience in `milestone-2.md` and `golden-launch.md`. Do not pull combat, multiplayer, safety/content-expectation tools, portraits, or full exploration mapping into it. A capability mentioned as later direction is not implementation authority.
 
 **Decisions.** Every approved decision has an ID. Reference them in commits and PRs (`implements D-08`). If you hit a question the design record doesn't answer, don't guess — ask, and the answer becomes a new decision with an ID.
 
-**Working order.** Follow the task list in `milestone-1.md` in order. Each task should leave the build working and the tests passing.
+**Working order.** Follow the ordered task groups in `milestone-2.md`. Each task should leave the build working and the tests passing. Preserve the Milestone 1 golden-session path while introducing launch-state compatibility for existing campaigns and fixtures.
 
 ## Non-negotiables
 
@@ -31,6 +34,9 @@ These come from the design record. Violating them means the design was misunders
 - **Dice and state never wait on the AI.** Mechanics resolve immediately; narration streams in after. (§10)
 - **Rules data stays separate from rules logic.** Datasworn is imported through an adapter into Astrolabe's own schema. Automation logic is keyed to stable rule IDs. (§5)
 - **Every automated rule behaviour is traceable** to the rule entry that triggered it.
+- **Setup drafts are durable but not canon.** Save-and-continue snapshots and unaccepted Guide proposals stay out of narration, recaps, and ordinary world context. (§6; D-161)
+- **Activation is a boundary.** Readiness is derived on the server; activation is irreversible, creates Session 1 and its opening scene, and leads to the real `Swear an Iron Vow` move. It does not pre-resolve that move. (D-160, D-168)
+- **The command starship is shared.** Do not create one Starship asset per character. Character-selected modules retain their owners and contribute to the shared vessel. (D-164)
 
 ## Stack
 
@@ -48,7 +54,8 @@ Library choices beyond this are open; propose and justify rather than assuming.
 ## Testing
 
 - `rules` gets real unit tests: outcome tiers, matches, momentum burn, chained moves.
-- The golden session runs as an end-to-end test with a stubbed AI provider.
+- The golden session remains an end-to-end regression test with a stubbed AI provider.
+- The golden launch runs end to end with a stubbed AI provider and in a no-provider/manual path.
 - AI output is validated against its schema and retried on failure. AI quality is not unit tested.
 
 ## Attribution

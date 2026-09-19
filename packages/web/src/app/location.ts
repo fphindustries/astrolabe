@@ -4,6 +4,8 @@
  * file is the one that actually touches `location`/`history`.
  */
 
+import { clearArrival, noteArrival } from '../ui/arrival.js';
+
 const NAVIGATE_EVENT = 'astrolabe:navigate';
 
 /**
@@ -15,6 +17,7 @@ export function navigate(to: string): void {
   if (to === location.pathname + location.search) {
     return;
   }
+  noteArrival(to);
   history.pushState(null, '', to);
   dispatchEvent(new Event(NAVIGATE_EVENT));
 }
@@ -25,9 +28,12 @@ export function getPathname(): string {
 
 /** For `useSyncExternalStore`. */
 export function subscribeToLocation(onChange: () => void): () => void {
+  // Back/forward restores the browser's own focus (D-209), so it is not an arrival.
+  addEventListener('popstate', clearArrival);
   addEventListener('popstate', onChange);
   addEventListener(NAVIGATE_EVENT, onChange);
   return () => {
+    removeEventListener('popstate', clearArrival);
     removeEventListener('popstate', onChange);
     removeEventListener(NAVIGATE_EVENT, onChange);
   };

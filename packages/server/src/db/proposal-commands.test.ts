@@ -1,20 +1,29 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { STARFORGED, type OracleId } from '@astrolabe/rules';
-import { LOCAL_PLAYER_ID, type Actor, type CampaignId, type CommandId } from '@astrolabe/shared';
+import {
+  LOCAL_PLAYER_ID,
+  type Actor,
+  type CampaignId,
+  type CommandId,
+  type EventId,
+} from '@astrolabe/shared';
 
 import { CHARACTER_PROPOSAL_ROLLS, INCIDENT_PROPOSAL_ROLLS } from '../ai/context/index.js';
+import type { Sql } from 'postgres';
+
 import { StubProvider } from '../ai/stub.js';
 import { loadedDice } from '../fixtures/loaded-dice.js';
 import { project } from '../projection/project.js';
 
-import {
-  addSectorLocation,
-  createCampaign,
-  setTruth,
-  swearIncitingVow,
-} from './campaign-commands.js';
+import { createCampaign } from './campaign-commands.js';
 import { createCharacter, UnknownProposalError } from './character-commands.js';
+import {
+  configureLaunchSector,
+  decideTruth,
+  rollLaunchRecipe,
+  saveLaunchLocation,
+} from './launch-commands.js';
 import { readEvents } from './event-store.js';
 import { AiRequestRefusedError } from './narration-commands.js';
 import { proposeCharacter, proposeIncidents } from './proposal-commands.js';
@@ -23,6 +32,8 @@ import { uuidv7 } from './uuid.js';
 
 const PLAYER: Actor = { kind: 'player', playerId: LOCAL_PLAYER_ID };
 const newId = <T>(): T => uuidv7() as T;
+const companionAsset = STARFORGED.assets.find((asset) => asset.categoryId === 'companion')!.id;
+
 const CONCEPT =
   'A former evacuation pilot who still flies toward the distress calls everyone else ignores.';
 
@@ -66,8 +77,35 @@ function goodProposal(overrides: Record<string, unknown> = {}) {
       },
     ],
     pronouns: { value: null, reason: 'The concept states none.' },
+    // The Campaign Launch fields (6.3): beat 3 keeps the proposed appearance
+    // and backstory, so the Guide has to offer them.
+    appearance: { value: 'Flight jacket worn through at the elbows.', reason: 'A working pilot.' },
+    backstory: {
+      kind: 'written',
+      text: 'She flew the last shuttle out and has never stopped flying toward the noise.',
+      reason: 'Built from both prompts.',
+      groundedIn: ['backstory-1', 'backstory-2'],
+    },
+    signatureGear: { value: null, reason: 'Nothing the concept names.' },
     ...overrides,
   };
+}
+
+/**
+ * The recipe roll a character proposal is grounded in (D-186).
+ *
+ * Its own command now, so the rolls exist before the Guide is asked â€” and stay
+ * there, with their chips, whether or not the provider answers.
+ */
+async function rollCharacterRecipe(sql: Sql, campaignId: CampaignId): Promise<EventId[]> {
+  const rolled = await rollLaunchRecipe(sql, {
+    campaignId,
+    commandId: newId<CommandId>(),
+    actor: PLAYER,
+    selector: { kind: 'character' },
+    rng: rolls(),
+  });
+  return (rolled.response as { results: { eventId: EventId }[] }).results.map((r) => r.eventId);
 }
 
 /** Five d100 faces, one per roll D-123 names. */
@@ -96,7 +134,9 @@ describe.skipIf(!hasTestDatabase)('character proposals (task 3.3, D-123, D-124)'
     return campaignId;
   }
 
-  it('rolls, asks, and writes the rolls, the accounting and the proposal as one command', async () => {
+  const groundRolls = (campaignId: CampaignId) => rollCharacterRecipe(db.sql, campaignId);
+
+  it('asks, and writes the accounting and the proposal, over rolls made earlier (D-186)', async () => {
     const campaignId = await campaign();
     const ai = new StubProvider({ responses: [{ kind: 'structured', value: goodProposal() }] });
     const commandId = newId<CommandId>();
@@ -106,7 +146,8 @@ describe.skipIf(!hasTestDatabase)('character proposals (task 3.3, D-123, D-124)'
       commandId,
       actor: PLAYER,
       concept: CONCEPT,
-      rng: rolls(),
+      targetId: 'draft-vesna',
+      groundedIn: await groundRolls(campaignId),
     });
 
     expect(result.ok).toBe(true);
@@ -127,11 +168,10 @@ describe.skipIf(!hasTestDatabase)('character proposals (task 3.3, D-123, D-124)'
 
     const events = await readEvents(db.sql, campaignId);
     const written = events.filter((e) => e.commandId === commandId).map((e) => e.type);
-    expect(written).toEqual([
-      ...CHARACTER_PROPOSAL_ROLLS.map(() => 'oracle.rolled'),
-      'ai.completed',
-      'character.proposed',
-    ]);
+    // The rolls belong to the recipe command that made them; this one writes
+    // no dice of its own, because re-rolling would ground the Guide in results
+    // the player never saw.
+    expect(written).toEqual(['ai.completed', 'creation.proposed']);
     for (const roll of result.rolls) {
       const table = STARFORGED.oracles.find((t) => t.id === roll.oracleId);
       expect(table?.rows.some((row) => row.text === roll.rowText)).toBe(true);
@@ -152,7 +192,8 @@ describe.skipIf(!hasTestDatabase)('character proposals (task 3.3, D-123, D-124)'
       commandId: newId<CommandId>(),
       actor: PLAYER,
       concept: CONCEPT,
-      rng: rolls(),
+      targetId: 'draft-vesna',
+      groundedIn: await groundRolls(campaignId),
     };
 
     const first = await proposeCharacter(db.sql, ai, request);
@@ -162,9 +203,10 @@ describe.skipIf(!hasTestDatabase)('character proposals (task 3.3, D-123, D-124)'
     expect(ai.requests).toHaveLength(1);
   });
 
-  it('labels each roll by its own table, in roll order, on a replay as on the first answer', async () => {
-    // `outcomeFrom` labels the i-th `oracle.rolled` with the i-th roll spec,
-    // so a read that returned the rolls out of order would mislabel them.
+  it('labels each roll by the recipe slot it filled, on a replay as on the first answer', async () => {
+    // The slot a roll filled is decided by walking the declared recipe, not by
+    // position in the log â€” which is what keeps `backstory-1` and
+    // `backstory-2` apart when they share one table (D-186).
     const campaignId = await campaign();
     const ai = new StubProvider({ responses: [{ kind: 'structured', value: goodProposal() }] });
     const request = {
@@ -172,7 +214,8 @@ describe.skipIf(!hasTestDatabase)('character proposals (task 3.3, D-123, D-124)'
       commandId: newId<CommandId>(),
       actor: PLAYER,
       concept: CONCEPT,
-      rng: rolls(),
+      targetId: 'draft-vesna',
+      groundedIn: await groundRolls(campaignId),
     };
 
     const first = await proposeCharacter(db.sql, ai, request);
@@ -184,11 +227,8 @@ describe.skipIf(!hasTestDatabase)('character proposals (task 3.3, D-123, D-124)'
     expect(again.rolls.map((r) => [r.label, r.oracleId])).toEqual(expected);
     expect(again.rolls.map((r) => r.eventId)).toEqual(first.rolls.map((r) => r.eventId));
 
-    // The log order the labels rely on is the order the rolls were written in.
-    const written = (await readEvents(db.sql, campaignId))
-      .filter((e) => e.commandId === request.commandId && e.type === 'oracle.rolled')
-      .map((e) => e.id);
-    expect(again.rolls.map((r) => r.eventId)).toEqual(written);
+    // The cited rolls are the ones the recipe command wrote, in recipe order.
+    expect(again.rolls.map((r) => r.eventId)).toEqual([...request.groundedIn]);
 
     // And the citations still point at the rolls their labels name.
     const byLabel = (label: string) =>
@@ -222,7 +262,8 @@ describe.skipIf(!hasTestDatabase)('character proposals (task 3.3, D-123, D-124)'
       commandId: newId(),
       actor: PLAYER,
       concept: CONCEPT,
-      rng: rolls(),
+      targetId: 'draft-vesna',
+      groundedIn: await groundRolls(campaignId),
     });
 
     expect(result.ok).toBe(true);
@@ -255,7 +296,8 @@ describe.skipIf(!hasTestDatabase)('character proposals (task 3.3, D-123, D-124)'
       commandId: newId(),
       actor: PLAYER,
       concept: CONCEPT,
-      rng: rolls(),
+      targetId: 'draft-vesna',
+      groundedIn: await groundRolls(campaignId),
     });
 
     expect(result).toMatchObject({ ok: false, errorKind: 'invalid_output' });
@@ -290,7 +332,8 @@ describe.skipIf(!hasTestDatabase)('character proposals (task 3.3, D-123, D-124)'
       commandId: newId(),
       actor: PLAYER,
       concept: `Isolde "Wick" Varga, ${CONCEPT}`,
-      rng: rolls(),
+      targetId: 'draft-vesna',
+      groundedIn: await groundRolls(campaignId),
     });
 
     expect(result).toMatchObject({
@@ -323,7 +366,8 @@ describe.skipIf(!hasTestDatabase)('character proposals (task 3.3, D-123, D-124)'
       commandId: newId(),
       actor: PLAYER,
       concept: `A spacer. ${CONCEPT}`,
-      rng: rolls(),
+      targetId: 'draft-vesna',
+      groundedIn: await groundRolls(campaignId),
     });
 
     expect(result).toMatchObject({ ok: true, proposal: { callsign: { value: 'Lantern' } } });
@@ -339,14 +383,15 @@ describe.skipIf(!hasTestDatabase)('character proposals (task 3.3, D-123, D-124)'
       commandId: newId(),
       actor: PLAYER,
       concept: CONCEPT,
-      rng: rolls(),
+      targetId: 'draft-vesna',
+      groundedIn: await groundRolls(campaignId),
     });
 
     expect(result).toMatchObject({ ok: false, errorKind: 'unavailable' });
     expect(result.rolls).toHaveLength(5);
   });
 
-  it('refuses an empty concept before rolling anything', async () => {
+  it('refuses an empty concept before asking, leaving the rolls alone', async () => {
     const campaignId = await campaign();
     await expect(
       proposeCharacter(db.sql, new StubProvider(), {
@@ -354,9 +399,75 @@ describe.skipIf(!hasTestDatabase)('character proposals (task 3.3, D-123, D-124)'
         commandId: newId(),
         actor: PLAYER,
         concept: '   ',
+        targetId: 'draft-vesna',
+        groundedIn: await groundRolls(campaignId),
       }),
     ).rejects.toBeInstanceOf(AiRequestRefusedError);
-    expect(await readEvents(db.sql, campaignId)).toHaveLength(1);
+    // The campaign, and the five rolls the player already made. Nothing else:
+    // a refused ask writes no accounting and no proposal.
+    const events = await readEvents(db.sql, campaignId);
+    expect(events).toHaveLength(6);
+    expect(events.filter((event) => event.type === 'ai.completed')).toEqual([]);
+  });
+
+  it('records a kept proposal as the Guideâ€™s, and an edited one as edited (6.3, D-185)', async () => {
+    // The distinction A41's badge exists for, decided by comparing rather than
+    // taken from the client: whether the player changed something is a fact
+    // about the player.
+    const campaignId = await campaign();
+    const ai = () =>
+      new StubProvider({ responses: [{ kind: 'structured', value: goodProposal() }] });
+
+    const keptCommand = newId<CommandId>();
+    const kept = await proposeCharacter(db.sql, ai(), {
+      campaignId,
+      commandId: keptCommand,
+      actor: PLAYER,
+      concept: CONCEPT,
+      targetId: 'draft-kept',
+      groundedIn: await groundRolls(campaignId),
+    });
+    if (!kept.ok) throw new Error('Expected a proposal.');
+
+    const asProposed = {
+      campaignId,
+      actor: PLAYER,
+      draft: {
+        name: kept.proposal.name.value,
+        callsign: kept.proposal.callsign.value,
+        stats: kept.proposal.stats.value,
+        assets: kept.proposal.assets.map((asset) => asset.assetId),
+      },
+      backgroundVow: {
+        title: kept.proposal.backgroundVow.title,
+        rank: kept.proposal.backgroundVow.rank,
+      },
+      launch: {
+        appearance: kept.proposal.appearance.value,
+        backstory: kept.proposal.backstory.value,
+      },
+      hooks: kept.proposal.hooks.map((hook) => hook.text),
+      proposalCommandId: keptCommand,
+    } as const;
+
+    const unedited = await createCharacter(db.sql, {
+      ...asProposed,
+      commandId: newId<CommandId>(),
+    });
+    const edited = await createCharacter(db.sql, {
+      ...asProposed,
+      commandId: newId<CommandId>(),
+      // Beat 3: he changes the final asset and keeps everything else.
+      draft: {
+        ...asProposed.draft,
+        assets: [...asProposed.draft.assets.slice(0, 2), companionAsset],
+      },
+      proposalCommandId: keptCommand,
+    });
+
+    const state = project(await readEvents(db.sql, campaignId));
+    expect(state.characters[unedited.characterId]?.provenance).toBe('guide_proposal');
+    expect(state.characters[edited.characterId]?.provenance).toBe('guide_proposal_edited');
   });
 
   it('accepts a proposal through createCharacter, naming it as the cause and keeping the hooks', async () => {
@@ -368,7 +479,8 @@ describe.skipIf(!hasTestDatabase)('character proposals (task 3.3, D-123, D-124)'
       commandId: proposalCommandId,
       actor: PLAYER,
       concept: CONCEPT,
-      rng: rolls(),
+      targetId: 'draft-vesna',
+      groundedIn: await groundRolls(campaignId),
     });
     if (!proposed.ok) throw new Error('expected a proposal');
 
@@ -440,7 +552,8 @@ describe.skipIf(!hasTestDatabase)('character proposals (task 3.3, D-123, D-124)'
       commandId: newId(),
       actor: PLAYER,
       concept: `${CONCEPT} They/them.`,
-      rng: rolls(),
+      targetId: 'draft-vesna',
+      groundedIn: await groundRolls(campaignId),
     });
 
     expect(ai.requests[1]?.user).toMatch(/pronouns "she\/her" are not in the player's concept/);
@@ -459,7 +572,8 @@ describe.skipIf(!hasTestDatabase)('character proposals (task 3.3, D-123, D-124)'
       commandId: newId(),
       actor: PLAYER,
       concept: CONCEPT,
-      rng: rolls(),
+      targetId: 'draft-vesna',
+      groundedIn: await groundRolls(campaignId),
     });
 
     expect(result.ok && 'pronouns' in result.proposal).toBe(false);
@@ -525,20 +639,33 @@ describe.skipIf(!hasTestDatabase)('inciting incident proposals (task 4.6, D-132â
 
   /** A truth, a location and one crew member with a backstory, as a setup evening leaves them. */
   async function setUp(campaignId: CampaignId) {
-    await setTruth(db.sql, {
+    await decideTruth(db.sql, {
       campaignId,
       commandId: newId(),
       actor: PLAYER,
-      oracleId: 'oracle:cataclysm' as OracleId,
-      source: 'written',
+      truthId: 'oracle:cataclysm' as OracleId,
+      resolution: 'custom',
       text: 'The sun plague burned the old worlds.',
     });
-    await addSectorLocation(db.sql, {
+    // A launch settlement: the Milestone 1 location command is retired (D-206).
+    await configureLaunchSector(db.sql, {
       campaignId,
       commandId: newId(),
       actor: PLAYER,
-      name: 'Varga Relay',
-      description: 'A relay station at the sector edge.',
+      sector: { name: 'Lantern Reach', region: 'expanse' },
+    });
+    await saveLaunchLocation(db.sql, {
+      campaignId,
+      commandId: newId(),
+      actor: PLAYER,
+      location: {
+        kind: 'settlement',
+        name: 'Varga Relay',
+        location: 'deep_space',
+        population: 'Few',
+        authority: 'None',
+        projects: ['Keeping the relay dark'],
+      },
     });
     await createCharacter(db.sql, {
       campaignId,
@@ -585,7 +712,7 @@ describe.skipIf(!hasTestDatabase)('inciting incident proposals (task 4.6, D-132â
     const events = await readEvents(db.sql, campaignId);
     const state = project(events);
     const [vesna] = Object.values(state.characters);
-    const relay = Object.values(state.entities).find((e) => e.name === 'Varga Relay');
+    const relay = Object.values(state.launch.locations).find((l) => l.name === 'Varga Relay');
     expect(result.proposal.options).toHaveLength(3);
     result.proposal.options.forEach((option, i) => {
       expect(option.groundedIn).toEqual([result.rolls[i]?.eventId]);
@@ -603,7 +730,7 @@ describe.skipIf(!hasTestDatabase)('inciting incident proposals (task 4.6, D-132â
       '- oracle:cataclysm (Cataclysm): The sun plague burned the old worlds.',
     );
     expect(asked?.user).toContain(
-      '- Varga Relay (description: A relay station at the sector edge.)',
+      '- Varga Relay (deep_space; population: Few; authority: None; projects: Keeping the relay dark)',
     );
     expect(asked?.user).toContain(
       '- Vesna: Vesna Kade (she/her); background vow: "Find the pilots I left behind" (extreme); backstory: She flew the last evacuation out of a burning colony.',
@@ -685,58 +812,5 @@ describe.skipIf(!hasTestDatabase)('inciting incident proposals (task 4.6, D-132â
 
     expect(again).toEqual(first);
     expect(ai.requests).toHaveLength(1);
-  });
-
-  it('swears the vow the player edited, naming the proposal as its cause (D-132)', async () => {
-    const campaignId = await campaign();
-    const ai = new StubProvider({ responses: [{ kind: 'structured', value: goodIncidents() }] });
-    const proposalCommandId = newId<CommandId>();
-    const proposed = await proposeIncidents(db.sql, ai, {
-      campaignId,
-      commandId: proposalCommandId,
-      actor: PLAYER,
-      rng: incidentRolls(),
-    });
-    if (!proposed.ok) throw new Error('expected a proposal');
-
-    const sworn = await swearIncitingVow(db.sql, {
-      campaignId,
-      commandId: newId(),
-      actor: PLAYER,
-      title: 'Recover the flight recorder of the Meridian',
-      rank: 'formidable',
-      proposalCommandId,
-    });
-
-    const vow = sworn.result.events.find((e) => e.type === 'track.created');
-    expect(vow?.causedBy).toBe(proposed.proposalEventId);
-    const state = project(await readEvents(db.sql, campaignId));
-    expect(state.tracks[sworn.vowTrackId]).toMatchObject({
-      title: 'Recover the flight recorder of the Meridian',
-      rank: 'formidable',
-    });
-  });
-
-  it('refuses a vow naming a command that holds no incident proposal', async () => {
-    const campaignId = await campaign();
-    const characterProposal = newId<CommandId>();
-    await proposeCharacter(
-      db.sql,
-      new StubProvider({ responses: [{ kind: 'structured', value: goodProposal() }] }),
-      { campaignId, commandId: characterProposal, actor: PLAYER, concept: CONCEPT, rng: rolls() },
-    );
-
-    for (const proposalCommandId of [newId<CommandId>(), characterProposal]) {
-      await expect(
-        swearIncitingVow(db.sql, {
-          campaignId,
-          commandId: newId(),
-          actor: PLAYER,
-          title: 'Anything',
-          rank: 'dangerous',
-          proposalCommandId,
-        }),
-      ).rejects.toBeInstanceOf(UnknownProposalError);
-    }
   });
 });

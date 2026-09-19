@@ -78,6 +78,14 @@ export function resolveBeatScope(
     if (parent === undefined || seen.has(parent.commandId)) {
       break;
     }
+    // A chain is moves caused by moves. Once the walk stands on a move, a
+    // cause that is not one (the activation, for the pending vow's swear,
+    // D-201) is not part of the chain, and the move starts its own.
+    const isMove = (id: CommandId) =>
+      events.some((e) => e.commandId === id && e.type === 'move.invoked');
+    if (isMove(rootCommandId) && !isMove(parent.commandId)) {
+      break;
+    }
     rootCommandId = parent.commandId;
   }
 

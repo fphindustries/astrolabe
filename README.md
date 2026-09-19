@@ -10,7 +10,7 @@ Built first for solo play, then for a private table of up to six players in a sh
 
 ## Status
 
-**Milestone 1, in build.** The golden session plays end to end; the visual design pass and keyboard work are under way. Scope and progress: [docs/milestone-1.md](docs/milestone-1.md).
+**Milestone 1 is complete. Milestone 2 is designed and ready to build.** The current milestone is Campaign Launch: the Chapter 2 Session 0 flow for truths, crew, shared starship, starting sector, local connection, inciting incident, and the opening vow. Scope: [docs/milestone-2.md](docs/milestone-2.md). Acceptance narrative: [docs/golden-launch.md](docs/golden-launch.md).
 
 ## Development
 
@@ -38,7 +38,7 @@ To run the app, copy `.env.example` to `.env` and fill in `ANTHROPIC_API_KEY`. T
 
 ```bash
 npm run db:up
-npm run db:seed                             # fixture campaigns (D-122): "session 1" to play Beat 1 on, "golden session" to read the finished session
+npm run db:seed                             # fixture campaigns (D-122, D-205): the golden launch just launched, "session 1" to play Beat 1 on, "golden session" to read the finished session
 npm run dev --workspace @astrolabe/server   # :3000
 npm run dev --workspace @astrolabe/web      # :5173
 ```
@@ -87,7 +87,7 @@ docker compose pull
 docker compose up -d
 ```
 
-This pulls the published image, starts Postgres, migrates, and serves the app at `http://localhost:3000` (or `http://<host>:3000` from another machine on a Linux server; change the port with `ASTROLABE_PORT`). **A fresh database seeds itself on first start** (D-158) with the same example campaigns local development uses — "Lantern Wake" (ready for Begin Session), "Lantern Wake (session 2 open)", and "Lantern Wake (golden session)" (played through to the end) — so there's something to open right away. This is a stopgap for as long as campaign and character creation are still catching up; it runs once and does nothing on later restarts. The manual `db:seed` and `db:reset` commands remain refused under `NODE_ENV=production`, unchanged — that's a different, destructive command, not the automatic seed. Postgres is published on `127.0.0.1` only. There is no authentication in Milestone 1, so keep the app on a trusted network. Campaign data lives in the `astrolabe-pgdata` volume; back it up with `docker compose exec db pg_dump -U astrolabe astrolabe`.
+This pulls the published image, starts Postgres, migrates, and serves the app at `http://localhost:3000` (or `http://<host>:3000` from another machine on a Linux server; change the port with `ASTROLABE_PORT`). **A fresh database starts empty** (D-170): the first thing you see is the campaign list, and **New campaign** opens Campaign Launch, which walks you from a blank campaign through truths, crew, ship, sector, connection and inciting incident to Session 1 and its first vow. It works with or without an Anthropic API key: without one, every Guide proposal says it is unavailable and every manual and oracle path still completes the launch. An existing database keeps every campaign it already has, including the example campaigns earlier versions seeded on first start (D-158, now retired). The `db:seed` and `db:reset` commands are for development and refuse under `NODE_ENV=production`. Postgres is published on `127.0.0.1` only. There is no authentication in Milestone 1, so keep the app on a trusted network. Campaign data lives in the `astrolabe-pgdata` volume; back it up with `docker compose exec db pg_dump -U astrolabe astrolabe`.
 
 ### Updating
 
@@ -109,8 +109,11 @@ Working on the app itself, or `main`'s image isn't reachable: `docker compose up
 | Document | What it is |
 |---|---|
 | [docs/design-record.md](docs/design-record.md) | The living design record: charter, decision log, authority model, rules scope, creation flows, play screen, architecture, and milestone plan |
-| [docs/golden-session.md](docs/golden-session.md) | A scripted slice of ideal play, used as both the acceptance test and the fun test |
-| [docs/milestone-1.md](docs/milestone-1.md) | Current scope, acceptance criteria, and task breakdown |
+| [docs/milestone-2.md](docs/milestone-2.md) | Current Campaign Launch scope, acceptance criteria, domain model, and ordered task breakdown |
+| [docs/golden-launch.md](docs/golden-launch.md) | Milestone 2's scripted Session 0 acceptance and fun test |
+| [docs/milestone-1.md](docs/milestone-1.md) | Completed Milestone 1 scope and implementation record |
+| [docs/golden-session.md](docs/golden-session.md) | Milestone 1's scripted play and regression test |
+| [AGENTS.md](AGENTS.md) | Repository guide and engineering boundaries for Codex and other coding agents |
 | [CLAUDE.md](CLAUDE.md) | Working agreement and repository conventions for Claude Code |
 
 The design record is the source of truth. Every approved decision carries an ID (D-01, D-02, …) so code, issues, and commits can reference it.

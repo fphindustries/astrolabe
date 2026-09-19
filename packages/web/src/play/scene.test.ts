@@ -38,6 +38,20 @@ describe('toSceneHeaderView', () => {
     });
   });
 
+  it('names Session 1’s opening settlement, a launch location (9.0i, D-168)', () => {
+    const locationId = 'loc-1' as EntityId;
+    const launchLocations = {
+      [locationId]: { name: 'Ember Hold' },
+    } as unknown as Parameters<typeof toSceneHeaderView>[3];
+    const view = toSceneHeaderView(
+      { id: 'scene-1' as never, title: 'The dock at Ember Hold', locationId },
+      {},
+      null,
+      launchLocations,
+    );
+    expect(view).toEqual({ title: 'The dock at Ember Hold', locationName: 'Ember Hold' });
+  });
+
   it('omits locationName when the referenced entity is not (yet) projected', () => {
     const view = toSceneHeaderView(
       { id: 'scene-1' as never, title: 'The relay station', locationId: 'ent-missing' as EntityId },

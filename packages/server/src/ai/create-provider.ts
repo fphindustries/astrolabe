@@ -1,3 +1,5 @@
+import { planetClassFromRow, settlementLocationFromRow } from '@astrolabe/rules';
+
 import { stubComplicationOptions } from './context/complication.js';
 import { stubSessionSummary } from './context/summary.js';
 import { stubWhatNow } from './context/what-now.js';
@@ -78,9 +80,10 @@ function nonEmpty(value: string | undefined): value is string {
 
 /**
  * Local-development answers for every purpose the app asks for, so a
- * stubbed session plays through without pausing.
+ * stubbed session plays through without pausing. Fixtures reuse the answers
+ * read off a prompt's rolls (10.1b).
  */
-function devStubResponse(
+export function devStubResponse(
   request: { readonly purpose: string; readonly user: string },
   mode: 'text' | 'structured',
 ): StubResponse {
@@ -175,6 +178,35 @@ function devStubResponse(
   if (mode === 'structured' && request.purpose === 'character_proposal') {
     return { kind: 'structured', value: STUB_CHARACTER_PROPOSAL };
   }
+  if (mode === 'structured' && request.purpose === 'truth_proposal') {
+    // The first official option, which every truth has, so the stubbed path
+    // through Campaign Launch reaches an acceptance rather than a refusal.
+    // The no-provider path is the *other* half of what the launch has to
+    // prove (A42), and it is reached by configuring no provider at all.
+    return {
+      kind: 'structured',
+      value: {
+        resolution: 'selected',
+        optionIndex: 0,
+        reason: 'Stub recommendation: the first option fits what the campaign has so far.',
+      },
+    };
+  }
+  if (mode === 'structured' && request.purpose === 'starship_proposal') {
+    return { kind: 'structured', value: stubStarshipProposal(request.user) };
+  }
+  if (mode === 'structured' && request.purpose === 'settlement_proposal') {
+    return { kind: 'structured', value: stubSettlementProposal(request.user) };
+  }
+  if (mode === 'structured' && request.purpose === 'connection_proposal') {
+    return { kind: 'structured', value: stubConnectionProposal(request.user) };
+  }
+  if (mode === 'structured' && request.purpose === 'sector_name_proposal') {
+    return { kind: 'structured', value: stubSectorName(request.user) };
+  }
+  if (mode === 'structured' && request.purpose === 'trouble_proposal') {
+    return { kind: 'structured', value: stubTroubleProposal(request.user) };
+  }
   if (mode === 'structured') {
     return {
       kind: 'error',
@@ -188,15 +220,138 @@ function devStubResponse(
   };
 }
 
+/**
+ * A ship that cites every roll it was given (7.0e), so the stubbed launch
+ * reaches an acceptance. The quirk count is read off the rolls in the prompt,
+ * because the schema demands exactly as many quirks as were rolled.
+ */
+function stubStarshipProposal(user: string) {
+  const quirkKeys = ['quirk_1', 'quirk_2'].filter((key) => user.includes(`- ${key} (`));
+  return {
+    name: { value: 'Stub Wake', reason: 'Stub proposal: the name roll.', groundedIn: ['name'] },
+    appearance: { value: 'A patched, dependable hull.', reason: 'Stub proposal: its history.' },
+    history: {
+      value: 'Stub history, read off the roll.',
+      reason: 'Stub proposal: the history roll.',
+      groundedIn: ['history'],
+    },
+    quirks: quirkKeys.map((key, index) => ({
+      value: `Stub quirk ${index + 1}.`,
+      reason: 'Stub proposal: the quirk roll.',
+      groundedIn: [key],
+    })),
+    reason: 'Stub proposal: the ship as the rolls describe it.',
+  };
+}
+
+/**
+ * A settlement that cites every roll it was given (8.0e), so the stubbed launch
+ * reaches an acceptance. What to answer is read off the rolls in the prompt:
+ * the location and planet class must be the rolled ones, and the schema wants
+ * exactly as many projects and first looks as were rolled.
+ */
+function stubSettlementProposal(user: string) {
+  const rolls = oracleRollsOf(user);
+  const rolled = (key: string) =>
+    new RegExp(`^- ${key} \\([^)]*\\): (.*)$`, 'm').exec(rolls)?.[1]?.trim();
+  const cite = (key: string, value: string) => ({
+    value,
+    reason: `Stub proposal: the ${key} roll.`,
+    groundedIn: [key],
+  });
+  const location = settlementLocationFromRow(rolled('location') ?? '') ?? 'deep_space';
+  const planetClass = planetClassFromRow(rolled('planet_class') ?? '');
+  const projects = ['project_1', 'project_2'].filter((key) => rolled(key) !== undefined);
+  const looks = ['first_look_1', 'first_look_2'].filter((key) => rolled(key) !== undefined);
+  return {
+    name: cite('name', rolled('name') ?? 'Stub Settlement'),
+    location: { ...cite('location', location), value: location },
+    population: cite('population', rolled('population') ?? 'Stub population'),
+    authority: cite('authority', rolled('authority') ?? 'Stub authority'),
+    projects: projects.map((key) => cite(key, rolled(key)!)),
+    planet:
+      planetClass === undefined
+        ? null
+        : {
+            planetClass: { ...cite('planet_class', planetClass), value: planetClass },
+            name: cite('planet_name', rolled('planet_name') ?? 'Stub World'),
+          },
+    firstLooks: looks.length === 0 ? null : looks.map((key) => cite(key, rolled(key)!)),
+    reason: 'Stub proposal: the settlement as the rolls describe it.',
+  };
+}
+
+/**
+ * The `<oracle_rolls>` block of a proposal prompt. The campaign block above it
+ * lists truths in the same `- key (label): text` shape, so reading the whole
+ * prompt would cite a truth as a roll.
+ */
+function oracleRollsOf(user: string): string {
+  return /<oracle_rolls>([\s\S]*?)<\/oracle_rolls>/.exec(user)?.[1] ?? '';
+}
+
+/** A local connection read straight off the NPC recipe's rolls (9.0c). */
+function stubConnectionProposal(user: string) {
+  const rolls = oracleRollsOf(user);
+  const rolled = (key: string) =>
+    new RegExp(`^- ${key} \\([^)]*\\): (.*)$`, 'm').exec(rolls)?.[1]?.trim();
+  const cite = (keys: readonly string[], value: string) => ({
+    value,
+    reason: `Stub proposal: the ${keys.join(' and ')} roll.`,
+    groundedIn: [...keys],
+  });
+  const name = [rolled('given_name'), rolled('family_name')].filter((part) => part !== undefined);
+  return {
+    npcName: cite(['given_name', 'family_name'], name.join(' ') || 'Stub Contact'),
+    role: cite(['role'], rolled('role') ?? 'Stub role'),
+    goal: cite(['goal'], rolled('goal') ?? 'Stub goal'),
+    firstLook: cite(['first_look'], rolled('first_look') ?? 'Stub first look'),
+    disposition: cite(['disposition'], rolled('disposition') ?? 'Stub disposition'),
+    reason: 'Stub proposal: the connection as the rolls describe them.',
+  };
+}
+
+/** A sector name read straight off its prefix and suffix (8.6). */
+function stubSectorName(user: string) {
+  const rolls = oracleRollsOf(user);
+  const part = (key: string) =>
+    new RegExp(`^- ${key} \\([^)]*\\): (.*)$`, 'm').exec(rolls)?.[1]?.trim();
+  return {
+    name: {
+      value:
+        [part('prefix'), part('suffix')].filter((word) => word !== undefined).join(' ') ||
+        'Stub Reach',
+      reason: 'Stub proposal: the two name rolls, together.',
+      groundedIn: ['prefix', 'suffix'],
+    },
+    reason: 'Stub proposal: the sector as the rolls name it.',
+  };
+}
+
+/** A trouble read straight off its roll (8.0e). */
+function stubTroubleProposal(user: string) {
+  const key = /^- (\S+) \(/m.exec(oracleRollsOf(user))?.[1] ?? 'trouble';
+  return {
+    text: {
+      value: 'Stub trouble, read off the roll.',
+      reason: 'Stub proposal: the trouble roll.',
+      groundedIn: [key],
+    },
+    reason: 'Stub proposal: the trouble as the roll describes it.',
+  };
+}
+
 /** A build that passes the creation rules and cites every roll D-123 makes (3.3). */
 const STUB_CHARACTER_PROPOSAL = {
   name: {
-    value: 'Stub Given Stub Family',
+    // Not "Stub": the stub's narration opens with that word, and a passage
+    // naming a player character in a world segment is withdrawn (D-127, 10.4).
+    value: 'Sam Placeholder',
     reason: 'Stub proposal: the two name rolls, together.',
     groundedIn: ['given-name', 'family-name'],
   },
   callsign: {
-    value: 'Stub',
+    value: 'Placeholder',
     reason: 'Stub proposal: the callsign roll.',
     groundedIn: ['callsign'],
   },
@@ -227,6 +382,19 @@ const STUB_CHARACTER_PROPOSAL = {
     },
   ],
   pronouns: { value: null, reason: 'Stub proposal: the concept states none.' },
+  // The Campaign Launch fields (6.3). Without these the stubbed launch path
+  // fails its own schema, which is the one path the golden launch runs on.
+  appearance: {
+    value: 'Stub proposal: a jacket worn through at the elbows.',
+    reason: 'Stub proposal: a working spacer.',
+  },
+  backstory: {
+    kind: 'written',
+    text: 'Stub backstory, built from both prompts.',
+    reason: 'Stub proposal: the two backstory rolls.',
+    groundedIn: ['backstory-1', 'backstory-2'],
+  },
+  signatureGear: { value: null, reason: 'Stub proposal: nothing the concept names.' },
 };
 
 /**
@@ -249,6 +417,8 @@ function stubIncidentProposal(user: string) {
         truths: truth !== undefined ? [truth] : [],
         locations: [],
         crew: crew !== undefined ? [crew] : [],
+        // Required once the campaign has a starship, trouble or connection (9.2).
+        launchFacts: [],
       },
     })),
   };

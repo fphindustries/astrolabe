@@ -1,11 +1,13 @@
-import type { MoveId, OracleId } from '@astrolabe/rules';
+import type { CharacterId, MoveId, OracleId } from '@astrolabe/rules';
 import type { AstrolabeEvent, CampaignSettings, EventId } from '@astrolabe/shared';
 import { describe, expect, it } from 'vitest';
 
 import {
+  character,
   goldenSessionPrelude,
   PLAYER_ACTOR,
   ROOK,
+  VESNA,
   AI_ACTOR,
   type LogBuilder,
 } from '../../projection/fixtures.js';
@@ -21,7 +23,7 @@ import {
   buildRevisionRequest,
   GUIDE_RULES,
 } from './prompt.js';
-import { renderState } from './render-state.js';
+import { LEGACY_STARSHIP_LINE, renderState } from './render-state.js';
 
 const FACE_DANGER = 'move:adventure/face-danger' as MoveId;
 const PAY_THE_PRICE = 'move:fate/pay-the-price' as MoveId;
@@ -596,6 +598,325 @@ describe('renderState (task 7.4)', () => {
     expect(text).toContain(
       'Vow (formidable) "Recover the flight recorder of Meridian\'s Hope": 0 of 10 progress boxes',
     );
+  });
+
+  it('carries a launched campaign’s truths into play narration (D-183)', () => {
+    // The defect group 5 exists to fix: this read was `state.truths`, the
+    // Milestone 1 fold, so a campaign that decided its truths through Campaign
+    // Launch was narrated by a Guide that knew none of them.
+    const text = renderState(
+      project(
+        goldenSessionPrelude()
+          .add('truth.decided', {
+            truthId: 'oracle:cataclysm' as never,
+            resolution: 'selected',
+            optionIndex: 0,
+            text: 'The Sun Plague extinguished the stars.',
+            summary: 'The Sun Plague.',
+            provenance: 'official_choice',
+            groundedIn: [],
+          })
+          .build(),
+      ),
+    );
+
+    expect(text).toContain('Setting truths:');
+    expect(text).toContain('- Cataclysm: The Sun Plague extinguished the stars.');
+  });
+
+  // 7.0h: the same defect as D-183, for the ship.
+  it('carries the launched ship into play narration, with each module’s owner', () => {
+    const text = renderState(
+      project(
+        goldenSessionPrelude()
+          .add('character.revised', {
+            characterId: VESNA,
+            character: {
+              ...character(VESNA, 'Vesna Kade', 7),
+              assets: ['asset:module/sensor-array' as never],
+              appearance: 'A flight jacket.',
+              backstory: { kind: 'discover_in_play' },
+              backgroundVow: { title: 'Chart the Drift', rank: 'formidable' },
+            },
+            provenance: 'player_written',
+            groundedIn: [],
+          })
+          .add('starship.established', {
+            starshipId: 'aaaa8888-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as never,
+            name: 'Lantern Wake',
+            appearance: 'A patched hull.',
+            history: 'Won in a wager.',
+            quirks: ['Its clocks run slow.'],
+            integrity: { value: 5, min: 0, max: 5 },
+            assetId: 'asset:command-vehicle/starship' as never,
+            provenance: 'player_written',
+            groundedIn: [],
+          })
+          .build(),
+      ),
+    );
+
+    expect(text).toContain(
+      "The crew's shared starship: Lantern Wake, integrity 5 of 5 - A patched hull.; " +
+        'history: Won in a wager.; quirks: Its clocks run slow.; ' +
+        "installed modules: Sensor Array (Vesna Kade's).",
+    );
+  });
+
+  // 8.0j: the same defect as D-183 and 7.0h, for the sector.
+  describe('a launched sector in play narration (8.0j)', () => {
+    const SECTOR = 'aaaa2222-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as never;
+    const STAR = 'aaaa3333-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as never;
+    const PLANET = 'aaaa4444-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as never;
+    const DEEPWATER = 'aaaa5555-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as never;
+    const DRIFT = 'aaaa7777-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as never;
+    const accepted = { provenance: 'player_written', groundedIn: [] } as const;
+    const sectorLog = () =>
+      goldenSessionPrelude()
+        .add('location.added', {
+          kind: 'star',
+          id: STAR,
+          name: 'Cinder',
+          details: { description: 'Smoldering red star' },
+          ...accepted,
+        })
+        .add('sector.configured', {
+          sectorId: SECTOR,
+          name: 'Ashen Anvil',
+          region: 'outlands',
+          baseline: { settlements: 3, passages: 2 },
+          starId: STAR,
+          ...accepted,
+        })
+        .add('location.added', {
+          kind: 'planet',
+          id: PLANET,
+          name: 'Hollow',
+          planetClass: 'ice',
+          details: { atmosphere: 'Thin and cold' },
+          ...accepted,
+        })
+        .add('location.added', {
+          kind: 'settlement',
+          id: DEEPWATER,
+          name: 'Deepwater Anchorage',
+          location: 'orbital',
+          population: 'Thousands',
+          authority: 'Corporate',
+          projects: ['Ice mining'],
+          planetId: PLANET,
+          ...accepted,
+        })
+        .add('location.added', {
+          kind: 'other',
+          id: DRIFT,
+          name: 'Kessel Drift',
+          description: 'A slow river of broken ice',
+          ...accepted,
+        })
+        .add('route.added', { from: DEEPWATER, to: DRIFT, ...accepted })
+        .add('starting_settlement.selected', { settlementId: DEEPWATER })
+        .add('trouble.established', {
+          kind: 'settlement',
+          troubleId: 'aaaa9999-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as never,
+          ownerId: DEEPWATER,
+          text: 'The ice haulers have stopped answering.',
+          ...accepted,
+        })
+        .add('trouble.established', {
+          kind: 'sector',
+          troubleId: 'aaaa1111-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as never,
+          text: 'A blockade chokes trade.',
+          ...accepted,
+        });
+
+    it('names the sector, its star, each place, the passages and the troubles', () => {
+      const text = renderState(project(sectorLog().build()));
+
+      expect(text).toContain(
+        'The starting sector: Ashen Anvil, in the outlands; its star: Cinder (Smoldering red star).',
+      );
+      expect(text).toMatch(
+        /- Deepwater Anchorage \[starting settlement\] \(orbital; population: Thousands/,
+      );
+      expect(text).toContain('; planet Hollow (planet, class ice; atmosphere: Thin and cold)');
+      expect(text).toContain('; passages to Kessel Drift');
+      expect(text).toContain(
+        '- Kessel Drift (A slow river of broken ice); passages to Deepwater Anchorage',
+      );
+      expect(text).toContain(
+        '- Trouble in Deepwater Anchorage: The ice haulers have stopped answering.',
+      );
+      expect(text).toContain('- Trouble in the sector: A blockade chokes trade.');
+      // A planet and a star are details, not places of their own (D-165).
+      expect(text).not.toMatch(/^- Hollow/m);
+      expect(text).not.toMatch(/^- Cinder/m);
+    });
+
+    it('opens a scene at a launch location by name (D-168)', () => {
+      const text = renderState(
+        project(
+          sectorLog()
+            .add('scene.started', {
+              sceneId: 'aaaa6666-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as never,
+              title: 'The ice dock',
+              locationId: DEEPWATER,
+            })
+            .build(),
+        ),
+      );
+
+      expect(text).toContain('Current scene: The ice dock at Deepwater Anchorage.');
+    });
+
+    it('says nothing about a sector a campaign never configured', () => {
+      expect(renderState(project(goldenSessionPrelude().build()))).not.toContain(
+        'The starting sector',
+      );
+    });
+  });
+
+  // 9.0k: the same defect as D-183, 7.0h and 8.0j, for the incident and its vow.
+  describe('the incident and its pending vow in play narration (9.0k)', () => {
+    const INCIDENT = 'bbbb1111-bbbb-4bbb-8bbb-bbbbbbbbbbbb' as never;
+    const launched = () =>
+      goldenSessionPrelude()
+        .add('incident.accepted', {
+          incidentId: INCIDENT,
+          text: 'A distress beacon carries the lost colony’s call sign.',
+          citedFactEventIds: [],
+          rank: 'formidable',
+          rollerId: VESNA,
+          participants: [VESNA, ROOK],
+          openingScene: { title: 'The dock' },
+          provenance: 'player_written',
+          groundedIn: [],
+        })
+        .add('campaign.activated', {
+          launchFactEventIds: [],
+          sessionId: 'bbbb2222-bbbb-4bbb-8bbb-bbbbbbbbbbbb' as never,
+          sceneId: 'bbbb3333-bbbb-4bbb-8bbb-bbbbbbbbbbbb' as never,
+          pendingVow: {
+            incidentId: INCIDENT,
+            rank: 'formidable',
+            rollerId: VESNA,
+            participants: [VESNA, ROOK],
+          },
+          readinessVersion: 1,
+        });
+
+    it('names the incident, and the unsworn vow with its roller and sharing crew', () => {
+      const text = renderState(project(launched().build()));
+
+      expect(text).toContain(
+        'The inciting incident: A distress beacon carries the lost colony’s call sign.',
+      );
+      expect(text).toContain(
+        'The inciting vow (formidable) is not yet sworn: Vesna Kade is to swear it with ' +
+          'Swear an Iron Vow, shared with Rook Ilari.',
+      );
+    });
+
+    it('shares a vow with no one when its roller swears it alone', () => {
+      const text = renderState(
+        project(
+          goldenSessionPrelude()
+            .add('campaign.activated', {
+              launchFactEventIds: [],
+              sessionId: 'bbbb2222-bbbb-4bbb-8bbb-bbbbbbbbbbbb' as never,
+              sceneId: 'bbbb3333-bbbb-4bbb-8bbb-bbbbbbbbbbbb' as never,
+              pendingVow: {
+                incidentId: INCIDENT,
+                rank: 'dangerous',
+                rollerId: VESNA,
+                participants: [VESNA],
+              },
+              readinessVersion: 1,
+            })
+            .build(),
+        ),
+      );
+
+      expect(text).toContain('Vesna Kade is to swear it with Swear an Iron Vow.');
+    });
+
+    it('stops calling the vow pending once it is sworn (D-201)', () => {
+      const text = renderState(
+        project(
+          launched()
+            .add('track.created', {
+              kind: 'vow',
+              trackId: 'bbbb4444-bbbb-4bbb-8bbb-bbbbbbbbbbbb' as never,
+              title: 'A distress beacon carries the lost colony’s call sign.',
+              rank: 'formidable',
+              characterId: VESNA,
+              participantCharacterIds: [VESNA, ROOK],
+              incidentId: INCIDENT,
+            })
+            .build(),
+        ),
+      );
+
+      expect(text).not.toContain('not yet sworn');
+      expect(text).toContain('The inciting incident:');
+    });
+  });
+
+  it('says nothing about a ship a campaign never established', () => {
+    expect(renderState(project(goldenSessionPrelude().build()))).not.toContain('starship');
+  });
+
+  // D-193's interim line: a Milestone 1 crew's granted ship, said once.
+  it('carries a Milestone 1 crew’s granted ship once, at crew level, not on each sheet', () => {
+    const text = renderState(
+      project(
+        goldenSessionPrelude()
+          .add('character.created', {
+            ...character('aaaa6666-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as CharacterId, 'Juno Marr', 3),
+            assets: ['asset:path/gearhead' as never, 'asset:command-vehicle/starship' as never],
+          })
+          .build(),
+      ),
+    );
+
+    expect(text).toContain(LEGACY_STARSHIP_LINE);
+    expect(text).not.toMatch(/assets: [^\n]*Starship/);
+  });
+
+  it('carries a Milestone 1 campaign’s truths too, through the same read (D-183)', () => {
+    // The positive control for the fold: one representation has to serve both,
+    // or ending the split would have traded one blind spot for another.
+    const text = renderState(
+      project(
+        goldenSessionPrelude()
+          .add('truth.set', {
+            oracleId: 'oracle:cataclysm' as never,
+            source: 'written',
+            text: 'A slow collapse, not one cataclysm.',
+          })
+          .build(),
+      ),
+    );
+
+    expect(text).toContain('- Cataclysm: A slow collapse, not one cataclysm.');
+  });
+
+  it('states a deliberately open truth as open, never as blank (D-162)', () => {
+    const text = renderState(
+      project(
+        goldenSessionPrelude()
+          .add('truth.decided', {
+            truthId: 'oracle:horrors' as never,
+            resolution: 'leave_open',
+            provenance: 'player_written',
+            groundedIn: [],
+          })
+          .build(),
+      ),
+    );
+
+    // An open truth is a fact about the campaign, not a gap the Guide may fill.
+    expect(text).toContain('- Horrors: deliberately left open — do not settle it');
   });
 
   it('names recorded pronouns, and says when none are recorded without implying a default (D-131)', () => {

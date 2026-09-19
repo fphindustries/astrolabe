@@ -1,19 +1,36 @@
 import {
-  AddSectorLocationRequestBodySchema,
-  AddSectorRouteRequestBodySchema,
   BeginSessionRequestBodySchema,
   EndSessionRequestBodySchema,
   ApplyMoveChoiceRequestBodySchema,
   BurnMomentumRequestBodySchema,
   CreateCampaignRequestBodySchema,
-  CreateCharacterRequestBodySchema,
   InvokeMoveRequestBodySchema,
   LOCAL_PLAYER_ID,
   ResolvePayThePriceRequestBodySchema,
-  SetTruthRequestBodySchema,
-  SwearIncitingVowRequestBodySchema,
+  SaveLaunchDraftRequestBodySchema,
+  SetLaunchFoundationRequestBodySchema,
+  DecideLaunchTruthRequestBodySchema,
+  ActivateLaunchRequestBodySchema,
+  SaveSharedStarshipRequestBodySchema,
+  ConfigureLaunchSectorRequestBodySchema,
+  CreateLaunchCharacterRequestBodySchema,
+  RemoveLaunchCharacterRequestBodySchema,
+  ReviseLaunchCharacterRequestBodySchema,
+  EstablishLaunchConnectionRequestBodySchema,
+  AcceptLaunchIncidentRequestBodySchema,
+  AmendLaunchFactRequestBodySchema,
+  EntityIdSchema,
+  RemoveLaunchLocationRequestBodySchema,
+  RemoveLaunchRouteRequestBodySchema,
+  SaveLaunchLocationRequestBodySchema,
+  SaveLaunchRouteRequestBodySchema,
+  SetStartingSettlementRequestBodySchema,
+  SetSectorLayoutRequestBodySchema,
+  SaveLaunchTroubleRequestBodySchema,
+  RollLaunchOracleRequestBodySchema,
+  RollLaunchRecipeRequestBodySchema,
+  ProposeLaunchCreationRequestBodySchema,
   VoidEventRequestBodySchema,
-  type AddSectorLocationResponse,
   type BeginSessionResponse,
   type EndSessionResponse,
   type BurnMomentumResponse,
@@ -21,42 +38,64 @@ import {
   type CampaignStateResponse,
   type CreateCampaignResponse,
   type CreateCharacterResponse,
+  type RemoveCharacterResponse,
+  type ReviseCharacterResponse,
   type InvokeMoveResponse,
+  type LaunchWorkspaceResponse,
   type EntityGroundingResponse,
   type NarrativeLogResponse,
   type ResolvePayThePriceResponse,
-  type SetTruthResponse,
-  type SwearIncitingVowResponse,
+  type SaveLaunchDraftResponse,
+  type SetLaunchFoundationResponse,
+  type DecideLaunchTruthResponse,
+  type ActivateLaunchResponse,
+  type SaveSharedStarshipResponse,
+  type ConfigureLaunchSectorResponse,
+  type EstablishLaunchConnectionResponse,
+  type AcceptLaunchIncidentResponse,
+  type AmendLaunchFactResponse,
+  type SaveLaunchLocationResponse,
+  type SaveLaunchRouteResponse,
+  type SaveLaunchTroubleResponse,
+  type RollLaunchOracleResponse,
+  type RollLaunchRecipeResponse,
   type VoidEventResponse,
   type VoidPreviewResult,
 } from '@astrolabe/shared';
 import fastifyStatic from '@fastify/static';
-import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import type { Sql } from 'postgres';
 import * as z from 'zod';
 
-import type { CharacterProblem, RandomSource } from '@astrolabe/rules';
+import type { RandomSource } from '@astrolabe/rules';
 
 import type { AiProvider } from '../ai/provider.js';
 import { AiStatus } from '../ai/status.js';
 import { owedPassages } from '../ai/context/index.js';
 import { buildNarrativeLog, oracleChips } from '../projection/narrative-log.js';
 import { registerAiRoutes } from './ai-routes.js';
-import { parseCampaignId, parseEntityId, parseEventId, requireCampaignExists } from './params.js';
-import { project } from '../projection/project.js';
 import {
-  addSectorLocation,
-  addSectorRoute,
+  parseCampaignId,
+  parseCharacterId,
+  parseEntityId,
+  parseEventId,
+  requireCampaignExists,
+} from './params.js';
+import { project } from '../projection/project.js';
+import { buildLaunchWorkspace } from '../launch/workspace.js';
+import {
   applyMoveChoice,
   beginSession,
   endSession,
   SessionRejectedError,
   burnMomentum,
-  CharacterRejectedError,
+  LaunchCharacterRejectedError,
+  UnknownCharacterError,
   UnknownProposalError,
   createCampaign,
   createCharacter,
-  IncitingVowRejectedError,
+  removeCharacter,
+  reviseCharacter,
   invokeMove,
   latestSessionId,
   listCampaigns,
@@ -65,10 +104,27 @@ import {
   readEvents,
   readNarrativeEvents,
   resolvePayThePriceMethod,
-  SectorRouteRejectedError,
-  setTruth,
-  swearIncitingVow,
-  TruthRejectedError,
+  saveLaunchDraft,
+  setLaunchFoundation,
+  decideTruth,
+  activateLaunch,
+  saveSharedStarship,
+  configureLaunchSector,
+  establishLaunchConnection,
+  reviseLaunchConnection,
+  acceptLaunchIncident,
+  amendLaunchFact,
+  removeLaunchLocation,
+  removeLaunchRoute,
+  saveLaunchLocation,
+  saveLaunchRoute,
+  setStartingSettlement,
+  setSectorLayout,
+  saveLaunchTrouble,
+  rollLaunchOracle,
+  rollLaunchRecipe,
+  proposeLaunchCreation,
+  LaunchRejectedError,
   voidEvent,
   VoidRefusedError,
 } from '../db/index.js';
@@ -126,6 +182,38 @@ export interface BuildAppOptions {
 
 interface CampaignParams {
   readonly id: string;
+}
+
+interface LocationParams extends CampaignParams {
+  locationId: string;
+}
+
+interface CrewParams extends CampaignParams {
+  readonly characterId: string;
+}
+
+/**
+ * The refusals both crew routes share (6.0d).
+ *
+ * 404 for a character the campaign does not have, so a stale link reads as
+ * "not here" rather than as a bad request; 422 for a launch that is closed
+ * (D-178) or a draft the rules reject, which is the shape every other launch
+ * route already uses.
+ */
+function crewFailure(error: unknown, reply: FastifyReply): { problem: string; reason?: string } {
+  if (error instanceof UnknownCharacterError) {
+    reply.code(404);
+    return { problem: error.message };
+  }
+  if (error instanceof LaunchRejectedError) {
+    reply.code(422);
+    return { problem: error.message, reason: error.reason };
+  }
+  if (error instanceof LaunchCharacterRejectedError) {
+    reply.code(422);
+    return { problem: error.message };
+  }
+  throw error;
 }
 
 interface EventParams {
@@ -208,6 +296,22 @@ export function buildApp({
             ? []
             : owedPassages(events, state.session.id),
       };
+    },
+  );
+
+  app.get<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/launch',
+    async (request, reply): Promise<LaunchWorkspaceResponse | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined) return undefined;
+      const events = await readEvents(sql, id);
+      const lastEvent = events[events.length - 1];
+      if (lastEvent === undefined) {
+        reply.code(404);
+        return undefined;
+      }
+      const workspace = buildLaunchWorkspace(events);
+      return { headSeq: lastEvent.seq, ...workspace };
     },
   );
 
@@ -340,61 +444,71 @@ export function buildApp({
     },
   );
 
+  app.put<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/launch/drafts',
+    async (
+      request,
+      reply,
+    ): Promise<SaveLaunchDraftResponse | { problem: string; reason: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = SaveLaunchDraftRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        await saveLaunchDraft(sql, {
+          campaignId: id,
+          commandId: parsed.data.commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          draft: parsed.data.draft,
+        });
+        reply.code(201);
+        return { section: parsed.data.draft.section };
+      } catch (error) {
+        if (error instanceof LaunchRejectedError) {
+          reply.code(422);
+          return { problem: error.message, reason: error.reason };
+        }
+        throw error;
+      }
+    },
+  );
+
   app.post<{ Params: CampaignParams }>(
-    '/api/campaigns/:id/characters',
+    '/api/campaigns/:id/launch/proposals',
     async (
       request,
       reply,
     ): Promise<
-      | CreateCharacterResponse
-      | { problems: readonly CharacterProblem[]; problem?: string }
-      | undefined
+      { targetKind: string; targetId: string } | { problem: string; reason: string } | undefined
     > => {
       const id = parseCampaignId(request.params.id, reply);
-      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
-        return undefined;
-      }
-
-      const parsedBody = CreateCharacterRequestBodySchema.safeParse(request.body);
-      if (!parsedBody.success) {
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = ProposeLaunchCreationRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
         reply.code(400);
         return undefined;
       }
-      const {
-        commandId,
-        draft,
-        backgroundVow,
-        grantCommandVehicle,
-        hooks,
-        pronouns,
-        proposalCommandId,
-      } = parsedBody.data;
-
       try {
-        const created = await createCharacter(sql, {
+        const { commandId, targetId, rationale, groundedIn, ...proposal } = parsed.data;
+        const result = await proposeLaunchCreation(sql, {
           campaignId: id,
           commandId,
           actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
-          draft,
-          ...(backgroundVow !== undefined ? { backgroundVow } : {}),
-          ...(grantCommandVehicle !== undefined ? { grantCommandVehicle } : {}),
-          ...(hooks !== undefined ? { hooks } : {}),
-          ...(pronouns !== undefined ? { pronouns } : {}),
-          ...(proposalCommandId !== undefined ? { proposalCommandId } : {}),
+          // The discriminated pair travels together, so the union stays narrow.
+          proposal,
+          targetId,
+          rationale,
+          groundedIn,
         });
         reply.code(201);
-        return {
-          characterId: created.characterId,
-          ...(created.vowTrackId !== undefined ? { vowTrackId: created.vowTrackId } : {}),
-        };
+        return result.response as { targetKind: string; targetId: string };
       } catch (error) {
-        if (error instanceof CharacterRejectedError) {
+        if (error instanceof LaunchRejectedError) {
           reply.code(422);
-          return { problems: error.problems };
-        }
-        if (error instanceof UnknownProposalError) {
-          reply.code(422);
-          return { problems: [], problem: error.message };
+          return { problem: error.message, reason: error.reason };
         }
         throw error;
       }
@@ -402,100 +516,506 @@ export function buildApp({
   );
 
   app.post<{ Params: CampaignParams }>(
-    '/api/campaigns/:id/truths',
-    async (request, reply): Promise<SetTruthResponse | { problem: string } | undefined> => {
-      const id = parseCampaignId(request.params.id, reply);
-      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
-        return undefined;
-      }
-
-      const parsedBody = SetTruthRequestBodySchema.safeParse(request.body);
-      if (!parsedBody.success) {
-        reply.code(400);
-        return undefined;
-      }
-      const { commandId, oracleId, source, rowIndex, text } = parsedBody.data;
-
-      try {
-        const answered = await setTruth(sql, {
-          ...dice,
-          campaignId: id,
-          commandId,
-          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
-          oracleId,
-          source,
-          ...(rowIndex !== undefined ? { rowIndex } : {}),
-          ...(text !== undefined ? { text } : {}),
-        });
-        reply.code(201);
-        return { text: answered.text };
-      } catch (error) {
-        if (error instanceof TruthRejectedError) {
-          reply.code(422);
-          return { problem: error.message };
-        }
-        throw error;
-      }
-    },
-  );
-
-  app.post<{ Params: CampaignParams }>(
-    '/api/campaigns/:id/sector/locations',
+    '/api/campaigns/:id/launch/recipe-rolls',
     async (
       request,
       reply,
-    ): Promise<AddSectorLocationResponse | { problem: string } | undefined> => {
+    ): Promise<RollLaunchRecipeResponse | { problem: string; reason: string } | undefined> => {
       const id = parseCampaignId(request.params.id, reply);
-      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
-        return undefined;
-      }
-
-      const parsedBody = AddSectorLocationRequestBodySchema.safeParse(request.body);
-      if (!parsedBody.success) {
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = RollLaunchRecipeRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
         reply.code(400);
         return undefined;
       }
-      const { commandId, name, description } = parsedBody.data;
-
-      const added = await addSectorLocation(sql, {
-        campaignId: id,
-        commandId,
-        actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
-        name,
-        description,
-      });
-      reply.code(201);
-      return { locationId: added.locationId };
+      try {
+        const result = await rollLaunchRecipe(sql, {
+          ...dice,
+          campaignId: id,
+          commandId: parsed.data.commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          selector: parsed.data.selector,
+        });
+        reply.code(201);
+        return result.response as RollLaunchRecipeResponse;
+      } catch (error) {
+        if (error instanceof LaunchRejectedError) {
+          reply.code(422);
+          return { problem: error.message, reason: error.reason };
+        }
+        throw error;
+      }
     },
   );
 
   app.post<{ Params: CampaignParams }>(
-    '/api/campaigns/:id/sector/routes',
-    async (request, reply): Promise<Record<string, never> | { problem: string } | undefined> => {
+    '/api/campaigns/:id/launch/oracle-rolls',
+    async (
+      request,
+      reply,
+    ): Promise<RollLaunchOracleResponse | { problem: string; reason: string } | undefined> => {
       const id = parseCampaignId(request.params.id, reply);
-      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
-        return undefined;
-      }
-
-      const parsedBody = AddSectorRouteRequestBodySchema.safeParse(request.body);
-      if (!parsedBody.success) {
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = RollLaunchOracleRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
         reply.code(400);
         return undefined;
       }
-      const { commandId, fromLocationId, toLocationId } = parsedBody.data;
-
       try {
-        await addSectorRoute(sql, {
+        const result = await rollLaunchOracle(sql, {
+          ...dice,
           campaignId: id,
-          commandId,
+          commandId: parsed.data.commandId,
           actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
-          fromLocationId,
-          toLocationId,
+          oracleId: parsed.data.oracleId,
         });
         reply.code(201);
-        return {};
+        return result.response as RollLaunchOracleResponse;
       } catch (error) {
-        if (error instanceof SectorRouteRejectedError) {
+        if (error instanceof LaunchRejectedError) {
+          reply.code(422);
+          return { problem: error.message, reason: error.reason };
+        }
+        throw error;
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/launch/troubles',
+    async (
+      request,
+      reply,
+    ): Promise<SaveLaunchTroubleResponse | { problem: string; reason: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = SaveLaunchTroubleRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        const result = await saveLaunchTrouble(sql, {
+          campaignId: id,
+          commandId: parsed.data.commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          trouble: parsed.data.trouble,
+          ...(parsed.data.proposalEventId === undefined
+            ? {}
+            : { proposalEventId: parsed.data.proposalEventId }),
+          ...(parsed.data.groundedIn === undefined ? {} : { groundedIn: parsed.data.groundedIn }),
+        });
+        reply.code(201);
+        return result.response as SaveLaunchTroubleResponse;
+      } catch (error) {
+        if (error instanceof LaunchRejectedError) {
+          reply.code(422);
+          return { problem: error.message, reason: error.reason };
+        }
+        throw error;
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/launch/starting-settlement',
+    async (
+      request,
+      reply,
+    ): Promise<{ settlementId: string } | { problem: string; reason: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = SetStartingSettlementRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        await setStartingSettlement(sql, {
+          campaignId: id,
+          commandId: parsed.data.commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          settlementId: parsed.data.settlementId,
+        });
+        reply.code(201);
+        return { settlementId: parsed.data.settlementId };
+      } catch (error) {
+        if (error instanceof LaunchRejectedError) {
+          reply.code(422);
+          return { problem: error.message, reason: error.reason };
+        }
+        throw error;
+      }
+    },
+  );
+
+  app.put<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/launch/sector-layout',
+    async (
+      request,
+      reply,
+    ): Promise<{ locations: number } | { problem: string; reason: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = SetSectorLayoutRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        const result = await setSectorLayout(sql, {
+          campaignId: id,
+          commandId: parsed.data.commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          coordinates: parsed.data.coordinates,
+        });
+        reply.code(201);
+        return result.response as { locations: number };
+      } catch (error) {
+        if (error instanceof LaunchRejectedError) {
+          reply.code(422);
+          return { problem: error.message, reason: error.reason };
+        }
+        throw error;
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/launch/routes',
+    async (
+      request,
+      reply,
+    ): Promise<SaveLaunchRouteResponse | { problem: string; reason: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = SaveLaunchRouteRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        await saveLaunchRoute(sql, {
+          campaignId: id,
+          commandId: parsed.data.commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          route: parsed.data.route,
+        });
+        reply.code(201);
+        return { from: parsed.data.route.from };
+      } catch (error) {
+        if (error instanceof LaunchRejectedError) {
+          reply.code(422);
+          return { problem: error.message, reason: error.reason };
+        }
+        throw error;
+      }
+    },
+  );
+
+  // 8.0g: remove a node or a passage before launch. Append-only (A40): the
+  // reason is required, and the removal is an event rather than a deletion.
+  app.delete<{ Params: LocationParams }>(
+    '/api/campaigns/:id/launch/locations/:locationId',
+    async (
+      request,
+      reply,
+    ): Promise<{ locationId: string } | { problem: string; reason: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) return undefined;
+      const locationId = EntityIdSchema.safeParse(request.params.locationId);
+      const parsed = RemoveLaunchLocationRequestBodySchema.safeParse(request.body);
+      if (!locationId.success || !parsed.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        const result = await removeLaunchLocation(sql, {
+          campaignId: id,
+          commandId: parsed.data.commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          locationId: locationId.data,
+          reason: parsed.data.reason,
+        });
+        return result.response as { locationId: string };
+      } catch (error) {
+        if (error instanceof LaunchRejectedError) {
+          reply.code(422);
+          return { problem: error.message, reason: error.reason };
+        }
+        throw error;
+      }
+    },
+  );
+
+  app.delete<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/launch/routes',
+    async (
+      request,
+      reply,
+    ): Promise<{ from: string } | { problem: string; reason: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = RemoveLaunchRouteRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        const result = await removeLaunchRoute(sql, {
+          campaignId: id,
+          commandId: parsed.data.commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          route: parsed.data.route,
+          reason: parsed.data.reason,
+        });
+        return result.response as { from: string };
+      } catch (error) {
+        if (error instanceof LaunchRejectedError) {
+          reply.code(422);
+          return { problem: error.message, reason: error.reason };
+        }
+        throw error;
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/launch/locations',
+    async (
+      request,
+      reply,
+    ): Promise<SaveLaunchLocationResponse | { problem: string; reason: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = SaveLaunchLocationRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        const result = await saveLaunchLocation(sql, {
+          campaignId: id,
+          commandId: parsed.data.commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          ...(parsed.data.locationId === undefined ? {} : { locationId: parsed.data.locationId }),
+          location: parsed.data.location,
+          ...(parsed.data.planet === undefined ? {} : { planet: parsed.data.planet }),
+          ...(parsed.data.proposalTargetId === undefined
+            ? {}
+            : { proposalTargetId: parsed.data.proposalTargetId }),
+          ...(parsed.data.proposalEventId === undefined
+            ? {}
+            : { proposalEventId: parsed.data.proposalEventId }),
+          ...(parsed.data.groundedIn === undefined ? {} : { groundedIn: parsed.data.groundedIn }),
+        });
+        reply.code(201);
+        return result.response as SaveLaunchLocationResponse;
+      } catch (error) {
+        if (error instanceof LaunchRejectedError) {
+          reply.code(422);
+          return { problem: error.message, reason: error.reason };
+        }
+        throw error;
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/launch/amendments',
+    async (
+      request,
+      reply,
+    ): Promise<AmendLaunchFactResponse | { problem: string; reason: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = AmendLaunchFactRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        const result = await amendLaunchFact(sql, {
+          campaignId: id,
+          commandId: parsed.data.commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          amendment: parsed.data.amendment,
+          reason: parsed.data.reason,
+          supersedesEventId: parsed.data.supersedesEventId,
+        });
+        reply.code(201);
+        return result.response as AmendLaunchFactResponse;
+      } catch (error) {
+        if (error instanceof LaunchRejectedError) {
+          reply.code(422);
+          return { problem: error.message, reason: error.reason };
+        }
+        throw error;
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/launch/incident',
+    async (
+      request,
+      reply,
+    ): Promise<AcceptLaunchIncidentResponse | { problem: string; reason: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = AcceptLaunchIncidentRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        const result = await acceptLaunchIncident(sql, {
+          campaignId: id,
+          commandId: parsed.data.commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          incident: parsed.data.incident,
+          ...(parsed.data.proposal === undefined ? {} : { proposal: parsed.data.proposal }),
+        });
+        reply.code(201);
+        return result.response as AcceptLaunchIncidentResponse;
+      } catch (error) {
+        if (error instanceof LaunchRejectedError) {
+          reply.code(422);
+          return { problem: error.message, reason: error.reason };
+        }
+        throw error;
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/launch/connection',
+    async (
+      request,
+      reply,
+    ): Promise<
+      EstablishLaunchConnectionResponse | { problem: string; reason: string } | undefined
+    > => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = EstablishLaunchConnectionRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        const result = await establishLaunchConnection(sql, {
+          campaignId: id,
+          commandId: parsed.data.commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          npcName: parsed.data.npcName,
+          role: parsed.data.role,
+          rank: parsed.data.rank,
+          participants: parsed.data.participants,
+          ...(parsed.data.details === undefined ? {} : { details: parsed.data.details }),
+          ...(parsed.data.proposalEventId === undefined
+            ? {}
+            : { proposalEventId: parsed.data.proposalEventId }),
+          ...(parsed.data.groundedIn === undefined ? {} : { groundedIn: parsed.data.groundedIn }),
+        });
+        reply.code(201);
+        return result.response as EstablishLaunchConnectionResponse;
+      } catch (error) {
+        if (error instanceof LaunchRejectedError) {
+          reply.code(422);
+          return { problem: error.message, reason: error.reason };
+        }
+        throw error;
+      }
+    },
+  );
+
+  // 9.0a: revise the starting connection before launch, in place (D-202, D-203).
+  app.put<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/launch/connection',
+    async (
+      request,
+      reply,
+    ): Promise<
+      EstablishLaunchConnectionResponse | { problem: string; reason: string } | undefined
+    > => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = EstablishLaunchConnectionRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        const result = await reviseLaunchConnection(sql, {
+          campaignId: id,
+          commandId: parsed.data.commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          npcName: parsed.data.npcName,
+          role: parsed.data.role,
+          rank: parsed.data.rank,
+          participants: parsed.data.participants,
+          ...(parsed.data.details === undefined ? {} : { details: parsed.data.details }),
+          ...(parsed.data.proposalEventId === undefined
+            ? {}
+            : { proposalEventId: parsed.data.proposalEventId }),
+          ...(parsed.data.groundedIn === undefined ? {} : { groundedIn: parsed.data.groundedIn }),
+        });
+        reply.code(201);
+        return result.response as EstablishLaunchConnectionResponse;
+      } catch (error) {
+        if (error instanceof LaunchRejectedError) {
+          reply.code(422);
+          return { problem: error.message, reason: error.reason };
+        }
+        throw error;
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/launch/crew',
+    async (request, reply): Promise<CreateCharacterResponse | { problem: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = CreateLaunchCharacterRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        const result = await createCharacter(sql, {
+          campaignId: id,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          commandId: parsed.data.commandId,
+          draft: parsed.data.draft,
+          backgroundVow: parsed.data.backgroundVow,
+          launch: {
+            appearance: parsed.data.launch.appearance,
+            backstory: parsed.data.launch.backstory,
+            ...(parsed.data.launch.signatureGear === undefined
+              ? {}
+              : { signatureGear: parsed.data.launch.signatureGear }),
+          },
+          ...(parsed.data.hooks === undefined ? {} : { hooks: parsed.data.hooks }),
+          ...(parsed.data.pronouns === undefined ? {} : { pronouns: parsed.data.pronouns }),
+          ...(parsed.data.proposalCommandId === undefined
+            ? {}
+            : { proposalCommandId: parsed.data.proposalCommandId }),
+          ...(parsed.data.groundedIn === undefined ? {} : { groundedIn: parsed.data.groundedIn }),
+        });
+        reply.code(201);
+        return {
+          characterId: result.characterId,
+          ...(result.vowTrackId === undefined ? {} : { vowTrackId: result.vowTrackId }),
+        };
+      } catch (error) {
+        // An unknown proposal is the client's error, not the server's (10.1e:
+        // only the retired Milestone 1 route mapped it).
+        if (
+          error instanceof LaunchCharacterRejectedError ||
+          error instanceof UnknownProposalError
+        ) {
           reply.code(422);
           return { problem: error.message };
         }
@@ -504,36 +1024,266 @@ export function buildApp({
     },
   );
 
-  app.post<{ Params: CampaignParams }>(
-    '/api/campaigns/:id/inciting-vow',
-    async (request, reply): Promise<SwearIncitingVowResponse | { problem: string } | undefined> => {
+  // 6.0d: revise an accepted crew member before launch. PUT, because the
+  // revision replaces the character rather than adding to it — the same shape
+  // `PUT /launch/drafts` uses for the same reason.
+  app.put<{ Params: CrewParams }>(
+    '/api/campaigns/:id/launch/crew/:characterId',
+    async (
+      request,
+      reply,
+    ): Promise<ReviseCharacterResponse | { problem: string; reason?: string } | undefined> => {
       const id = parseCampaignId(request.params.id, reply);
-      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
-        return undefined;
-      }
-
-      const parsedBody = SwearIncitingVowRequestBodySchema.safeParse(request.body);
-      if (!parsedBody.success) {
+      const characterId = parseCharacterId(request.params.characterId, reply);
+      if (id === undefined || characterId === undefined) return undefined;
+      if (!(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = ReviseLaunchCharacterRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
         reply.code(400);
         return undefined;
       }
-      const { commandId, title, rank, proposalCommandId } = parsedBody.data;
-
       try {
-        const sworn = await swearIncitingVow(sql, {
+        const result = await reviseCharacter(sql, {
           campaignId: id,
-          commandId,
           actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
-          title,
-          rank,
-          ...(proposalCommandId !== undefined ? { proposalCommandId } : {}),
+          commandId: parsed.data.commandId,
+          characterId,
+          draft: parsed.data.draft,
+          backgroundVow: parsed.data.backgroundVow,
+          launch: {
+            appearance: parsed.data.launch.appearance,
+            backstory: parsed.data.launch.backstory,
+            ...(parsed.data.launch.signatureGear === undefined
+              ? {}
+              : { signatureGear: parsed.data.launch.signatureGear }),
+          },
+          ...(parsed.data.hooks === undefined ? {} : { hooks: parsed.data.hooks }),
+          ...(parsed.data.pronouns === undefined ? {} : { pronouns: parsed.data.pronouns }),
+          ...(parsed.data.groundedIn === undefined ? {} : { groundedIn: parsed.data.groundedIn }),
+        });
+        return {
+          characterId: result.characterId,
+          ...(result.vowTrackId === undefined ? {} : { vowTrackId: result.vowTrackId }),
+        };
+      } catch (error: unknown) {
+        return crewFailure(error, reply);
+      }
+    },
+  );
+
+  // 6.0d: remove a crew member before launch. Append-only like everything else
+  // before activation (A40) — the reason is required, and the removal is an
+  // event rather than a deletion.
+  app.delete<{ Params: CrewParams }>(
+    '/api/campaigns/:id/launch/crew/:characterId',
+    async (
+      request,
+      reply,
+    ): Promise<RemoveCharacterResponse | { problem: string; reason?: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      const characterId = parseCharacterId(request.params.characterId, reply);
+      if (id === undefined || characterId === undefined) return undefined;
+      if (!(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = RemoveLaunchCharacterRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        const result = await removeCharacter(sql, {
+          campaignId: id,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          commandId: parsed.data.commandId,
+          characterId,
+          reason: parsed.data.reason,
+        });
+        return { characterId: result.characterId };
+      } catch (error: unknown) {
+        return crewFailure(error, reply);
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/launch/sector',
+    async (
+      request,
+      reply,
+    ): Promise<ConfigureLaunchSectorResponse | { problem: string; reason: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = ConfigureLaunchSectorRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        const result = await configureLaunchSector(sql, {
+          campaignId: id,
+          commandId: parsed.data.commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          sector: parsed.data.sector,
+          ...(parsed.data.proposalEventId === undefined
+            ? {}
+            : { proposalEventId: parsed.data.proposalEventId }),
+          ...(parsed.data.groundedIn === undefined ? {} : { groundedIn: parsed.data.groundedIn }),
         });
         reply.code(201);
-        return { vowTrackId: sworn.vowTrackId };
+        return result.response as ConfigureLaunchSectorResponse;
       } catch (error) {
-        if (error instanceof IncitingVowRejectedError || error instanceof UnknownProposalError) {
+        if (error instanceof LaunchRejectedError) {
           reply.code(422);
-          return { problem: error.message };
+          return { problem: error.message, reason: error.reason };
+        }
+        throw error;
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/launch/starship',
+    async (
+      request,
+      reply,
+    ): Promise<SaveSharedStarshipResponse | { problem: string; reason: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = SaveSharedStarshipRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        const result = await saveSharedStarship(sql, {
+          campaignId: id,
+          commandId: parsed.data.commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          starship: parsed.data.starship,
+          ...(parsed.data.proposalEventId === undefined
+            ? {}
+            : { proposalEventId: parsed.data.proposalEventId }),
+          ...(parsed.data.groundedIn === undefined ? {} : { groundedIn: parsed.data.groundedIn }),
+        });
+        reply.code(201);
+        // The server minted or reused the id (7.0a); the body never carries one.
+        return result.response as SaveSharedStarshipResponse;
+      } catch (error) {
+        if (error instanceof LaunchRejectedError) {
+          reply.code(422);
+          return { problem: error.message, reason: error.reason };
+        }
+        throw error;
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/launch/activate',
+    async (
+      request,
+      reply,
+    ): Promise<ActivateLaunchResponse | { problem: string; reason: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = ActivateLaunchRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        const result = await activateLaunch(sql, {
+          campaignId: id,
+          commandId: parsed.data.commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+        });
+        reply.code(201);
+        return result.response as ActivateLaunchResponse;
+      } catch (error) {
+        if (error instanceof LaunchRejectedError) {
+          reply.code(422);
+          return { problem: error.message, reason: error.reason };
+        }
+        throw error;
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/launch/foundation',
+    async (
+      request,
+      reply,
+    ): Promise<SetLaunchFoundationResponse | { problem: string; reason: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = SetLaunchFoundationRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        await setLaunchFoundation(sql, {
+          campaignId: id,
+          commandId: parsed.data.commandId,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          premise: parsed.data.premise,
+          settings: parsed.data.settings,
+        });
+        reply.code(201);
+        return { premise: parsed.data.premise };
+      } catch (error) {
+        if (error instanceof LaunchRejectedError) {
+          reply.code(422);
+          return { problem: error.message, reason: error.reason };
+        }
+        throw error;
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/launch/truths',
+    async (
+      request,
+      reply,
+    ): Promise<DecideLaunchTruthResponse | { problem: string; reason: string } | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) return undefined;
+      const parsed = DecideLaunchTruthRequestBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400);
+        return undefined;
+      }
+      try {
+        const {
+          commandId,
+          truthId,
+          resolution,
+          optionIndex,
+          subchoiceId,
+          subchoiceOptionIndex,
+          text,
+          proposalEventId,
+        } = parsed.data;
+        await decideTruth(sql, {
+          ...dice,
+          campaignId: id,
+          actor: { kind: 'player', playerId: LOCAL_PLAYER_ID },
+          commandId,
+          truthId,
+          resolution,
+          ...(optionIndex !== undefined ? { optionIndex } : {}),
+          ...(subchoiceId !== undefined ? { subchoiceId } : {}),
+          ...(subchoiceOptionIndex !== undefined ? { subchoiceOptionIndex } : {}),
+          ...(text !== undefined ? { text } : {}),
+          ...(proposalEventId !== undefined ? { proposalEventId } : {}),
+        });
+        reply.code(201);
+        return { truthId: parsed.data.truthId };
+      } catch (error) {
+        if (error instanceof LaunchRejectedError) {
+          reply.code(422);
+          return { problem: error.message, reason: error.reason };
         }
         throw error;
       }
@@ -565,6 +1315,7 @@ export function buildApp({
         proposalEventId,
         suggestionEventId,
         chainedFromCommandId,
+        swearsPendingVow,
       } = parsedBody.data;
 
       try {
@@ -583,6 +1334,7 @@ export function buildApp({
           ...(proposalEventId !== undefined ? { proposalEventId } : {}),
           ...(suggestionEventId !== undefined ? { suggestionEventId } : {}),
           ...(chainedFromCommandId !== undefined ? { chainedFromCommandId } : {}),
+          ...(swearsPendingVow === true ? { swearsPendingVow } : {}),
         });
         reply.code(201);
         return {

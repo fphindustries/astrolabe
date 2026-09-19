@@ -8,12 +8,28 @@ import type {
   OutcomeTier,
   TrackId,
 } from '@astrolabe/rules';
+import type { LaunchReadiness } from '@astrolabe/rules';
 
 import type { AiErrorKind } from './events/ai.js';
 import { CampaignSettingsSchema } from './events/campaign.js';
+import { PLANET_CLASSES } from '@astrolabe/rules';
+
 import { CharacterStatsSchema } from './events/character.js';
 import { RollAdjustmentSchema, RollUsingSchema } from './events/move.js';
 import { ChallengeRankSchema } from './events/track.js';
+import {
+  CreationProposalSchema,
+  LaunchIncidentDetailsSchema,
+  LaunchAmendmentSchema,
+  LaunchDraftSavedSchema,
+  LaunchLocationDetailsSchema,
+  LaunchRouteSchema,
+  LaunchPlanetDetailsSchema,
+  LaunchTroubleDetailsSchema,
+  SharedStarshipSchema,
+  type CreationTargetKind,
+  type LaunchAmendmentSubject,
+} from './events/launch.js';
 import {
   AssetIdSchema,
   CampaignIdSchema,
@@ -64,6 +80,35 @@ export interface CampaignStateResponse {
   readonly owedPassages: readonly OwedPassage[];
 }
 
+/**
+ * Why Campaign Launch is closed for a campaign. The same union types the 422
+ * `reason` a launch command refuses with, so the field a client routes on and
+ * the refusal it would otherwise earn share one vocabulary.
+ */
+export type LaunchClosedReason = 'campaign_active' | 'campaign_in_play';
+
+/** The resumable Campaign Launch workspace; readiness is server-derived. */
+export interface LaunchWorkspaceResponse {
+  readonly headSeq: number;
+  readonly state: CampaignState;
+  readonly readiness: LaunchReadiness;
+  /**
+   * D-178: a campaign that has begun a session is in play whatever its phase
+   * says, which is every Milestone 1 campaign. A43 routes on this rather than
+   * on `phase`, and it is derived server-side so the client does not keep a
+   * second copy of the rule (D-176's lesson).
+   */
+  readonly launchOpen: boolean;
+  readonly closedReason?: LaunchClosedReason;
+  /**
+   * A41: the oracle rolls the launch's accepted facts cite, resolved by event
+   * id. `groundedIn` carries ids; a chip needs the table and the result, and a
+   * truth is not an entity, so the entity grounding endpoint cannot answer for
+   * one. Beside the state, like `readiness`.
+   */
+  readonly chips: Readonly<Record<EventId, OracleChip>>;
+}
+
 /** D-150: a move chain committed without its passage, as the log offers to narrate it. */
 export interface OwedPassage {
   readonly rootCommandId: CommandId;
@@ -103,7 +148,6 @@ export const CreateCharacterRequestBodySchema = z.object({
     assets: z.array(AssetIdSchema),
   }),
   backgroundVow: z.object({ title: z.string().min(1), rank: ChallengeRankSchema }).optional(),
-  grantCommandVehicle: z.boolean().optional(),
   /** D-124: backstory hooks, proposed or written by hand. */
   hooks: z.array(z.string().trim().min(1)).max(3).optional(),
   /** D-131: free text; blank means not recorded. */
@@ -121,6 +165,68 @@ export type CreateCharacterRequestBody = z.infer<typeof CreateCharacterRequestBo
 export interface CreateCharacterResponse {
   readonly characterId: CharacterId;
   readonly vowTrackId?: TrackId;
+}
+
+export const CreateLaunchCharacterRequestBodySchema = CreateCharacterRequestBodySchema.extend({
+  backgroundVow: z.object({ title: z.string().trim().min(1), rank: ChallengeRankSchema }),
+  /**
+   * The `oracle.rolled` events this character was built on (A41).
+   *
+   * Event ids, not oracle ids: the client cites rolls the server already made
+   * and can never name a table of its own. A roll that turns out to be
+   * something else resolves to no chip, so over-citing is harmless.
+   */
+  groundedIn: z.array(EventIdSchema).optional(),
+  launch: z.object({
+    appearance: z.string().trim().min(1),
+    backstory: z.discriminatedUnion('kind', [
+      z.object({ kind: z.literal('written'), text: z.string().trim().min(1) }),
+      z.object({ kind: z.literal('discover_in_play') }),
+    ]),
+    signatureGear: z.string().trim().min(1).optional(),
+  }),
+});
+export type CreateLaunchCharacterRequestBody = z.infer<
+  typeof CreateLaunchCharacterRequestBodySchema
+>;
+
+/**
+ * The body of `PUT /campaigns/:id/launch/crew/:characterId` (6.0d).
+ *
+ * The same shape acceptance takes, minus the fields the server decides for
+ * itself. `characterId` comes from the route, and `supersedesEventId` is never
+ * in the body: the server reads it from the projected character, because a
+ * client that could name what it supersedes could rewrite a different
+ * revision's place in the chain.
+ */
+export const ReviseLaunchCharacterRequestBodySchema = CreateLaunchCharacterRequestBodySchema;
+export type ReviseLaunchCharacterRequestBody = z.infer<
+  typeof ReviseLaunchCharacterRequestBodySchema
+>;
+
+/**
+ * The body of `DELETE /campaigns/:id/launch/crew/:characterId` (6.0d).
+ *
+ * A reason is required by `character.removed`'s own schema, and this is why:
+ * removal is append-only like everything else before launch (A40), so the log
+ * has to say why a crew member is gone rather than merely that they are.
+ */
+export const RemoveLaunchCharacterRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  reason: z.string().trim().min(1),
+});
+export type RemoveLaunchCharacterRequestBody = z.infer<
+  typeof RemoveLaunchCharacterRequestBodySchema
+>;
+
+export interface ReviseCharacterResponse {
+  readonly characterId: CharacterId;
+  /** Present when the revision created the character's first background vow. */
+  readonly vowTrackId?: TrackId;
+}
+
+export interface RemoveCharacterResponse {
+  readonly characterId: CharacterId;
 }
 
 /**
@@ -150,69 +256,344 @@ export interface CreateCampaignResponse {
   readonly campaignId: CampaignId;
 }
 
+/** Campaign Launch save-and-resume is one typed snapshot per section. */
+export const SaveLaunchDraftRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  draft: LaunchDraftSavedSchema,
+});
+export type SaveLaunchDraftRequestBody = z.infer<typeof SaveLaunchDraftRequestBodySchema>;
+export interface SaveLaunchDraftResponse {
+  readonly section: SaveLaunchDraftRequestBody['draft']['section'];
+}
+
+export const SetLaunchFoundationRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  premise: z.string().trim().min(1),
+  settings: CampaignSettingsSchema,
+});
+export type SetLaunchFoundationRequestBody = z.infer<typeof SetLaunchFoundationRequestBodySchema>;
+export interface SetLaunchFoundationResponse {
+  readonly premise: string;
+}
+
+export const DecideLaunchTruthRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  truthId: OracleIdSchema,
+  resolution: z.enum(['selected', 'rolled', 'custom', 'leave_open']),
+  optionIndex: z.int().nonnegative().optional(),
+  subchoiceId: z.string().min(1).optional(),
+  subchoiceOptionIndex: z.int().nonnegative().optional(),
+  text: z.string().trim().min(1).optional(),
+  /**
+   * The Guide recommendation this decision accepts (D-161).
+   *
+   * The design record requires an accepted value that came from a proposal to
+   * be server-caused by its `creation.proposed` event, and its provenance to
+   * say `guide_proposal` or `guide_proposal_edited`. The client names the
+   * proposal; the server decides which of the two it was by comparing what was
+   * proposed to what was accepted, because "did the player edit it" is not a
+   * claim the client gets to make about itself.
+   *
+   * By event id, because that is the reference the client actually has: a held
+   * proposal reaches the screen through projected state, which carries the
+   * event id and not the command that wrote it. A command id would work only
+   * until the page was reloaded.
+   */
+  proposalEventId: EventIdSchema.optional(),
+});
+export type DecideLaunchTruthRequestBody = z.infer<typeof DecideLaunchTruthRequestBodySchema>;
+export interface DecideLaunchTruthResponse {
+  readonly truthId: OracleId;
+}
+
+export const ActivateLaunchRequestBodySchema = z.object({ commandId: CommandIdSchema });
+export type ActivateLaunchRequestBody = z.infer<typeof ActivateLaunchRequestBodySchema>;
+export interface ActivateLaunchResponse {
+  readonly sessionId: string;
+  readonly sceneId: string;
+  readonly pendingVow: string;
+}
+
 /**
- * The body of `POST /campaigns/:id/truths` (task 4.2). Which of `rowIndex`
- * or `text` matters depends on `source` — the server rejects a `'picked'`
- * request with no `rowIndex` and a `'written'` one with no `text` (see
- * `setTruth`'s note on why this isn't a discriminated union: a rolled
- * request carries neither).
+ * What the player states about the ship. Installed modules are not here: they
+ * are derived from the crew (D-191). Its id, asset and integrity are the
+ * server's (7.0a): one campaign has one ship, so the id is minted on
+ * establishment and reused on revision, and the asset and bounds come from the
+ * rules rather than from a request that could name different ones.
  */
-export const SetTruthRequestBodySchema = z.object({
+export const SharedStarshipDetailsSchema = SharedStarshipSchema.pick({
+  name: true,
+  appearance: true,
+  history: true,
+  quirks: true,
+});
+export type SharedStarshipDetails = z.infer<typeof SharedStarshipDetailsSchema>;
+
+export const SaveSharedStarshipRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  starship: SharedStarshipDetailsSchema,
+  /** The ship proposal being accepted; the server decides whether it was edited (7.0c). */
+  proposalEventId: EventIdSchema.optional(),
+  /** Field-level rolls the player kept (A41). */
+  groundedIn: z.array(EventIdSchema).optional(),
+});
+export type SaveSharedStarshipRequestBody = z.infer<typeof SaveSharedStarshipRequestBodySchema>;
+export interface SaveSharedStarshipResponse {
+  readonly starshipId: EntityId;
+}
+
+/**
+ * What the player states about the sector (8.0a). Its id and baseline are the
+ * server's: one campaign has one starting sector, so the id is minted on
+ * configure and reused on revise, and the baseline is the region's rule
+ * (D-180), which a request should not be able to restate.
+ */
+export const LaunchSectorDetailsSchema = z.object({
+  name: z.string().trim().min(1),
+  region: z.enum(['terminus', 'outlands', 'expanse']),
+  starId: EntityIdSchema.optional(),
+});
+export type LaunchSectorDetails = z.infer<typeof LaunchSectorDetailsSchema>;
+
+/**
+ * What accepting a proposal names, and the field rolls a player kept (8.0f).
+ *
+ * The proposal is named by event id and resolved against the fold, and the
+ * server decides whether it was edited (7.0c). `groundedIn` is the rolls
+ * behind fields the player rolled one at a time and kept (A41).
+ */
+const AcceptanceRequestFields = {
+  proposalEventId: EventIdSchema.optional(),
+  groundedIn: z.array(EventIdSchema).optional(),
+};
+
+export const ConfigureLaunchSectorRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  sector: LaunchSectorDetailsSchema,
+  ...AcceptanceRequestFields,
+});
+export type ConfigureLaunchSectorRequestBody = z.infer<
+  typeof ConfigureLaunchSectorRequestBodySchema
+>;
+export interface ConfigureLaunchSectorResponse {
+  readonly sectorId: EntityId;
+}
+
+export const EstablishLaunchConnectionRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  npcName: z.string().trim().min(1),
+  role: z.string().trim().min(1),
+  rank: ChallengeRankSchema,
+  participants: z.array(CharacterIdSchema).min(1),
+  /** The NPC's goal, first look and disposition (9.0d), kept as the NPC's fields. */
+  details: z
+    .object({
+      goal: z.string().trim().min(1).optional(),
+      firstLook: z.string().trim().min(1).optional(),
+      disposition: z.string().trim().min(1).optional(),
+    })
+    .optional(),
+  ...AcceptanceRequestFields,
+});
+export type EstablishLaunchConnectionRequestBody = z.infer<
+  typeof EstablishLaunchConnectionRequestBodySchema
+>;
+export interface EstablishLaunchConnectionResponse {
+  readonly connectionId: EntityId;
+  readonly npcId: EntityId;
+  readonly trackId: TrackId;
+}
+
+export const AcceptLaunchIncidentRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  incident: LaunchIncidentDetailsSchema,
+  /** The Guide's option being accepted: the held proposal and which option (9.0f). */
+  proposal: z.object({ eventId: EventIdSchema, optionIndex: z.int().nonnegative() }).optional(),
+});
+export type AcceptLaunchIncidentRequestBody = z.infer<typeof AcceptLaunchIncidentRequestBodySchema>;
+export interface AcceptLaunchIncidentResponse {
+  readonly incidentId: EntityId;
+}
+
+export const AmendLaunchFactRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  /** The typed replacement and the subject it claims. The server checks that
+   * claim against the superseded event rather than trusting it. */
+  amendment: LaunchAmendmentSchema,
+  reason: z.string().trim().min(1),
+  supersedesEventId: EventIdSchema,
+});
+export type AmendLaunchFactRequestBody = z.infer<typeof AmendLaunchFactRequestBodySchema>;
+export interface AmendLaunchFactResponse {
+  readonly subject: LaunchAmendmentSubject;
+  readonly supersedesEventId: EventId;
+}
+
+export const SaveLaunchLocationRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  /** The accepted node being revised. Absent to add one; the server mints its id (8.0a). */
+  locationId: EntityIdSchema.optional(),
+  location: LaunchLocationDetailsSchema,
+  /**
+   * A settlement's planet, accepted in the same command (8.0f): one decision,
+   * one command (D-105). `locationId` names the planet being revised.
+   */
+  planet: z
+    .object({
+      locationId: EntityIdSchema.optional(),
+      details: LaunchPlanetDetailsSchema,
+      groundedIn: z.array(EventIdSchema).optional(),
+    })
+    .optional(),
+  /** The key the proposal was made under: a `draftId`, or the `locationId` (D-196). */
+  proposalTargetId: z.string().min(1).optional(),
+  ...AcceptanceRequestFields,
+});
+export type SaveLaunchLocationRequestBody = z.infer<typeof SaveLaunchLocationRequestBodySchema>;
+
+/** `DELETE /campaigns/:id/launch/locations/:locationId` (8.0g). */
+export const RemoveLaunchLocationRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  reason: z.string().trim().min(1),
+});
+export type RemoveLaunchLocationRequestBody = z.infer<typeof RemoveLaunchLocationRequestBodySchema>;
+
+/** `DELETE /campaigns/:id/launch/routes` (8.0g): the passage is named by its endpoints. */
+export const RemoveLaunchRouteRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  route: LaunchRouteSchema,
+  reason: z.string().trim().min(1),
+});
+export type RemoveLaunchRouteRequestBody = z.infer<typeof RemoveLaunchRouteRequestBodySchema>;
+export interface SaveLaunchLocationResponse {
+  readonly locationId: EntityId;
+  /** The planet accepted with its settlement, when there was one (8.0f). */
+  readonly planetId?: EntityId;
+}
+
+export const SaveLaunchRouteRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  route: LaunchRouteSchema,
+});
+export type SaveLaunchRouteRequestBody = z.infer<typeof SaveLaunchRouteRequestBodySchema>;
+export interface SaveLaunchRouteResponse {
+  readonly from: EntityId;
+}
+
+export const SetStartingSettlementRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  settlementId: EntityIdSchema,
+});
+export type SetStartingSettlementRequestBody = z.infer<
+  typeof SetStartingSettlementRequestBodySchema
+>;
+
+export const SetSectorLayoutRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  coordinates: z.record(EntityIdSchema, z.object({ x: z.number(), y: z.number() })),
+});
+export type SetSectorLayoutRequestBody = z.infer<typeof SetSectorLayoutRequestBodySchema>;
+
+export const SaveLaunchTroubleRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  /** No id: there is one sector trouble and one per settlement, so the owner says which (8.0f). */
+  trouble: LaunchTroubleDetailsSchema,
+  ...AcceptanceRequestFields,
+});
+export type SaveLaunchTroubleRequestBody = z.infer<typeof SaveLaunchTroubleRequestBodySchema>;
+export interface SaveLaunchTroubleResponse {
+  readonly troubleId: EntityId;
+}
+
+export const RollLaunchOracleRequestBodySchema = z.object({
   commandId: CommandIdSchema,
   oracleId: OracleIdSchema,
-  source: z.enum(['picked', 'rolled', 'written']),
-  rowIndex: z.int().nonnegative().optional(),
-  text: z.string().optional(),
 });
-
-export type SetTruthRequestBody = z.infer<typeof SetTruthRequestBodySchema>;
-
-export interface SetTruthResponse {
+export type RollLaunchOracleRequestBody = z.infer<typeof RollLaunchOracleRequestBodySchema>;
+export interface RollLaunchOracleResponse {
+  readonly eventId: EventId;
+  readonly oracleId: OracleId;
+  readonly roll: number;
   readonly text: string;
 }
 
-/** The body of `POST /campaigns/:id/sector/locations` (task 4.3). */
-export const AddSectorLocationRequestBodySchema = z.object({
+/**
+ * A recipe is named by its parameters, never by an oracle id (D-65, D-173):
+ * the caller cannot reach a table the rules did not declare in a recipe.
+ */
+export const LaunchRecipeSelectorSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('starship'), quirkCount: z.union([z.literal(1), z.literal(2)]) }),
+  z.object({
+    kind: z.literal('settlement'),
+    region: z.enum(['terminus', 'outlands', 'expanse']),
+    projectCount: z.union([z.literal(1), z.literal(2)]),
+  }),
+  z.object({
+    kind: z.literal('planet'),
+    planetClass: z.enum(PLANET_CLASSES),
+    depth: z.enum(['shallow', 'starting_detail']),
+  }),
+  z.object({ kind: z.literal('character') }),
+  z.object({ kind: z.literal('starting_connection') }),
+  z.object({ kind: z.literal('sector_trouble') }),
+  z.object({ kind: z.literal('inciting_incident') }),
+  z.object({ kind: z.literal('sector_name') }),
+  z.object({
+    kind: z.literal('starting_settlement'),
+    firstLookCount: z.union([z.literal(1), z.literal(2)]),
+  }),
+  z.object({ kind: z.literal('planet_class') }),
+  z.object({ kind: z.literal('star') }),
+]);
+export const RollLaunchRecipeRequestBodySchema = z.object({
   commandId: CommandIdSchema,
-  name: z.string().min(1),
-  description: z.string(),
+  selector: LaunchRecipeSelectorSchema,
 });
-
-export type AddSectorLocationRequestBody = z.infer<typeof AddSectorLocationRequestBodySchema>;
-
-export interface AddSectorLocationResponse {
-  readonly locationId: EntityId;
+export type RollLaunchRecipeRequestBody = z.infer<typeof RollLaunchRecipeRequestBodySchema>;
+export interface RollLaunchRecipeResponse {
+  readonly recipeId: string;
+  /** One entry per rolled result — a "roll twice" row yields two. */
+  readonly results: readonly {
+    readonly eventId: EventId;
+    readonly slot: string;
+    readonly oracleId: OracleId;
+    readonly roll: number;
+    readonly text: string;
+  }[];
 }
 
-/** The body of `POST /campaigns/:id/sector/routes` (task 4.3, D-103). */
-export const AddSectorRouteRequestBodySchema = z.object({
+/** The body of `POST /campaigns/:id/truth-proposals` (5.3). */
+export const ProposeTruthRequestBodySchema = z.object({
   commandId: CommandIdSchema,
-  fromLocationId: EntityIdSchema,
-  toLocationId: EntityIdSchema,
+  truthId: OracleIdSchema,
 });
-
-export type AddSectorRouteRequestBody = z.infer<typeof AddSectorRouteRequestBodySchema>;
+export type ProposeTruthRequestBody = z.infer<typeof ProposeTruthRequestBodySchema>;
 
 /**
- * The body of `POST /campaigns/:id/inciting-vow` (task 4.4, D-34, D-101).
- * No `characterId` field yet: the player-written path this task builds
- * always swears a crew-level vow, matching the golden session's own
- * inciting vow. A per-character option waits for whatever UI decision
- * accompanies the AI-proposal path this defers.
+ * The Guide's recommendation for one truth. Not canon: the player accepts it
+ * through `decideTruth`, the same command the manual paths use (D-161, D-166).
  */
-export const SwearIncitingVowRequestBodySchema = z.object({
-  commandId: CommandIdSchema,
-  title: z.string().min(1),
-  rank: ChallengeRankSchema,
-  /** D-132: the incident proposal the player started from, edited or not. */
-  proposalCommandId: CommandIdSchema.optional(),
-});
+export type ProposeTruthResponse =
+  | {
+      readonly ok: true;
+      readonly proposalEventId: EventId;
+      readonly truthId: OracleId;
+      readonly proposal: Extract<PayloadFor<'creation.proposed'>, { targetKind: 'truth' }>;
+    }
+  | { readonly ok: false; readonly errorKind: AiErrorKind; readonly message: string };
 
-export type SwearIncitingVowRequestBody = z.infer<typeof SwearIncitingVowRequestBodySchema>;
-
-export interface SwearIncitingVowResponse {
-  readonly vowTrackId: TrackId;
-}
+export const ProposeLaunchCreationRequestBodySchema = z.intersection(
+  CreationProposalSchema,
+  z.object({
+    commandId: CommandIdSchema,
+    targetId: z.string().trim().min(1),
+    rationale: z.string().trim().min(1),
+    groundedIn: z.array(EventIdSchema),
+  }),
+);
+export type ProposeLaunchCreationRequestBody = z.infer<
+  typeof ProposeLaunchCreationRequestBodySchema
+>;
 
 /**
  * The move flow (task 6.x). The write API D-94 left for later: it did not
@@ -266,6 +647,12 @@ export const InvokeMoveRequestBodySchema = z.object({
    * `MoveChainedSchema` has the full reasoning).
    */
   chainedFromCommandId: CommandIdSchema.optional(),
+  /**
+   * D-201: this `Swear an Iron Vow` swears the campaign's pending vow, the
+   * inciting incident's. The server writes the vow's track from the incident
+   * in the same command; the client names neither.
+   */
+  swearsPendingVow: z.literal(true).optional(),
 });
 
 export type InvokeMoveRequestBody = z.infer<typeof InvokeMoveRequestBodySchema>;
@@ -613,9 +1000,65 @@ export interface AiStatusResponse {
 export const ProposeCharacterRequestBodySchema = z.object({
   commandId: CommandIdSchema,
   concept: z.string().trim().min(1).max(2000),
+  /** D-185: the crew member's draft id while building, character id when revising. */
+  targetId: z.string().min(1),
+  /** The `oracle.rolled` events from this campaign's character recipe roll (D-186). */
+  groundedIn: z.array(EventIdSchema).min(1),
+  /** Beat 5: the fields the player wants help with. Steering only, never stored. */
+  fields: z.array(z.string().min(1)).optional(),
 });
 
 export type ProposeCharacterRequestBody = z.infer<typeof ProposeCharacterRequestBodySchema>;
+
+/** 7.0e: ask the Guide for the crew's ship, grounded in a starship recipe roll. */
+export const ProposeStarshipRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  /** The `oracle.rolled` events from this campaign's starship recipe roll. */
+  groundedIn: z.array(EventIdSchema).min(1),
+  /** The fields the player wants help with. Steering only, never stored. */
+  fields: z.array(z.string().min(1)).optional(),
+});
+export type ProposeStarshipRequestBody = z.infer<typeof ProposeStarshipRequestBodySchema>;
+
+/** `POST /campaigns/:id/settlement-proposals` (8.0e, D-196). */
+export const ProposeSettlementRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  /** The settlement's `draftId` before acceptance, or its `locationId` after. */
+  targetId: z.string().trim().min(1),
+  /** The `oracle.rolled` events from this campaign's settlement recipe rolls. */
+  groundedIn: z.array(EventIdSchema).min(1),
+  /** The fields the player wants help with. Steering only, never stored. */
+  fields: z.array(z.string().min(1)).optional(),
+});
+export type ProposeSettlementRequestBody = z.infer<typeof ProposeSettlementRequestBodySchema>;
+
+/** `POST /campaigns/:id/connection-proposals` (9.0c, D-167). */
+export const ProposeConnectionRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  /** The `oracle.rolled` events from this campaign's NPC recipe roll. */
+  groundedIn: z.array(EventIdSchema).min(1),
+  /** The fields the player wants help with. Steering only, never stored. */
+  fields: z.array(z.string().min(1)).optional(),
+});
+export type ProposeConnectionRequestBody = z.infer<typeof ProposeConnectionRequestBodySchema>;
+
+/** `POST /campaigns/:id/sector-proposals` (8.6, D-196): the whole sector, one proposal per object. */
+export const ProposeSectorRequestBodySchema = z.object({ commandId: CommandIdSchema });
+export type ProposeSectorRequestBody = z.infer<typeof ProposeSectorRequestBodySchema>;
+
+/** `POST /campaigns/:id/trouble-proposals` (8.0e, D-194). */
+export const ProposeTroubleRequestBodySchema = z.intersection(
+  z.object({
+    commandId: CommandIdSchema,
+    /** The `oracle.rolled` event of the trouble roll. */
+    groundedIn: z.array(EventIdSchema).min(1),
+  }),
+  z.discriminatedUnion('kind', [
+    z.object({ kind: z.literal('sector') }),
+    z.object({ kind: z.literal('settlement'), ownerId: EntityIdSchema }),
+  ]),
+);
+export type ProposeTroubleRequestBody = z.infer<typeof ProposeTroubleRequestBodySchema>;
 
 /** One server-rolled oracle result a proposal was grounded in (D-123). */
 export interface ProposalRoll {
@@ -736,11 +1179,109 @@ export type ProposeIncidentsResponse =
       readonly rolls: readonly ProposalRoll[];
     };
 
+type ProposalFor<K extends CreationTargetKind> = Extract<
+  PayloadFor<'creation.proposed'>,
+  { readonly targetKind: K }
+>['proposal'];
+
+/** The Guide's local connection. Not canon: accepted through the connection commands (9.0d). */
+export type ProposeConnectionResponse =
+  | {
+      readonly ok: true;
+      readonly proposalEventId: EventId;
+      readonly proposal: ProposalFor<'connection'>;
+      readonly rolls: readonly ProposalRoll[];
+    }
+  | {
+      readonly ok: false;
+      readonly errorKind: AiErrorKind;
+      readonly message: string;
+      readonly rolls: readonly ProposalRoll[];
+    };
+
+/** The Guide's sector name. Not canon: accepted through `configureLaunchSector` (8.0f). */
+export type ProposeSectorNameResponse =
+  | {
+      readonly ok: true;
+      readonly proposalEventId: EventId;
+      readonly proposal: ProposalFor<'sector'>;
+      readonly rolls: readonly ProposalRoll[];
+    }
+  | {
+      readonly ok: false;
+      readonly errorKind: AiErrorKind;
+      readonly message: string;
+      readonly rolls: readonly ProposalRoll[];
+    };
+
+/**
+ * A whole-sector proposal (8.6, D-196): the name and each settlement, each its
+ * own held proposal. A settlement's `targetId` is the draft key the client
+ * adopts for it.
+ */
+export interface ProposeSectorResponse {
+  readonly name: ProposeSectorNameResponse;
+  readonly settlements: readonly ProposeSettlementResponse[];
+}
+
+/** The Guide's settlement. Not canon: accepted through `saveLaunchLocation` (8.0f). */
+export type ProposeSettlementResponse =
+  | {
+      readonly ok: true;
+      readonly proposalEventId: EventId;
+      readonly targetId: string;
+      readonly proposal: ProposalFor<'settlement'>;
+      readonly rolls: readonly ProposalRoll[];
+    }
+  | {
+      readonly ok: false;
+      readonly errorKind: AiErrorKind;
+      readonly message: string;
+      readonly rolls: readonly ProposalRoll[];
+    };
+
+/** The Guide's reading of a rolled trouble. Not canon: accepted through `saveLaunchTrouble`. */
+export type ProposeTroubleResponse =
+  | {
+      readonly ok: true;
+      readonly proposalEventId: EventId;
+      readonly targetId: string;
+      readonly proposal: ProposalFor<'trouble'>;
+      readonly rolls: readonly ProposalRoll[];
+    }
+  | {
+      readonly ok: false;
+      readonly errorKind: AiErrorKind;
+      readonly message: string;
+      readonly rolls: readonly ProposalRoll[];
+    };
+
+/** The Guide's ship. Not canon: accepted through `saveSharedStarship` (7.0c). */
+export type ProposeStarshipResponse =
+  | {
+      readonly ok: true;
+      readonly proposalEventId: EventId;
+      readonly proposal: Extract<
+        PayloadFor<'creation.proposed'>,
+        { readonly targetKind: 'starship' }
+      >['proposal'];
+      readonly rolls: readonly ProposalRoll[];
+    }
+  | {
+      readonly ok: false;
+      readonly errorKind: AiErrorKind;
+      readonly message: string;
+      readonly rolls: readonly ProposalRoll[];
+    };
+
 export type ProposeCharacterResponse =
   | {
       readonly ok: true;
       readonly proposalEventId: EventId;
-      readonly proposal: PayloadFor<'character.proposed'>;
+      readonly proposal: Extract<
+        PayloadFor<'creation.proposed'>,
+        { readonly targetKind: 'character' }
+      >['proposal'];
       readonly rolls: readonly ProposalRoll[];
     }
   | {

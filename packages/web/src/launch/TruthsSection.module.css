@@ -1,0 +1,45 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.progress {
+  margin: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  letter-spacing: 0.02em;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.secondary {
+  composes: secondary from '../ui/controls.module.css';
+}
+
+.saved {
+  margin: 0;
+  color: var(--provenance-player);
+  font-size: var(--text-sm);
+}
+
+.note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
