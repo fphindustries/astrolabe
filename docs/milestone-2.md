@@ -1252,3 +1252,54 @@ implementation note.
     at.
   Verified with Postgres: 122 files, 1435 tests, zero skipped files. typecheck, lint,
   format:check and the web build clean.
+- **Group 8 complete.** The starting sector, and the Troubles half of Connection and
+  Troubles. Planning found the group-4-to-7 shape again, at greater size. The aggregate was
+  written and projected. What would let a player build it with help, correct it, resume it,
+  or see where it came from was missing: every command hardcoded `player_written`, the
+  client supplied every id, five tables Chapter 2 rolls were in no recipe, two removal
+  events had no command, the draft held two fields, and play context knew no sector. Four
+  questions were asked before planning (D-194–D-197) and one during it (D-198). Item 8.0k
+  was found after 8.0a–j had landed.
+  - **The server owns every id in the sector (8.0a, 8.0f, 8.0k).** This covers the sector,
+    each location, and each trouble, whose owner now names it. Amendments are held to the
+    same contract, 7.0j's finding applied again.
+  - **A settlement and its planet are one decision (8.0f).** One command writes both, the
+    planet first. Acceptance judges the planet on its own, so a kept planet under a renamed
+    settlement is unedited.
+  - **One acceptance mechanism still.** A settlement proposal is keyed by its draft key, and
+    acceptance names the key it was made under, so `heldProposal` resolves every path,
+    whole-sector included (D-196). A trouble proposal is held under a prefixed target
+    (`trouble:<settlementId>`), because the proposals fold keeps one proposal per target.
+  - **A slot can yield several results (8.5, found in the browser).** A trouble read
+    "Deliver" where the roll was "Deliver + Discovery", and the Guide was refused. The server
+    matched rolls to slots by table id, and an embedded table's result has another table's
+    id. `rollLaunchRecipe` now records each result's recipe and slot, fields D-142 already
+    defined. The matcher takes a slot's every result, and the client reads them as one
+    field. This was latent in the starship and character proposals from groups 6 and 7.
+  - **The map (D-197).** The browser pass found that dragging one unsaved node moved the
+    others: default positions were renumbered around a local move. They are now decided
+    against the saved layout alone. Focus follows the pointer, so the arrow keys move what
+    was just touched.
+  - **A draft that outlives its acceptance.** Accepting a settlement writes its new id back
+    into the form and saves the draft, so a reload shows it once. **Not fixed, and group 6's
+    to check:** `initialCrewForm` appears to have the same shape. A crew member drafted and
+    then accepted without a later save keeps a draft entry with no `characterId`, which
+    would show beside the accepted character after a reload. This was read in the code, not
+    reproduced.
+  - **Test setup, not an app defect:** the server indexes `packages/web/dist` when it
+    starts, so after a web rebuild it serves the old asset names. The page then loads blank
+    with no console error. Restart the server after each web build. This may be the freeze
+    group 7 recorded under the Vite dev server; it was not investigated there.
+  - **Browser.** Walked at 1280x720 on the dev stub, on the production build. Beat 7 went
+    through the whole-sector path: the name and a settlement with its planet were accepted
+    as `guide_proposal` with their rolls, and the other proposals survived a reload. The
+    walk also covered a lone settlement proposal taken and accepted, the star rolled and
+    accepted, and the map dragged and moved by keys, with the layout saved and reloaded.
+    Passages and an off-map exit were added through the list. Beat 9 covered the start
+    selected, first looks and trouble rolled, the Guide's reading taken and accepted, and
+    the sector trouble in Connection and Troubles. **Not walked:** the no-provider path (A42)
+    in the browser. The proposal actions are disabled from the same `useAiStatus` signal
+    groups 5–7 use, and every Write and Roll path is independent of it, but 10.3 and 10.4
+    own the proof.
+  Verified with Postgres: 127 files, 1540 tests, zero skipped files. typecheck, lint,
+  format:check and the web build clean.
