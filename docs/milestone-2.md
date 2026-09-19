@@ -1312,7 +1312,7 @@ of them stays). D-170 retires the production seed, and was approved with the mil
   Replay re-sends a truth decision's command id and gets the same answer with the event
   count unchanged. Replay runs on an open campaign, because a closed launch refuses
   before it would replay.
-- [ ] 10.3 Test manual/oracle completion with an unconfigured provider and proposal failure
+- [x] 10.3 Test manual/oracle completion with an unconfigured provider and proposal failure
   without blocking unrelated setup. The same launch, through the harness, with an
   unconfigured Claude provider (the shipped default without a key): every section is
   completed by hand and by server rolls, and every proposal route answers that no Guide is
@@ -1320,6 +1320,18 @@ of them stays). D-170 retires the production seed, and was approved with the mil
   then pauses (D-116), which is play's contract, not launch's. Then a provider that fails
   once: one proposal fails, its rolls stay the player's, and the next manual command in
   another section succeeds.
+  *As built:* `no-provider-launch.test.ts` drives the harness with the shipped Claude
+  provider unconfigured. AI status reports it unconfigured and unavailable. The truth,
+  character, starship, trouble, connection and incident proposals each answer
+  `not_configured`, and each command wrote nothing but its rolls. The whole-sector
+  proposal rolls every recipe before it asks, so its rolls land too, and its name answers
+  `not_configured`. Then the launch is completed by hand and by server rolls: 14 truths
+  picked, rolled (with their subchoices) or left open; one crew member; a ship from its
+  rolls; an Expanse sector; troubles, a connection and an incident from rolled tables.
+  Readiness comes back with no problems. Activation and the swear's roll go through, and
+  the narration stream ends `failed` rather than committed (D-116). No proposal is held
+  anywhere. The second test fails one starship proposal as `unavailable`: its rolls stay
+  recorded, nothing is proposed, and a Foundation acceptance straight after succeeds.
 - [ ] 10.4 Exercise the full flow in the browser at 1280×720, including save/resume,
   keyboard focus, map alternatives, launch, and entry into play. A fresh campaign on the
   production build, on the dev stub, through every section. That includes save, a server
