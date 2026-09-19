@@ -2,6 +2,8 @@ import type { CampaignId } from '@astrolabe/shared';
 import type { Sql } from 'postgres';
 
 import { GOLDEN_SESSION, GOLDEN_SESSION_CAMPAIGN_ID, playGoldenSession } from './golden-session.js';
+import { LANTERN_WAKE_LAUNCH, playLanternWakeLaunch } from './lantern-wake-launch.js';
+import { fixtureUuid } from './ids.js';
 import { playSessionOne, SESSION_ONE, SESSION_ONE_CAMPAIGN_ID } from './session-one.js';
 import {
   playSessionTwoOpen,
@@ -23,8 +25,22 @@ export interface Fixture {
   play(sql: Sql): Promise<unknown>;
 }
 
+const LANTERN_WAKE_LAUNCH_CAMPAIGN_ID = fixtureUuid<CampaignId>(LANTERN_WAKE_LAUNCH, 'campaign');
+
 export const FIXTURES: ReadonlyMap<string, Fixture> = new Map(
   [
+    {
+      name: LANTERN_WAKE_LAUNCH,
+      description:
+        'Lantern Wake just launched: the golden launch played through, Session 1 open, the vow sworn (D-205)',
+      campaignId: LANTERN_WAKE_LAUNCH_CAMPAIGN_ID,
+      play: (sql: Sql) =>
+        playLanternWakeLaunch(sql, {
+          fixture: LANTERN_WAKE_LAUNCH,
+          campaignId: LANTERN_WAKE_LAUNCH_CAMPAIGN_ID,
+          campaignName: 'Lantern Wake (just launched)',
+        }),
+    },
     {
       name: SESSION_ONE,
       description:

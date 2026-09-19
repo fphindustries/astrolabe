@@ -80,9 +80,10 @@ function nonEmpty(value: string | undefined): value is string {
 
 /**
  * Local-development answers for every purpose the app asks for, so a
- * stubbed session plays through without pausing.
+ * stubbed session plays through without pausing. Fixtures reuse the answers
+ * read off a prompt's rolls (10.1b).
  */
-function devStubResponse(
+export function devStubResponse(
   request: { readonly purpose: string; readonly user: string },
   mode: 'text' | 'structured',
 ): StubResponse {

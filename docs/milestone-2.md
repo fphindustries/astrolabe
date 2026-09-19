@@ -1200,7 +1200,7 @@ of them stays). D-170 retires the production seed, and was approved with the mil
     provider replaces the scripted Guide, checker and planner, for 10.3. Baseline before the
     launch: the DB-backed suite runs in 7.8 s of wall time, and the two fixture test files in
     3.4 s.
-  - [ ] **10.1b The Lantern Wake launch (D-205).** `playLanternWakeLaunch` plays
+  - [x] **10.1b The Lantern Wake launch (D-205).** `playLanternWakeLaunch` plays
     golden-launch beats 1–13 through the harness, exactly as the narrative gives them, with
     every route the screens use. That covers the premise and settings, all fourteen truths
     (picked, rolled, custom, one with a subchoice, one revised, Horrors left open), Vesna
@@ -1218,6 +1218,18 @@ of them stays). D-170 retires the production seed, and was approved with the mil
     just launched, Session 1 open, the vow sworn. **Measure** `db:seed` and the
     DB-backed suite's wall time before and after, because the launch now replays under
     every fixture. Record both in the as-built note.
+    *As built:* the scripted Guide reuses the dev stub's answers, which are read off each
+    prompt's rolls, and replaces only the words the narrative names (`devStubResponse` is
+    now exported, and the harness takes an answer computed from the request). Vesna's
+    concept states her pronouns, because a proposal may carry only pronouns the concept
+    gives. The settlements follow the narrative. Deepwater Anchorage is the Guide's,
+    renamed, and still names its proposal when its first looks are added, as the form does,
+    so it stays `guide_proposal_edited`. Varga Relay is entered by hand. The third
+    settlement is rolled, planetside on a rocky world with a shallow planet. A rolled
+    settlement records `player_written` with its rolls as grounding: group 8's model for
+    every fact but a truth, which A41's links satisfy. The swear is a strong hit: Vesna
+    +4, Rook and Juno +2. Wall time is measured once 10.1c lands, since the launch alone
+    does not yet replay under the other fixtures.
   - [ ] **10.1c Rebuild the three fixtures on it.** `session-1` continues from the launch:
     Session 1 is the activation's, and the swear is its first beat. The existing moves,
     passages, relay scene and ending follow. **Session 1 absorbs the swear's momentum.**

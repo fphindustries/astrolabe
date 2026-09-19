@@ -9,7 +9,7 @@ import type {
 import type { FastifyInstance } from 'fastify';
 import type { Sql } from 'postgres';
 
-import type { AiProvider } from '../ai/provider.js';
+import type { AiProvider, AiRequest } from '../ai/provider.js';
 import { StubProvider, type StubResponse } from '../ai/stub.js';
 import { buildApp } from '../http/app.js';
 
@@ -75,6 +75,9 @@ export interface Answer {
 
 export type FixtureScript = ReturnType<typeof openScript>;
 
+/** A scripted answer, or one computed from the request, as a proposal read off its rolls is. */
+export type ScriptedAnswer = StubResponse | ((request: AiRequest) => StubResponse);
+
 export function openScript(sql: Sql, options: ScriptOptions) {
   const { fixture, campaignId } = options;
   let beat = 'setup';
@@ -82,14 +85,14 @@ export function openScript(sql: Sql, options: ScriptOptions) {
 
   // One queue per purpose, so a beat scripts what it expects to be asked and
   // an unscripted call names itself.
-  const scripts = new Map<string, StubResponse[]>();
+  const scripts = new Map<string, ScriptedAnswer[]>();
   const guide = new StubProvider({
     fallback: (request) => {
       const next = scripts.get(request.purpose)?.shift();
       if (next === undefined) {
         throw new Error(`${where()}: an unscripted ${request.purpose} call.\n${request.user}`);
       }
-      return next;
+      return typeof next === 'function' ? next(request) : next;
     },
   });
   // Passes every check: scripted passages are written to pass D-127–D-130.
@@ -142,7 +145,7 @@ export function openScript(sql: Sql, options: ScriptOptions) {
     fail(message: string): never {
       throw new Error(`${where()}: ${message}`);
     },
-    say(purpose: string, ...responses: StubResponse[]) {
+    say(purpose: string, ...responses: ScriptedAnswer[]) {
       scripts.set(purpose, [...(scripts.get(purpose) ?? []), ...responses]);
     },
     async move(
