@@ -1058,6 +1058,16 @@ export const ProposeSettlementRequestBodySchema = z.object({
 });
 export type ProposeSettlementRequestBody = z.infer<typeof ProposeSettlementRequestBodySchema>;
 
+/** `POST /campaigns/:id/connection-proposals` (9.0c, D-167). */
+export const ProposeConnectionRequestBodySchema = z.object({
+  commandId: CommandIdSchema,
+  /** The `oracle.rolled` events from this campaign's NPC recipe roll. */
+  groundedIn: z.array(EventIdSchema).min(1),
+  /** The fields the player wants help with. Steering only, never stored. */
+  fields: z.array(z.string().min(1)).optional(),
+});
+export type ProposeConnectionRequestBody = z.infer<typeof ProposeConnectionRequestBodySchema>;
+
 /** `POST /campaigns/:id/sector-proposals` (8.6, D-196): the whole sector, one proposal per object. */
 export const ProposeSectorRequestBodySchema = z.object({ commandId: CommandIdSchema });
 export type ProposeSectorRequestBody = z.infer<typeof ProposeSectorRequestBodySchema>;
@@ -1199,6 +1209,21 @@ type ProposalFor<K extends CreationTargetKind> = Extract<
   PayloadFor<'creation.proposed'>,
   { readonly targetKind: K }
 >['proposal'];
+
+/** The Guide's local connection. Not canon: accepted through the connection commands (9.0d). */
+export type ProposeConnectionResponse =
+  | {
+      readonly ok: true;
+      readonly proposalEventId: EventId;
+      readonly proposal: ProposalFor<'connection'>;
+      readonly rolls: readonly ProposalRoll[];
+    }
+  | {
+      readonly ok: false;
+      readonly errorKind: AiErrorKind;
+      readonly message: string;
+      readonly rolls: readonly ProposalRoll[];
+    };
 
 /** The Guide's sector name. Not canon: accepted through `configureLaunchSector` (8.0f). */
 export type ProposeSectorNameResponse =

@@ -197,6 +197,9 @@ function devStubResponse(
   if (mode === 'structured' && request.purpose === 'settlement_proposal') {
     return { kind: 'structured', value: stubSettlementProposal(request.user) };
   }
+  if (mode === 'structured' && request.purpose === 'connection_proposal') {
+    return { kind: 'structured', value: stubConnectionProposal(request.user) };
+  }
   if (mode === 'structured' && request.purpose === 'sector_name_proposal') {
     return { kind: 'structured', value: stubSectorName(request.user) };
   }
@@ -284,6 +287,27 @@ function stubSettlementProposal(user: string) {
  */
 function oracleRollsOf(user: string): string {
   return /<oracle_rolls>([\s\S]*?)<\/oracle_rolls>/.exec(user)?.[1] ?? '';
+}
+
+/** A local connection read straight off the NPC recipe's rolls (9.0c). */
+function stubConnectionProposal(user: string) {
+  const rolls = oracleRollsOf(user);
+  const rolled = (key: string) =>
+    new RegExp(`^- ${key} \\([^)]*\\): (.*)$`, 'm').exec(rolls)?.[1]?.trim();
+  const cite = (keys: readonly string[], value: string) => ({
+    value,
+    reason: `Stub proposal: the ${keys.join(' and ')} roll.`,
+    groundedIn: [...keys],
+  });
+  const name = [rolled('given_name'), rolled('family_name')].filter((part) => part !== undefined);
+  return {
+    npcName: cite(['given_name', 'family_name'], name.join(' ') || 'Stub Contact'),
+    role: cite(['role'], rolled('role') ?? 'Stub role'),
+    goal: cite(['goal'], rolled('goal') ?? 'Stub goal'),
+    firstLook: cite(['first_look'], rolled('first_look') ?? 'Stub first look'),
+    disposition: cite(['disposition'], rolled('disposition') ?? 'Stub disposition'),
+    reason: 'Stub proposal: the connection as the rolls describe them.',
+  };
 }
 
 /** A sector name read straight off its prefix and suffix (8.6). */

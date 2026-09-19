@@ -8,6 +8,7 @@ import {
   ProposeAmountRequestBodySchema,
   ProposeCharacterRequestBodySchema,
   ProposeIncidentsRequestBodySchema,
+  ProposeConnectionRequestBodySchema,
   ProposeSectorRequestBodySchema,
   ProposeSettlementRequestBodySchema,
   ProposeStarshipRequestBodySchema,
@@ -33,6 +34,7 @@ import {
   type ProposeAmountResponse,
   type ProposeCharacterResponse,
   type ProposeIncidentsResponse,
+  type ProposeConnectionResponse,
   type ProposeSectorResponse,
   type ProposeSettlementResponse,
   type ProposeStarshipResponse,
@@ -57,6 +59,7 @@ import {
   proposeAmount,
   proposeCharacter,
   proposeIncidents,
+  proposeConnection,
   proposeSector,
   proposeSettlement,
   proposeStarship,
@@ -607,6 +610,44 @@ export function registerAiRoutes(
             commandId: parsedBody.data.commandId,
             actor: PLAYER,
             targetId: parsedBody.data.targetId,
+            groundedIn: parsedBody.data.groundedIn,
+            ...(parsedBody.data.fields === undefined ? {} : { fields: parsedBody.data.fields }),
+          },
+          status,
+        );
+        reply.code(201);
+        return result;
+      } catch (error) {
+        return refusal(error, reply);
+      }
+    },
+  );
+
+  app.post<{ Params: CampaignParams }>(
+    '/api/campaigns/:id/connection-proposals',
+    async (
+      request,
+      reply,
+    ): Promise<ProposeConnectionResponse | NarrationRefusalResponse | undefined> => {
+      const id = parseCampaignId(request.params.id, reply);
+      if (id === undefined || !(await requireCampaignExists(sql, id, reply))) {
+        return undefined;
+      }
+      const parsedBody = ProposeConnectionRequestBodySchema.safeParse(request.body);
+      if (!parsedBody.success) {
+        reply.code(400);
+        return undefined;
+      }
+
+      try {
+        const result = await proposeConnection(
+          sql,
+          ai,
+          {
+            ...dice,
+            campaignId: id,
+            commandId: parsedBody.data.commandId,
+            actor: PLAYER,
             groundedIn: parsedBody.data.groundedIn,
             ...(parsedBody.data.fields === undefined ? {} : { fields: parsedBody.data.fields }),
           },

@@ -21,6 +21,7 @@ import type {
   PayloadFor,
   ProposalRoll,
   ProposeCharacterResponse,
+  ProposeConnectionResponse,
   ProposeIncidentsResponse,
   ProposeSectorNameResponse,
   ProposeSectorResponse,
@@ -30,6 +31,7 @@ import type {
   ProposeTruthResponse,
 } from '@astrolabe/shared';
 import {
+  CONNECTION_PROPOSAL_TARGET,
   SECTOR_PROPOSAL_TARGET,
   STARSHIP_PROPOSAL_TARGET,
   troubleProposalTarget,
@@ -75,6 +77,13 @@ import {
   type SettlementProposalShape,
   type TroubleProposalOutput,
 } from '../ai/context/sector.js';
+import {
+  buildConnectionProposalRequest,
+  checkConnectionProposal,
+  connectionProposalRolls,
+  connectionProposalSchema,
+  type ConnectionProposalOutput,
+} from '../ai/context/connection.js';
 import {
   buildTruthProposalRequest,
   checkTruthProposal,
@@ -1130,6 +1139,100 @@ async function proposeSectorName(
   const payload = outcome.event.payload;
   if (payload.targetKind !== 'sector') {
     throw new Error('A sector-name proposal wrote a different target kind.');
+  }
+  return {
+    ok: true,
+    proposalEventId: outcome.event.id,
+    proposal: payload.proposal,
+    rolls: outcome.rolls,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// The local connection (task 9.0c, D-167)
+// ---------------------------------------------------------------------------
+
+export interface ProposeConnectionRequest extends ProposalRequest {
+  /** The `oracle.rolled` events from this campaign's NPC recipe roll. */
+  readonly groundedIn: readonly EventId[];
+  /** The fields the player asked for help with. Steering only, never stored (6.3). */
+  readonly fields?: readonly string[];
+}
+
+/**
+ * Ask the Guide for the local connection's NPC (9.0c, beat 10).
+ *
+ * The client rolls `STARTING_CONNECTION_RECIPE` through `rollLaunchRecipe`
+ * and cites the results, which are matched to the recipe's slots by their
+ * recorded slot (8.5). A proposal missing a slot is refused before the Guide
+ * is asked. The rank and the sharing crew are the player's; the outcome is
+ * the automatic strong hit, and nothing is rolled for it (D-167).
+ */
+export async function proposeConnection(
+  sql: Sql,
+  ai: AiProvider,
+  request: ProposeConnectionRequest,
+  status?: AiStatus,
+): Promise<ProposeConnectionResponse> {
+  const events = await readEvents(sql, request.campaignId);
+  const closed = launchClosedReason(project(events));
+  if (closed !== undefined)
+    throw new AiRequestRefusedError(closed, 'Campaign Launch is closed for this campaign.');
+  const slots = connectionProposalRolls();
+  const provided = rollsForProposal(events, request.groundedIn, slots);
+  if (provided.length !== slots.length)
+    throw new AiRequestRefusedError(
+      'no_rolls',
+      'Roll the connection’s prompts before asking the Guide.',
+    );
+  const keys = slots.map((slot) => slot.key);
+
+  const outcome = await runProposal<ConnectionProposalOutput, 'creation.proposed'>(
+    sql,
+    ai,
+    request,
+    {
+      kind: PROPOSAL_COMMAND_KINDS[7],
+      contentType: 'creation.proposed',
+      rolls: slots,
+      provided,
+      build: (current, rolled) => ({
+        request: buildConnectionProposalRequest(current, rolled, request.fields),
+        schema: connectionProposalSchema(keys),
+        check: (value) => checkConnectionProposal(value, keys),
+      }),
+      toPayload: (value, eventIdsOf) => {
+        const text = (field: {
+          readonly value: string;
+          readonly reason: string;
+          readonly groundedIn: readonly string[];
+        }) => ({
+          value: field.value,
+          reason: field.reason,
+          groundedIn: field.groundedIn.flatMap(eventIdsOf),
+        });
+        return {
+          targetKind: 'connection',
+          targetId: CONNECTION_PROPOSAL_TARGET,
+          rationale: value.reason,
+          groundedIn: provided.flatMap((roll) => roll.eventIds),
+          proposal: {
+            npcName: text(value.npcName),
+            role: text(value.role),
+            goal: text(value.goal),
+            firstLook: text(value.firstLook),
+            disposition: text(value.disposition),
+          },
+        };
+      },
+    },
+    status,
+  );
+
+  if (!outcome.ok) return outcome;
+  const payload = outcome.event.payload;
+  if (payload.targetKind !== 'connection') {
+    throw new Error('A connection proposal wrote a different target kind.');
   }
   return {
     ok: true,

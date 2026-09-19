@@ -420,6 +420,7 @@ export const PROPOSAL_COMMAND_KINDS = [
   'launch.propose.settlement',
   'launch.propose.trouble',
   'launch.propose.sector',
+  'launch.propose.connection',
 ] as const;
 
 /**

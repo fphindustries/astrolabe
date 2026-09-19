@@ -981,7 +981,7 @@ D-202 (`track.revised` carries participants).
     player's (beat 10), so the Guide proposes neither. The target is the fixed
     `'connection'`, because there is one starting connection. Update the sample payloads
     (3R.4e).
-  - [ ] **9.0c A connection proposal route (8.0e's shape).** Add a `connection_proposal`
+  - [x] **9.0c A connection proposal route (8.0e's shape).** Add a `connection_proposal`
     purpose, a context builder over accepted facts only (truths, crew, the starting
     settlement and its trouble; no drafts, D-161), `proposeConnection`,
     `POST /connection-proposals`, the structured arm in `create-provider.ts`, and a dev-stub
