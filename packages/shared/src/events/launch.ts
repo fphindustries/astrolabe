@@ -549,7 +549,21 @@ const DraftSnapshotSchema = z.discriminatedUnion('section', [
   z.object({
     section: z.literal('connection_troubles'),
     snapshot: z.object({
-      connection: ConnectionSchema.partial().optional(),
+      // 9.1: the person's other fields, the rolls behind them and the proposal
+      // they came from, so a draft restores all the work (A41). Additive.
+      connection: ConnectionSchema.partial()
+        .extend({
+          details: z
+            .object({
+              goal: z.string().optional(),
+              firstLook: z.string().optional(),
+              disposition: z.string().optional(),
+            })
+            .optional(),
+          groundedIn: z.array(EventIdSchema).optional(),
+          proposalEventId: EventIdSchema.optional(),
+        })
+        .optional(),
       // A draft trouble is incomplete by nature (D-161), so it keeps the loose
       // shape; the accepted event is where the discriminator's rule binds.
       troubles: z.array(

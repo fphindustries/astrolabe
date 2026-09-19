@@ -1077,7 +1077,7 @@ D-202 (`track.revised` carries participants).
     no `launch.incident`. Until the vow is sworn, the Guide in play would not know why the
     campaign has begun. Render the accepted incident, and the pending vow with its roller and
     sharing crew, while it is unsworn. Assert that each arrives.
-- [ ] 9.1 Establish the local NPC connection, role, rank, track, and sharing crew through
+- [x] 9.1 Establish the local NPC connection, role, rank, track, and sharing crew through
   the automatic strong-hit launch command. This is the connection half of Connection and
   Troubles, beside group 8's troubles. Offer Write, a field Roll from the declared NPC
   recipe, and Ask the Guide, reviewed field by field (beat 10). The screen says plainly
@@ -1086,6 +1086,14 @@ D-202 (`track.revised` carries participants).
   Transitions live in `connection-form.ts`, not the `.tsx`. The section stops being half
   built: `SECTION_ARRIVES_IN.connection_troubles` becomes null, and the `part` placeholder
   goes.
+  *As built:* a field Roll rolls that field's table from the NPC recipe (a name is its given
+  and family rolls). A new connection starts shared by the whole crew at rank dangerous; both
+  are the player's to change. The section draft's connection gained the person's other
+  fields, the rolls behind them, and the proposal they came from, all optional, so a draft
+  restores the whole person. The first acceptance establishes the connection, and later saves
+  revise it in place (9.0a). Walked in the browser: a Guide proposal with chips, the whole
+  proposal taken, one crew member unticked, a formidable rank, and acceptance recorded as
+  `guide_proposal` with its rolls. Then a revision adding the second crew member to the track.
 - [ ] 9.2 Extend incident proposals to cite complete accepted launch facts and oracle
   grounding; retain choose/edit/write/ask-again behavior. This is the Incident half of
   Incident and Launch. Ask the Guide for three incidents. Each shows its rolls as chips and

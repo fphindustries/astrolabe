@@ -55,8 +55,7 @@ export const SECTION_ARRIVES_IN: Readonly<Record<LaunchSection, string | null>> 
   crew: null,
   starship: null,
   sector: null,
-  // Half built after 8.5: the troubles are here, the connection is ahead.
-  connection_troubles: 'group 9',
+  connection_troubles: null,
   incident_launch: 'Incident and Launch (group 9)',
 };
 

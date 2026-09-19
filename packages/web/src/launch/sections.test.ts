@@ -39,8 +39,9 @@ describe('the launch section catalogue', () => {
     expect(SECTION_ARRIVES_IN.crew).toBeNull();
     expect(SECTION_ARRIVES_IN.starship).toBeNull();
     expect(SECTION_ARRIVES_IN.sector).toBeNull();
+    expect(SECTION_ARRIVES_IN.connection_troubles).toBeNull();
     const pending = LAUNCH_SECTION_ORDER.filter((section) => SECTION_ARRIVES_IN[section] !== null);
-    expect(pending).toHaveLength(2);
+    expect(pending).toHaveLength(1);
     for (const section of pending) expect(SECTION_ARRIVES_IN[section]).toMatch(/group \d/);
   });
 

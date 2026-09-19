@@ -11,22 +11,11 @@ import styles from './SectionPlaceholder.module.css';
  * facts, and the status is about the campaign rather than about whether group 4
  * built this screen.
  */
-export function SectionPlaceholder({
-  card,
-  part,
-}: {
-  readonly card: SectionCardView;
-  /**
-   * The half still ahead, for a section built in two halves (8.5): Connection
-   * and Troubles has its troubles and waits on its connection.
-   */
-  readonly part?: string;
-}) {
+export function SectionPlaceholder({ card }: { readonly card: SectionCardView }) {
   return (
     <div className={styles.placeholder}>
       <p className={styles.pending}>
-        {part === undefined ? 'This section isn’t built yet.' : `${part} isn’t built yet.`} It
-        arrives with {card.arrivesIn}.
+        This section isn’t built yet. It arrives with {card.arrivesIn}.
       </p>
       <h2 className={styles.heading}>What’s still needed</h2>
       {card.blockers.length === 0 ? (
