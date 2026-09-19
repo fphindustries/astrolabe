@@ -29,7 +29,7 @@ import {
  * controlled by the prompt (D-115), never by truncation.
  */
 
-export const DEFAULT_CLAUDE_MODEL = 'claude-opus-5';
+export const DEFAULT_CLAUDE_MODEL = 'claude-sonnet-5';
 
 const FALLBACK_BETA = 'server-side-fallback-2026-07-01';
 const STRUCTURED_OUTPUTS_BETA = 'structured-outputs-2025-12-15';

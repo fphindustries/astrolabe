@@ -1,0 +1,1242 @@
+{
+  "ranAt": "2026-09-19T18:06:51.663Z",
+  "models": {
+    "guide": "claude-opus-5",
+    "checker": "claude-sonnet-5",
+    "planner": "claude-sonnet-5"
+  },
+  "finished": false,
+  "failure": "Fixture live-launch, Beat 13: the stream did not commit cleanly: [{\"type\":\"checking\"},{\"type\":\"withdrawn\",\"reason\":\"Withdrawn: it said what Vesna thinks, feels or characteristically does, which is the player’s to decide.\",\"rejectedText\":\"The beacon squats in its alcove of welded ship-iron, receiver housing scoured dull by decades of hands, its status light cycling a slow amber through the cold air of the anchorage. Vesna lays her hand flat on the beacon receiver, palm against pitted metal, and swears to find the recorder of Meridian's Hope. The housing takes the words the way iron takes anything: without answer, only the faint hum of the carrier tone under the plating, steady, holding. The cold of the receiver runs up through her fingers and something in the chest loosens, sharpens — the clean forward lean of a course finally set.\"},{\"type\":\"checking\"},{\"type\":\"withdrawn\",\"reason\":\"Withdrawn: it gave Vesna words or expression that this latitude doesn’t allow, and 1 more problem.\",\"rejectedText\":\"The beacon squats at the end of the commissary passage, a scarred column of ship-iron with its receiver dish bolted on crooked, ticking as the hold's failing cells cycle beneath the deck. Somewhere aft, a lashing groans and settles. Vesna lays her hand flat on the beacon receiver and swears to find the recorder, the words plain against the hum of the plate. The dish is cold and faintly gritty with old frost, and the vow carries clean. The column's vibration travels up through her palm and into her wrist, steady as a held note. Under it, the low pull of a course now named. A section-holder passes with a crate on one shoulder, glances at the beacon, and does not stop.\"},{\"type\":\"failed\",\"errorKind\":\"invalid_output\",\"message\":\"It broke the players' authority: \\\"the words plain against the hum of the plate\\\" (voice: Describes outward manner of speech, forbidden under COLOR latitude which disallows spoken lines and expression.); \\\"the vow carries clean\\\" (voice: Characterizes the quality/expression of her spoken vow, forbidden under COLOR latitude.)\"}]",
+  "wallMs": 171731,
+  "events": 137,
+  "calls": [
+    {
+      "role": "guide",
+      "purpose": "character_proposal",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 1364,
+        "outputTokens": 1332,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 10054
+      },
+      "latencyMs": 20725,
+      "output": {
+        "name": {
+          "value": "Ash Valk",
+          "reason": "The rolled given and family names fit a plainspoken pilot who keeps her own counsel.",
+          "groundedIn": [
+            "given-name",
+            "family-name"
+          ]
+        },
+        "callsign": {
+          "value": "Dash",
+          "reason": "The rolled callsign suits a daring pilot known for speed.",
+          "groundedIn": [
+            "callsign"
+          ]
+        },
+        "stats": {
+          "value": {
+            "edge": 3,
+            "heart": 2,
+            "iron": 1,
+            "shadow": 1,
+            "wits": 2
+          },
+          "reason": "Edge 3 for daring flying, wits 2 for charts and navigation, heart 2 for holding her own with people she does not trust."
+        },
+        "assets": [
+          {
+            "assetId": "asset:path/ace",
+            "reason": "Core to a daring pilot who flies through hazards rather than around them."
+          },
+          {
+            "assetId": "asset:path/navigator",
+            "reason": "Covers the charting half of the concept and lets her choose fast or safe paths."
+          },
+          {
+            "assetId": "asset:module/sensor-array",
+            "reason": "Her own instruments let her verify a route instead of trusting someone else's word."
+          }
+        ],
+        "backgroundVow": {
+          "title": "Chart the lost and isolated settlements of the Forge, and make the charts free to all",
+          "rank": "formidable",
+          "reason": "Turns her trust in charts over institutions into a long quest against hoarded knowledge."
+        },
+        "hooks": [
+          {
+            "text": "Someone from the situation Ash escaped is still looking for her, and has the means to hire people who find things.",
+            "reason": "Follows the escape roll and gives the table a pursuit thread.",
+            "groundedIn": [
+              "backstory-1"
+            ]
+          },
+          {
+            "text": "A duty Ash walked away from left an empty seat that others still expect her to fill.",
+            "reason": "Draws on the rejected-duty roll without naming the group.",
+            "groundedIn": [
+              "backstory-2"
+            ]
+          },
+          {
+            "text": "Valk keeps a set of route charts that contradict the official ones, and she will not say where she got them.",
+            "reason": "Ties the concept's distrust of institutions to the escape in her past.",
+            "groundedIn": [
+              "backstory-1",
+              "callsign"
+            ]
+          }
+        ],
+        "pronouns": {
+          "value": "she/her",
+          "reason": "Stated in the concept and copied as written."
+        },
+        "appearance": {
+          "value": "Flight-worn jacket with the patches stripped off, and a habit of glancing at a folded chart before she answers any question about where she has been.",
+          "reason": "Shows the pilot's trade and her preference for charts over institutions at a glance."
+        },
+        "backstory": {
+          "kind": "written",
+          "text": "Ash Valk was raised to a role she never chose, in a place where the people above her decided what was true and who got to leave. She learned the routes first as a way to be useful, then as a way out: every drift, every gravity well, every stretch of dark nobody had bothered to mark. The night she went, she took the charts and left the duty behind. Since then she has flown for whoever pays and answered to nobody's doctrine, and she checks every heading herself. Charts can be wrong, but they never lie on purpose.",
+          "reason": "Combines the escape and rejected-duty rolls into the concept's distrust of institutions.",
+          "groundedIn": [
+            "backstory-1",
+            "backstory-2",
+            "family-name"
+          ]
+        },
+        "signatureGear": {
+          "value": "A battered chart case of hand-corrected routes, with an iron shard from an Exodus ship riveted to the lid.",
+          "reason": "Her charts are the thing she trusts, and the shard ties her vow to the setting's iron tradition."
+        }
+      }
+    },
+    {
+      "role": "guide",
+      "purpose": "character_proposal",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 1635,
+        "outputTokens": 1474,
+        "cacheReadTokens": 10054,
+        "cacheWriteTokens": 0
+      },
+      "latencyMs": 20700,
+      "output": {
+        "name": {
+          "value": "Azriel Jensen",
+          "reason": "Uses the rolled given and family names as-is for a salvager working the wrecks.",
+          "groundedIn": [
+            "given-name",
+            "family-name"
+          ]
+        },
+        "callsign": {
+          "value": "Fidget",
+          "reason": "The rolled callsign fits someone whose hands are always inside a machine.",
+          "groundedIn": [
+            "callsign"
+          ]
+        },
+        "stats": {
+          "value": {
+            "edge": 2,
+            "heart": 2,
+            "iron": 1,
+            "shadow": 1,
+            "wits": 3
+          },
+          "reason": "Wits 3 leads for an engineer and salvager; edge and heart 2 cover quick fieldwork and her rapport with her machines."
+        },
+        "assets": [
+          {
+            "assetId": "asset:path/gearhead",
+            "reason": "Core to an engineer who repairs, repurposes and modifies whatever she drags home."
+          },
+          {
+            "assetId": "asset:path/scavenger",
+            "reason": "Covers the salvager half of the concept: picking wrecks and ruins clean."
+          },
+          {
+            "assetId": "asset:companion/utility-bot",
+            "reason": "Gives her a machine that answers back when she talks to it."
+          }
+        ],
+        "backgroundVow": {
+          "title": "Learn who I was before I woke with nothing, and why I was sent away",
+          "rank": "formidable",
+          "reason": "Ties the amnesia and banishment rolls into a long quest without settling the answer."
+        },
+        "hooks": [
+          {
+            "text": "Azriel woke in a scrap hold with no memory and a shard of Exodus iron already in her pocket — she doesn't know whose it was.",
+            "reason": "Builds the amnesia roll into a salvager's starting mystery.",
+            "groundedIn": [
+              "backstory-1"
+            ]
+          },
+          {
+            "text": "Somewhere there is a settlement that put her out the airlock door, and someone there still recognizes the name Jensen.",
+            "reason": "Turns the banishment roll into a place and a name that can come looking.",
+            "groundedIn": [
+              "backstory-2",
+              "family-name"
+            ]
+          },
+          {
+            "text": "Her utility bot holds logs from before the blank years, and it will only play them back when she calls it by the right name.",
+            "reason": "Links her habit of talking to machines to both rolled backstory prompts.",
+            "groundedIn": [
+              "backstory-1",
+              "callsign"
+            ]
+          }
+        ],
+        "pronouns": {
+          "value": "she/her",
+          "reason": "The concept refers to her machines, so she/her is copied from the player's wording."
+        },
+        "appearance": {
+          "value": "Grease worked so deep into her knuckles it reads as tattooing, a headset pushed up in her hair, and a constant low murmur aimed at whatever she's got open in front of her.",
+          "reason": "Shows the salvager-engineer who talks to her machines at first glance."
+        },
+        "backstory": {
+          "kind": "discover_in_play",
+          "reason": "The rolled prompt says she has no memory of her former life, so leaving it unwritten makes the blank real at the table.",
+          "groundedIn": [
+            "backstory-1",
+            "backstory-2"
+          ]
+        },
+        "signatureGear": {
+          "value": "A battered multitool kit with every handle wrapped in different coloured tape, each one named",
+          "reason": "A concrete prop for an engineer who talks to her machines."
+        }
+      }
+    },
+    {
+      "role": "guide",
+      "purpose": "character_proposal",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 1689,
+        "outputTokens": 1194,
+        "cacheReadTokens": 10054,
+        "cacheWriteTokens": 0
+      },
+      "latencyMs": 16782,
+      "output": {
+        "name": {
+          "value": "Azriel Jensen",
+          "reason": "Built directly from the rolled given and family names, which suit a working salvager.",
+          "groundedIn": [
+            "given-name",
+            "family-name"
+          ]
+        },
+        "callsign": {
+          "value": "Fidget",
+          "reason": "The rolled callsign fits someone whose hands are always in an open panel, muttering to the machine.",
+          "groundedIn": [
+            "callsign"
+          ]
+        },
+        "stats": {
+          "value": {
+            "edge": 2,
+            "heart": 1,
+            "iron": 2,
+            "shadow": 1,
+            "wits": 3
+          },
+          "reason": "Wits 3 for the engineer's eye, edge and iron 2 for hauling salvage out of dangerous wrecks."
+        },
+        "assets": [
+          {
+            "assetId": "asset:path/gearhead",
+            "reason": "Core to an engineer who repairs, repurposes and modifies everything she touches."
+          },
+          {
+            "assetId": "asset:path/scavenger",
+            "reason": "The salvager half of the concept: wrecks, ruins and abandoned sites are her trade."
+          },
+          {
+            "assetId": "asset:companion/utility-bot",
+            "reason": "Gives the machines she talks to a voice at her side, without deciding what answers back."
+          }
+        ],
+        "backgroundVow": {
+          "title": "Recover the truth of the life Fidget cannot remember",
+          "rank": "formidable",
+          "reason": "Ties the amnesia roll to a long-running quest that can run under the crew's other vows."
+        },
+        "hooks": [
+          {
+            "text": "Fidget woke in a stripped hull with tools in her hands and no memory of learning to use them.",
+            "reason": "Anchors the amnesia roll to the salvager-engineer concept.",
+            "groundedIn": [
+              "backstory-1"
+            ]
+          },
+          {
+            "text": "A settlement she has never seen recognizes her on sight, and has barred her from ever docking again.",
+            "reason": "Combines the banishment roll with the missing memory for an unanswered question in play.",
+            "groundedIn": [
+              "backstory-1",
+              "backstory-2"
+            ]
+          },
+          {
+            "text": "One salvaged unit in her kit answers to a name she does not remember giving it.",
+            "reason": "Puts the concept's machine-talking habit into direct tension with the amnesia roll.",
+            "groundedIn": [
+              "backstory-1",
+              "callsign"
+            ]
+          }
+        ],
+        "pronouns": {
+          "value": null,
+          "reason": "Pronouns were not stated as a separate declaration, so they are left for the player to set."
+        },
+        "appearance": {
+          "value": "Grease-dark hands, a tool harness worn shiny at the buckles, and a habit of speaking softly to whatever panel is open at the time.",
+          "reason": "Shows the salvager-engineer trade and the talking-to-machines habit the player named."
+        },
+        "backstory": {
+          "kind": "discover_in_play",
+          "reason": "The rolled prompt says the former life is a blank, so the past is best uncovered at the table rather than fixed now.",
+          "groundedIn": [
+            "backstory-1",
+            "backstory-2"
+          ]
+        },
+        "signatureGear": {
+          "value": "A patched multi-tool rig with a shard of Exodus iron welded into the grip",
+          "reason": "Practical kit for an engineer, and a shard she can swear her vows upon."
+        }
+      }
+    },
+    {
+      "role": "guide",
+      "purpose": "starship_proposal",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 4279,
+        "outputTokens": 745,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      },
+      "latencyMs": 14139,
+      "output": {
+        "name": {
+          "value": "Iron Cairn",
+          "reason": "The rolled name reads as a grave-marker, fitting a ship raised from a derelict in a galaxy that swears on iron shards.",
+          "groundedIn": [
+            "name",
+            "history"
+          ]
+        },
+        "appearance": {
+          "value": "A blunt, heavy-hulled freighter whose patchwork plating is a mosaic of mismatched salvage, welded seams still bright against older, scorched metal. Inside, the deck plates ring hollow underfoot, and the airlock wall carries a dark shape under fresh paint that never quite takes.",
+          "reason": "Draws the patched-derelict history together with the hollow deck plates and the stubborn airlock stain."
+        },
+        "history": {
+          "value": "The ship was found dead and drifting, cold for long enough that frost had grown through her corridors and no log survived to say who had crewed her or why they stopped. Salvagers stripped what was easy and left the bones. Whoever came after did the harder work: cutting away ruined sections, grafting in plate from other wrecks, coaxing the drive back to life one system at a time. She flies now as a thing reassembled rather than built, and every patch marks a repair someone gambled on. What happened aboard her before she went quiet has never been answered.",
+          "reason": "Expands the rolled history of a derelict patched back together, leaving her original fate open for play.",
+          "groundedIn": [
+            "history",
+            "name"
+          ]
+        },
+        "quirks": [
+          {
+            "value": "An old bloodstain in the airlock keeps coming back. It has been scrubbed, sealed, primered and painted; within a few weeks the same dark outline surfaces through the coating, in the same place, the same shape.",
+            "reason": "States the rolled quirk and ties it to the ship's unexplained derelict past.",
+            "groundedIn": [
+              "quirk_2",
+              "history"
+            ]
+          },
+          {
+            "value": "Many of the deck plates lift free by hand, revealing shallow compartments running the length of the ship — storage the original builders never drew, big enough for cargo someone did not want found.",
+            "reason": "Renders the rolled hidden-storage quirk as a physical feature of the patched hull.",
+            "groundedIn": [
+              "quirk_1",
+              "history"
+            ]
+          }
+        ],
+        "reason": "A salvaged, twice-built ship named like a grave suits a campaign where survivors swear on iron taken from dead vessels."
+      }
+    },
+    {
+      "role": "guide",
+      "purpose": "sector_name_proposal",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 3812,
+        "outputTokens": 165,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      },
+      "latencyMs": 4172,
+      "output": {
+        "name": {
+          "value": "Devil's Nexus",
+          "reason": "Where the smuggler lanes of the Kessel Drift knot together — a crossing every chart warns against, and the one Vesna has sworn to make safe.",
+          "groundedIn": [
+            "prefix",
+            "suffix"
+          ]
+        },
+        "reason": "The rolled prefix and suffix fit as-is: a junction of routes with a name spacers spit when they say it, matching an outlands sector of bad charts, bounty hunters, and hoarded knowledge."
+      }
+    },
+    {
+      "role": "guide",
+      "purpose": "settlement_proposal",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 4970,
+        "outputTokens": 484,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      },
+      "latencyMs": 8338,
+      "output": {
+        "name": {
+          "value": "Bulwark",
+          "reason": "The name oracle gave Bulwark, fitting a hold that survives by sheer stubbornness in the dark.",
+          "groundedIn": [
+            "name"
+          ]
+        },
+        "location": {
+          "value": "deep_space",
+          "reason": "The location roll places it in deep space, far from any star's warmth.",
+          "groundedIn": [
+            "location"
+          ]
+        },
+        "population": {
+          "value": "Several hundred residents, most of them descended from a single Exodus convoy, living inside a shell of welded ship-iron",
+          "reason": "The outlands population roll of hundreds suits a small, resource-starved community built from Exodus bones.",
+          "groundedIn": [
+            "population",
+            "location",
+            "name"
+          ]
+        },
+        "authority": {
+          "value": "A fair council of section-holders, each speaking for one grafted hull segment; disputes are heard openly and bounty writs honored without favor",
+          "reason": "The authority roll of fair calls for even-handed, accountable rule.",
+          "groundedIn": [
+            "authority",
+            "population"
+          ]
+        },
+        "projects": [
+          {
+            "value": "Energy: the hold is racing to bring a salvaged reactor core online before the failing cells leave them cold and dark",
+            "reason": "The project roll of Energy is an existential concern for a starless deep-space station.",
+            "groundedIn": [
+              "project_1",
+              "location"
+            ]
+          }
+        ],
+        "planet": null,
+        "firstLooks": null,
+        "reason": "A fairly governed deep-space hold of hundreds, built from Exodus iron and fighting to keep its lights burning, fits the truths of scarce, isolated communities far from any star."
+      }
+    },
+    {
+      "role": "guide",
+      "purpose": "settlement_proposal",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 4975,
+        "outputTokens": 532,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      },
+      "latencyMs": 8191,
+      "output": {
+        "name": {
+          "value": "Hearth",
+          "reason": "The rolled name suits a deep-space haven where survivors huddle around borrowed warmth, echoing the cataclysm truth.",
+          "groundedIn": [
+            "name",
+            "location"
+          ]
+        },
+        "location": {
+          "value": "deep_space",
+          "reason": "The roll places it in deep space, drifting far from any star in the Kessel Reach.",
+          "groundedIn": [
+            "location"
+          ]
+        },
+        "population": {
+          "value": "Hundreds — several hundred souls packed into a lattice of Exodus-ship hull sections welded end to end",
+          "reason": "The outlands population roll gives hundreds, and the iron truth explains the station's salvaged bones.",
+          "groundedIn": [
+            "population",
+            "location",
+            "name"
+          ]
+        },
+        "authority": {
+          "value": "Ineffectual — a council of section-holders whose rulings are ignored as often as obeyed, leaving disputes to whoever holds the airlocks",
+          "reason": "The authority roll is ineffectual, fitting communities on the brink of ruin.",
+          "groundedIn": [
+            "authority",
+            "population"
+          ]
+        },
+        "projects": [
+          {
+            "value": "Manufacturing: the station is tooling up a foundry to draw hull plate and pressure fittings from scavenged wreckage, hoping to trade fabricated parts for food and fuel",
+            "reason": "The project roll is manufacturing, and a resource-starved deep-space station must make what it cannot buy.",
+            "groundedIn": [
+              "project_1",
+              "location",
+              "population"
+            ]
+          }
+        ],
+        "planet": null,
+        "firstLooks": null,
+        "reason": "A drifting iron-boned haven of hundreds, loosely governed and building a foundry, fits the Kessel Reach's isolated, resource-starved communities."
+      }
+    },
+    {
+      "role": "guide",
+      "purpose": "settlement_proposal",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 4969,
+        "outputTokens": 484,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      },
+      "latencyMs": 9123,
+      "output": {
+        "name": {
+          "value": "Nerio",
+          "reason": "The rolled settlement name, kept as the outpost's given designation.",
+          "groundedIn": [
+            "name"
+          ]
+        },
+        "location": {
+          "value": "deep_space",
+          "reason": "The roll places Nerio in deep space, far from any star's warmth.",
+          "groundedIn": [
+            "location"
+          ]
+        },
+        "population": {
+          "value": "A few dozen residents, most of them born aboard, packed into a knot of welded Exodus-ship hull sections.",
+          "reason": "The outlands population roll of 'few' fits communities that are small and on the brink.",
+          "groundedIn": [
+            "population",
+            "location"
+          ]
+        },
+        "authority": {
+          "value": "Unyielding: docking, breathing and ration rights are governed by a strict code enforced without exception, and bounty hunters are granted free passage to take their marks.",
+          "reason": "The authority roll is unyielding, and the truths let bounty hunter guilds operate freely in settled places.",
+          "groundedIn": [
+            "authority",
+            "population"
+          ]
+        },
+        "projects": [
+          {
+            "value": "Salvage: crews work a drifting debris field of dead hulls, cutting iron free for trade and for the shards residents swear their vows upon.",
+            "reason": "The rolled project is salvage, and iron from Exodus wrecks is sacred in this galaxy.",
+            "groundedIn": [
+              "project_1",
+              "location"
+            ]
+          }
+        ],
+        "planet": null,
+        "firstLooks": null,
+        "reason": "A small, iron-hard salvage station adrift in the dark, matching the rolls and the Reach's isolated, resource-starved communities."
+      }
+    },
+    {
+      "role": "guide",
+      "purpose": "trouble_proposal",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 4293,
+        "outputTokens": 273,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      },
+      "latencyMs": 5710,
+      "output": {
+        "text": {
+          "value": "The only clear lane out of Deepwater Anchorage toward the Drift has closed — wreckage shifted, and the hold's marked beacons now lead ships into ice that shears hulls. Supply runs the reactor project depends on are stacking up unflown, and the council is taking open petitions from anyone who claims they can cut a new passage.",
+          "reason": "The rolled trouble is an impassable route, so the hold's outbound lane is blocked; it presses on the settlement's stated reactor project and the council's open-petition authority without naming people or factions.",
+          "groundedIn": [
+            "trouble"
+          ]
+        },
+        "reason": "A blocked route at the starting settlement gives the crew an immediate reason to fly and a stake in the hold, while sitting comfortably beside the established truths about scarce settlements and untrustworthy charts."
+      }
+    },
+    {
+      "role": "guide",
+      "purpose": "trouble_proposal",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 4321,
+        "outputTokens": 219,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      },
+      "latencyMs": 5165,
+      "output": {
+        "text": {
+          "value": "Energy storms scour the Kessel Reach in unpredictable waves, charging the ice and wreckage of the Drift until it hums and arcs. Ships lose sensors and comms for days at a stretch, and settlements ration what little power they can hold onto between surges.",
+          "reason": "Takes the rolled sector trouble of rampant energy storms and spreads it across the Reach, tying it to the Drift's ice and wreckage and to the isolation and power scarcity already present in the sector.",
+          "groundedIn": [
+            "trouble"
+          ]
+        },
+        "reason": "A sector-wide hazard that pressures every location without contradicting established truths or settling anything left open."
+      }
+    },
+    {
+      "role": "guide",
+      "purpose": "connection_proposal",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 5278,
+        "outputTokens": 603,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      },
+      "latencyMs": 10610,
+      "output": {
+        "npcName": {
+          "value": "Bruno Valenus",
+          "reason": "The given-name and family-name rolls combine into a name that fits the Anchorage's Exodus-convoy descendants.",
+          "groundedIn": [
+            "given_name",
+            "family_name"
+          ]
+        },
+        "role": {
+          "value": "Bounty hunter working the Anchorage under a section-holder's writ, tracking fugitives out along the Kessel Drift",
+          "reason": "The Hunter role reads as a bounty hunter in a setting where the guilds are given free rein and the council honors writs openly.",
+          "groundedIn": [
+            "role"
+          ]
+        },
+        "goal": {
+          "value": "Keep buried the fact that the last writ he closed was on the wrong person — and that the name he was really paid to erase is still breathing somewhere in the Drift",
+          "reason": "The goal roll of protecting a secret turns his hunting work into something he must keep from the open council hearings.",
+          "groundedIn": [
+            "goal",
+            "role"
+          ]
+        },
+        "firstLook": {
+          "value": "Plain to the point of forgettable: a grey coverall cut like any hold worker's, no guild marks, no weapon showing, a face you would not pick out of the commissary line twice",
+          "reason": "The Plain first look suits a hunter who survives by not being noticed, and contrasts with the Anchorage's obvious social stratification.",
+          "groundedIn": [
+            "first_look",
+            "role"
+          ]
+        },
+        "disposition": {
+          "value": "Desperate — he approaches the crew because they have a ship, no local ties, and no reason to talk to the council",
+          "reason": "The Desperate disposition explains why a hunter would reach out to newcomers rather than his own guild.",
+          "groundedIn": [
+            "disposition",
+            "goal"
+          ]
+        },
+        "reason": "A plain, desperate bounty hunter guarding a bad writ fits a hold where the council honors writs without favor and knowledge is hoarded, and gives the crew a foothold pointed toward the Drift."
+      }
+    },
+    {
+      "role": "guide",
+      "purpose": "incident_proposal",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 6233,
+        "outputTokens": 1700,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      },
+      "latencyMs": 23296,
+      "output": {
+        "options": [
+          {
+            "title": "Chart a safe passage through the Kessel Drift linking the Anchorage, the Relay and every hold gone silent.",
+            "rank": "dangerous",
+            "situation": "Energy storms have charged the ice and wreckage of the Kessel Drift until every chart the Anchorage holds is worthless, and the only route between Deepwater Anchorage and Varga Relay now runs blind through arcing debris. The Anchorage council needs supply runs to keep a salvaged reactor core coming in before the failing cells leave several hundred people cold, and smaller holds further out have not been heard from in months.",
+            "reason": "Builds the 'new passage between isolated settlements' roll from the sector's storms, the Anchorage's power crisis and Vesna's distrust of official charts.",
+            "groundedIn": [
+              "incident-1"
+            ],
+            "drawsOn": {
+              "truths": [
+                "oracle:communities",
+                "oracle:communication-and-data"
+              ],
+              "locations": [
+                "Deepwater Anchorage",
+                "Varga Relay",
+                "Kessel Drift"
+              ],
+              "crew": [
+                "Vesna"
+              ],
+              "launchFacts": [
+                "Starship: Lantern Wake",
+                "Trouble in Deepwater Anchorage",
+                "Trouble in the sector"
+              ]
+            }
+          },
+          {
+            "title": "Discover what walks the ice at the silent settlement and end it before the Drift holds go the same way.",
+            "rank": "formidable",
+            "situation": "A small icebound hold off the Drift has stopped answering the relay, and the last transmissions to reach Deepwater Anchorage describe figures in the corridors, voices on dead channels, and the settlement's power plant — a salvaged Exodus drive core — running when no one is feeding it. Traders who diverted past report the landing field intact, vehicles idle, and no one answering the light.",
+            "reason": "Takes the 'terrifying manifestations' roll into the abandoned-settlement truth and the salvaged drive that Juno's apprenticeship turned on, leaving the cause unsettled.",
+            "groundedIn": [
+              "incident-2"
+            ],
+            "drawsOn": {
+              "truths": [
+                "oracle:communities",
+                "oracle:exodus",
+                "oracle:magic"
+              ],
+              "locations": [
+                "Kessel Drift",
+                "Deepwater Anchorage"
+              ],
+              "crew": [
+                "Juno"
+              ],
+              "launchFacts": [
+                "Starship: Lantern Wake",
+                "Trouble in the sector"
+              ]
+            }
+          },
+          {
+            "title": "Retrieve the stolen weapons cache from the raiders and return it before the writ falls on the wrong name again.",
+            "rank": "dangerous",
+            "situation": "A raider crew working out of Redemption has taken a shipment of military-grade ordnance bound for the Anchorage and gone to ground somewhere in the Drift, and the bounty guilds are already writing writs against whoever can be named for it. The Anchorage harbormaster, who quietly closed the last writ on an innocent, approaches the crew because they have a ship, no local ties and no reason to talk to the council.",
+            "reason": "Runs the 'stolen weapons cache' roll through the bounty-writ truth and Bruno Valenus's buried mistake, with Redemption's raiders as the holders.",
+            "groundedIn": [
+              "incident-3"
+            ],
+            "drawsOn": {
+              "truths": [
+                "oracle:laws",
+                "oracle:war"
+              ],
+              "locations": [
+                "Redemption",
+                "Deepwater Anchorage",
+                "Kessel Drift"
+              ],
+              "crew": [],
+              "launchFacts": [
+                "Starship: Lantern Wake",
+                "Connection: Bruno Valenus",
+                "Trouble in Deepwater Anchorage"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "role": "guide",
+      "purpose": "beat",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 3359,
+        "outputTokens": 326,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 1607
+      },
+      "latencyMs": 6167,
+      "output": {
+        "segments": [
+          {
+            "about": "world",
+            "character": null,
+            "basis": [
+              "F1"
+            ],
+            "text": "The beacon squats in its alcove of welded ship-iron, receiver housing scoured dull by decades of hands, its status light cycling a slow amber through the cold air of the anchorage."
+          },
+          {
+            "about": "character_does",
+            "character": "Vesna",
+            "basis": [
+              "F2",
+              "F1"
+            ],
+            "text": "Vesna lays her hand flat on the beacon receiver, palm against pitted metal, and swears to find the recorder of Meridian's Hope."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": [
+              "F3"
+            ],
+            "text": "The housing takes the words the way iron takes anything: without answer, only the faint hum of the carrier tone under the plating, steady, holding."
+          },
+          {
+            "about": "character_undergoes",
+            "character": "Vesna",
+            "basis": [
+              "F4",
+              "F3"
+            ],
+            "text": "The cold of the receiver runs up through her fingers and something in the chest loosens, sharpens — the clean forward lean of a course finally set."
+          }
+        ]
+      }
+    },
+    {
+      "role": "checker",
+      "purpose": "narration_check",
+      "model": "claude-sonnet-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 557,
+        "outputTokens": 448,
+        "cacheReadTokens": 1555,
+        "cacheWriteTokens": 0
+      },
+      "latencyMs": 5935,
+      "verdict": {
+        "review": "Segment 1 matches the declared action (laying hand, swearing) and is allowed. Segment 3 attributes an emotional/interior state ('something in the chest loosens, sharpens') and frames it as a settled disposition ('the clean forward lean of a course finally set'), which reaches beyond a mere sensation into interpreted meaning/motivation, violating player-owned interior. No spoken dialogue or outward expression appears, so voice latitude is not implicated.",
+        "violations": [
+          {
+            "rule": "player_interior",
+            "character": "Vesna",
+            "segment": 3,
+            "quote": "something in the chest loosens, sharpens — the clean forward lean of a course finally set",
+            "why": "Interprets Vesna's inner state as a settled resolve/disposition beyond the immediate sensation, which belongs to the player."
+          }
+        ]
+      }
+    },
+    {
+      "role": "guide",
+      "purpose": "beat",
+      "model": "claude-opus-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 3471,
+        "outputTokens": 351,
+        "cacheReadTokens": 1607,
+        "cacheWriteTokens": 0
+      },
+      "latencyMs": 6835,
+      "output": {
+        "segments": [
+          {
+            "about": "world",
+            "character": null,
+            "basis": [],
+            "text": "The beacon squats at the end of the commissary passage, a scarred column of ship-iron with its receiver dish bolted on crooked, ticking as the hold's failing cells cycle beneath the deck. Somewhere aft, a lashing groans and settles."
+          },
+          {
+            "about": "character_does",
+            "character": "Vesna",
+            "basis": [
+              "F1",
+              "F2",
+              "F3"
+            ],
+            "text": "Vesna lays her hand flat on the beacon receiver and swears to find the recorder, the words plain against the hum of the plate. The dish is cold and faintly gritty with old frost, and the vow carries clean."
+          },
+          {
+            "about": "character_undergoes",
+            "character": "Vesna",
+            "basis": [
+              "F3",
+              "F4"
+            ],
+            "text": "The column's vibration travels up through her palm and into her wrist, steady as a held note. Under it, the low pull of a course now named."
+          },
+          {
+            "about": "world",
+            "character": null,
+            "basis": [],
+            "text": "A section-holder passes with a crate on one shoulder, glances at the beacon, and does not stop."
+          }
+        ]
+      }
+    },
+    {
+      "role": "checker",
+      "purpose": "narration_check",
+      "model": "claude-sonnet-5",
+      "kind": "structured",
+      "ok": true,
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 585,
+        "outputTokens": 299,
+        "cacheReadTokens": 1555,
+        "cacheWriteTokens": 0
+      },
+      "latencyMs": 4811,
+      "verdict": {
+        "review": "COLOR latitude forbids all spoken lines and outward expression. Segment 1 includes Vesna speaking a vow ('swears to find the recorder, the words plain') and characterizes delivery ('the vow carries clean'), which is outward expression/voice beyond what latitude allows. Other content (touching the receiver) matches declared action; sensations in segment 2 are permitted as resulting from the committed action.",
+        "violations": [
+          {
+            "rule": "voice",
+            "character": "Vesna",
+            "segment": 1,
+            "quote": "the words plain against the hum of the plate",
+            "why": "Describes outward manner of speech, forbidden under COLOR latitude which disallows spoken lines and expression."
+          },
+          {
+            "rule": "voice",
+            "character": "Vesna",
+            "segment": 1,
+            "quote": "the vow carries clean",
+            "why": "Characterizes the quality/expression of her spoken vow, forbidden under COLOR latitude."
+          }
+        ]
+      }
+    }
+  ],
+  "byPurpose": {
+    "guide:character_proposal": {
+      "calls": 3,
+      "ok": 3,
+      "medianMs": 20700,
+      "maxMs": 20725,
+      "usage": {
+        "inputTokens": 4688,
+        "outputTokens": 4000,
+        "cacheReadTokens": 20108,
+        "cacheWriteTokens": 10054
+      }
+    },
+    "guide:starship_proposal": {
+      "calls": 1,
+      "ok": 1,
+      "medianMs": 14139,
+      "maxMs": 14139,
+      "usage": {
+        "inputTokens": 4279,
+        "outputTokens": 745,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      }
+    },
+    "guide:sector_name_proposal": {
+      "calls": 1,
+      "ok": 1,
+      "medianMs": 4172,
+      "maxMs": 4172,
+      "usage": {
+        "inputTokens": 3812,
+        "outputTokens": 165,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      }
+    },
+    "guide:settlement_proposal": {
+      "calls": 3,
+      "ok": 3,
+      "medianMs": 8338,
+      "maxMs": 9123,
+      "usage": {
+        "inputTokens": 14914,
+        "outputTokens": 1500,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      }
+    },
+    "guide:trouble_proposal": {
+      "calls": 2,
+      "ok": 2,
+      "medianMs": 5710,
+      "maxMs": 5710,
+      "usage": {
+        "inputTokens": 8614,
+        "outputTokens": 492,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      }
+    },
+    "guide:connection_proposal": {
+      "calls": 1,
+      "ok": 1,
+      "medianMs": 10610,
+      "maxMs": 10610,
+      "usage": {
+        "inputTokens": 5278,
+        "outputTokens": 603,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      }
+    },
+    "guide:incident_proposal": {
+      "calls": 1,
+      "ok": 1,
+      "medianMs": 23296,
+      "maxMs": 23296,
+      "usage": {
+        "inputTokens": 6233,
+        "outputTokens": 1700,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0
+      }
+    },
+    "guide:beat": {
+      "calls": 2,
+      "ok": 2,
+      "medianMs": 6835,
+      "maxMs": 6835,
+      "usage": {
+        "inputTokens": 6830,
+        "outputTokens": 677,
+        "cacheReadTokens": 1607,
+        "cacheWriteTokens": 1607
+      }
+    },
+    "checker:narration_check": {
+      "calls": 2,
+      "ok": 2,
+      "medianMs": 5935,
+      "maxMs": 5935,
+      "usage": {
+        "inputTokens": 1142,
+        "outputTokens": 747,
+        "cacheReadTokens": 3110,
+        "cacheWriteTokens": 0
+      }
+    }
+  },
+  "commands": [
+    {
+      "commandId": "3b71b9b2-6456-8bf3-adc9-1185b9b3bea0",
+      "purposes": [
+        "character_proposal"
+      ],
+      "completed": 1,
+      "failed": 0
+    },
+    {
+      "commandId": "b4026a82-cc97-81a0-b206-bd1c9f3a560b",
+      "purposes": [
+        "character_proposal"
+      ],
+      "completed": 2,
+      "failed": 0
+    },
+    {
+      "commandId": "fb9c9e73-4be1-83b1-a3c9-3b7b7c1eac71",
+      "purposes": [
+        "starship_proposal"
+      ],
+      "completed": 1,
+      "failed": 0
+    },
+    {
+      "commandId": "37b36e7b-cbce-8632-b29f-23898d223090",
+      "purposes": [
+        "sector_name_proposal"
+      ],
+      "completed": 1,
+      "failed": 0
+    },
+    {
+      "commandId": "7070d9e2-6227-808f-bcd6-dc069b90c33f",
+      "purposes": [
+        "settlement_proposal"
+      ],
+      "completed": 1,
+      "failed": 0
+    },
+    {
+      "commandId": "493d595a-0baf-819f-9926-c1fb77b5fa8e",
+      "purposes": [
+        "settlement_proposal"
+      ],
+      "completed": 1,
+      "failed": 0
+    },
+    {
+      "commandId": "5365f3d5-110e-8d45-b443-be0b1eff450a",
+      "purposes": [
+        "settlement_proposal"
+      ],
+      "completed": 1,
+      "failed": 0
+    },
+    {
+      "commandId": "7dbaa73d-cc47-8313-9f7a-daccf0a62f67",
+      "purposes": [
+        "trouble_proposal"
+      ],
+      "completed": 1,
+      "failed": 0
+    },
+    {
+      "commandId": "aae3d204-16d0-86af-ad90-4dcbcd9571b1",
+      "purposes": [
+        "trouble_proposal"
+      ],
+      "completed": 1,
+      "failed": 0
+    },
+    {
+      "commandId": "68a5709b-d897-87c8-a311-22dd1d2aaaff",
+      "purposes": [
+        "connection_proposal"
+      ],
+      "completed": 1,
+      "failed": 0
+    },
+    {
+      "commandId": "83643f51-1f98-8c59-8d52-b5e3eba4de29",
+      "purposes": [
+        "incident_proposal"
+      ],
+      "completed": 1,
+      "failed": 0
+    },
+    {
+      "commandId": "83441f32-78bb-876a-9248-a4733af74ad5",
+      "purposes": [
+        "beat",
+        "narration_check"
+      ],
+      "completed": 4,
+      "failed": 1
+    }
+  ],
+  "checker": [
+    {
+      "purpose": "narration_check",
+      "ok": true,
+      "verdict": {
+        "review": "Segment 1 matches the declared action (laying hand, swearing) and is allowed. Segment 3 attributes an emotional/interior state ('something in the chest loosens, sharpens') and frames it as a settled disposition ('the clean forward lean of a course finally set'), which reaches beyond a mere sensation into interpreted meaning/motivation, violating player-owned interior. No spoken dialogue or outward expression appears, so voice latitude is not implicated.",
+        "violations": [
+          {
+            "rule": "player_interior",
+            "character": "Vesna",
+            "segment": 3,
+            "quote": "something in the chest loosens, sharpens — the clean forward lean of a course finally set",
+            "why": "Interprets Vesna's inner state as a settled resolve/disposition beyond the immediate sensation, which belongs to the player."
+          }
+        ]
+      }
+    },
+    {
+      "purpose": "narration_check",
+      "ok": true,
+      "verdict": {
+        "review": "COLOR latitude forbids all spoken lines and outward expression. Segment 1 includes Vesna speaking a vow ('swears to find the recorder, the words plain') and characterizes delivery ('the vow carries clean'), which is outward expression/voice beyond what latitude allows. Other content (touching the receiver) matches declared action; sensations in segment 2 are permitted as resulting from the committed action.",
+        "violations": [
+          {
+            "rule": "voice",
+            "character": "Vesna",
+            "segment": 1,
+            "quote": "the words plain against the hum of the plate",
+            "why": "Describes outward manner of speech, forbidden under COLOR latitude which disallows spoken lines and expression."
+          },
+          {
+            "rule": "voice",
+            "character": "Vesna",
+            "segment": 1,
+            "quote": "the vow carries clean",
+            "why": "Characterizes the quality/expression of her spoken vow, forbidden under COLOR latitude."
+          }
+        ]
+      }
+    }
+  ],
+  "grounding": {
+    "cited": 163,
+    "unresolved": []
+  },
+  "tokens": {
+    "spent": {
+      "inputTokens": 55790,
+      "outputTokens": 10629,
+      "cacheReadTokens": 24825,
+      "cacheWriteTokens": 11661
+    },
+    "recordedCompleted": {
+      "inputTokens": 55790,
+      "outputTokens": 10629,
+      "cacheReadTokens": 24825,
+      "cacheWriteTokens": 11661
+    },
+    "recordedFailed": {
+      "inputTokens": 0,
+      "outputTokens": 0
+    }
+  }
+}
